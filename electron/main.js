@@ -1,8 +1,9 @@
 // Electron main process for CloudCLI Desktop (ESM — package.json is type:module).
 // Spawns the bundled CloudCLI server as a child using Electron's node ABI
 // (ELECTRON_RUN_AS_NODE) so native modules match, then loads the UI in a window.
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import net from 'node:net';
@@ -13,6 +14,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow = null;
 let serverProc = null;
 let serverPort = 0;
+
+// ---- Cloud-account JWT (cc.brainmate.cc) persisted via safeStorage ----
+// Renderer calls window.cloudAuth.{getToken,setToken,removeToken} (see preload.cjs);
+// these handlers encrypt the token with the OS keychain and store the blob in userData,
+// so the cloud JWT never sits in plaintext localStorage like the local app token does.
+const cloudTokenFile = () => path.join(app.getPath('userData'), 'cloud-token.bin');
+
+function readCloudToken() {
+  try {
+    if (!fs.existsSync(cloudTokenFile())) return null;
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    return safeStorage.decryptString(fs.readFileSync(cloudTokenFile()));
+  } catch { return null; }
+}
+function writeCloudToken(token) {
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('safeStorage unavailable on this platform');
+  fs.writeFileSync(cloudTokenFile(), safeStorage.encryptString(token));
+}
+function deleteCloudToken() {
+  try { fs.unlinkSync(cloudTokenFile()); } catch {}
+}
+
+ipcMain.handle('cloud-auth:get', () => readCloudToken());
+ipcMain.handle('cloud-auth:set', (_e, token) => { writeCloudToken(token); });
+ipcMain.handle('cloud-auth:remove', () => deleteCloudToken());
 
 function findFreePort() {
   return new Promise((resolve, reject) => {
@@ -66,7 +92,11 @@ function createWindow() {
     width: 1280,
     height: 840,
     backgroundColor: '#0b1120',
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+    },
   });
   const devUrl = process.env.ELECTRON_DEV_URL;
   if (devUrl) {
