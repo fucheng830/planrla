@@ -3,6 +3,7 @@ import { useCredentialsSettings } from '../../../hooks/useCredentialsSettings';
 import ApiKeysSection from './sections/ApiKeysSection';
 import GithubCredentialsSection from './sections/GithubCredentialsSection';
 import NewApiKeyAlert from './sections/NewApiKeyAlert';
+import CloudAccountSection from '../../../../cloud-account/CloudAccountSection';
 
 export default function CredentialsSettingsTab() {
   const { t } = useTranslation('settings');
@@ -47,6 +48,7 @@ export default function CredentialsSettingsTab() {
 
   return (
     <div className="space-y-8">
+      <CloudAccountSection />
       {newlyCreatedKey && (
         <NewApiKeyAlert
           apiKey={newlyCreatedKey}

@@ -3,6 +3,7 @@ import { I18nextProvider } from 'react-i18next';
 
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, ProtectedRoute } from './components/auth';
+import { CloudAccountProvider } from './components/cloud-account/context/CloudAccountContext';
 import { TaskMasterProvider } from './contexts/TaskMasterContext';
 import { TasksSettingsProvider } from './contexts/TasksSettingsContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
@@ -106,6 +107,7 @@ export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProvider>
+        <CloudAccountProvider>
         <AuthProvider>
           <WebSocketProvider>
             <PluginsProvider>
@@ -124,6 +126,7 @@ export default function App() {
             </PluginsProvider>
           </WebSocketProvider>
         </AuthProvider>
+        </CloudAccountProvider>
       </ThemeProvider>
     </I18nextProvider>
   );
