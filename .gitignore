@@ -12,6 +12,12 @@ dist-server/
 dist-ssr/
 build/
 out/
+.gradle/
+captures/
+*.apk
+*.aab
+*.apks
+local.properties
 
 # Environment variables
 .env

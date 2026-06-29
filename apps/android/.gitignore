@@ -1,0 +1,33 @@
+# Build
+*.apk
+*.aab
+*.dex
+*.class
+*.iml
+.gradle/
+build/
+app/build/
+*.keystore
+*.jks
+
+# Config (machine-specific)
+local.properties
+
+# Temp
+*.png
+!app/src/main/res/mipmap-*/ic_launcher.png
+!app/src/main/res/mipmap-*/ic_launcher_round.png
+ui.xml
+u.xml
+xhs-matrix.log
+cloudcli-android-v*.apk
+
+# IDE
+.idea/
+*.swp
+
+# Docs dev artifacts (keep .md files, ignore screenshots/html)
+docs/*.png
+docs/*.html
+docs/*.xml
+docs/ref/
