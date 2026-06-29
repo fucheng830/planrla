@@ -9,12 +9,8 @@
     "nomad": "./bin.js"
   },
   "homepage": "https://nomad.ai",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/fucheng830/nomad.git"
-  },
   "bugs": {
-    "url": "https://github.com/fucheng830/nomad/issues"
+    "url": "https://nomad.ai/support"
   },
   "keywords": [
     "claude code",

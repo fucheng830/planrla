@@ -14,13 +14,13 @@
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/fucheng830/nomad/main/public/logo.svg" alt="nomad" width="64" height="64">
+  <img src="https://nomad.ai/public/logo.svg" alt="nomad" width="64" height="64">
   <h1>nomad</h1>
   <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, and <a href="https://geminicli.com/">Gemini-CLI</a>.<br>Use it locally or remotely to view your active projects and sessions from everywhere.</p>
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Documentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">Bug Reports</a> · <a href="https://github.com/fucheng830/nomad/blob/main/CONTRIBUTING.md">Contributing</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Documentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Bug Reports</a> · <a href="https://nomad.ai/docs">Contributing</a>
 </p>
 
 <p align="center">
@@ -40,13 +40,13 @@
 <tr>
 <td align="center">
 <h3>Desktop View</h3>
-<img src="https://raw.githubusercontent.com/fucheng830/nomad/main/public/screenshots/desktop-main.png" alt="Desktop Interface" width="400">
+<img src="https://nomad.ai/public/screenshots/desktop-main.png" alt="Desktop Interface" width="400">
 <br>
 <em>Main interface showing project overview and chat</em>
 </td>
 <td align="center">
 <h3>Mobile Experience</h3>
-<img src="https://raw.githubusercontent.com/fucheng830/nomad/main/public/screenshots/mobile-chat.png" alt="Mobile Interface" width="250">
+<img src="https://nomad.ai/public/screenshots/mobile-chat.png" alt="Mobile Interface" width="250">
 <br>
 <em>Responsive mobile design with touch navigation</em>
 </td>
@@ -54,7 +54,7 @@
 <tr>
 <td align="center" colspan="2">
 <h3>CLI Selection</h3>
-<img src="https://raw.githubusercontent.com/fucheng830/nomad/main/public/screenshots/cli-selection.png" alt="CLI Selection" width="400">
+<img src="https://nomad.ai/public/screenshots/cli-selection.png" alt="CLI Selection" width="400">
 <br>
 <em>Select between Claude Code, Gemini, Cursor CLI and Codex</em>
 </td>
@@ -214,8 +214,8 @@ Yes, for self-hosted. nomad reads from and writes to the same `~/.claude` config
 
 - **[Documentation](https://nomad.ai/docs)** — installation, configuration, features, and troubleshooting
 - **[Discord](https://discord.gg/buxwujPNRE)** — get help and connect with other users
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — bug reports and feature requests
-- **[Contributing Guide](https://github.com/fucheng830/nomad/blob/main/CONTRIBUTING.md)** — how to contribute to the project
+- **[Support](https://nomad.ai/support)** — bug reports and feature requests
+- **[Contributing Guide](https://nomad.ai/docs)** — how to contribute to the project
 
 ## License
 
@@ -238,7 +238,7 @@ nomad  - (https://nomad.ai).
 
 
 ### Sponsors
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

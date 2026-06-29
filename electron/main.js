@@ -27,6 +27,28 @@ function resolveAppIcon() {
   return fs.existsSync(iconPath) ? iconPath : undefined;
 }
 
+async function setupAutoUpdater() {
+  if (process.env.ELECTRON_DEV_URL) return;
+
+  try {
+    const { autoUpdater } = await import('electron-updater');
+    const updateFeedUrl = process.env.NOMAD_UPDATE_URL;
+
+    autoUpdater.autoDownload = false;
+    if (updateFeedUrl) {
+      autoUpdater.setFeedURL({ provider: 'generic', url: updateFeedUrl });
+    }
+
+    autoUpdater.on('error', (error) => console.error('[desktop:update] error:', error?.message || error));
+    autoUpdater.on('update-available', (info) => console.log('[desktop:update] available:', info.version));
+    autoUpdater.on('update-not-available', (info) => console.log('[desktop:update] current:', info.version));
+
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    console.error('[desktop:update] failed to initialize:', error?.message || error);
+  }
+}
+
 // ---- Cloud-account JWT (cc.brainmate.cc) persisted via safeStorage ----
 // Renderer calls window.cloudAuth.{getToken,setToken,removeToken} (see preload.cjs);
 // these handlers encrypt the token with the OS keychain and store the blob in userData,
@@ -129,6 +151,7 @@ app.whenReady().then(async () => {
   try {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
     createWindow();
+    await setupAutoUpdater();
   } catch (e) {
     console.error('[desktop] failed to start:', e);
     app.quit();

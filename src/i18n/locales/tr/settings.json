@@ -96,7 +96,8 @@
     "tasks": "Görevler",
     "notifications": "Bildirimler",
     "plugins": "Eklentiler",
-    "about": "Hakkında"
+    "about": "Hakkında",
+    "license": "License"
   },
   "notifications": {
     "title": "Bildirimler",

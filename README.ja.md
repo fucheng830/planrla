@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">ドキュメント</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">バグ報告</a> · <a href="CONTRIBUTING.md">コントリビュート</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">ドキュメント</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">バグ報告</a> · <a href="CONTRIBUTING.md">コントリビュート</a>
 </p>
 
 <p align="center">
@@ -218,7 +218,7 @@ nomad と nomad Hosted は、Claude Code の横に別物として存在するの
 
 - **[ドキュメント](https://nomad.ai/docs)** — インストール、設定、機能、トラブルシューティング
 - **[Discord](https://discord.gg/buxwujPNRE)** — ヘルプを得たり、ユーザー同士で交流したりできます
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — バグ報告と機能要望
+- **[Support](https://nomad.ai/support)** — バグ報告と機能要望
 - **[コントリビューションガイド](CONTRIBUTING.md)** — プロジェクトへの貢献方法
 
 ## ライセンス
@@ -242,7 +242,7 @@ All rights reserved.
 - **[TaskMaster AI](https://github.com/eyaltoledano/claude-task-master)** *(オプション)* - AI を活用したプロジェクト管理とタスク計画
 
 ## スポンサー
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

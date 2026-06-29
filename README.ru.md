@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Документация</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">Сообщить об ошибке</a> · <a href="CONTRIBUTING.md">Участие в разработке</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Документация</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Сообщить об ошибке</a> · <a href="CONTRIBUTING.md">Участие в разработке</a>
 </p>
 
 <p align="center">
@@ -226,7 +226,7 @@ nomad и nomad Hosted расширяют Claude Code, а не работают �
 
 - **[Документация](https://nomad.ai/docs)** — установка, настройка, возможности и устранение неполадок
 - **[Discord](https://discord.gg/buxwujPNRE)** — помощь и общение с другими пользователями
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — сообщения об ошибках и запросы новых функций
+- **[Support](https://nomad.ai/support)** — сообщения об ошибках и запросы новых функций
 - **[Руководство для контрибьюторов](CONTRIBUTING.md)** — как участвовать в развитии проекта
 
 ## Лицензия
@@ -250,7 +250,7 @@ GNU General Public License v3.0 - подробности в файле [LICENSE]
 
 
 ### Спонсоры
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

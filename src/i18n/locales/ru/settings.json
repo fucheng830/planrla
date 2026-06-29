@@ -96,7 +96,8 @@
     "tasks": "Задачи",
     "notifications": "Уведомления",
     "plugins": "Плагины",
-    "about": "О программе"
+    "about": "О программе",
+    "license": "License"
   },
   "notifications": {
     "title": "Уведомления",

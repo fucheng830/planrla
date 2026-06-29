@@ -2,7 +2,7 @@ import { Settings, ArrowUpCircle, Bug, AlertTriangle } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 
-const GITHUB_ISSUES_URL = 'https://github.com/fucheng830/nomad/issues/new';
+const GITHUB_ISSUES_URL = 'https://nomad.ai/support';
 
 const DISCORD_INVITE_URL = 'https://discord.gg/buxwujPNRE';
 
