@@ -115,7 +115,8 @@
     "browser": "Browser",
     "notifications": "Notifications",
     "plugins": "Plugins",
-    "about": "About"
+    "about": "About",
+    "license": "License"
   },
   "notifications": {
     "title": "Notifications",

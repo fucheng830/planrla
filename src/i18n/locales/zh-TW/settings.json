@@ -96,7 +96,8 @@
     "tasks": "任務",
     "notifications": "通知",
     "plugins": "外掛",
-    "about": "關於"
+    "about": "關於",
+    "license": "License"
   },
   "notifications": {
     "title": "通知",

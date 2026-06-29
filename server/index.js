@@ -55,6 +55,7 @@ import taskmasterRoutes from './routes/taskmaster.js';
 import mcpUtilsRoutes from './routes/mcp-utils.js';
 import commandsRoutes from './routes/commands.js';
 import settingsRoutes from './routes/settings.js';
+import licenseRoutes from './routes/license.js';
 import agentRoutes from './routes/agent.js';
 import projectModuleRoutes from './modules/projects/projects.routes.js';
 import userRoutes from './routes/user.js';
@@ -69,6 +70,7 @@ import { startEnabledPluginServers, stopAllPlugins, getPluginPort } from './util
 import { initializeDatabase, projectsDb, sessionsDb } from './modules/database/index.js';
 import { configureWebPush } from './services/vapid-keys.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
+import { enforceCommercialLicense } from './services/commercial-license.js';
 import { IS_PLATFORM } from './constants/config.js';
 import { c } from './utils/colors.js';
 
@@ -175,11 +177,48 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Public commercial update metadata endpoint. Set NOMAD_UPDATE_CHECK_URL to a
+// JSON endpoint returning { version, title, body, htmlUrl, publishedAt }.
+app.get('/api/version/latest', async (req, res) => {
+    if (!process.env.NOMAD_UPDATE_CHECK_URL) {
+        return res.json({ updateSourceConfigured: false });
+    }
+
+    try {
+        const response = await fetch(process.env.NOMAD_UPDATE_CHECK_URL, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+            return res.status(502).json({ error: 'Update source returned an error' });
+        }
+
+        const data = await response.json();
+        res.json({
+            updateSourceConfigured: true,
+            version: data.version || data.tag_name || null,
+            title: data.title || data.name || data.version || data.tag_name || null,
+            body: data.body || data.notes || '',
+            htmlUrl: data.htmlUrl || data.html_url || process.env.NOMAD_UPDATE_URL || '',
+            publishedAt: data.publishedAt || data.published_at || null,
+        });
+    } catch (error) {
+        console.error('Version check failed:', error);
+        res.status(502).json({ error: 'Failed to fetch update metadata' });
+    }
+});
+
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
 
 // Authentication routes (public)
 app.use('/api/auth', authRoutes);
+
+// Commercial license routes (protected, but always reachable before license enforcement)
+app.use('/api/license', authenticateToken, licenseRoutes);
+
+// Optional commercial license enforcement
+app.use('/api', enforceCommercialLicense);
 
 // Projects API Routes (protected)
 app.use('/api/projects', authenticateToken, projectModuleRoutes);

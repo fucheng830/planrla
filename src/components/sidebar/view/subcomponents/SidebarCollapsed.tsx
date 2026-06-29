@@ -2,7 +2,7 @@ import { Settings, Sparkles, PanelLeftOpen, Bug, AlertTriangle } from 'lucide-re
 import type { TFunction } from 'i18next';
 
 const DISCORD_INVITE_URL = 'https://discord.gg/buxwujPNRE';
-const GITHUB_ISSUES_URL = 'https://github.com/fucheng830/nomad/issues/new';
+const GITHUB_ISSUES_URL = 'https://nomad.ai/support';
 
 function DiscordIcon({ className }: { className?: string }) {
   return (

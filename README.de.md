@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Dokumentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">Fehler melden</a> · <a href="CONTRIBUTING.md">Mitwirken</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Dokumentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Fehler melden</a> · <a href="CONTRIBUTING.md">Mitwirken</a>
 </p>
 
 <p align="center">
@@ -226,7 +226,7 @@ Ja, bei Self-Hosted. nomad liest aus und schreibt in dieselbe `~/.claude`-Konfig
 
 - **[Dokumentation](https://nomad.ai/docs)** — Installation, Konfiguration, Funktionen und Fehlerbehebung
 - **[Discord](https://discord.gg/buxwujPNRE)** — Hilfe erhalten und mit anderen Nutzer:innen in Kontakt treten
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — Fehlerberichte und Feature-Anfragen
+- **[Support](https://nomad.ai/support)** — Fehlerberichte und Feature-Anfragen
 - **[Beitragsrichtlinien](CONTRIBUTING.md)** — So kannst du zum Projekt beitragen
 
 ## Lizenz
@@ -250,7 +250,7 @@ Alle Rechte vorbehalten.
 
 
 ### Sponsoren
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

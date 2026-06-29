@@ -4,8 +4,8 @@ Thanks for your interest in contributing to nomad! Before you start, please take
 
 ## Before You Start
 
-- **Search first.** Check [existing issues](https://github.com/fucheng830/nomad/issues) and [pull requests](https://github.com/fucheng830/nomad/pulls) to avoid duplicating work.
-- **Discuss first** for new features. Open an [issue](https://github.com/fucheng830/nomad/issues/new) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
+- **Search first.** Check [existing issues](https://nomad.ai/support) and [pull requests](https://nomad.ai/support) to avoid duplicating work.
+- **Discuss first** for new features. Open an [issue](https://nomad.ai/support) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
 - **Bug fixes are always welcome.** If you spot a bug, feel free to open a PR directly.
 
 ## Prerequisites

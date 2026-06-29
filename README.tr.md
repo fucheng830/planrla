@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Dokümantasyon</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">Sorun Bildir</a> · <a href="CONTRIBUTING.md">Katkıda Bulun</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Dokümantasyon</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Sorun Bildir</a> · <a href="CONTRIBUTING.md">Katkıda Bulun</a>
 </p>
 
 <p align="center">
@@ -225,7 +225,7 @@ Evet, kendin barındırdığında. nomad, Claude Code'un yerel olarak kullandı�
 
 - **[Dokümantasyon](https://nomad.ai/docs)** — kurulum, yapılandırma, özellikler ve sorun giderme
 - **[Discord](https://discord.gg/buxwujPNRE)** — yardım al ve diğer kullanıcılarla tanış
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — hata raporları ve özellik istekleri
+- **[Support](https://nomad.ai/support)** — hata raporları ve özellik istekleri
 - **[Katkı Rehberi](CONTRIBUTING.md)** — projeye nasıl katkıda bulunulur
 
 ## Lisans
@@ -249,7 +249,7 @@ nomad — (https://nomad.ai).
 
 
 ### Sponsorlar
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

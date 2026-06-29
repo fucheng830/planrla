@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">문서</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">버그 신고</a> · <a href="CONTRIBUTING.md">기여 안내</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">문서</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">버그 신고</a> · <a href="CONTRIBUTING.md">기여 안내</a>
 </p>
 
 <p align="center">
@@ -219,7 +219,7 @@ nomad와 nomad Hosted는 Claude Code를 확장하며 별도로 존재하지 않�
 
 - **[문서](https://nomad.ai/docs)** — 설치, 구성, 기능, 문제 해결 안내
 - **[Discord](https://discord.gg/buxwujPNRE)** — 도움 및 커뮤니티 참여
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — 버그 보고 및 기능 요청
+- **[Support](https://nomad.ai/support)** — 버그 보고 및 기능 요청
 - **[기여 안내](CONTRIBUTING.md)** — 프로젝트 참여 방법
 
 ## 라이선스
@@ -242,7 +242,7 @@ All rights reserved.
 - **[TaskMaster AI](https://github.com/eyaltoledano/claude-task-master)** *(선택사항)* - AI 기반 프로젝트 관리 및 작업 계획
 
 ### 스폰서
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

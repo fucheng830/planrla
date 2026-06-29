@@ -7,6 +7,7 @@ import SettingsSidebar from '../view/SettingsSidebar';
 import AgentsSettingsTab from '../view/tabs/agents-settings/AgentsSettingsTab';
 import AppearanceSettingsTab from '../view/tabs/AppearanceSettingsTab';
 import CredentialsSettingsTab from '../view/tabs/api-settings/CredentialsSettingsTab';
+import LicenseSettingsTab from '../view/tabs/LicenseSettingsTab';
 import VoiceSettingsTab from '../view/tabs/VoiceSettingsTab';
 import GitSettingsTab from '../view/tabs/git-settings/GitSettingsTab';
 import BrowserUseSettingsTab from '../view/tabs/browser-use-settings/BrowserUseSettingsTab';
@@ -157,6 +158,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
               )}
 
               {activeTab === 'api' && <CredentialsSettingsTab />}
+
+              {activeTab === 'license' && <LicenseSettingsTab />}
 
               {activeTab === 'voice' && <VoiceSettingsTab />}
 

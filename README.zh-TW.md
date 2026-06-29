@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">文件</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">Bug 回報</a> · <a href="CONTRIBUTING.md">貢獻指南</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">文件</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Bug 回報</a> · <a href="CONTRIBUTING.md">貢獻指南</a>
 </p>
 
 <p align="center">
@@ -219,7 +219,7 @@ nomad 與 nomad Hosted 是對 Claude Code 的擴充，而非旁觀 — MCP 伺�
 
 - **[文件](https://nomad.ai/docs)** — 安裝、設定、功能與疑難排解指南
 - **[Discord](https://discord.gg/buxwujPNRE)** — 取得協助並與社群交流
-- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — 回報 Bug 與建議功能
+- **[Support](https://nomad.ai/support)** — 回報 Bug 與建議功能
 - **[貢獻指南](CONTRIBUTING.md)** — 如何參與專案貢獻
 
 ## 授權條款
@@ -242,7 +242,7 @@ All rights reserved.
 - **[TaskMaster AI](https://github.com/eyaltoledano/claude-task-master)** *(選用)* — AI 驅動的專案管理與任務規劃
 
 ### 贊助商
-- [nomad](https://github.com/fucheng830/nomad)
+- [nomad](https://nomad.ai)
 ---
 
 <div align="center">

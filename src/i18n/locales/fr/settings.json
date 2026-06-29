@@ -96,7 +96,8 @@
     "tasks": "Tâches",
     "notifications": "Notifications",
     "plugins": "Plugins",
-    "about": "À propos"
+    "about": "À propos",
+    "license": "License"
   },
   "notifications": {
     "title": "Notifications",
