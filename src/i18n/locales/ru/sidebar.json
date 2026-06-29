@@ -20,7 +20,7 @@
     "runClaudeCli": "Запустите Claude CLI в каталоге проекта для начала работы"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "nomad",
     "subtitle": "Интерфейс AI помощника для программирования"
   },
   "sessions": {
@@ -68,12 +68,9 @@
     "delete": "Удалить",
     "rename": "Переименовать",
     "joinCommunity": "Присоединиться к сообществу",
-    "reportIssue": "Сообщить о проблеме",
-    "starOnGithub": "Звезда на GitHub"
+    "reportIssue": "Сообщить о проблеме"
   },
-  "branding": {
-    "openSource": "Открытый исходный код"
-  },
+  "branding": {},
   "status": {
     "active": "Активен",
     "inactive": "Неактивен",

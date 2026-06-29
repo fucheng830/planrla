@@ -105,6 +105,57 @@ export const getAllSessions = (project: Project): SessionWithProvider[] => {
   );
 };
 
+
+/**
+ * Minimal shape `partitionConversations` needs from a conversation list item.
+ * Kept structural (no React/i18n types) so the helper stays a pure, unit-testable
+ * function with zero rendering dependencies.
+ */
+export type ConversationPartitionItem = {
+  sessionId: string;
+  lastActivityTime: number;
+  completedAt?: number;
+};
+
+export type ConversationPartition<T> = {
+  completed: T[];
+  recent: T[];
+};
+
+/**
+ * Splits a newest-first list of conversations into a "Completed" group
+ * (sessions flagged as just-finished) and the remaining history.
+ *
+ * Completed items surface first so users can pick up finished work, and the
+ * group is rendered with explicit "Completed" copy to stay visually distinct
+ * from the "Running now" tab — which only lists sessions that are still
+ * processing. Completed items are ordered by completion freshness, falling
+ * back to last-activity time when completion metadata is missing.
+ */
+export const partitionConversations = <T extends ConversationPartitionItem>(
+  items: readonly T[],
+  completedSessions: ReadonlyMap<string, unknown>,
+): ConversationPartition<T> => {
+  const completed: T[] = [];
+  const recent: T[] = [];
+
+  for (const item of items) {
+    if (completedSessions.has(item.sessionId)) {
+      completed.push(item);
+    } else {
+      recent.push(item);
+    }
+  }
+
+  completed.sort((itemA, itemB) => {
+    const keyA = itemA.completedAt ?? itemA.lastActivityTime;
+    const keyB = itemB.completedAt ?? itemB.lastActivityTime;
+    return keyB - keyA;
+  });
+
+  return { completed, recent };
+};
+
 export const getProjectLastActivity = (project: Project): Date => {
   const sessions = getAllSessions(project);
   if (sessions.length === 0) {

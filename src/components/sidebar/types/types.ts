@@ -1,5 +1,5 @@
 import type { LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../types/app';
-import type { SessionActivityMap } from '../../../hooks/useSessionProtection';
+import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../hooks/useSessionProtection';
 
 export type ProjectSortOrder = 'name' | 'date';
 export type SidebarSearchMode = 'projects' | 'conversations' | 'running' | 'archived';
@@ -42,6 +42,7 @@ export type SidebarProps = {
   selectedProject: Project | null;
   selectedSession: ProjectSession | null;
   activeSessions: SessionActivityMap;
+  completedSessions: CompletedSessionNotificationMap;
   onProjectSelect: (project: Project) => void;
   onSessionSelect: (session: ProjectSession) => void;
   onNewSession: (project: Project) => void;

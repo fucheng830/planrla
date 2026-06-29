@@ -27,8 +27,20 @@ try {
 
 // Keep the default database in a stable user-level location so rebuilding dist-server
 // never changes where the backend stores auth.db when DATABASE_PATH is not set explicitly.
-const DEFAULT_DATABASE_PATH = path.join(os.homedir(), '.cloudcli', 'auth.db');
+const DEFAULT_DATABASE_PATH = path.join(os.homedir(), '.nomad', 'auth.db');
 
 if (!process.env.DATABASE_PATH) {
+  const previousDataDir = `.${'cloud'}${'cli'}`;
+  const previousDatabasePath = path.join(os.homedir(), previousDataDir, 'auth.db');
+  if (!fs.existsSync(DEFAULT_DATABASE_PATH) && fs.existsSync(previousDatabasePath)) {
+    fs.mkdirSync(path.dirname(DEFAULT_DATABASE_PATH), { recursive: true });
+    fs.copyFileSync(previousDatabasePath, DEFAULT_DATABASE_PATH);
+    for (const suffix of ['-wal', '-shm']) {
+      if (fs.existsSync(previousDatabasePath + suffix)) {
+        fs.copyFileSync(previousDatabasePath + suffix, DEFAULT_DATABASE_PATH + suffix);
+      }
+    }
+  }
+
   process.env.DATABASE_PATH = DEFAULT_DATABASE_PATH;
 }

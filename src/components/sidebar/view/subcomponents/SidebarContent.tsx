@@ -3,12 +3,13 @@ import { Activity, Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } f
 import type { TFunction } from 'i18next';
 
 import { ScrollArea } from '../../../../shared/view/ui';
+import type { CompletedSessionNotificationMap } from '../../../../hooks/useSessionProtection';
 import type { Project } from '../../../../types/app';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 import type { ConversationSearchResults, SearchProgress } from '../../hooks/useSidebarController';
 import type { ArchivedProjectListItem, ArchivedSessionListItem, SidebarSearchMode } from '../../types/types';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
-import { getAllSessions } from '../../utils/utils';
+import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 
 import SidebarFooter from './SidebarFooter';
 import SidebarHeader from './SidebarHeader';
@@ -46,6 +47,12 @@ type ArchivedSessionGroup = {
   isProjectArchived: boolean;
   sessions: ArchivedSessionListItem[];
   latestActivity: string | null;
+};
+
+type ConversationListItem = {
+  project: Project;
+  session: ReturnType<typeof getAllSessions>[number];
+  lastActivityTime: number;
 };
 
 /**
@@ -117,6 +124,7 @@ type SidebarContentProps = {
   isLoading: boolean;
   projects: Project[];
   runningSessionsCount: number;
+  completedSessionsCount: number;
   archivedProjects: ArchivedProjectListItem[];
   archivedSessions: ArchivedSessionListItem[];
   archivedSessionsCount: number;
@@ -148,6 +156,7 @@ type SidebarContentProps = {
   onShowVersionModal: () => void;
   onShowSettings: () => void;
   projectListProps: SidebarProjectListProps;
+  completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
 };
 
@@ -157,6 +166,7 @@ export default function SidebarContent({
   isLoading,
   projects,
   runningSessionsCount,
+  completedSessionsCount,
   archivedProjects,
   archivedSessions,
   archivedSessionsCount,
@@ -186,11 +196,21 @@ export default function SidebarContent({
   onShowVersionModal,
   onShowSettings,
   projectListProps,
+  completedSessions,
   t,
 }: SidebarContentProps) {
   const showConversationSearch = searchMode === 'conversations' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
+  const conversationListItems: ConversationListItem[] = projects
+    .flatMap((project) =>
+      getAllSessions(project).map((session) => ({
+        project,
+        session,
+        lastActivityTime: getSessionDate(session).getTime(),
+      })),
+    )
+    .sort((itemA, itemB) => itemB.lastActivityTime - itemA.lastActivityTime);
 
   return (
     <div
@@ -203,6 +223,7 @@ export default function SidebarContent({
         isLoading={isLoading}
         projectsCount={projects.length}
         runningSessionsCount={runningSessionsCount}
+        completedSessionsCount={completedSessionsCount}
         archivedSessionsCount={archivedSessionsCount}
         isArchivedSessionsLoading={isArchivedSessionsLoading}
         searchFilter={searchFilter}
@@ -314,6 +335,88 @@ export default function SidebarContent({
               ))}
             </div>
           ) : null
+        ) : searchMode === 'conversations' ? (
+          conversationListItems.length === 0 ? (
+            <div className="px-4 py-12 text-center md:py-8">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">
+                <MessageSquare className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="mb-2 text-base font-medium text-foreground md:mb-1">
+                {t('sessions.noSessions')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t('search.conversationsEmptyDescription', 'Completed conversations will appear here in newest-first order.')}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1 px-2">
+              <div className="flex items-center justify-between px-1 pb-1">
+                <p className="text-xs text-muted-foreground">
+                  {t('search.conversationsListCount', {
+                    count: conversationListItems.length,
+                    defaultValue: '{{count}} conversations',
+                  })}
+                </p>
+                {completedSessionsCount > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    {t('search.completedNoticeCount', {
+                      count: completedSessionsCount,
+                      defaultValue: '{{count}} new',
+                    })}
+                  </span>
+                )}
+              </div>
+              {conversationListItems.map(({ project, session }) => {
+                const isCompleted = completedSessions.has(session.id);
+                const isSelected = projectListProps.selectedSession?.id === session.id;
+                const isProcessing = projectListProps.activeSessions.has(session.id);
+                const sessionTitle = getSessionName(session, t);
+                const sessionDate = getSessionDate(session);
+                const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
+
+                return (
+                  <button
+                    key={`${project.projectId}-${session.id}`}
+                    className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                      isSelected
+                        ? 'border-primary/25 bg-primary/5'
+                        : isCompleted
+                          ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
+                          : 'border-transparent hover:border-border/60 hover:bg-accent/45'
+                    }`}
+                    onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <SessionProviderLogo provider={session.__provider} className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                        {sessionTitle}
+                      </span>
+                      {isCompleted && !isProcessing && (
+                        <span className="flex-shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
+                          {t('search.justCompleted', 'Done')}
+                        </span>
+                      )}
+                      {age && (
+                        <span className="flex-shrink-0 text-[11px] text-muted-foreground">
+                          {age}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex min-w-0 items-center gap-2 pl-5">
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {project.displayName}
+                      </span>
+                      {session.__provider !== 'claude' && (
+                        <span className="flex-shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase text-muted-foreground">
+                          {session.__provider}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
         ) : searchMode === 'running' ? (
           projectListProps.filteredProjects.length === 0 ? (
             <div className="px-4 py-12 text-center md:py-8">

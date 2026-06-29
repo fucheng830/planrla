@@ -4,7 +4,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { ServerEvent } from '../../../contexts/WebSocketContext';
 import { showCompletionTitleIndicator } from '../../../utils/pageTitleNotification';
 import { playChatCompletionSound, playNotificationSound } from '../../../utils/notificationSound';
-import type { MarkSessionIdle, MarkSessionProcessing } from '../../../hooks/useSessionProtection';
+import type { MarkSessionCompleted, MarkSessionIdle, MarkSessionProcessing } from '../../../hooks/useSessionProtection';
 import type { PendingPermissionRequest } from '../types/types';
 import type { ProjectSession, LLMProvider } from '../../../types/app';
 import type { SessionStore, NormalizedMessage } from '../../../stores/useSessionStore';
@@ -38,6 +38,7 @@ interface UseChatRealtimeHandlersArgs {
   statusCheckSentAtRef: MutableRefObject<Map<string, number>>;
   onSessionProcessing?: MarkSessionProcessing;
   onSessionIdle?: MarkSessionIdle;
+  onSessionCompleted?: MarkSessionCompleted;
   onWebSocketReconnect?: () => void;
   sessionStore: SessionStore;
 }
@@ -69,6 +70,7 @@ export function useChatRealtimeHandlers({
   statusCheckSentAtRef,
   onSessionProcessing,
   onSessionIdle,
+  onSessionCompleted,
   onWebSocketReconnect,
   sessionStore,
 }: UseChatRealtimeHandlersArgs) {
@@ -250,6 +252,7 @@ export function useChatRealtimeHandlers({
 
           // Celebrate only successful runs (failed runs end with success: false).
           if (msg.success !== false) {
+            onSessionCompleted?.(sid);
             showCompletionTitleIndicator();
             void playChatCompletionSound();
           }
@@ -342,6 +345,7 @@ export function useChatRealtimeHandlers({
     statusCheckSentAtRef,
     onSessionProcessing,
     onSessionIdle,
+    onSessionCompleted,
     onWebSocketReconnect,
     sessionStore,
   ]);

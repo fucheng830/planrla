@@ -1,11 +1,11 @@
-# Contributing to CloudCLI UI
+# Contributing to nomad
 
-Thanks for your interest in contributing to CloudCLI UI! Before you start, please take a moment to read through this guide.
+Thanks for your interest in contributing to nomad! Before you start, please take a moment to read through this guide.
 
 ## Before You Start
 
-- **Search first.** Check [existing issues](https://github.com/siteboon/claudecodeui/issues) and [pull requests](https://github.com/siteboon/claudecodeui/pulls) to avoid duplicating work.
-- **Discuss first** for new features. Open an [issue](https://github.com/siteboon/claudecodeui/issues/new) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
+- **Search first.** Check [existing issues](https://github.com/fucheng830/nomad/issues) and [pull requests](https://github.com/fucheng830/nomad/pulls) to avoid duplicating work.
+- **Discuss first** for new features. Open an [issue](https://github.com/fucheng830/nomad/issues/new) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
 - **Bug fixes are always welcome.** If you spot a bug, feel free to open a PR directly.
 
 ## Prerequisites
@@ -18,8 +18,8 @@ Thanks for your interest in contributing to CloudCLI UI! Before you start, pleas
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/<your-username>/claudecodeui.git
-   cd claudecodeui
+   git clone https://github.com/<your-username>/nomad.git
+   cd nomad
    ```
 3. Install dependencies:
    ```bash
@@ -37,7 +37,7 @@ Thanks for your interest in contributing to CloudCLI UI! Before you start, pleas
 ## Project Structure
 
 ```
-claudecodeui/
+nomad/
 ├── src/              # React frontend (Vite + Tailwind)
 │   ├── components/   # UI components
 │   ├── contexts/     # React context providers
@@ -153,4 +153,4 @@ This automatically:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [AGPL-3.0-or-later License](LICENSE), including the additional terms specified in Section 7 of the LICENSE file.
+By contributing, you agree that your contributions may be incorporated into the project under its proprietary terms.

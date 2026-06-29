@@ -1,5 +1,5 @@
-// Electron main process for CloudCLI Desktop (ESM — package.json is type:module).
-// Spawns the bundled CloudCLI server as a child using Electron's node ABI
+// Electron main process for nomad Desktop (ESM — package.json is type:module).
+// Spawns the bundled nomad server as a child using Electron's node ABI
 // (ELECTRON_RUN_AS_NODE) so native modules match, then loads the UI in a window.
 import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import { spawn } from 'node:child_process';
@@ -10,10 +10,22 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const APP_NAME = 'nomad';
+const APP_ID = 'cc.nomad.desktop';
 
 let mainWindow = null;
 let serverProc = null;
 let serverPort = 0;
+
+app.setName(APP_NAME);
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_ID);
+}
+
+function resolveAppIcon() {
+  const iconPath = path.join(__dirname, '..', 'public', 'logo-512.png');
+  return fs.existsSync(iconPath) ? iconPath : undefined;
+}
 
 // ---- Cloud-account JWT (cc.brainmate.cc) persisted via safeStorage ----
 // Renderer calls window.cloudAuth.{getToken,setToken,removeToken} (see preload.cjs);
@@ -73,10 +85,13 @@ function waitForReady(port, timeoutMs = 30000) {
 async function startServer() {
   serverPort = await findFreePort();
   const serverPath = path.join(__dirname, '..', 'dist-server', 'server', 'cli.js');
-  // Spawn the server with system node (native modules were built for system node ABI;
-  // electron-rebuild is deferred to packaging — see plan M5).
-  serverProc = spawn('node', [serverPath, 'start', '--port', String(serverPort)], {
-    env: { ...process.env, SERVER_PORT: String(serverPort) },
+  serverProc = spawn(process.execPath, [serverPath, 'start', '--port', String(serverPort)], {
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
+      SERVER_PORT: String(serverPort),
+    },
+    cwd: path.join(__dirname, '..'),
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -89,8 +104,10 @@ async function startServer() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    title: APP_NAME,
     width: 1280,
     height: 840,
+    icon: resolveAppIcon(),
     backgroundColor: '#0b1120',
     webPreferences: {
       contextIsolation: true,

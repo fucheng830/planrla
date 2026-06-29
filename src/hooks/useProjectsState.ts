@@ -11,7 +11,7 @@ import type {
   ProjectSession,
 } from '../types/app';
 
-import type { SessionActivityMap } from './useSessionProtection';
+import type { ClearSessionCompleted, CompletedSessionNotificationMap, SessionActivityMap } from './useSessionProtection';
 
 type UseProjectsStateArgs = {
   sessionId?: string;
@@ -20,6 +20,8 @@ type UseProjectsStateArgs = {
   subscribe: (listener: (event: ServerEvent) => void) => () => void;
   isMobile: boolean;
   activeSessions: SessionActivityMap;
+  completedSessions: CompletedSessionNotificationMap;
+  onCompletedSessionSeen: ClearSessionCompleted;
 };
 
 /**
@@ -348,6 +350,8 @@ export function useProjectsState({
   subscribe,
   isMobile,
   activeSessions,
+  completedSessions,
+  onCompletedSessionSeen,
 }: UseProjectsStateArgs) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -775,6 +779,7 @@ export function useProjectsState({
   const handleSessionSelect = useCallback(
     (session: ProjectSession) => {
       setSelectedSession(session);
+      onCompletedSessionSeen(session.id);
 
       if (activeTab === 'tasks' || activeTab === 'browser') {
         setActiveTab('chat');
@@ -795,7 +800,7 @@ export function useProjectsState({
 
       navigate(`/session/${session.id}`);
     },
-    [activeTab, isMobile, navigate, selectedProject?.projectId],
+    [activeTab, isMobile, navigate, onCompletedSessionSeen, selectedProject?.projectId],
   );
 
   const handleNewSession = useCallback(
@@ -945,6 +950,7 @@ export function useProjectsState({
       selectedProject,
       selectedSession,
       activeSessions,
+      completedSessions,
       onProjectSelect: handleProjectSelect,
       onSessionSelect: handleSessionSelect,
       onNewSession: handleNewSession,
@@ -971,6 +977,7 @@ export function useProjectsState({
       isLoadingProjects,
       isMobile,
       loadingProgress,
+      completedSessions,
       activeSessions,
       projects,
       settingsInitialTab,

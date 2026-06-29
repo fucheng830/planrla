@@ -20,7 +20,7 @@
     "runClaudeCli": "Führ Claude CLI in einem Projektverzeichnis aus, um zu beginnen"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "nomad",
     "subtitle": "KI-Programmierassistent-Oberfläche"
   },
   "sessions": {
@@ -68,12 +68,9 @@
     "delete": "Löschen",
     "rename": "Umbenennen",
     "joinCommunity": "Community beitreten",
-    "reportIssue": "Problem melden",
-    "starOnGithub": "Stern auf GitHub"
+    "reportIssue": "Problem melden"
   },
-  "branding": {
-    "openSource": "Open Source"
-  },
+  "branding": {},
   "status": {
     "active": "Aktiv",
     "inactive": "Inaktiv",

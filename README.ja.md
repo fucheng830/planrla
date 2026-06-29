@@ -1,18 +1,18 @@
 <div align="center">
-  <img src="public/logo.svg" alt="CloudCLI UI" width="64" height="64">
-  <h1>Cloud CLI（別名 Claude Code UI）</h1>
+  <img src="public/logo.svg" alt="nomad" width="64" height="64">
+  <h1>nomad</h1>
   <p><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>、<a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>、<a href="https://developers.openai.com/codex">Codex</a>、<a href="https://geminicli.com/">Gemini-CLI</a> のためのデスクトップ／モバイル UI。<br>ローカルでもリモートでも使え、アクティブなプロジェクトとセッションをどこからでも閲覧できます。</p>
 </div>
 
 <p align="center">
-  <a href="https://cloudcli.ai">CloudCLI Cloud</a> · <a href="https://cloudcli.ai/docs">ドキュメント</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/siteboon/claudecodeui/issues">バグ報告</a> · <a href="CONTRIBUTING.md">コントリビュート</a>
+  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">ドキュメント</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/fucheng830/nomad/issues">バグ報告</a> · <a href="CONTRIBUTING.md">コントリビュート</a>
 </p>
 
 <p align="center">
-  <a href="https://cloudcli.ai"><img src="https://img.shields.io/badge/☁️_CloudCLI_Cloud-Try_Now-0066FF?style=for-the-badge" alt="CloudCLI Cloud"></a>
+  <a href="https://nomad.ai"><img src="https://img.shields.io/badge/☁️_nomad_Cloud-Try_Now-0066FF?style=for-the-badge" alt="nomad Hosted"></a>
   <a href="https://discord.gg/buxwujPNRE"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord コミュニティに参加"></a>
   <br><br>
-  <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="siteboon%2Fclaudecodeui | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="fucheng830%2Fnomad | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </p>
 
 <div align="right"><i><a href="./README.md">English</a> · <a href="./README.ru.md">Русский</a> · <a href="./README.de.md">Deutsch</a> · <a href="./README.ko.md">한국어</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.zh-TW.md">繁體中文</a> · <b>日本語</b> · <a href="./README.tr.md">Türkçe</a></i></div>
@@ -60,43 +60,43 @@
 - **ファイルエクスプローラー** - シンタックスハイライトとライブ編集に対応したインタラクティブなファイルツリー
 - **Git エクスプローラー** - 変更の表示、ステージ、コミット。ブランチ切り替えも可能
 - **セッション管理** - 会話の再開、複数セッションの管理、履歴の追跡
-- **プラグインシステム** - カスタムプラグインで CloudCLI を拡張 — 新しいタブ、バックエンドサービス、連携を追加できます。[自分で構築する →](https://github.com/cloudcli-ai/cloudcli-plugin-starter)
+- **プラグインシステム** - カスタムプラグインで nomad を拡張 — 新しいタブ、バックエンドサービス、連携を追加できます。[自分で構築する →](https://github.com/nomad/nomad-plugin-starter)
 
 ## クイックスタート
 
-### CloudCLI Cloud（推奨）
+### nomad Hosted（推奨）
 
 最速で始める方法 — ローカルのセットアップは不要です。Web、モバイルアプリ、API、またはお気に入りの IDE からアクセスできる、フルマネージドでコンテナ化された開発環境を利用できます。
 
-**[CloudCLI Cloud を始める](https://cloudcli.ai)**
+**[nomad Hosted を始める](https://nomad.ai)**
 
-### セルフホスト（オープンソース）
+### セルフホスト
 
 #### npm
 
-**npx** で今すぐ CloudCLI UI を試せます（**Node.js** v22+ が必要）：
+**npx** で今すぐ nomad を試せます（**Node.js** v22+ が必要）：
 
 ```bash
-npx @cloudcli-ai/cloudcli
+npx nomad
 ```
 
 または、普段使いするなら **グローバル** にインストール：
 
 ```bash
-npm install -g @cloudcli-ai/cloudcli
-cloudcli
+npm install -g nomad
+nomad
 ```
 
 `http://localhost:3001` を開いてください — 既存のセッションは自動的に検出されます。
 
-より詳細な設定オプション、PM2、リモートサーバー設定などについては **[ドキュメントはこちら →](https://cloudcli.ai/docs)** を参照してください。
+より詳細な設定オプション、PM2、リモートサーバー設定などについては **[ドキュメントはこちら →](https://nomad.ai/docs)** を参照してください。
 
 #### Docker Sandboxes（実験的）
 
 ハイパーバイザーレベルの分離でエージェントをサンドボックスで実行します。デフォルトでは Claude Code が起動します。[`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/) が必要です。
 
 ```
-npx @cloudcli-ai/cloudcli@latest sandbox ~/my-project
+npx nomad@latest sandbox ~/my-project
 ```
 
 Claude Code、Codex、Gemini CLI に対応。詳細は[サンドボックスのドキュメント](docker/)をご覧ください。
@@ -105,13 +105,13 @@ Claude Code、Codex、Gemini CLI に対応。詳細は[サンドボックスの�
 
 ## どちらの選択肢が適していますか？
 
-CloudCLI UI は、CloudCLI Cloud を支えるオープンソースの UI レイヤーです。自分のマシンにセルフホストすることも、フルマネージドのクラウド環境、チーム機能、より深い統合を備えた CloudCLI Cloud を使うこともできます。
+nomad は、nomad Hosted を支える UI レイヤーです。自分のマシンにセルフホストすることも、フルマネージドのクラウド環境、チーム機能、より深い統合を備えた nomad Hosted を使うこともできます。
 
-| | CloudCLI UI（セルフホスト） | CloudCLI Cloud |
+| | nomad（セルフホスト） | nomad Hosted |
 |---|---|---|
 | **対象ユーザー** | 自分のマシン上でローカルの agent セッションに対してフル UI を使いたい開発者 | クラウド上で動く agents をどこからでも利用したいチーム／開発者 |
 | **アクセス方法** | ブラウザ（`[yourip]:port`） | ブラウザ、任意の IDE、REST API、n8n |
-| **セットアップ** | `npx @cloudcli-ai/cloudcli` | セットアップ不要 |
+| **セットアップ** | `npx nomad` | セットアップ不要 |
 | **マシンの稼働継続** | はい | いいえ |
 | **モバイルアクセス** | 同一ネットワーク内の任意のブラウザ | 任意のデバイス（ネイティブアプリも準備中） |
 | **利用可能なセッション** | `~/.claude` から全セッションを自動検出 | クラウド環境内の全セッション |
@@ -122,9 +122,9 @@ CloudCLI UI は、CloudCLI Cloud を支えるオープンソースの UI レイ�
 | **REST API** | はい | はい |
 | **n8n ノード** | いいえ | はい |
 | **チーム共有** | いいえ | はい |
-| **料金プラン** | 無料（オープンソース） | 月 $7〜 |
+| **料金プラン** | 利用可能 | 月 $7〜 |
 
-> どちらの選択肢でも、AI のサブスクリプション（Claude、Cursor など）はご自身のものを使用します — CloudCLI が提供するのは環境であり、AI そのものではありません。
+> どちらの選択肢でも、AI のサブスクリプション（Claude、Cursor など）はご自身のものを使用します — nomad が提供するのは環境であり、AI そのものではありません。
 
 ---
 
@@ -151,27 +151,27 @@ CloudCLI UI は、CloudCLI Cloud を支えるオープンソースの UI レイ�
 
 ## プラグイン
 
-CloudCLI にはプラグインシステムがあり、独自のフロントエンド UI と（必要に応じて）Node.js バックエンドを持つカスタムタブを追加できます。プラグインは **Settings > Plugins** から git リポジトリを直接指定してインストールするか、自作できます。
+nomad にはプラグインシステムがあり、独自のフロントエンド UI と（必要に応じて）Node.js バックエンドを持つカスタムタブを追加できます。プラグインは **Settings > Plugins** から git リポジトリを直接指定してインストールするか、自作できます。
 
 ### 利用可能なプラグイン
 
 | プラグイン | 説明 |
 |---|---|
-| **[Project Stats](https://github.com/cloudcli-ai/cloudcli-plugin-starter)** | 現在のプロジェクトについて、ファイル数、コード行数、ファイル種別の内訳、最大ファイル、最近変更されたファイルを表示 |
-| **[Web Terminal](https://github.com/cloudcli-ai/cloudcli-plugin-terminal)** | 複数タブに対応した本格的な xterm.js ターミナル |
-| **[Claude Watch](https://github.com/satsuki19980613/cloudcli-claude-watch)** | 長時間実行中の Claude Code セッションのハングを監視し、プロセス操作を提供 |
-| **[CloudCLI Scheduler](https://github.com/grostim/cloudcli-cron)** | ワークスペース単位のスケジュール済みプロンプトを作成し、Codex、Claude Code、Gemini CLI などのローカル CLI で実行 |
-| **[PRISM CloudCLI](https://github.com/jakeefr/cloudcli-plugin-prism)** | CloudCLI 内で Claude Code のセッション分析を行い、トークン消費の可視化も提供 |
-| **[Sessions](https://github.com/strykereye2/cloudcli-plugin-session-manager)** | アクティブな Claude Code セッションを表示、管理、終了 |
-| **[Token Cost Calculator](https://github.com/NightmareAway/cloudcli-plugin-token-cost-calculator)** | モデル価格とトークン使用量から API コストを計算し、モデル価格プリセットにも対応 |
-| **[Task Queue](https://github.com/TadMSTR/cloudcli-plugin-task-queue)** | エージェントタスクを表示、フィルタリング、起動するためのタスクキューダッシュボード |
+| **[Project Stats](https://github.com/nomad/nomad-plugin-starter)** | 現在のプロジェクトについて、ファイル数、コード行数、ファイル種別の内訳、最大ファイル、最近変更されたファイルを表示 |
+| **[Web Terminal](https://github.com/nomad/nomad-plugin-terminal)** | 複数タブに対応した本格的な xterm.js ターミナル |
+| **[Claude Watch](https://github.com/satsuki19980613/nomad-claude-watch)** | 長時間実行中の Claude Code セッションのハングを監視し、プロセス操作を提供 |
+| **[nomad Scheduler](https://github.com/grostim/nomad-cron)** | ワークスペース単位のスケジュール済みプロンプトを作成し、Codex、Claude Code、Gemini CLI などのローカル CLI で実行 |
+| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | nomad 内で Claude Code のセッション分析を行い、トークン消費の可視化も提供 |
+| **[Sessions](https://github.com/strykereye2/nomad-plugin-session-manager)** | アクティブな Claude Code セッションを表示、管理、終了 |
+| **[Token Cost Calculator](https://github.com/NightmareAway/nomad-plugin-token-cost-calculator)** | モデル価格とトークン使用量から API コストを計算し、モデル価格プリセットにも対応 |
+| **[Task Queue](https://github.com/TadMSTR/nomad-plugin-task-queue)** | エージェントタスクを表示、フィルタリング、起動するためのタスクキューダッシュボード |
 | **[GitHub Issues Board](https://github.com/szmidtpiotr/claude-github-issue)** | GitHub Issues 用の Kanban ボード。TaskMaster との双方向同期と /github-task CLI スキルの自動インストールに対応 |
 
 ### 自作する
 
-**[Plugin Starter Template →](https://github.com/cloudcli-ai/cloudcli-plugin-starter)** — このリポジトリを fork して独自プラグインを作れます。フロントエンド描画、ライブコンテキスト更新、バックエンドサーバーへの RPC 通信を含む動作例が入っています。
+**[Plugin Starter Template →](https://github.com/nomad/nomad-plugin-starter)** — このリポジトリを fork して独自プラグインを作れます。フロントエンド描画、ライブコンテキスト更新、バックエンドサーバーへの RPC 通信を含む動作例が入っています。
 
-**[プラグインのドキュメント →](https://cloudcli.ai/docs/plugin-overview)** — プラグイン API、manifest 形式、セキュリティモデルなどの完全ガイド。
+**[プラグインのドキュメント →](https://nomad.ai/docs/plugin-overview)** — プラグイン API、manifest 形式、セキュリティモデルなどの完全ガイド。
 
 ---
 ## FAQ
@@ -181,34 +181,34 @@ CloudCLI にはプラグインシステムがあり、独自のフロントエ�
 
 Claude Code Remote Control は、ローカル端末で既に動作しているセッションへメッセージを送れる仕組みです。マシンを起動したままにし、端末も開いたままにする必要があり、ネットワーク接続がない状態が約 10 分続くとセッションがタイムアウトします。
 
-CloudCLI UI と CloudCLI Cloud は、Claude Code の横に別物として存在するのではなく、Claude Code を拡張します — MCP サーバー、権限、設定、セッションは Claude Code がネイティブに使うものと完全に同一です。複製したり、別系統で管理したりしません。
+nomad と nomad Hosted は、Claude Code の横に別物として存在するのではなく、Claude Code を拡張します — MCP サーバー、権限、設定、セッションは Claude Code がネイティブに使うものと完全に同一です。複製したり、別系統で管理したりしません。
 
-- **すべてのセッションにアクセス** — CloudCLI UI は `~/.claude` フォルダのすべてのセッションを自動検出します。Remote Control は、Claude モバイルアプリで利用可能にするため、1つのアクティブセッションだけを公開します。
-- **設定はあなたの設定** — CloudCLI UI で変更した MCP サーバー、ツール権限、プロジェクト構成は、Claude Code の設定に直接書き込まれて即座に反映され、その逆（Claude Code での変更が UI に反映）も同様です。
+- **すべてのセッションにアクセス** — nomad は `~/.claude` フォルダのすべてのセッションを自動検出します。Remote Control は、Claude モバイルアプリで利用可能にするため、1つのアクティブセッションだけを公開します。
+- **設定はあなたの設定** — nomad で変更した MCP サーバー、ツール権限、プロジェクト構成は、Claude Code の設定に直接書き込まれて即座に反映され、その逆（Claude Code での変更が UI に反映）も同様です。
 - **対応エージェントがさらに充実** — Claude Code に加えて Cursor CLI、Codex、Gemini CLI にも対応しています。
 - **チャット窓だけではない完全な UI** — ファイルエクスプローラー、Git 統合、MCP 管理、シェル端末などがすべて組み込まれています。
-- **CloudCLI Cloud はクラウド上で稼働** — ノートパソコンを閉じてもエージェントは動き続けます。監視が要る端末も、スリープ防止も不要です。
+- **nomad Hosted はクラウド上で稼働** — ノートパソコンを閉じてもエージェントは動き続けます。監視が要る端末も、スリープ防止も不要です。
 
 </details>
 
 <details>
 <summary>AI のサブスクリプションは別途支払いが必要ですか？</summary>
 
-はい。CloudCLI は環境を提供するものであり、AI は含まれません。Claude、Cursor、Codex、または Gemini のサブスクリプションはご自身でご用意ください。CloudCLI Cloud のホスティング環境はそれに加えて月額 $7 から提供されます。
+はい。nomad は環境を提供するものであり、AI は含まれません。Claude、Cursor、Codex、または Gemini のサブスクリプションはご自身でご用意ください。nomad Hosted のホスティング環境はそれに加えて月額 $7 から提供されます。
 
 </details>
 
 <details>
-<summary>CloudCLI UI をスマホで使えますか？</summary>
+<summary>nomad をスマホで使えますか？</summary>
 
-はい。セルフホストの場合は、自身のマシンでサーバーを起動し、ネットワーク内のブラウザで `[yourip]:port` を開いてください。CloudCLI Cloud を使う場合は、任意のデバイスからアクセスできます。VPN もポートフォワーディングも不要で、セットアップも不要です。ネイティブアプリも開発中です。
+はい。セルフホストの場合は、自身のマシンでサーバーを起動し、ネットワーク内のブラウザで `[yourip]:port` を開いてください。nomad Hosted を使う場合は、任意のデバイスからアクセスできます。VPN もポートフォワーディングも不要で、セットアップも不要です。ネイティブアプリも開発中です。
 
 </details>
 
 <details>
 <summary>UI で加えた変更はローカルの Claude Code 設定に影響しますか？</summary>
 
-はい、セルフホストの場合です。CloudCLI UI は Claude Code がネイティブに使う `~/.claude` 設定を読み書きします。UI から追加した MCP サーバーは即座に Claude Code に反映され、その逆も同様です。
+はい、セルフホストの場合です。nomad は Claude Code がネイティブに使う `~/.claude` 設定を読み書きします。UI から追加した MCP サーバーは即座に Claude Code に反映され、その逆も同様です。
 
 </details>
 
@@ -216,16 +216,16 @@ CloudCLI UI と CloudCLI Cloud は、Claude Code の横に別物として存在�
 
 ## コミュニティとサポート
 
-- **[ドキュメント](https://cloudcli.ai/docs)** — インストール、設定、機能、トラブルシューティング
+- **[ドキュメント](https://nomad.ai/docs)** — インストール、設定、機能、トラブルシューティング
 - **[Discord](https://discord.gg/buxwujPNRE)** — ヘルプを得たり、ユーザー同士で交流したりできます
-- **[GitHub Issues](https://github.com/siteboon/claudecodeui/issues)** — バグ報告と機能要望
+- **[GitHub Issues](https://github.com/fucheng830/nomad/issues)** — バグ報告と機能要望
 - **[コントリビューションガイド](CONTRIBUTING.md)** — プロジェクトへの貢献方法
 
 ## ライセンス
 
 GNU General Public License v3.0 - 詳細は [LICENSE](LICENSE) ファイルを参照してください。
 
-このプロジェクトはオープンソースであり、GPL v3 ライセンスの下で無料で使用、修正、再配布できます。
+All rights reserved.
 
 ## 謝辞
 
@@ -242,7 +242,7 @@ GNU General Public License v3.0 - 詳細は [LICENSE](LICENSE) ファイルを�
 - **[TaskMaster AI](https://github.com/eyaltoledano/claude-task-master)** *(オプション)* - AI を活用したプロジェクト管理とタスク計画
 
 ## スポンサー
-- [Siteboon - AI を活用したウェブサイトビルダー](https://siteboon.ai)
+- [nomad](https://github.com/fucheng830/nomad)
 ---
 
 <div align="center">

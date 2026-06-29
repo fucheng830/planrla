@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cloud, Loader2, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Button, Input, Dialog, DialogContent, DialogTitle } from '../../shared/view/ui';
 import { useCloudAccount } from './context/CloudAccountContext';
 
@@ -38,11 +38,11 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0">
-        <DialogTitle>CloudCLI Cloud Account</DialogTitle>
+        <DialogTitle>nomad Account</DialogTitle>
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
-            <Cloud className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">{mode === 'signup' ? 'Create cloud account' : 'Sign in to cloud'}</h2>
+            <img src="/logo.svg" alt="nomad" className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">{mode === 'signup' ? 'Create nomad account' : 'Sign in to nomad'}</h2>
           </div>
           <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />

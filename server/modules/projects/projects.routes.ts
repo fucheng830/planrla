@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'node:fs';
 
 import { createProject, updateProjectDisplayName } from '@/modules/projects/services/project-management.service.js';
 import { startCloneProject } from '@/modules/projects/services/project-clone.service.js';
@@ -78,7 +79,15 @@ router.get(
       sessionsLimit,
       sessionsOffset,
     });
-    res.json(projects);
+    // Filter out projects whose on-disk path no longer exists. These are stale entries
+    // left in ~/.claude/projects after a repo was moved/deleted; the provider runtime
+    // cannot spawn claude in a non-existent cwd ("native binary ... failed to launch"),
+    // so hiding them avoids dead-end selections on every client (web + mobile).
+    const existing = projects.filter((p: Record<string, unknown>) => {
+      const pp = (p.path ?? p.fullPath ?? p.projectPath ?? p.project_path) as string | undefined;
+      return typeof pp === 'string' && pp.trim() !== '' && fs.existsSync(pp);
+    });
+    res.json(existing);
   }),
 );
 

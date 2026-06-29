@@ -20,7 +20,7 @@
     "runClaudeCli": "Run Claude CLI in a project directory to get started"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "nomad",
     "subtitle": "AI coding assistant interface"
   },
   "sessions": {
@@ -68,12 +68,9 @@
     "delete": "Delete",
     "rename": "Rename",
     "joinCommunity": "Join Community",
-    "reportIssue": "Report Issue",
-    "starOnGithub": "Star on GitHub"
+    "reportIssue": "Report Issue"
   },
-  "branding": {
-    "openSource": "Open Source"
-  },
+  "branding": {},
   "status": {
     "active": "Active",
     "inactive": "Inactive",
