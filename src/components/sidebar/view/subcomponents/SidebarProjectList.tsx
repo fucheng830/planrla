@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { TFunction } from 'i18next';
 
 import type { LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../../types/app';
-import type { SessionActivityMap } from '../../../../hooks/useSessionProtection';
+import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../../hooks/useSessionProtection';
 import type { MCPServerStatus, SessionWithProvider } from '../../types/types';
 
 import SidebarProjectItem from './SidebarProjectItem';
@@ -29,6 +29,7 @@ export type SidebarProjectListProps = {
   onLoadMoreSessions: (projectId: string) => void;
   loadingMoreProjects: Set<string>;
   activeSessions: SessionActivityMap;
+  completedSessions: CompletedSessionNotificationMap;
   forceExpanded?: boolean;
   isProjectStarred: (projectName: string) => boolean;
   onEditingNameChange: (value: string) => void;
@@ -75,6 +76,7 @@ export default function SidebarProjectList({
   onLoadMoreSessions,
   loadingMoreProjects,
   activeSessions,
+  completedSessions,
   forceExpanded = false,
   isProjectStarred,
   onEditingNameChange,
@@ -152,6 +154,7 @@ export default function SidebarProjectList({
               onDeleteSession={onDeleteSession}
               onLoadMoreSessions={onLoadMoreSessions}
               activeSessions={activeSessions}
+              completedSessions={completedSessions}
               onNewSession={onNewSession}
               onEditingSessionNameChange={onEditingSessionNameChange}
               onStartEditingSession={onStartEditingSession}

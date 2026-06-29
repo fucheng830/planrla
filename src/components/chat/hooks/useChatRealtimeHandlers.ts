@@ -250,9 +250,11 @@ export function useChatRealtimeHandlers({
             break;
           }
 
-          // Celebrate only successful runs (failed runs end with success: false).
-          if (msg.success !== false) {
-            onSessionCompleted?.(sid);
+          const terminalStatus = msg.success === false ? 'failed' : 'completed';
+          onSessionCompleted?.(sid, terminalStatus);
+
+          // Celebrate only successful runs.
+          if (terminalStatus === 'completed') {
             showCompletionTitleIndicator();
             void playChatCompletionSound();
           }
@@ -294,7 +296,11 @@ export function useChatRealtimeHandlers({
             }
           }
           if (sid) {
-            onSessionProcessing?.(sid);
+            onSessionProcessing?.(sid, {
+              taskStatus: 'waiting_for_input',
+              statusText: 'Waiting for permission',
+              canInterrupt: true,
+            });
           }
           break;
         }
@@ -316,6 +322,7 @@ export function useChatRealtimeHandlers({
             setTokenBudget(msg.tokenBudget as Record<string, unknown>);
           } else if (msg.text && sid) {
             onSessionProcessing?.(sid, {
+              taskStatus: 'running',
               statusText: msg.text as string,
               canInterrupt: msg.canInterrupt !== false,
             });

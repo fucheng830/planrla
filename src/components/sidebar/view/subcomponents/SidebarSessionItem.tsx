@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Check, Edit2, Loader2, Trash2, X } from 'lucide-react';
+import { AlertCircle, Check, Edit2, Loader2, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Badge, Button, Tooltip } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
+import type { SessionTaskStatus, SessionTaskStatusTone } from '../../../../shared/taskStatus';
+import { getSessionTaskStatusView } from '../../../../shared/taskStatus';
 import type { SessionWithProvider } from '../../types/types';
 import { createSessionViewModel } from '../../utils/utils';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
@@ -14,6 +16,7 @@ type SidebarSessionItemProps = {
   session: SessionWithProvider;
   selectedSession: ProjectSession | null;
   isProcessing: boolean;
+  taskStatus: SessionTaskStatus;
   currentTime: Date;
   editingSession: string | null;
   editingSessionName: string;
@@ -60,11 +63,46 @@ const formatCompactSessionAge = (dateString: string, currentTime: Date): string 
   return `${diffInDays}d`;
 };
 
+const taskStatusBadgeClassNames: Record<SessionTaskStatusTone, string> = {
+  muted: 'bg-muted text-muted-foreground',
+  info: 'bg-blue-500/10 text-blue-600 dark:text-blue-300',
+  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  danger: 'bg-red-500/10 text-red-700 dark:text-red-300',
+};
+
+function SessionTaskStatusBadge({ status }: { status: SessionTaskStatus }) {
+  const statusView = getSessionTaskStatusView(status);
+  if (statusView.status === 'idle') {
+    return null;
+  }
+
+  const Icon = statusView.status === 'running'
+    ? Loader2
+    : statusView.status === 'completed'
+      ? Check
+      : AlertCircle;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none',
+        taskStatusBadgeClassNames[statusView.tone],
+      )}
+      title={statusView.label}
+    >
+      <Icon className={cn('h-2.5 w-2.5', statusView.status === 'running' && 'animate-spin')} />
+      {statusView.label}
+    </span>
+  );
+}
+
 export default function SidebarSessionItem({
   project,
   session,
   selectedSession,
   isProcessing,
+  taskStatus,
   currentTime,
   editingSession,
   editingSessionName,
@@ -170,12 +208,13 @@ export default function SidebarSessionItem({
                   <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground">{compactSessionAge}</span>
                 )}
               </div>
-              <div className="mt-0.5 flex items-center">
+              <div className="mt-0.5 flex items-center gap-1.5">
                 {sessionView.messageCount > 0 && (
                   <Badge variant="secondary" className="px-1 py-0 text-xs">
                     {sessionView.messageCount}
                   </Badge>
                 )}
+                <SessionTaskStatusBadge status={taskStatus} />
               </div>
             </div>
 
@@ -244,8 +283,9 @@ export default function SidebarSessionItem({
                   </span>
                 )}
               </div>
-              <div className="mt-0.5 flex items-center">
+              <div className="mt-0.5 flex items-center gap-1.5">
                 {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
+                <SessionTaskStatusBadge status={taskStatus} />
               </div>
             </div>
           </div>

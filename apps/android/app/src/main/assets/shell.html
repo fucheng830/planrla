@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="stylesheet" href="xterm.css">
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#0B1120;overflow:hidden;overscroll-behavior:none;}
+  #t{width:100vw;height:100vh;}
+  *{-webkit-tap-highlight-color:transparent;}
+</style>
+<script src="xterm.js"></script>
+<script src="xterm-addon-fit.js"></script>
+</head>
+<body>
+<div id="t"></div>
+<script>
+(async function(){
+  var retries=0;
+  while(!window.SHELL_CONFIG && retries<500){ await new Promise(function(r){setTimeout(r,40);}); retries++; }
+  if(!window.SHELL_CONFIG){ document.body.innerHTML='<pre style="color:#94A3B8;padding:16px;font-family:monospace">Shell not configured.</pre>'; return; }
+  var c = window.SHELL_CONFIG;
+  var Term = window.Terminal;
+  var term = new Term({
+    cursorBlink: true,
+    fontFamily: 'Menlo,Consolas,monospace',
+    fontSize: 13,
+    lineHeight: 1.25,
+    theme: { background:'#0B1120', foreground:'#E2E8F0', cursor:'#94A3B8', selectionBackground:'#334155' },
+    allowProposedApi: true
+  });
+  var fit = new window.FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(document.getElementById('t'));
+  try{ fit.fit(); }catch(e){}
+  term.write('\x1b[36mConnecting to shell…\x1b[0m\r\n');
+  var ws;
+  try { ws = new WebSocket(c.wsUrl); } catch(e){ term.write('\x1b[31m[bad url]\x1b[0m\r\n'); }
+  var opened = false;
+  ws.onopen = function(){
+    opened = true;
+    term.clear();
+    ws.send(JSON.stringify({ type:'init', projectPath: c.projectPath || '.', provider:'plain-shell', isPlainShell: true, hasSession:false }));
+    ws.send(JSON.stringify({ type:'resize', cols: term.cols, rows: term.rows }));
+  };
+  ws.onmessage = function(e){
+    try{ var m = JSON.parse(e.data); if(m.type==='output') term.write(m.data); else if(m.type==='error') term.write('\r\n\x1b[31m'+m.message+'\x1b[0m'); }catch(_){}
+  };
+  ws.onclose = function(){ term.write('\r\n\x1b[33m[disconnected]\x1b[0m\r\n'); opened=false; };
+  ws.onerror = function(){ term.write('\r\n\x1b[31m[ws error]\x1b[0m\r\n'); };
+  term.onData(function(d){ if(opened && ws && ws.readyState===1) ws.send(JSON.stringify({ type:'input', data:d })); });
+  window.addEventListener('resize', function(){
+    try{ fit.fit(); if(opened&&ws&&ws.readyState===1) ws.send(JSON.stringify({type:'resize',cols:term.cols,rows:term.rows})); }catch(e){}
+  });
+  window.__term = term;
+})();
+</script>
+</body>
+</html>

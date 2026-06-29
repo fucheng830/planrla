@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 
 import { ScrollArea } from '../../../../shared/view/ui';
 import type { CompletedSessionNotificationMap } from '../../../../hooks/useSessionProtection';
+import { getSessionTaskStatusView } from '../../../../shared/taskStatus';
 import type { Project } from '../../../../types/app';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 import type { ConversationSearchResults, SearchProgress } from '../../hooks/useSidebarController';
@@ -367,9 +368,13 @@ export default function SidebarContent({
                 )}
               </div>
               {conversationListItems.map(({ project, session }) => {
-                const isCompleted = completedSessions.has(session.id);
+                const completion = completedSessions.get(session.id);
+                const isCompleted = Boolean(completion);
                 const isSelected = projectListProps.selectedSession?.id === session.id;
                 const isProcessing = projectListProps.activeSessions.has(session.id);
+                const statusView = getSessionTaskStatusView(
+                  projectListProps.activeSessions.get(session.id)?.taskStatus ?? completion?.status ?? 'idle',
+                );
                 const sessionTitle = getSessionName(session, t);
                 const sessionDate = getSessionDate(session);
                 const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
@@ -391,9 +396,9 @@ export default function SidebarContent({
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
                         {sessionTitle}
                       </span>
-                      {isCompleted && !isProcessing && (
+                      {statusView.status !== 'idle' && !isProcessing && (
                         <span className="flex-shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
-                          {t('search.justCompleted', 'Done')}
+                          {t(`taskStatus.${statusView.status}`, statusView.label)}
                         </span>
                       )}
                       {age && (

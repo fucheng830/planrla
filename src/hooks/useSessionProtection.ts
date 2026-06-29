@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
+import type { SessionTaskStatus } from '../shared/taskStatus';
 
 export interface SessionActivity {
+  taskStatus: Extract<SessionTaskStatus, 'running' | 'waiting_for_input'>;
   /** Provider-supplied status line; null renders the default activity label. */
   statusText: string | null;
   canInterrupt: boolean;
@@ -15,12 +17,14 @@ export type SessionActivityMap = ReadonlyMap<string, SessionActivity>;
 
 export interface CompletedSessionNotification {
   completedAt: number;
+  status: Extract<SessionTaskStatus, 'completed' | 'failed' | 'needs_attention'>;
 }
 
 export type CompletedSessionNotificationMap = ReadonlyMap<string, CompletedSessionNotification>;
 
 export type SessionActivitySnapshot = {
   sessionId: string;
+  taskStatus?: SessionTaskStatus;
   statusText?: string | null;
   canInterrupt?: boolean;
   startedAt?: number;
@@ -28,7 +32,11 @@ export type SessionActivitySnapshot = {
 
 export type MarkSessionProcessing = (
   sessionId?: string | null,
-  activity?: { statusText?: string | null; canInterrupt?: boolean },
+  activity?: {
+    taskStatus?: Extract<SessionTaskStatus, 'running' | 'waiting_for_input'>;
+    statusText?: string | null;
+    canInterrupt?: boolean;
+  },
 ) => void;
 
 export type MarkSessionIdle = (
@@ -36,7 +44,10 @@ export type MarkSessionIdle = (
   opts?: { ifStartedBefore?: number },
 ) => void;
 
-export type MarkSessionCompleted = (sessionId?: string | null) => void;
+export type MarkSessionCompleted = (
+  sessionId?: string | null,
+  status?: Extract<SessionTaskStatus, 'completed' | 'failed' | 'needs_attention'>,
+) => void;
 
 export type ClearSessionCompleted = (sessionId?: string | null) => void;
 
@@ -58,6 +69,7 @@ const sessionActivityMapsMatch = (
     const rightActivity = right.get(sessionId);
     if (
       !rightActivity
+      || leftActivity.taskStatus !== rightActivity.taskStatus
       || leftActivity.statusText !== rightActivity.statusText
       || leftActivity.canInterrupt !== rightActivity.canInterrupt
       || leftActivity.startedAt !== rightActivity.startedAt
@@ -103,6 +115,7 @@ export function useSessionProtection() {
     setProcessingSessions((prev) => {
       const existing = prev.get(sessionId);
       const next: SessionActivity = {
+        taskStatus: activity?.taskStatus ?? existing?.taskStatus ?? 'running',
         statusText:
           activity?.statusText !== undefined ? activity.statusText : existing?.statusText ?? null,
         canInterrupt: activity?.canInterrupt ?? existing?.canInterrupt ?? true,
@@ -111,6 +124,7 @@ export function useSessionProtection() {
 
       if (
         existing
+        && existing.taskStatus === next.taskStatus
         && existing.statusText === next.statusText
         && existing.canInterrupt === next.canInterrupt
       ) {
@@ -169,6 +183,10 @@ export function useSessionProtection() {
             : undefined;
 
         updated.set(sessionId, {
+          taskStatus:
+            snapshot.taskStatus === 'waiting_for_input'
+              ? 'waiting_for_input'
+              : existing?.taskStatus ?? 'running',
           statusText:
             snapshot.statusText !== undefined ? snapshot.statusText : existing?.statusText ?? null,
           canInterrupt: snapshot.canInterrupt ?? existing?.canInterrupt ?? true,
@@ -186,7 +204,7 @@ export function useSessionProtection() {
     });
   }, []);
 
-  const markSessionCompleted = useCallback<MarkSessionCompleted>((sessionId) => {
+  const markSessionCompleted = useCallback<MarkSessionCompleted>((sessionId, status = 'completed') => {
     if (!sessionId) {
       return;
     }
@@ -194,12 +212,12 @@ export function useSessionProtection() {
     setCompletedSessions((prev) => {
       const completedAt = Date.now();
       const existing = prev.get(sessionId);
-      if (existing && completedAt - existing.completedAt < 1000) {
+      if (existing && existing.status === status && completedAt - existing.completedAt < 1000) {
         return prev;
       }
 
       const updated = new Map(prev);
-      updated.set(sessionId, { completedAt });
+      updated.set(sessionId, { completedAt, status });
       return updated;
     });
   }, []);

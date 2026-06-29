@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Button } from '../../../../shared/view/ui';
-import type { SessionActivityMap } from '../../../../hooks/useSessionProtection';
+import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../../hooks/useSessionProtection';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
 import type { SessionWithProvider } from '../../types/types';
 
@@ -17,6 +17,7 @@ type SidebarProjectSessionsProps = {
   hasMoreSessions: boolean;
   isLoadingMoreSessions: boolean;
   activeSessions: SessionActivityMap;
+  completedSessions: CompletedSessionNotificationMap;
   currentTime: Date;
   editingSession: string | null;
   editingSessionName: string;
@@ -64,6 +65,7 @@ export default function SidebarProjectSessions({
   hasMoreSessions,
   isLoadingMoreSessions,
   activeSessions,
+  completedSessions,
   currentTime,
   editingSession,
   editingSessionName,
@@ -117,26 +119,32 @@ export default function SidebarProjectSessions({
         </div>
       ) : (
         <>
-          {sessions.map((session) => (
-            <SidebarSessionItem
-              key={session.id}
-              project={project}
-              session={session}
-              selectedSession={selectedSession}
-              isProcessing={activeSessions.has(session.id)}
-              currentTime={currentTime}
-              editingSession={editingSession}
-              editingSessionName={editingSessionName}
-              onEditingSessionNameChange={onEditingSessionNameChange}
-              onStartEditingSession={onStartEditingSession}
-              onCancelEditingSession={onCancelEditingSession}
-              onSaveEditingSession={onSaveEditingSession}
-              onProjectSelect={onProjectSelect}
-              onSessionSelect={onSessionSelect}
-              onDeleteSession={onDeleteSession}
-              t={t}
-            />
-          ))}
+          {sessions.map((session) => {
+            const activity = activeSessions.get(session.id);
+            const completion = completedSessions.get(session.id);
+
+            return (
+              <SidebarSessionItem
+                key={session.id}
+                project={project}
+                session={session}
+                selectedSession={selectedSession}
+                isProcessing={Boolean(activity)}
+                taskStatus={activity?.taskStatus ?? completion?.status ?? 'idle'}
+                currentTime={currentTime}
+                editingSession={editingSession}
+                editingSessionName={editingSessionName}
+                onEditingSessionNameChange={onEditingSessionNameChange}
+                onStartEditingSession={onStartEditingSession}
+                onCancelEditingSession={onCancelEditingSession}
+                onSaveEditingSession={onSaveEditingSession}
+                onProjectSelect={onProjectSelect}
+                onSessionSelect={onSessionSelect}
+                onDeleteSession={onDeleteSession}
+                t={t}
+              />
+            );
+          })}
 
           {hasMoreSessions && (
             <Button

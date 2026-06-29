@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { Button } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
-import type { SessionActivityMap } from '../../../../hooks/useSessionProtection';
+import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../../hooks/useSessionProtection';
 import type { MCPServerStatus, SessionWithProvider } from '../../types/types';
 import { getTaskIndicatorStatus } from '../../utils/utils';
 
@@ -45,6 +45,7 @@ type SidebarProjectItemProps = {
   ) => void;
   onLoadMoreSessions: (projectId: string) => void;
   activeSessions: SessionActivityMap;
+  completedSessions: CompletedSessionNotificationMap;
   onNewSession: (project: Project) => void;
   onEditingSessionNameChange: (value: string) => void;
   onStartEditingSession: (sessionId: string, initialName: string) => void;
@@ -87,6 +88,7 @@ export default function SidebarProjectItem({
   onDeleteSession,
   onLoadMoreSessions,
   activeSessions,
+  completedSessions,
   onNewSession,
   onEditingSessionNameChange,
   onStartEditingSession,
@@ -399,6 +401,7 @@ export default function SidebarProjectItem({
         hasMoreSessions={Boolean(project.sessionMeta?.hasMore)}
         isLoadingMoreSessions={isLoadingMoreSessions}
         activeSessions={activeSessions}
+        completedSessions={completedSessions}
         currentTime={currentTime}
         editingSession={editingSession}
         editingSessionName={editingSessionName}
