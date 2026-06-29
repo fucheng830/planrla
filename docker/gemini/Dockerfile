@@ -1,11 +1,11 @@
 FROM docker/sandbox-templates:gemini
 
 USER root
-COPY shared/install-cloudcli.sh /tmp/install-cloudcli.sh
-RUN chmod +x /tmp/install-cloudcli.sh && /tmp/install-cloudcli.sh
+COPY shared/install-nomad.sh /tmp/install-nomad.sh
+RUN chmod +x /tmp/install-nomad.sh && /tmp/install-nomad.sh
 
 USER agent
-RUN npm install -g @cloudcli-ai/cloudcli && cloudcli --version
+RUN npm install -g nomad && nomad --version
 
-COPY --chown=agent:agent shared/start-cloudcli.sh /home/agent/.cloudcli-start.sh
-RUN echo '. ~/.cloudcli-start.sh' >> /home/agent/.bashrc
+COPY --chown=agent:agent shared/start-nomad.sh /home/agent/.nomad-start.sh
+RUN echo '. ~/.nomad-start.sh' >> /home/agent/.bashrc

@@ -26,6 +26,7 @@ function Sidebar({
   selectedProject,
   selectedSession,
   activeSessions,
+  completedSessions,
   onProjectSelect,
   onSessionSelect,
   onNewSession,
@@ -44,8 +45,8 @@ function Sidebar({
   const { t } = useTranslation(['sidebar', 'common']);
   const { isPWA } = useDeviceSettings({ trackMobile: false });
   const { updateAvailable, restartRequired, latestVersion, currentVersion, releaseInfo, installMode } = useVersionCheck(
-    'siteboon',
-    'claudecodeui',
+    'fucheng830',
+    'nomad',
   );
   const { preferences, setPreference } = useUiPreferences();
   const { sidebarVisible } = preferences;
@@ -236,6 +237,7 @@ function Sidebar({
             isLoading={isLoading}
             projects={projects}
             runningSessionsCount={runningSessionsCount}
+            completedSessionsCount={completedSessions.size}
             archivedProjects={archivedProjects}
             archivedSessions={archivedSessions}
             archivedSessionsCount={archivedSessionsCount}
@@ -304,6 +306,7 @@ function Sidebar({
             onShowVersionModal={() => setShowVersionModal(true)}
             onShowSettings={onShowSettings}
             projectListProps={projectListProps}
+            completedSessions={completedSessions}
             t={t}
           />
         </>

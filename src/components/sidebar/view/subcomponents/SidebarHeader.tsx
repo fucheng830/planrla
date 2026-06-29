@@ -6,8 +6,6 @@ import { IS_PLATFORM } from '../../../../constants/config';
 import { cn } from '../../../../lib/utils';
 import type { SidebarSearchMode } from '../../types/types';
 
-import GitHubStarBadge from './GitHubStarBadge';
-
 const MOD_KEY =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
@@ -17,6 +15,7 @@ type SidebarHeaderProps = {
   isLoading: boolean;
   projectsCount: number;
   runningSessionsCount: number;
+  completedSessionsCount: number;
   archivedSessionsCount: number;
   isArchivedSessionsLoading: boolean;
   searchFilter: string;
@@ -37,6 +36,7 @@ export default function SidebarHeader({
   isLoading,
   projectsCount,
   runningSessionsCount,
+  completedSessionsCount,
   archivedSessionsCount,
   isArchivedSessionsLoading,
   searchFilter,
@@ -59,14 +59,11 @@ export default function SidebarHeader({
         ? t('search.runningPlaceholder', 'Search running sessions...')
         : t('projects.searchPlaceholder');
   const runningBadgeText = runningSessionsCount > 99 ? '99+' : String(runningSessionsCount);
+  const completedBadgeText = completedSessionsCount > 99 ? '99+' : String(completedSessionsCount);
 
   const LogoBlock = () => (
     <div className="flex min-w-0 items-center gap-2.5">
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary/90 shadow-sm">
-        <svg className="h-3.5 w-3.5 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
+      <img src="/logo.svg" alt="nomad" className="h-7 w-7 flex-shrink-0" />
       <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">{t('app.title')}</h1>
     </div>
   );
@@ -81,7 +78,7 @@ export default function SidebarHeader({
         <div className="flex items-center justify-between gap-2">
           {IS_PLATFORM ? (
             <a
-              href="https://cloudcli.ai/dashboard"
+              href="https://nomad.ai/dashboard"
               className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80"
               title={t('tooltips.viewEnvironments')}
             >
@@ -126,9 +123,6 @@ export default function SidebarHeader({
             </Button>
           </div>
         </div>
-
-        <GitHubStarBadge />
-
         {/* Search bar */}
         {showSearchTools && (
           <div className="mt-2.5 space-y-2">
@@ -157,7 +151,14 @@ export default function SidebarHeader({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <MessageSquare className="h-3 w-3" />
+                <span className="relative flex h-3 w-3 items-center justify-center">
+                  <MessageSquare className="h-3 w-3" />
+                  {completedSessionsCount > 0 && (
+                    <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
+                      {completedBadgeText}
+                    </span>
+                  )}
+                </span>
                 {t('search.modeConversations')}
               </button>
               <Tooltip content={t('search.runningTooltip', 'Running sessions')} position="top">
@@ -243,7 +244,7 @@ export default function SidebarHeader({
         <div className="flex items-center justify-between">
           {IS_PLATFORM ? (
             <a
-              href="https://cloudcli.ai/dashboard"
+              href="https://nomad.ai/dashboard"
               className="flex min-w-0 items-center gap-2.5 transition-opacity active:opacity-70"
               title={t('tooltips.viewEnvironments')}
             >
@@ -297,7 +298,14 @@ export default function SidebarHeader({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <MessageSquare className="h-3 w-3" />
+                <span className="relative flex h-3 w-3 items-center justify-center">
+                  <MessageSquare className="h-3 w-3" />
+                  {completedSessionsCount > 0 && (
+                    <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
+                      {completedBadgeText}
+                    </span>
+                  )}
+                </span>
                 {t('search.modeConversations')}
               </button>
               <Tooltip content={t('search.runningTooltip', 'Running sessions')} position="top">

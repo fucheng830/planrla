@@ -1,4 +1,4 @@
-// CloudCLI cloud-account client (cc.brainmate.cc). Completely separate from the local
+// nomad cloud-account client (cc.brainmate.cc). Completely separate from the local
 // app's utils/api.js — different origin (absolute URL), different token (cloud JWT stored
 // in safeStorage), never mixed with the local server's auth-token. Used for the commercial
 // "remote access" feature; M3 (login/account) + M4 (device tokens for relay).

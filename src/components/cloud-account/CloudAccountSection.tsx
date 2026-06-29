@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cloud, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Badge, Button } from '../../shared/view/ui';
 import { useCloudAccount } from './context/CloudAccountContext';
 import CloudLoginModal from './CloudLoginModal';
@@ -11,11 +11,11 @@ export default function CloudAccountSection() {
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <Cloud className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Cloud Account</h3>
+        <img src="/logo.svg" alt="nomad" className="h-5 w-5" />
+        <h3 className="text-lg font-semibold">nomad Account</h3>
       </div>
       <p className="mb-3 text-sm text-muted-foreground">
-        Connect your CloudCLI cloud account (cc.brainmate.cc) to enable remote access from the phone app.
+        Connect your nomad account (cc.brainmate.cc) to enable remote access from the phone app.
       </p>
 
       {loading ? (
@@ -24,7 +24,7 @@ export default function CloudAccountSection() {
         <div className="flex items-center justify-between rounded-md border p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Cloud className="h-4 w-4" />
+              <img src="/logo.svg" alt="nomad" className="h-5 w-5" />
             </div>
             <div>
               <div className="text-sm font-medium">{user.email}</div>
@@ -41,8 +41,8 @@ export default function CloudAccountSection() {
         </div>
       ) : (
         <Button onClick={() => setOpen(true)}>
-          <Cloud className="mr-1 h-4 w-4" />
-          Connect cloud account
+          <img src="/logo.svg" alt="nomad" className="mr-1 h-4 w-4" />
+          Connect nomad account
         </Button>
       )}
 

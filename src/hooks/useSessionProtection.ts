@@ -13,6 +13,12 @@ export interface SessionActivity {
 
 export type SessionActivityMap = ReadonlyMap<string, SessionActivity>;
 
+export interface CompletedSessionNotification {
+  completedAt: number;
+}
+
+export type CompletedSessionNotificationMap = ReadonlyMap<string, CompletedSessionNotification>;
+
 export type SessionActivitySnapshot = {
   sessionId: string;
   statusText?: string | null;
@@ -29,6 +35,10 @@ export type MarkSessionIdle = (
   sessionId?: string | null,
   opts?: { ifStartedBefore?: number },
 ) => void;
+
+export type MarkSessionCompleted = (sessionId?: string | null) => void;
+
+export type ClearSessionCompleted = (sessionId?: string | null) => void;
 
 export type SyncProcessingSessions = (
   sessions: readonly SessionActivitySnapshot[],
@@ -71,11 +81,24 @@ export function useSessionProtection() {
   const [processingSessions, setProcessingSessions] = useState<Map<string, SessionActivity>>(
     new Map(),
   );
+  const [completedSessions, setCompletedSessions] = useState<Map<string, CompletedSessionNotification>>(
+    new Map(),
+  );
 
   const markSessionProcessing = useCallback<MarkSessionProcessing>((sessionId, activity) => {
     if (!sessionId) {
       return;
     }
+
+    setCompletedSessions((prev) => {
+      if (!prev.has(sessionId)) {
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.delete(sessionId);
+      return updated;
+    });
 
     setProcessingSessions((prev) => {
       const existing = prev.get(sessionId);
@@ -163,10 +186,47 @@ export function useSessionProtection() {
     });
   }, []);
 
+  const markSessionCompleted = useCallback<MarkSessionCompleted>((sessionId) => {
+    if (!sessionId) {
+      return;
+    }
+
+    setCompletedSessions((prev) => {
+      const completedAt = Date.now();
+      const existing = prev.get(sessionId);
+      if (existing && completedAt - existing.completedAt < 1000) {
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.set(sessionId, { completedAt });
+      return updated;
+    });
+  }, []);
+
+  const clearSessionCompleted = useCallback<ClearSessionCompleted>((sessionId) => {
+    if (!sessionId) {
+      return;
+    }
+
+    setCompletedSessions((prev) => {
+      if (!prev.has(sessionId)) {
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.delete(sessionId);
+      return updated;
+    });
+  }, []);
+
   return {
     processingSessions,
+    completedSessions,
     markSessionProcessing,
     markSessionIdle,
+    markSessionCompleted,
+    clearSessionCompleted,
     syncProcessingSessions,
   };
 }

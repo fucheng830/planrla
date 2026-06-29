@@ -55,8 +55,11 @@ function AppContentInner() {
 
   const {
     processingSessions,
+    completedSessions,
     markSessionProcessing,
     markSessionIdle,
+    markSessionCompleted,
+    clearSessionCompleted,
     syncProcessingSessions,
   } = useSessionProtection();
 
@@ -82,6 +85,8 @@ function AppContentInner() {
     subscribe,
     isMobile,
     activeSessions: processingSessions,
+    completedSessions,
+    onCompletedSessionSeen: clearSessionCompleted,
   });
 
   const refreshRunningSessions = useCallback(async () => {
@@ -239,6 +244,7 @@ function AppContentInner() {
           onInputFocusChange={setIsInputFocused}
           onSessionProcessing={markSessionProcessing}
           onSessionIdle={markSessionIdle}
+          onSessionCompleted={markSessionCompleted}
           processingSessions={processingSessions}
           onNavigateToSession={(targetSessionId: string, options) =>
             navigate(`/session/${targetSessionId}`, { replace: Boolean(options?.replace) })

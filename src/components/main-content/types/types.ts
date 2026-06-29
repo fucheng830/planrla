@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { AppTab, Project, ProjectSession } from '../../../types/app';
 import type {
+  MarkSessionCompleted,
   MarkSessionIdle,
   MarkSessionProcessing,
   SessionActivityMap,
@@ -51,6 +52,7 @@ export type MainContentProps = {
   onInputFocusChange: (focused: boolean) => void;
   onSessionProcessing: MarkSessionProcessing;
   onSessionIdle: MarkSessionIdle;
+  onSessionCompleted: MarkSessionCompleted;
   processingSessions: SessionActivityMap;
   onNavigateToSession: (targetSessionId: string, options?: SessionNavigationOptions) => void;
   onSessionEstablished: (sessionId: string, context: SessionEstablishedContext) => void;

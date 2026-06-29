@@ -20,7 +20,7 @@
     "runClaudeCli": "Başlamak için bir proje dizininde Claude CLI çalıştır"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "nomad",
     "subtitle": "AI kodlama asistanı arayüzü"
   },
   "sessions": {
@@ -68,12 +68,9 @@
     "delete": "Sil",
     "rename": "Yeniden Adlandır",
     "joinCommunity": "Topluluğa Katıl",
-    "reportIssue": "Sorun Bildir",
-    "starOnGithub": "GitHub'da Yıldızla"
+    "reportIssue": "Sorun Bildir"
   },
-  "branding": {
-    "openSource": "Açık Kaynak"
-  },
+  "branding": {},
   "status": {
     "active": "Aktif",
     "inactive": "Pasif",

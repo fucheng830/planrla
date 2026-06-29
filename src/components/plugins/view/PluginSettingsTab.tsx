@@ -25,14 +25,14 @@ import type { Plugin } from '../../../contexts/PluginsContext';
 
 import PluginIcon from './PluginIcon';
 
-const STARTER_PLUGIN_URL = 'https://github.com/cloudcli-ai/cloudcli-plugin-starter';
-const TERMINAL_PLUGIN_URL = 'https://github.com/cloudcli-ai/cloudcli-plugin-terminal';
-const SCHEDULED_PROMPT_PLUGIN_URL = 'https://github.com/grostim/cloudcli-cron';
-const CLAUDE_WATCH_PLUGIN_URL = 'https://github.com/satsuki19980613/cloudcli-claude-watch';
-const PRISM_CLOUDCLI_PLUGIN_URL = 'https://github.com/jakeefr/cloudcli-plugin-prism';
-const SESSION_MANAGER_PLUGIN_URL = 'https://github.com/strykereye2/cloudcli-plugin-session-manager';
-const TOKEN_COST_CALCULATOR_PLUGIN_URL = 'https://github.com/NightmareAway/cloudcli-plugin-token-cost-calculator';
-const TASK_QUEUE_PLUGIN_URL = 'https://github.com/TadMSTR/cloudcli-plugin-task-queue';
+const STARTER_PLUGIN_URL = 'https://github.com/nomad/nomad-plugin-starter';
+const TERMINAL_PLUGIN_URL = 'https://github.com/nomad/nomad-plugin-terminal';
+const SCHEDULED_PROMPT_PLUGIN_URL = 'https://github.com/grostim/nomad-cron';
+const CLAUDE_WATCH_PLUGIN_URL = 'https://github.com/satsuki19980613/nomad-claude-watch';
+const PRISM_NOMAD_PLUGIN_URL = 'https://github.com/jakeefr/nomad-plugin-prism';
+const SESSION_MANAGER_PLUGIN_URL = 'https://github.com/strykereye2/nomad-plugin-session-manager';
+const TOKEN_COST_CALCULATOR_PLUGIN_URL = 'https://github.com/NightmareAway/nomad-plugin-token-cost-calculator';
+const TASK_QUEUE_PLUGIN_URL = 'https://github.com/TadMSTR/nomad-plugin-task-queue';
 const GITHUB_ISSUES_BOARD_PLUGIN_URL = 'https://github.com/szmidtpiotr/claude-github-issue';
 
 type PluginRecommendation = {
@@ -65,10 +65,10 @@ const OFFICIAL_PLUGIN_RECOMMENDATIONS: PluginRecommendation[] = [
 
 const UNOFFICIAL_PLUGIN_RECOMMENDATIONS: PluginRecommendation[] = [
   {
-    id: 'cloudcli-claude-watch',
+    id: 'nomad-claude-watch',
     translationKey: 'claudeWatchPlugin',
     repoUrl: CLAUDE_WATCH_PLUGIN_URL,
-    installedNames: ['cloudcli-claude-watch'],
+    installedNames: ['nomad-claude-watch'],
     icon: Activity,
     source: 'unofficial',
   },
@@ -82,8 +82,8 @@ const UNOFFICIAL_PLUGIN_RECOMMENDATIONS: PluginRecommendation[] = [
   },
   {
     id: 'prism',
-    translationKey: 'prismCloudCLI',
-    repoUrl: PRISM_CLOUDCLI_PLUGIN_URL,
+    translationKey: 'prismnomad',
+    repoUrl: PRISM_NOMAD_PLUGIN_URL,
     installedNames: ['prism'],
     icon: Activity,
     source: 'unofficial',
@@ -661,7 +661,7 @@ export default function PluginSettingsTab() {
         </a>
         <span className="text-muted-foreground/20">·</span>
         <a
-          href="https://cloudcli.ai/docs/plugin-overview"
+          href="https://nomad.ai/docs/plugin-overview"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 transition-colors hover:text-foreground"

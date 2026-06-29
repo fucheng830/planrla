@@ -260,7 +260,7 @@ export async function queryCodex(command, options = {}, ws) {
       model: resolvedModel
     };
 
-    // Start or resume thread
+    // Start or resume thread (SDK ≥0.142.3 reads 0.142.x rollouts natively).
     if (sessionId) {
       thread = codex.resumeThread(sessionId, threadOptions);
     } else {
