@@ -31,7 +31,11 @@ async function setupAutoUpdater() {
   if (process.env.ELECTRON_DEV_URL) return;
 
   try {
-    const { autoUpdater } = await import('electron-updater');
+    const updaterMod = await import('electron-updater');
+    // CJS package re-exported via dynamic import: autoUpdater may live on the
+    // namespace or under .default depending on the bundler/ESM interop layer.
+    const autoUpdater = updaterMod.autoUpdater || updaterMod.default?.autoUpdater;
+    if (!autoUpdater) throw new Error('electron-updater did not export autoUpdater');
     const updateFeedUrl = process.env.NOMAD_UPDATE_URL;
 
     autoUpdater.autoDownload = false;
@@ -107,16 +111,22 @@ function waitForReady(port, timeoutMs = 30000) {
 async function startServer() {
   serverPort = await findFreePort();
   const serverPath = path.join(__dirname, '..', 'dist-server', 'server', 'cli.js');
+  // Spawn cwd MUST be a real filesystem directory. When the app runs from
+  // app.asar, `path.join(__dirname, '..')` resolves to `.../app.asar`, which is
+  // a file, not a directory — Windows CreateProcess fails to use it as a cwd,
+  // the child never starts, and (without an 'error' handler) we'd silently hit
+  // waitForReady's 30s timeout. process.resourcesPath is always a real dir.
   serverProc = spawn(process.execPath, [serverPath, 'start', '--port', String(serverPort)], {
     env: {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       SERVER_PORT: String(serverPort),
     },
-    cwd: path.join(__dirname, '..'),
+    cwd: process.resourcesPath,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
+  serverProc.on('error', (e) => console.error('[server] spawn error:', e?.message || e));
   serverProc.stdout.on('data', (d) => console.log(`[server] ${d.toString().trim()}`));
   serverProc.stderr.on('data', (d) => console.error(`[server] ${d.toString().trim()}`));
   serverProc.on('exit', (code) => console.log(`[server] exited code=${code}`));
