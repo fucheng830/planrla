@@ -1,4 +1,4 @@
-package cc.nomad.android
+package cc.planrla.android
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -17,12 +17,12 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import cc.nomad.android.data.TokenHolder
-import cc.nomad.android.data.TokenStore
-import cc.nomad.android.ui.App
-import cc.nomad.android.ui.ChatScreen
-import cc.nomad.android.ui.NomadTheme
-import cc.nomad.android.ui.ConnectScreen
+import cc.planrla.android.data.TokenHolder
+import cc.planrla.android.data.TokenStore
+import cc.planrla.android.ui.App
+import cc.planrla.android.ui.ChatScreen
+import cc.planrla.android.ui.NomadTheme
+import cc.planrla.android.ui.ConnectScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlinx.coroutines.launch
@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     companion object {
-        const val CHANNEL_RUN = "nomad_run"
+        const val CHANNEL_RUN = "planrla_run"
     }
 
     /** Tracks process-wide foreground state into App.isForeground so ViewModels can decide
@@ -56,9 +56,9 @@ class MainActivity : ComponentActivity() {
 
     private fun checkForUpdates() {
         kotlinx.coroutines.MainScope().launch(kotlinx.coroutines.Dispatchers.IO) {
-            val checker = cc.nomad.android.data.UpdateChecker(applicationContext)
-            val current = cc.nomad.android.BuildConfig.VERSION_NAME
-            val repo = cc.nomad.android.BuildConfig.UPDATE_REPO
+            val checker = cc.planrla.android.data.UpdateChecker(applicationContext)
+            val current = cc.planrla.android.BuildConfig.VERSION_NAME
+            val repo = cc.planrla.android.BuildConfig.UPDATE_REPO
             val update = checker.checkForUpdate(current, repo) ?: return@launch
             // Use Android system AlertDialog (no AppCompat theme needed) instead of androidx.appcompat
             withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -142,7 +142,7 @@ fun NomadNav() {
                     }
                 },
                 onSwitchDevice = {
-                    // Switching devices = connecting to a different nomad instance; the old
+                    // Switching devices = connecting to a different planrla instance; the old
                     // session/project context is invalid there, so drop it and start fresh.
                     nav.navigate("chat/new") {
                         popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { inclusive = true }

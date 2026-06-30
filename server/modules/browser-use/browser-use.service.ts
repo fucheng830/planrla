@@ -78,9 +78,9 @@ const DEFAULT_SETTINGS: BrowserUseSettings = {
   enabled: false,
 };
 const AGENT_OWNER_ID = 'agent';
-const PROFILE_ROOT = path.join(os.homedir(), '.nomad', 'browser-use', 'profiles');
-const MCP_SERVER_NAME = 'nomad-browser';
-const LEGACY_MCP_SERVER_NAMES = ['nomad-browser-use'];
+const PROFILE_ROOT = path.join(os.homedir(), '.planrla', 'browser-use', 'profiles');
+const MCP_SERVER_NAME = 'planrla-browser';
+const LEGACY_MCP_SERVER_NAMES = ['planrla-browser-use'];
 const RUNTIME_READINESS_CACHE_TTL_MS = 30_000;
 
 function getRuntime(): BrowserUseRuntime {
@@ -158,7 +158,7 @@ function getMcpCommand(): { command: string; args: string[] } {
   }
 
   return {
-    command: 'nomad',
+    command: 'planrla',
     args: ['browser-use-mcp'],
   };
 }
@@ -287,7 +287,7 @@ function runCommand(command: string, args: string[]): Promise<void> {
 function formatInstallError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('sudo') && message.includes('password')) {
-    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where nomad runs, then try again.';
+    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where Planrla runs, then try again.';
   }
   return message || 'Failed to install Browser runtime.';
 }

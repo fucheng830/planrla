@@ -1,4 +1,4 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -42,7 +42,7 @@ data class CommandListResponse(
     val count: Int? = null,
 )
 
-/** nomad WS/REST NormalizedMessage envelope (server/shared/types.ts). */
+/** planrla WS/REST NormalizedMessage envelope (server/shared/types.ts). */
 @Serializable
 data class NormalizedMessage(
     val id: String? = null,

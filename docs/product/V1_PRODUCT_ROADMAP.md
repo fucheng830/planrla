@@ -1,8 +1,8 @@
-# nomad v1 产品迭代路线图
+# Planrla v1 产品迭代路线图
 
 ## 背景
 
-当前项目已经完成 MVP 阶段的核心目标：桌面端、Web UI、后端服务、AI Provider、商业授权和 Electron 分发能力已经基本跑通。下一阶段的目标不再只是“能用”，而是让 nomad 成为一个清晰、稳定、高性能、可扩展的商业级 AI Agent 工作台。
+当前项目已经完成 MVP 阶段的核心目标：桌面端、Web UI、后端服务、AI Provider、商业授权和 Electron 分发能力已经基本跑通。下一阶段的目标不再只是“能用”，而是让 Planrla 成为一个清晰、稳定、高性能、可扩展的商业级 AI Agent 工作台。
 
 同时，Android 端不应继续作为割裂项目单独演进。建议将 Android 客户端纳入当前工作区，形成统一产品、统一接口、统一发布节奏的一体化研发模式。
 
@@ -170,7 +170,7 @@ docs/
 
 ## Milestone 4：Android 一体化
 
-目标：Android 成为 nomad 产品的一等客户端，而不是附属项目。
+目标：Android 成为 Planrla 产品的一等客户端，而不是附属项目。
 
 ### 需求
 

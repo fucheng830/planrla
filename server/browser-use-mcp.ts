@@ -302,7 +302,7 @@ async function handleMessage(message: JsonRpcRequest) {
     return {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {} },
-      serverInfo: { name: 'nomad-browser', version: '1.0.0' },
+      serverInfo: { name: 'planrla-browser', version: '1.0.0' },
     };
   }
 

@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
-/** Full interactive terminal: WebView running xterm.js, talking to nomad's /shell WS.
+/** Full interactive terminal: WebView running xterm.js, talking to planrla's /shell WS.
  *  Assets are inlined and the page is loaded with the server as baseURL so the page
  *  origin is http://server (ws:// then works — avoids file://→ws:// mixed-content block). */
 @SuppressLint("SetJavaScriptEnabled")

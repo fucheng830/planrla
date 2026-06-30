@@ -1,11 +1,11 @@
-# nomad 商业化中继服务 — 设计与 MVP 计划
+# Planrla 商业化中继服务 — 设计与 MVP 计划
 
 ## 1. 背景与决策
 
-- **目标**：把 apps/android 商业化。手机在任何网络下，经云端中继 `cc.brainmate.cc` 控制用户**家里的** Claude（nomad server）。
+- **目标**：把 apps/android 商业化。手机在任何网络下，经云端中继 `api.planrla.com` 控制用户**家里的** Claude（Planrla server）。
 - **模式 A（已定）**：中继 SaaS。claude 会话/凭据/数据都留在用户家；云端只做过境转发 + 鉴权 + 计费。合规与责任边界对运营商最有利。
-- **基础设施（已定）**：`cc.brainmate.cc` 托管在 Cloudflare → 用 **Workers + Durable Objects** 做边缘接入和有状态 WS 中继（CF 原生能力，无服务器）。
-- **MVP（已定）**：先单用户（你自家 server + App）经 `cc.brainmate.cc` 全打通，验证延迟/稳定性/真实 CF 成本，再做多租户和计费。
+- **基础设施（已定）**：`api.planrla.com` 托管在 Cloudflare → 用 **Workers + Durable Objects** 做边缘接入和有状态 WS 中继（CF 原生能力，无服务器）。
+- **MVP（已定）**：先单用户（你自家 server + App）经 `api.planrla.com` 全打通，验证延迟/稳定性/真实 CF 成本，再做多租户和计费。
 
 **非目标（MVP 之后）**：多租户账号体系、计费、E2EE、多 device。
 
@@ -14,20 +14,20 @@
 ## 2. 架构总览
 
 ```
-App ──HTTPS/WSS──▶ cc.brainmate.cc ──▶ 用户家
+App ──HTTPS/WSS──▶ api.planrla.com ──▶ 用户家
                    Worker(边缘)：验 token、按 userId 路由到 RelayDO
                    RelayDO(每用户一个)：持有家端 agent 的常驻 WS，把入站 HTTP/WS 转发过去
-                                        ──▶ 家端 relay agent ──▶ 本机 nomad(localhost:3002) ──▶ claude
+                                        ──▶ 家端 relay agent ──▶ 本机 Planrla(localhost:3002) ──▶ claude
 ```
 
 ### 关键设计：App 改造最小化
 
 App **不改 transport**，只换 URL：
-- REST：`baseURL = https://cc.brainmate.cc`（Retrofit 照常发 HTTP）。
-- WS（chat/shell）：`wss://cc.brainmate.cc/ws`、`wss://cc.brainmate.cc/shell`。
+- REST：`baseURL = https://api.planrla.com`（Retrofit 照常发 HTTP）。
+- WS（chat/shell）：`wss://api.planrla.com/ws`、`wss://api.planrla.com/shell`。
 - 鉴权：URL query 或 header 带 `device token`。
 
-复杂度都在云端和家端：**Worker 把入站 HTTP/WS 转成多路复用(mux)消息，经 RelayDO 送到家端 agent，agent 还原成本地 HTTP/WS 调本地 nomad。**
+复杂度都在云端和家端：**Worker 把入站 HTTP/WS 转成多路复用(mux)消息，经 RelayDO 送到家端 agent，agent 还原成本地 HTTP/WS 调本地 Planrla。**
 
 ---
 
@@ -69,14 +69,14 @@ App **不改 transport**，只换 URL：
 ### 4.3 家端 relay agent（新，单文件 .exe）
 - 技术栈：Python（沿用 m5 的 PyInstaller 打包）或 Go 单文件（更省心，无运行时）。MVP 先 Python 快速验证。
 - 职责：
-  - 出站连 `wss://cc.brainmate.cc/relay?token=<device>`，自动重连 + 心跳。
+  - 出站连 `wss://api.planrla.com/relay?token=<device>`，自动重连 + 心跳。
   - 收 `http_req` → 对 `localhost:3002` 发真实 HTTP → 回 `http_res`。
   - 收 `ws_open` → 连 `ws://localhost:3002< path>` → 双向 `ws_data`。
-- 配置：device token + 本地 nomad 端口。nssm/启动项自启（沿用 nomad 的部署模式）。
-- 打包：`relay.exe`（+ 可选和 nomad 一起的 installer）。
+- 配置：device token + 本地 Planrla 端口。nssm/启动项自启（沿用 Planrla 的部署模式）。
+- 打包：`relay.exe`（+ 可选和 Planrla 一起的 installer）。
 
 ### 4.4 App 改造（apps/android）
-- `Net.kt`：`baseURL` 改 `https://cc.brainmate.cc`；`ChatSocket` WS 改 `wss://cc.brainmate.cc/ws?token=...`；Shell 的 `/shell` 同理。
+- `Net.kt`：`baseURL` 改 `https://api.planrla.com`；`ChatSocket` WS 改 `wss://api.planrla.com/ws?token=...`；Shell 的 `/shell` 同理。
 - 鉴权：登录后存 `device token`（DataStore），所有请求带 token。
 - 保留「直连 / 中继」开关（调试和本地场景友好）。
 - 设备离线提示（503 时）。
@@ -85,15 +85,15 @@ App **不改 transport**，只换 URL：
 
 ## 5. MVP 范围与任务（单用户打通）
 
-> 目标：你自家的 nomad（0.13 或本机）+ 你的 App，经 `cc.brainmate.cc` 跑通：REST（项目/消息/git/文件）+ chat WS（流式）+ Shell WS（终端）。验证端到端 + 测 CF 真实成本。
+> 目标：你自家的 Planrla（0.13 或本机）+ 你的 App，经 `api.planrla.com` 跑通：REST（项目/消息/git/文件）+ chat WS（流式）+ Shell WS（终端）。验证端到端 + 测 CF 真实成本。
 
 | # | 任务 | 产出 | 验证 |
 |---|---|---|---|
 | **T1** | CF 项目脚手架 | `relay/`（wrangler）+ Worker + 空 RelayDO，`wrangler dev` 本地起 | `curl` 命中 Worker，DO 能实例化 |
 | **T2** | mux 协议 + DO 转发 | DO 实现 `fetch`(HTTP→`http_req`→`http_res`) + WS 桥接；家端协议对齐 | 本地两台进程（假家端 + 假 App）经 DO 互发 HTTP/WS 通过 |
 | **T3** | 家端 relay agent | `relay-agent/`（Python）出站 WS + 本地 HTTP/WS 代理 + 重连心跳 | agent 连本地 DO，把 HTTP 请求落到 `localhost:3002`，响应回传 |
-| **T4** | 端到端本地联调 | 真 nomad + agent + DO + App(改 baseURL) | App 经本地 wrangler 看到 0.13 的项目列表/聊天/Shell |
-| **T5** | 部署到 cc.brainmate.cc | `wrangler deploy` + DNS/路由 + device token | 手机 4G 下 App 连 `cc.brainmate.cc` 操作家里的 claude |
+| **T4** | 端到端本地联调 | 真 Planrla + agent + DO + App(改 baseURL) | App 经本地 wrangler 看到 0.13 的项目列表/聊天/Shell |
+| **T5** | 部署到 api.planrla.com | `wrangler deploy` + DNS/路由 + device token | 手机 4G 下 App 连 `api.planrla.com` 操作家里的 claude |
 | **T6** | 成本与稳定性实测 | 一周真实使用，记录 CF 账单（DO duration / WS 消息 / 流量） | 拿到单用户月成本 → 推多用户定价 |
 
 依赖：T1→T2→T3→T4→T5→T6（基本线性，T3 可与 T2 后半并行）。

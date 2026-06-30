@@ -1,6 +1,6 @@
-# Nomad — nomad Mobile
+# Nomad — Planrla Mobile
 
-Mobile client for nomad — remote control for your Claude Code / Codex endpoints.
+Mobile client for Planrla — remote control for your Claude Code / Codex endpoints.
 
 ## Features
 
@@ -46,7 +46,7 @@ ui/             Compose UI
   ChatScreen.kt    Main chat VM + composables (messages, composer, tools, code blocks)
   ProjectsScreen.kt Sidebar (projects, conversations, archive, search, device switcher)
   FilesScreen.kt   File browser + editor + upload
-  ConnectScreen.kt Login (cloud account via cc.brainmate.cc)
+  ConnectScreen.kt Login (cloud account via api.planrla.com)
   SettingsScreen.kt Full settings (API keys, GitHub creds, git config)
   ExtensionsScreen.kt Provider capability viewer (MCP/Models/Skills/Plugins)
   ShellView.kt     Terminal (WebView + xterm.js)
@@ -56,7 +56,7 @@ ui/             Compose UI
 
 ## Protocol
 
-Uses the `chat.*` WebSocket protocol (nomad fork v1.34.0+):
+Uses the `chat.*` WebSocket protocol (Planrla fork v1.34.0+):
 - `chat.send` / `chat.subscribe` / `chat.abort` / `chat.permission-response`
 - Server-side `chatRunRegistry` with seq-based replay for background runs
 - REST `POST /api/providers/sessions` creates stable session IDs before first send

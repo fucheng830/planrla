@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-import('nomad/dist-server/server/cli.js');
+import('planrla/dist-server/server/cli.js');

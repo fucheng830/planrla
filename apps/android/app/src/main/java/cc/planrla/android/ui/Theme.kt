@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -7,7 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// nomad web palette — shadcn/ui HSL tokens (src/index.css)
+// planrla web palette — shadcn/ui HSL tokens (src/index.css)
 // primary 221.2 83.2% 53.3% = #3B82F6 (blue-600)
 private val Primary = Color(0xFF3B82F6)
 

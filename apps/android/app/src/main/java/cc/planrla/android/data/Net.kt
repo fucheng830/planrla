@@ -1,4 +1,4 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.channels.SendChannel
@@ -27,6 +27,7 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 object NetworkModule {
@@ -104,10 +105,13 @@ class TokenHolder {
 class AuthInterceptor(private val holder: TokenHolder) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val b = chain.request().newBuilder()
-        holder.relayToken?.let { b.addHeader("x-relay-token", it) }
-        holder.token?.let { b.addHeader("Authorization", "Bearer $it") }
+        holder.relayToken?.takeIf(::isSafeHeaderValue)?.let { b.addHeader("x-relay-token", it) }
+        holder.token?.takeIf(::isSafeHeaderValue)?.let { b.addHeader("Authorization", "Bearer $it") }
         return chain.proceed(b.build())
     }
+
+    private fun isSafeHeaderValue(value: String): Boolean =
+        value.isNotBlank() && value.all { ch -> ch.code in 0x21..0x7E }
 }
 
 class ApiProvider(val serverUrl: String, client: OkHttpClient) {
@@ -124,7 +128,7 @@ class ApiProvider(val serverUrl: String, client: OkHttpClient) {
     val settings: SettingsApi = r.settings
 }
 
-/** OkHttp WebSocket client for nomad /ws. Pushes parsed ChatEvent into a channel. */
+/** OkHttp WebSocket client for planrla /ws. Pushes parsed ChatEvent into a channel. */
 class ChatSocket(
     private val client: OkHttpClient,
     private val json: Json = NetworkModule.json
@@ -150,8 +154,9 @@ class ChatSocket(
     private fun openWs() {
         val a = args ?: return
         val base = if (a.serverUrl.endsWith("/")) a.serverUrl.dropLast(1) else a.serverUrl
-        val wsAuth = a.relayToken ?: a.token
-        val wsUrl = base.replaceFirst(Regex("^http"), "ws") + "/ws?token=$wsAuth"
+        val wsAuth = a.relayToken?.takeIf(::isSafeAuthToken) ?: a.token?.takeIf(::isSafeAuthToken)
+        val tokenQuery = wsAuth?.let { "?token=${URLEncoder.encode(it, "UTF-8")}" }.orEmpty()
+        val wsUrl = base.replaceFirst(Regex("^http"), "ws") + "/ws$tokenQuery"
         val req = Request.Builder().url(wsUrl).build()
         ws = client.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
@@ -286,4 +291,7 @@ class ChatSocket(
         ws?.close(1000, "bye")
         ws = null
     }
+
+    private fun isSafeAuthToken(value: String): Boolean =
+        value.isNotBlank() && value.all { ch -> ch.code in 0x21..0x7E }
 }

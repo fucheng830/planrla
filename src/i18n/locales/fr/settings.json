@@ -481,7 +481,7 @@
     "docs": "Docs",
     "sections": {
       "officialTitle": "Plugins officiels",
-      "officialDescription": "Maintenus par l'équipe nomad et prêts à être installés directement.",
+      "officialDescription": "Maintenus par l'équipe Planrla et prêts à être installés directement.",
       "unofficialTitle": "Autres plugins",
       "unofficialDescription": "Plugins non officiels et intégrations d'autres utilisateurs. Examinez le code source avant d'installer."
     },
@@ -510,9 +510,9 @@
       "install": "Installer"
     },
     "prismnomad": {
-      "name": "PRISM nomad",
+      "name": "PRISM Planrla",
       "badge": "non officiel",
-      "description": "Intelligence de session pour Claude Code, dans nomad. Voyez pourquoi vos sessions consomment des tokens sans quitter le navigateur.",
+      "description": "Intelligence de session pour Claude Code, dans Planrla. Voyez pourquoi vos sessions consomment des tokens sans quitter le navigateur.",
       "install": "Installer"
     },
     "sessionManagerPlugin": {

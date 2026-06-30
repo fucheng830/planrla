@@ -472,7 +472,7 @@
     },
     "managed": {
       "badge": "Managed",
-      "hint": "Managed by nomad."
+      "hint": "Managed by Planrla."
     },
     "help": {
       "title": "About Codex MCP",
@@ -504,7 +504,7 @@
     "docs": "Docs",
     "sections": {
       "officialTitle": "Official Plugins",
-      "officialDescription": "Maintained by the nomad team and ready for direct install.",
+      "officialDescription": "Maintained by the Planrla team and ready for direct install.",
       "unofficialTitle": "Other Plugins",
       "unofficialDescription": "Unofficial plugins and integrations from other users. Review the source before installing."
     },
@@ -533,9 +533,9 @@
       "install": "Install"
     },
     "prismnomad": {
-      "name": "PRISM nomad",
+      "name": "PRISM Planrla",
       "badge": "unofficial",
-      "description": "Session intelligence for Claude Code, inside nomad. See why your sessions are burning tokens without leaving the browser.",
+      "description": "Session intelligence for Claude Code, inside Planrla. See why your sessions are burning tokens without leaving the browser.",
       "install": "Install"
     },
     "sessionManagerPlugin": {

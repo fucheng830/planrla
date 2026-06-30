@@ -1,8 +1,8 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import kotlinx.serialization.json.JsonElement
 
-/** UI-facing event derived from a nomad NormalizedMessage. */
+/** UI-facing event derived from a planrla NormalizedMessage. */
 sealed class ChatEvent {
     data class TextDelta(val text: String) : ChatEvent()
     data class TextMessage(val text: String, val role: String?) : ChatEvent()

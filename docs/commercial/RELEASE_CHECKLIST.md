@@ -5,7 +5,7 @@
 - Configure `NOMAD_LICENSE_PUBLIC_KEY` in production.
 - Set `NOMAD_REQUIRE_LICENSE=true` when the activation flow is ready for customers.
 - Keep `NOMAD_LICENSE_BYPASS=false` outside local development.
-- Generate customer keys as `nomad_<base64url-json-payload>.<base64url-signature>`.
+- Generate customer keys as `planrla_<base64url-json-payload>.<base64url-signature>`.
 - Include at least `product`, `customer`, `plan`, `seats`, `issuedAt`, and `expiresAt` in the signed payload.
 - Generate keys with `npm run license:generate` after setting `NOMAD_LICENSE_PRIVATE_KEY`, `CUSTOMER`, and `EXPIRES_AT`.
 

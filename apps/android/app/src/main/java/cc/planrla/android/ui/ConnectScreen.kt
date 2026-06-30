@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -53,16 +53,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
-import cc.nomad.android.data.AccountLoginRequest
-import cc.nomad.android.data.Device
-import cc.nomad.android.data.LoginRequest
+import cc.planrla.android.data.AccountLoginRequest
+import cc.planrla.android.data.Device
+import cc.planrla.android.data.HostCandidate
+import cc.planrla.android.data.HostScanner
+import cc.planrla.android.data.LoginRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val SignInBlue = Color(0xFF2563EB) // bg-blue-600 (nomad Sign In button)
+private val SignInBlue = Color(0xFF2563EB) // bg-blue-600 (planrla Sign In button)
 private val ClaudeCoral = Color(0xFFD97757)
 
 class ConnectViewModel : ViewModel() {
@@ -76,10 +78,14 @@ class ConnectViewModel : ViewModel() {
     val state: StateFlow<State> = _state
     private val _err = MutableStateFlow<String?>(null)
     val err: StateFlow<String?> = _err
+    private val _scanResults = MutableStateFlow<List<HostCandidate>>(emptyList())
+    val scanResults: StateFlow<List<HostCandidate>> = _scanResults
+    private val _scanning = MutableStateFlow(false)
+    val scanning: StateFlow<Boolean> = _scanning
 
     suspend fun autoLogin(): Boolean {
         val s = App.tokenStore.serverUrlSync()
-        // Account session (preferred): JWT from cc.brainmate.cc account login.
+        // Account session (preferred): JWT from api.planrla.com account login.
         val jwt = App.tokenStore.accountJwtSync()
         if (jwt != null && s != null) {
             runCatching {
@@ -96,7 +102,7 @@ class ConnectViewModel : ViewModel() {
             }
             _state.value = State.LoggedIn(s); return true
         }
-        // Legacy: direct nomad token or relay device token.
+        // Legacy: direct planrla token or relay device token.
         val t = App.tokenStore.tokenSync()
         val r = App.tokenStore.relayTokenSync()
         if (s == null || (t == null && r == null)) return false
@@ -113,7 +119,7 @@ class ConnectViewModel : ViewModel() {
     fun accountLogin(email: String, pass: String, signup: Boolean) {
         viewModelScope.launch {
             _state.value = State.Loading; _err.value = null
-            val srv = "https://cc.brainmate.cc"
+            val srv = "https://api.planrla.com"
             try {
                 val req = AccountLoginRequest(email.trim(), pass)
                 val r = if (signup) App.api(srv).account.signup(req) else App.api(srv).account.login(req)
@@ -144,7 +150,7 @@ class ConnectViewModel : ViewModel() {
             try {
                 App.tokenStore.setServer(norm)
                 if (relay.isNotBlank()) {
-                    // Relay mode: the home agent authenticates to the local nomad; the App
+                    // Relay mode: the home agent authenticates to the local planrla; the App
                     // only carries the relay device token, so no /login call is needed here.
                     App.tokenHolder.relayToken = relay
                     App.tokenStore.setRelayToken(relay)
@@ -157,12 +163,37 @@ class ConnectViewModel : ViewModel() {
                 val r = App.api(norm).auth.login(LoginRequest(user, pass))
                 val tok = r.token ?: throw IllegalStateException("no token in response")
                 App.tokenHolder.token = tok
+                App.tokenHolder.relayToken = null
                 App.tokenStore.setToken(tok)
+                App.tokenStore.clearRelayToken()
+                val id = norm
+                App.tokenStore.upsertDevice(
+                    Device(
+                        id = id,
+                        name = norm.removePrefix("http://").removePrefix("https://"),
+                        token = "",
+                        lan = norm,
+                        ccUser = user.trim(),
+                        ccPass = pass,
+                    )
+                )
+                App.tokenStore.setCurrentDevice(id)
                 _state.value = State.LoggedIn(norm)
             } catch (e: Exception) {
                 _err.value = e.message ?: "login failed"
                 _state.value = State.Input
             }
+        }
+    }
+
+    fun scanLanHosts() {
+        if (_scanning.value) return
+        viewModelScope.launch {
+            _scanning.value = true; _err.value = null
+            runCatching { HostScanner.scan() }
+                .onSuccess { _scanResults.value = it }
+                .onFailure { _err.value = it.message ?: "scan failed" }
+            _scanning.value = false
         }
     }
 
@@ -178,12 +209,17 @@ fun ConnectScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val err by vm.err.collectAsStateWithLifecycle()
+    val scanResults by vm.scanResults.collectAsStateWithLifecycle()
+    val scanning by vm.scanning.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { vm.autoLogin() } }
     LaunchedEffect(state) { if (state is ConnectViewModel.State.LoggedIn) onLoggedIn() }
 
     var email by rememberSaveable { mutableStateOf("") }
     var pass by rememberSaveable { mutableStateOf("") }
     var signup by rememberSaveable { mutableStateOf(false) }
+    var desktopUrl by rememberSaveable { mutableStateOf("") }
+    var desktopUser by rememberSaveable { mutableStateOf("") }
+    var desktopPass by rememberSaveable { mutableStateOf("") }
     val loading = state is ConnectViewModel.State.Loading
 
     Surface(
@@ -211,7 +247,7 @@ fun ConnectScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Sign in to your nomad self-hosted account",
+                    "Sign in to your planrla self-hosted account",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -284,14 +320,83 @@ fun ConnectScreen(
 
                 Spacer(Modifier.height(20.dp))
                 Text(
-                    "通过 cc.brainmate.cc 账号登录,连接你的执行端设备",
+                    "通过 api.planrla.com 账号登录,连接你的执行端设备",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    "或直接连接 Desktop 执行器",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { vm.scanLanHosts() },
+                    enabled = !loading && !scanning,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                ) {
+                    if (scanning) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (scanning) "扫描中…" else "扫描局域网 Desktop")
+                }
+                scanResults.forEach { host ->
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { desktopUrl = host.url }.padding(10.dp),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        Column {
+                            Text(host.url, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                            Text(host.version?.let { "version $it" } ?: "planrla desktop", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                LabeledField(
+                    label = "Desktop URL",
+                    value = desktopUrl,
+                    onChange = { desktopUrl = it },
+                    placeholder = "http://192.168.1.20:3001",
+                    ime = ImeAction.Next,
+                    enabled = !loading,
+                )
+                Spacer(Modifier.height(10.dp))
+                LabeledField(
+                    label = "Desktop Username",
+                    value = desktopUser,
+                    onChange = { desktopUser = it },
+                    placeholder = "username",
+                    ime = ImeAction.Next,
+                    enabled = !loading,
+                )
+                Spacer(Modifier.height(10.dp))
+                LabeledField(
+                    label = "Desktop Password",
+                    value = desktopPass,
+                    onChange = { desktopPass = it },
+                    placeholder = "password",
+                    password = true,
+                    ime = ImeAction.Done,
+                    enabled = !loading,
+                    onSubmit = { if (desktopUrl.isNotBlank() && desktopUser.isNotBlank()) vm.login(desktopUrl, desktopUser, desktopPass, "") },
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { vm.login(desktopUrl, desktopUser, desktopPass, "") },
+                    enabled = !loading && desktopUrl.isNotBlank() && desktopUser.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                ) { Text("连接 Desktop") }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "nomad commercial desktop companion",
+                    "planrla commercial desktop companion",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center,
@@ -351,14 +456,14 @@ private fun LabeledField(
     }
 }
 
-/** nomad brand mark: blue rounded square with white chat glyph + coral Claude spark. */
+/** planrla brand mark: blue rounded square with white chat glyph + coral Claude spark. */
 @Composable
 private fun BrandLogo() {
     Box(
         Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)).background(SignInBlue),
         contentAlignment = Alignment.Center,
     ) {
-        // chat-bubble glyph (mirrors nomad's MessageSquare logo)
+        // chat-bubble glyph (mirrors planrla's MessageSquare logo)
         Canvas(Modifier.size(28.dp)) {
             val w = this.size.width
             val h = this.size.height

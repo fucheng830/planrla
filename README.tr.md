@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="public/logo.svg" alt="nomad" width="64" height="64">
-  <h1>nomad</h1>
+  <img src="public/logo.svg" alt="Planrla" width="64" height="64">
+  <h1>Planrla</h1>
   <p><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a> ve <a href="https://geminicli.com/">Gemini-CLI</a> için masaüstü ve mobil arayüz.<br>Yerel ya da uzaktan kullanarak aktif projelerine ve oturumlarına her yerden erişebilirsin.</p>
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Dokümantasyon</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Sorun Bildir</a> · <a href="CONTRIBUTING.md">Katkıda Bulun</a>
+  <a href="https://planrla.com">Planrla Hosted</a> · <a href="https://planrla.com/docs">Dokümantasyon</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://planrla.com/support">Sorun Bildir</a> · <a href="CONTRIBUTING.md">Katkıda Bulun</a>
 </p>
 
 <p align="center">
-  <a href="https://nomad.ai"><img src="https://img.shields.io/badge/☁️_nomad_Cloud-Hemen_Dene-0066FF?style=for-the-badge" alt="nomad Hosted"></a>
+  <a href="https://planrla.com"><img src="https://img.shields.io/badge/☁️_Planrla_Cloud-Hemen_Dene-0066FF?style=for-the-badge" alt="Planrla Hosted"></a>
   <a href="https://discord.gg/buxwujPNRE"><img src="https://img.shields.io/badge/Discord-Toplulu%C4%9Fa%20Kat%C4%B1l-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord'a Katıl"></a>
   <br><br>
   <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="fucheng830%2Fnomad | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -60,47 +60,47 @@
 - **Dosya Gezgini** — Sözdizimi vurgulama ve canlı düzenleme ile etkileşimli dosya ağacı
 - **Git Gezgini** — Değişikliklerini görüntüle, staging'e ekle ve commit'le. Dallar arası geçiş de yapabilirsin
 - **Oturum Yönetimi** — Konuşmalara devam et, birden fazla oturumu yönet ve geçmişi takip et
-- **Eklenti Sistemi** — nomad'ı özel eklentilerle genişlet: yeni sekmeler, arka uç servisleri ve entegrasyonlar ekle. [Kendi eklentini yaz →](https://github.com/nomad/nomad-plugin-starter)
+- **Eklenti Sistemi** — Planrla'ı özel eklentilerle genişlet: yeni sekmeler, arka uç servisleri ve entegrasyonlar ekle. [Kendi eklentini yaz →](https://github.com/nomad/nomad-plugin-starter)
 - **TaskMaster AI Entegrasyonu** *(İsteğe Bağlı)* — AI destekli görev planlama, PRD ayrıştırma ve iş akışı otomasyonu ile gelişmiş proje yönetimi
 - **Model Uyumluluğu** — Claude, GPT ve Gemini model aileleriyle çalışır (desteklenen tüm modeller için `GET /api/providers/:provider/models` API'sine bak)
 
 
 ## Hızlı Başlangıç
 
-### nomad Hosted (Önerilen)
+### Planrla Hosted (Önerilen)
 
 Başlamanın en hızlı yolu — yerel kurulum yok. Web, mobil uygulama, API veya favori IDE'nden erişilebilen, tam yönetilen, konteyner tabanlı bir geliştirme ortamına sahip ol.
 
-**[nomad Hosted ile başla](https://nomad.ai)**
+**[Planrla Hosted ile başla](https://planrla.com)**
 
 
 ### Kendin Barındır
 
 #### npm
 
-nomad'yi **npx** ile anında dene (**Node.js** v22+ gerekir):
+Planrla'yi **npx** ile anında dene (**Node.js** v22+ gerekir):
 
 ```
-npx nomad
+npx planrla
 ```
 
 Veya düzenli kullanım için **genel olarak** kur:
 
 ```
-npm install -g nomad
-nomad
+npm install -g planrla
+Planrla
 ```
 
 `http://localhost:3001` adresini aç — mevcut tüm oturumların otomatik olarak keşfedilir.
 
-Tam yapılandırma seçenekleri, PM2, uzak sunucu kurulumu ve daha fazlası için **[dokümantasyonu ziyaret et →](https://nomad.ai/docs)**.
+Tam yapılandırma seçenekleri, PM2, uzak sunucu kurulumu ve daha fazlası için **[dokümantasyonu ziyaret et →](https://planrla.com/docs)**.
 
 #### Docker Sandbox'lar (Deneysel)
 
 Ajanları hipervizör seviyesinde izolasyonlu sandbox'larda çalıştır. Varsayılan olarak Claude Code başlar. [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/) gerekir.
 
 ```
-npx nomad@latest sandbox ~/my-project
+npx planrla@latest sandbox ~/my-project
 ```
 
 Claude Code, Codex ve Gemini CLI destekler. Kurulum ve gelişmiş seçenekler için [sandbox dokümantasyonuna](docker/) bak.
@@ -110,13 +110,13 @@ Claude Code, Codex ve Gemini CLI destekler. Kurulum ve gelişmiş seçenekler i�
 
 ## Hangi seçenek sana uygun?
 
-nomad, nomad Hosted'u güçlendiren açık kaynak arayüz katmanıdır. Kendi makinende barındırabilir, izolasyon için Docker sandbox'ta çalıştırabilir veya tam yönetilen ortam için nomad Hosted kullanabilirsin.
+Planrla, Planrla Hosted'u güçlendiren açık kaynak arayüz katmanıdır. Kendi makinende barındırabilir, izolasyon için Docker sandbox'ta çalıştırabilir veya tam yönetilen ortam için Planrla Hosted kullanabilirsin.
 
-| | Kendin Barındır (npm) | Kendin Barındır (Docker Sandbox) *(Deneysel)* | nomad Hosted |
+| | Kendin Barındır (npm) | Kendin Barındır (Docker Sandbox) *(Deneysel)* | Planrla Hosted |
 |---|---|---|---|
 | **En iyi şunun için** | Kendi makinende yerel ajan oturumları | Web/mobil IDE ile izole ajanlar | Ajanlarını bulutta isteyen ekipler |
 | **Nasıl erişilir** | `[yourip]:port` üzerinden tarayıcıda | `localhost:port` üzerinden tarayıcıda | Tarayıcı, herhangi bir IDE, REST API, n8n |
-| **Kurulum** | `npx nomad` | `npx nomad@latest sandbox ~/project` | Kurulum gerekmez |
+| **Kurulum** | `npx planrla` | `npx planrla@latest sandbox ~/project` | Kurulum gerekmez |
 | **İzolasyon** | Kendi host'unda çalışır | Hipervizör seviyesi sandbox (microVM) | Tam bulut izolasyonu |
 | **Makinenin açık kalması gerek** | Evet | Evet | Hayır |
 | **Mobil erişim** | Ağındaki herhangi bir tarayıcı | Ağındaki herhangi bir tarayıcı | Herhangi bir cihaz, native uygulama yolda |
@@ -127,7 +127,7 @@ nomad, nomad Hosted'u güçlendiren açık kaynak arayüz katmanıdır. Kendi ma
 | **Ekip paylaşımı** | Hayır | Hayır | Evet |
 | **Platform maliyeti** | Ücretsiz, açık kaynak | Ücretsiz, açık kaynak | Aylık 7 $'dan başlar |
 
-> Tüm seçenekler kendi AI aboneliklerini (Claude, Cursor, vb.) kullanır — nomad AI'ı değil, ortamı sağlar.
+> Tüm seçenekler kendi AI aboneliklerini (Claude, Cursor, vb.) kullanır — Planrla AI'ı değil, ortamı sağlar.
 
 ---
 
@@ -156,7 +156,7 @@ Claude Code'un tam işlevselliğinden yararlanmak için araçları manuel olarak
 
 ## Eklentiler
 
-nomad, kendi frontend UI'sı ve isteğe bağlı Node.js arka ucu olan özel sekmeler eklemeni sağlayan bir eklenti sistemine sahiptir. Git depolarından eklentileri doğrudan **Ayarlar > Eklentiler**'den yükleyebilir veya kendi eklentini yazabilirsin.
+Planrla, kendi frontend UI'sı ve isteğe bağlı Node.js arka ucu olan özel sekmeler eklemeni sağlayan bir eklenti sistemine sahiptir. Git depolarından eklentileri doğrudan **Ayarlar > Eklentiler**'den yükleyebilir veya kendi eklentini yazabilirsin.
 
 ### Mevcut Eklentiler
 
@@ -166,7 +166,7 @@ nomad, kendi frontend UI'sı ve isteğe bağlı Node.js arka ucu olan özel sekm
 | **[Web Terminal](https://github.com/nomad/nomad-plugin-terminal)** | Çoklu sekme destekli tam xterm.js terminali |
 | **[Claude Watch](https://github.com/satsuki19980613/nomad-claude-watch)** | Uzun süren Claude Code oturumlarını takılmalara karşı izler ve süreç kontrolleri sunar |
 | **[nomad Scheduler](https://github.com/grostim/nomad-cron)** | Çalışma alanı kapsamlı zamanlanmış prompt'lar oluşturur ve bunları Codex, Claude Code veya Gemini CLI gibi yerel CLI'larla çalıştırır |
-| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | nomad içinde Claude Code oturum zekası ve token tüketimi görünürlüğü sağlar |
+| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | Planrla içinde Claude Code oturum zekası ve token tüketimi görünürlüğü sağlar |
 | **[Sessions](https://github.com/strykereye2/nomad-plugin-session-manager)** | Aktif Claude Code oturumlarını görüntülemeni, yönetmeni ve sonlandırmanı sağlar |
 | **[Token Cost Calculator](https://github.com/NightmareAway/nomad-plugin-token-cost-calculator)** | Model fiyatları ve token kullanımından API maliyetlerini hesaplar; model fiyatı hazır ayarlarını destekler |
 | **[Task Queue](https://github.com/TadMSTR/nomad-plugin-task-queue)** | Ajan görevlerini görüntülemek, filtrelemek ve başlatmak için görev kuyruğu paneli |
@@ -176,7 +176,7 @@ nomad, kendi frontend UI'sı ve isteğe bağlı Node.js arka ucu olan özel sekm
 
 **[Plugin Starter Şablonu →](https://github.com/nomad/nomad-plugin-starter)** — kendi eklentini oluşturmak için bu repo'yu fork'la. Frontend render, canlı bağlam güncellemeleri ve arka uç sunucusuyla RPC iletişimi içeren çalışan bir örnek içerir.
 
-**[Plugin Dokümantasyonu →](https://nomad.ai/docs/plugin-overview)** — plugin API'sı, manifest formatı, güvenlik modeli ve daha fazlası için tam rehber.
+**[Plugin Dokümantasyonu →](https://planrla.com/docs/plugin-overview)** — plugin API'sı, manifest formatı, güvenlik modeli ve daha fazlası için tam rehber.
 
 ---
 ## Sık Sorulan Sorular
@@ -186,36 +186,36 @@ nomad, kendi frontend UI'sı ve isteğe bağlı Node.js arka ucu olan özel sekm
 
 Claude Code Remote Control, yerel terminalinde zaten çalışan bir oturuma mesaj göndermeni sağlar. Makinen açık kalmak zorunda, terminalin açık kalmak zorunda ve ağ bağlantısı olmadan yaklaşık 10 dakika sonra oturumlar zaman aşımına uğrar.
 
-nomad ve nomad Hosted, Claude Code'un yanında değil içinde çalışır — MCP sunucuların, izinlerin, ayarların ve oturumların, Claude Code'un yerel olarak kullandığının birebir aynısıdır. Hiçbir şey çoğaltılmaz veya ayrı yönetilmez.
+Planrla ve Planrla Hosted, Claude Code'un yanında değil içinde çalışır — MCP sunucuların, izinlerin, ayarların ve oturumların, Claude Code'un yerel olarak kullandığının birebir aynısıdır. Hiçbir şey çoğaltılmaz veya ayrı yönetilmez.
 
 Pratikte bu ne demek:
 
-- **Tek oturum değil, tüm oturumların** — nomad, `~/.claude` klasöründeki her oturumu otomatik keşfeder. Remote Control yalnızca tek aktif oturumu Claude mobil uygulamasına açar.
+- **Tek oturum değil, tüm oturumların** — Planrla, `~/.claude` klasöründeki her oturumu otomatik keşfeder. Remote Control yalnızca tek aktif oturumu Claude mobil uygulamasına açar.
 - **Ayarların sana ait** — UI'da değiştirdiğin MCP sunucuları, araç izinleri ve proje yapılandırması doğrudan Claude Code yapılandırmana yazılır ve anında etkili olur; tersi de geçerli.
 - **Daha fazla ajanla çalışır** — Sadece Claude Code değil; Cursor CLI, Codex ve Gemini CLI de.
 - **Sadece sohbet penceresi değil, tam UI** — dosya gezgini, Git entegrasyonu, MCP yönetimi ve shell terminali hepsi yerleşik.
-- **nomad Hosted bulutta çalışır** — laptop'unu kapat, ajan çalışmaya devam eder. Beklemen gereken terminal yok, uyanık tutman gereken makine yok.
+- **Planrla Hosted bulutta çalışır** — laptop'unu kapat, ajan çalışmaya devam eder. Beklemen gereken terminal yok, uyanık tutman gereken makine yok.
 
 </details>
 
 <details>
 <summary>AI aboneliği için ayrıca ödeme yapmam gerekiyor mu?</summary>
 
-Evet. nomad AI'yi değil, ortamı sağlar. Kendi Claude, Cursor, Codex veya Gemini aboneliğini getirirsin. nomad Hosted, barındırılan ortam için aylık 7 $'dan başlar — bunun üzerine eklenir.
+Evet. Planrla AI'yi değil, ortamı sağlar. Kendi Claude, Cursor, Codex veya Gemini aboneliğini getirirsin. Planrla Hosted, barındırılan ortam için aylık 7 $'dan başlar — bunun üzerine eklenir.
 
 </details>
 
 <details>
-<summary>nomad'yi telefonumda kullanabilir miyim?</summary>
+<summary>Planrla'yi telefonumda kullanabilir miyim?</summary>
 
-Evet. Kendin barındırdığında, sunucuyu makinende çalıştır ve ağındaki herhangi bir tarayıcıda `[yourip]:port` adresini aç. nomad Hosted için, herhangi bir cihazdan aç — VPN yok, port yönlendirme yok, kurulum yok. Native bir uygulama da hazırlanıyor.
+Evet. Kendin barındırdığında, sunucuyu makinende çalıştır ve ağındaki herhangi bir tarayıcıda `[yourip]:port` adresini aç. Planrla Hosted için, herhangi bir cihazdan aç — VPN yok, port yönlendirme yok, kurulum yok. Native bir uygulama da hazırlanıyor.
 
 </details>
 
 <details>
 <summary>UI'da yaptığım değişiklikler yerel Claude Code kurulumumu etkiler mi?</summary>
 
-Evet, kendin barındırdığında. nomad, Claude Code'un yerel olarak kullandığı aynı `~/.claude` yapılandırmasından okur ve ona yazar. UI üzerinden eklediğin MCP sunucuları Claude Code'da anında görünür; tersi de geçerli.
+Evet, kendin barındırdığında. Planrla, Claude Code'un yerel olarak kullandığı aynı `~/.claude` yapılandırmasından okur ve ona yazar. UI üzerinden eklediğin MCP sunucuları Claude Code'da anında görünür; tersi de geçerli.
 
 </details>
 
@@ -223,16 +223,16 @@ Evet, kendin barındırdığında. nomad, Claude Code'un yerel olarak kullandı�
 
 ## Topluluk ve Destek
 
-- **[Dokümantasyon](https://nomad.ai/docs)** — kurulum, yapılandırma, özellikler ve sorun giderme
+- **[Dokümantasyon](https://planrla.com/docs)** — kurulum, yapılandırma, özellikler ve sorun giderme
 - **[Discord](https://discord.gg/buxwujPNRE)** — yardım al ve diğer kullanıcılarla tanış
-- **[Support](https://nomad.ai/support)** — hata raporları ve özellik istekleri
+- **[Support](https://planrla.com/support)** — hata raporları ve özellik istekleri
 - **[Katkı Rehberi](CONTRIBUTING.md)** — projeye nasıl katkıda bulunulur
 
 ## Lisans
 
 Tüm hakları saklıdır.
 
-nomad — (https://nomad.ai).
+Planrla — (https://planrla.com).
 
 ## Teşekkürler
 
@@ -249,7 +249,7 @@ nomad — (https://nomad.ai).
 
 
 ### Sponsorlar
-- [nomad](https://nomad.ai)
+- [Planrla](https://planrla.com)
 ---
 
 <div align="center">

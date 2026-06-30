@@ -5,10 +5,10 @@ export default function AuthLoadingScreen() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="text-center">
         <div className="mb-4 flex justify-center">
-          <img src="/logo.svg" alt="nomad" className="h-16 w-16" />
+          <img src="/logo.svg" alt="Planrla" className="h-16 w-16" />
         </div>
 
-        <h1 className="mb-2 text-2xl font-bold text-foreground">nomad</h1>
+        <h1 className="mb-2 text-2xl font-bold text-foreground">Planrla</h1>
 
         <div className="flex items-center justify-center space-x-2">
           {loadingDotAnimationDelays.map((delay) => (

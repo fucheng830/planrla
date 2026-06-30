@@ -1,4 +1,4 @@
 <resources>
-    <style name="Theme.Nomad" parent="android:Theme.Material.Light.NoActionBar" />
-    <style name="Theme.Nomad.ZXing" parent="Theme.AppCompat.DayNight.NoActionBar" />
+    <style name="Theme.Planrla" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Planrla.ZXing" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>

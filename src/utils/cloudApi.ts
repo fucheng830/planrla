@@ -1,9 +1,9 @@
-// nomad cloud-account client (cc.brainmate.cc). Completely separate from the local
+// Planrla cloud-account client (api.planrla.com). Completely separate from the local
 // app's utils/api.js — different origin (absolute URL), different token (cloud JWT stored
 // in safeStorage), never mixed with the local server's auth-token. Used for the commercial
 // "remote access" feature; M3 (login/account) + M4 (device tokens for relay).
 
-const CLOUD_API_BASE = 'https://cc.brainmate.cc';
+const CLOUD_API_BASE = 'https://api.planrla.com';
 
 export interface CloudUser {
   id: string;
@@ -60,7 +60,7 @@ export async function cloudMe(token: string): Promise<CloudUser> {
 }
 
 // M4 (remote access): mint a device token this desktop's relay agent will use to register
-// with cc.brainmate.cc, and list existing devices.
+// with api.planrla.com, and list existing devices.
 export async function cloudRegisterDevice(token: string, name: string): Promise<CloudDevice> {
   return cloudRequest<CloudDevice>('/api/devices', {
     method: 'POST',

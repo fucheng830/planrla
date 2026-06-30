@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="public/logo.svg" alt="nomad" width="64" height="64">
-  <h1>nomad</h1>
+  <img src="public/logo.svg" alt="Planrla" width="64" height="64">
+  <h1>Planrla</h1>
   <p><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, <a href="https://geminicli.com/">Gemini-CLI</a> 용 데스크톱 및 모바일 UI입니다.<br>로컬 또는 원격에서 실행하여 어디서나 활성 프로젝트와 세션을 확인하세요.</p>
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">문서</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">버그 신고</a> · <a href="CONTRIBUTING.md">기여 안내</a>
+  <a href="https://planrla.com">Planrla Hosted</a> · <a href="https://planrla.com/docs">문서</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://planrla.com/support">버그 신고</a> · <a href="CONTRIBUTING.md">기여 안내</a>
 </p>
 
 <p align="center">
-  <a href="https://nomad.ai"><img src="https://img.shields.io/badge/☁️_nomad_Cloud-Try_Now-0066FF?style=for-the-badge" alt="nomad Hosted"></a>
+  <a href="https://planrla.com"><img src="https://img.shields.io/badge/☁️_Planrla_Cloud-Try_Now-0066FF?style=for-the-badge" alt="Planrla Hosted"></a>
   <a href="https://discord.gg/buxwujPNRE"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord 커뮤니티"></a>
   <br><br>
   <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="fucheng830%2Fnomad | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -58,45 +58,45 @@
 - **파일 탐색기** - 구문 강조 및 실시간 편집을 갖춘 인터랙티브 파일 트리
 - **Git 탐색기** - 변경 사항 보기, 스테이징 및 커밋. 브랜치 전환 기능 포함
 - **세션 관리** - 대화를 재개하고, 여러 세션을 관리하며 기록을 추적
-- **플러그인 시스템** - 커스텀 탭, 백엔드 서비스, 통합을 추가하여 nomad 확장. [직접 빌드 →](https://github.com/nomad/nomad-plugin-starter)
+- **플러그인 시스템** - 커스텀 탭, 백엔드 서비스, 통합을 추가하여 Planrla 확장. [직접 빌드 →](https://github.com/nomad/nomad-plugin-starter)
 - **TaskMaster AI 통합** *(선택사항)* - AI 중심의 작업 계획, PRD 파싱, 워크플로 자동화를 통한 고급 프로젝트 관리
 - **모델 호환성** - Claude, GPT, Gemini 모델 계열에서 작동 (`GET /api/providers/:provider/models` API에서 전체 지원 모델 확인)
 
 ## 빠른 시작
 
-### nomad Hosted (추천)
+### Planrla Hosted (추천)
 
 가장 빠르게 시작하는 방법 — 로컬 설정 없이도 가능합니다. 웹, 모바일 앱, API 또는 선호하는 IDE에서 이용할 수 있는 완전 관리형 컨테이너화된 개발 환경을 제공합니다.
 
-**[nomad Hosted 시작하기](https://nomad.ai)**
+**[Planrla Hosted 시작하기](https://planrla.com)**
 
 ### 셀프 호스트
 
 #### npm
 
-**npx**로 즉시 nomad를 실행하세요 (Node.js v22+ 필요):
+**npx**로 즉시 Planrla를 실행하세요 (Node.js v22+ 필요):
 
 ```bash
-npx nomad
+npx planrla
 ```
 
 **정기적으로 사용한다면 전역 설치:**
 
 ```bash
-npm install -g nomad
-nomad
+npm install -g planrla
+Planrla
 ```
 
 `http://localhost:3001`을 열면 기존 세션이 자동으로 발견됩니다.
 
-자세한 구성 옵션, PM2, 원격 서버 설정 등은 **[문서 →](https://nomad.ai/docs)**를 참고하세요.
+자세한 구성 옵션, PM2, 원격 서버 설정 등은 **[문서 →](https://planrla.com/docs)**를 참고하세요.
 
 #### Docker Sandboxes (실험적)
 
 하이퍼바이저 수준 격리로 에이전트를 샌드박스에서 실행합니다. 기본 에이전트는 Claude Code입니다. [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/)가 필요합니다.
 
 ```
-npx nomad@latest sandbox ~/my-project
+npx planrla@latest sandbox ~/my-project
 ```
 
 Claude Code, Codex, Gemini CLI를 지원합니다. 자세한 내용은 [샌드박스 문서](docker/)를 참고하세요.
@@ -105,13 +105,13 @@ Claude Code, Codex, Gemini CLI를 지원합니다. 자세한 내용은 [샌드�
 
 ## 어느 옵션이 적합한가요?
 
-nomad는 nomad Hosted를 구동하는 UI 계층입니다. 로컬 머신에서 직접 셀프 호스트하거나, nomad Hosted(완전 관리형 클라우드 환경, 팀 기능, 심화 통합 제공)를 사용할 수 있습니다.
+Planrla는 Planrla Hosted를 구동하는 UI 계층입니다. 로컬 머신에서 직접 셀프 호스트하거나, Planrla Hosted(완전 관리형 클라우드 환경, 팀 기능, 심화 통합 제공)를 사용할 수 있습니다.
 
-| | nomad (셀프 호스트) | nomad Hosted |
+| | Planrla (셀프 호스트) | Planrla Hosted |
 |---|---|---|
 | **적합한 대상** | 로컬 에이전트 세션을 위한 전체 UI가 필요한 개발자 | 어디서든 접근 가능한 클라우드에서 에이전트를 운영하고자 하는 팀 및 개발자 |
 | **접근 방법** | `[yourip]:port`를 통해 브라우저 접속 | 브라우저, IDE, REST API, n8n |
-| **설정** | `npx nomad` | 설정 불필요 |
+| **설정** | `npx planrla` | 설정 불필요 |
 | **기기 유지 필요 여부** | 예 (머신 켜둬야 함) | 아니오 |
 | **모바일 접근** | 네트워크 내 브라우저 | 모든 기기 (네이티브 앱 예정) |
 | **세션 접근** | `~/.claude`에서 자동 발견 | 클라우드 환경 내 세션 |
@@ -124,7 +124,7 @@ nomad는 nomad Hosted를 구동하는 UI 계층입니다. 로컬 머신에서 �
 | **팀 공유** | 아니오 | 예 |
 | **플랫폼 비용** | 포함됨 | 월 $7부터 |
 
-> 둘 다 자체 AI 구독(Claude, Cursor 등)을 그대로 사용합니다 — nomad는 환경만 제공합니다.
+> 둘 다 자체 AI 구독(Claude, Cursor 등)을 그대로 사용합니다 — Planrla는 환경만 제공합니다.
 
 ---
 
@@ -151,7 +151,7 @@ nomad는 nomad Hosted를 구동하는 UI 계층입니다. 로컬 머신에서 �
 
 ## 플러그인
 
-nomad는 커스텀 탭과 선택적 Node.js 백엔드가 포함된 플러그인 시스템을 제공합니다. Settings > Plugins에서 Git 저장소에서 플러그인을 설치하거나 직접 빌드할 수 있습니다.
+Planrla는 커스텀 탭과 선택적 Node.js 백엔드가 포함된 플러그인 시스템을 제공합니다. Settings > Plugins에서 Git 저장소에서 플러그인을 설치하거나 직접 빌드할 수 있습니다.
 
 ### 이용 가능한 플러그인
 
@@ -161,7 +161,7 @@ nomad는 커스텀 탭과 선택적 Node.js 백엔드가 포함된 플러그인 
 | **[Web Terminal](https://github.com/nomad/nomad-plugin-terminal)** | 다중 탭을 지원하는 전체 xterm.js 터미널 |
 | **[Claude Watch](https://github.com/satsuki19980613/nomad-claude-watch)** | 장시간 실행 중인 Claude Code 세션의 중단 상태를 감시하고 프로세스 제어를 제공 |
 | **[nomad Scheduler](https://github.com/grostim/nomad-cron)** | 워크스페이스 범위 예약 프롬프트를 만들고 Codex, Claude Code, Gemini CLI 같은 로컬 CLI로 실행 |
-| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | nomad 안에서 Claude Code 세션 인텔리전스와 토큰 소모 가시성을 제공 |
+| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | Planrla 안에서 Claude Code 세션 인텔리전스와 토큰 소모 가시성을 제공 |
 | **[Sessions](https://github.com/strykereye2/nomad-plugin-session-manager)** | 활성 Claude Code 세션을 보고, 관리하고, 종료 |
 | **[Token Cost Calculator](https://github.com/NightmareAway/nomad-plugin-token-cost-calculator)** | 모델 가격과 토큰 사용량으로 API 비용을 계산하고 모델 가격 프리셋을 지원 |
 | **[Task Queue](https://github.com/TadMSTR/nomad-plugin-task-queue)** | 에이전트 작업을 보고, 필터링하고, 실행하는 작업 큐 대시보드 |
@@ -171,7 +171,7 @@ nomad는 커스텀 탭과 선택적 Node.js 백엔드가 포함된 플러그인 
 
 **[Plugin Starter Template →](https://github.com/nomad/nomad-plugin-starter)** — 이 저장소를 포크하여 플러그인 구축. 프런트엔드 렌더링, 실시간 컨텍스트 업데이트, RPC 통신 예제 포함.
 
-**[플러그인 문서 →](https://nomad.ai/docs/plugin-overview)** — 플러그인 API, 매니페스트 포맷, 보안 모델 등을 설명.
+**[플러그인 문서 →](https://planrla.com/docs/plugin-overview)** — 플러그인 API, 매니페스트 포맷, 보안 모델 등을 설명.
 
 ---
 
@@ -182,34 +182,34 @@ nomad는 커스텀 탭과 선택적 Node.js 백엔드가 포함된 플러그인 
 
 Claude Code Remote Control은 이미 로컬 터미널에서 실행 중인 세션으로 메시지를 전송합니다. 이 경우 기계가 켜져 있어야 하고 터미널을 열어 둬야 하며, 네트워크 연결 없이 약 10분 후 타임아웃됩니다.
 
-nomad와 nomad Hosted는 Claude Code를 확장하며 별도로 존재하지 않습니다 — MCP 서버, 권한, 설정, 세션은 Claude Code에서 그대로 사용됩니다.
+Planrla와 Planrla Hosted는 Claude Code를 확장하며 별도로 존재하지 않습니다 — MCP 서버, 권한, 설정, 세션은 Claude Code에서 그대로 사용됩니다.
 
-- **모든 세션을 다룬다** — nomad는 `~/.claude` 폴더에서 모든 세션을 자동 발견합니다. Remote Control은 단일 활성 세션만 노출합니다.
-- **설정은 그대로** — nomad에서 변경한 MCP, 도구 권한, 프로젝트 설정은 Claude Code에 즉시 반영됩니다.
+- **모든 세션을 다룬다** — Planrla는 `~/.claude` 폴더에서 모든 세션을 자동 발견합니다. Remote Control은 단일 활성 세션만 노출합니다.
+- **설정은 그대로** — Planrla에서 변경한 MCP, 도구 권한, 프로젝트 설정은 Claude Code에 즉시 반영됩니다.
 - **지원 에이전트가 더 많음** — Claude Code, Cursor CLI, Codex, Gemini CLI 지원.
 - **전체 UI 제공** — 단일 채팅 창이 아닌 파일 탐색기, Git 통합, MCP 관리 및 셸 터미널 포함.
-- **nomad Hosted는 클라우드에서 실행** — 노트북을 닫아도 에이전트가 실행됩니다. 터미널을 계속 확인할 필요 없음.
+- **Planrla Hosted는 클라우드에서 실행** — 노트북을 닫아도 에이전트가 실행됩니다. 터미널을 계속 확인할 필요 없음.
 
 </details>
 
 <details>
 <summary>AI 구독을 별도로 결제해야 하나요?</summary>
 
-네. nomad는 환경만 제공합니다. Claude, Cursor, Codex, Gemini 구독 비용은 별도로 부과됩니다. nomad Hosted는 관리형 환경을 월 $7부터 제공합니다.
+네. Planrla는 환경만 제공합니다. Claude, Cursor, Codex, Gemini 구독 비용은 별도로 부과됩니다. Planrla Hosted는 관리형 환경을 월 $7부터 제공합니다.
 
 </details>
 
 <details>
-<summary>nomad를 휴대폰에서 사용할 수 있나요?</summary>
+<summary>Planrla를 휴대폰에서 사용할 수 있나요?</summary>
 
-네. 셀프 호스트인 경우 기계에서 서버를 실행하고 네트워크의 아무 브라우저에서 `[yourip]:port`를 열면 됩니다. nomad Hosted는 어떤 기기에서도 열 수 있으며, 네이티브 앱도 준비 중입니다.
+네. 셀프 호스트인 경우 기계에서 서버를 실행하고 네트워크의 아무 브라우저에서 `[yourip]:port`를 열면 됩니다. Planrla Hosted는 어떤 기기에서도 열 수 있으며, 네이티브 앱도 준비 중입니다.
 
 </details>
 
 <details>
 <summary>UI에서 변경하면 로컬 Claude Code 설정에 영향을 주나요?</summary>
 
-네, 셀프 호스트에서는 그렇습니다. nomad는 Claude Code가 사용하는 동일한 `~/.claude` 설정을 읽고 씁니다. UI에서 추가한 MCP 서버가 Claude Code에 즉시 나타납니다.
+네, 셀프 호스트에서는 그렇습니다. Planrla는 Claude Code가 사용하는 동일한 `~/.claude` 설정을 읽고 씁니다. UI에서 추가한 MCP 서버가 Claude Code에 즉시 나타납니다.
 
 </details>
 
@@ -217,9 +217,9 @@ nomad와 nomad Hosted는 Claude Code를 확장하며 별도로 존재하지 않�
 
 ## 커뮤니티 및 지원
 
-- **[문서](https://nomad.ai/docs)** — 설치, 구성, 기능, 문제 해결 안내
+- **[문서](https://planrla.com/docs)** — 설치, 구성, 기능, 문제 해결 안내
 - **[Discord](https://discord.gg/buxwujPNRE)** — 도움 및 커뮤니티 참여
-- **[Support](https://nomad.ai/support)** — 버그 보고 및 기능 요청
+- **[Support](https://planrla.com/support)** — 버그 보고 및 기능 요청
 - **[기여 안내](CONTRIBUTING.md)** — 프로젝트 참여 방법
 
 ## 라이선스
@@ -242,7 +242,7 @@ All rights reserved.
 - **[TaskMaster AI](https://github.com/eyaltoledano/claude-task-master)** *(선택사항)* - AI 기반 프로젝트 관리 및 작업 계획
 
 ### 스폰서
-- [nomad](https://nomad.ai)
+- [Planrla](https://planrla.com)
 ---
 
 <div align="center">

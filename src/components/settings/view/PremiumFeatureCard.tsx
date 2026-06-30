@@ -1,7 +1,7 @@
 import { ExternalLink, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-const NOMAD_URL = 'https://nomad.ai';
+const NOMAD_URL = 'https://planrla.com';
 
 type PremiumFeatureCardProps = {
   icon: ReactNode;
@@ -14,7 +14,7 @@ export default function PremiumFeatureCard({
   icon,
   title,
   description,
-  ctaText = 'Available with nomad Pro',
+  ctaText = 'Available with Planrla Pro',
 }: PremiumFeatureCardProps) {
   return (
     <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5">

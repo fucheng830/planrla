@@ -4,8 +4,8 @@ import { IS_PLATFORM } from '../../../../../../constants/config';
 import type { ReleaseInfo } from '../../../../../../types/sharedTypes';
 
 const DISCORD_URL = 'https://discord.gg/buxwujPNRE';
-const DOCS_URL = 'https://nomad.ai/docs/plugin-overview';
-const NOMAD_URL = 'https://nomad.ai';
+const DOCS_URL = 'https://planrla.com/docs/plugin-overview';
+const NOMAD_URL = 'https://planrla.com';
 
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -33,14 +33,14 @@ export default function VersionInfoSection({
 
   return (
     <div className="border-t border-border/50 pt-6">
-      {/* About nomad */}
+      {/* About Planrla */}
       <div className="space-y-4">
         {/* Logo + name + version */}
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="nomad" className="h-9 w-9 flex-shrink-0" />
+          <img src="/logo.svg" alt="Planrla" className="h-9 w-9 flex-shrink-0" />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">nomad</span>
+              <span className="text-sm font-semibold text-foreground">Planrla</span>
               <a
                 href={releasesUrl}
                 target="_blank"
@@ -94,14 +94,14 @@ export default function VersionInfoSection({
             className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ExternalLink className="h-3 w-3" />
-            nomad.ai
+            planrla.com
           </a>
         </div>
 
         {/* Hosted CTA */}
         {!IS_PLATFORM && (
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
-            <h4 className="text-sm font-medium text-foreground">Try nomad Hosted</h4>
+            <h4 className="text-sm font-medium text-foreground">Try Planrla Hosted</h4>
             <p className="mt-1 text-xs text-muted-foreground">
               Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.
             </p>

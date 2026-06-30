@@ -1,7 +1,7 @@
 {
-  "name": "nomad",
-  "short_name": "nomad",
-  "description": "nomad web application",
+  "name": "Planrla",
+  "short_name": "Planrla",
+  "description": "Planrla web application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
