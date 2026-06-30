@@ -16,7 +16,7 @@ function base64UrlJson(value) {
 
 const privateKey = requireEnv('NOMAD_LICENSE_PRIVATE_KEY').replace(/\\n/g, '\n');
 const payload = {
-  product: 'nomad',
+  product: 'planrla',
   customer: requireEnv('CUSTOMER'),
   plan: process.env.PLAN || 'commercial',
   seats: Number(process.env.SEATS || 1),
@@ -31,4 +31,4 @@ signer.update(payloadPart);
 signer.end();
 const signaturePart = signer.sign(privateKey).toString('base64url');
 
-console.log(`nomad_${payloadPart}.${signaturePart}`);
+console.log(`planrla_${payloadPart}.${signaturePart}`);

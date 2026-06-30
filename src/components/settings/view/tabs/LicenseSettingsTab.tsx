@@ -150,7 +150,7 @@ export default function LicenseSettingsTab() {
             <textarea
               value={licenseKey}
               onChange={(event) => setLicenseKey(event.target.value)}
-              placeholder="nomad_..."
+              placeholder="planrla_..."
               className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isSaving}
             />

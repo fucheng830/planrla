@@ -1,5 +1,5 @@
-// Electron main process for nomad Desktop (ESM — package.json is type:module).
-// Spawns the bundled nomad server as a child using Electron's node ABI
+// Electron main process for Planrla Desktop (ESM — package.json is type:module).
+// Spawns the bundled Planrla server as a child using Electron's node ABI
 // (ELECTRON_RUN_AS_NODE) so native modules match, then loads the UI in a window.
 import { app, BrowserWindow, Menu, ipcMain, safeStorage } from 'electron';
 import { spawn } from 'node:child_process';
@@ -10,8 +10,8 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const APP_NAME = 'nomad';
-const APP_ID = 'cc.nomad.desktop';
+const APP_NAME = 'Planrla';
+const APP_ID = 'cc.planrla.desktop';
 
 let mainWindow = null;
 let serverProc = null;
@@ -36,7 +36,7 @@ async function setupAutoUpdater() {
     // namespace or under .default depending on the bundler/ESM interop layer.
     const autoUpdater = updaterMod.autoUpdater || updaterMod.default?.autoUpdater;
     if (!autoUpdater) throw new Error('electron-updater did not export autoUpdater');
-    const updateFeedUrl = process.env.NOMAD_UPDATE_URL;
+    const updateFeedUrl = process.env.PLANRLA_UPDATE_URL;
 
     autoUpdater.autoDownload = false;
     if (updateFeedUrl) {
@@ -53,7 +53,7 @@ async function setupAutoUpdater() {
   }
 }
 
-// ---- Cloud-account JWT (cc.brainmate.cc) persisted via safeStorage ----
+// ---- Cloud-account JWT (api.planrla.com) persisted via safeStorage ----
 // Renderer calls window.cloudAuth.{getToken,setToken,removeToken} (see preload.cjs);
 // these handlers encrypt the token with the OS keychain and store the blob in userData,
 // so the cloud JWT never sits in plaintext localStorage like the local app token does.

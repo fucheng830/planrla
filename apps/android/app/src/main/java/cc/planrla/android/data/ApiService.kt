@@ -1,4 +1,4 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import kotlinx.serialization.Serializable
 import okhttp3.MultipartBody
@@ -228,7 +228,7 @@ interface TaskMasterApi {
     suspend fun status(): ResponseBody
 }
 
-/** Account/auth API on the relay (cc.brainmate.cc). Bearer = account JWT. */
+/** Account/auth API on the relay (api.planrla.com). Bearer = account JWT. */
 interface AccountApi {
     @POST("api/auth/signup")
     suspend fun signup(@Body body: AccountLoginRequest): AccountAuthResponse

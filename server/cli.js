@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * nomad CLI
+ * Planrla CLI
  *
- * Provides command-line utilities for managing nomad
+ * Provides command-line utilities for managing Planrla
  *
  * Commands:
  *   (no args)     - Start the server (default)
@@ -54,9 +54,9 @@ const c = {
 // Load package.json for version info
 const packageJsonPath = path.join(APP_ROOT, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-// Match the runtime fallback in load-env.js so "nomad status" reports the same default
+// Match the runtime fallback in load-env.js so "planrla status" reports the same default
 // database location that the backend will actually use when no DATABASE_PATH is configured.
-const DEFAULT_DATABASE_PATH = path.join(os.homedir(), '.nomad', 'auth.db');
+const DEFAULT_DATABASE_PATH = path.join(os.homedir(), '.planrla', 'auth.db');
 
 // Load environment variables from .env file if it exists
 function loadEnvFile() {
@@ -90,7 +90,7 @@ function getInstallDir() {
 
 // Show status command
 function showStatus() {
-    console.log(`\n${c.bright('nomad - Status')}\n`);
+    console.log(`\n${c.bright('Planrla - Status')}\n`);
     console.log(c.dim('═'.repeat(60)));
 
     // Version info
@@ -137,9 +137,9 @@ function showStatus() {
 
     console.log('\n' + c.dim('═'.repeat(60)));
     console.log(`\n${c.tip('[TIP]')} Hints:`);
-    console.log(`      ${c.dim('>')} Use ${c.bright('nomad --port 8080')} to run on a custom port`);
-    console.log(`      ${c.dim('>')} Use ${c.bright('nomad --database-path /path/to/db')} for custom database`);
-    console.log(`      ${c.dim('>')} Run ${c.bright('nomad help')} for all options`);
+    console.log(`      ${c.dim('>')} Use ${c.bright('planrla --port 8080')} to run on a custom port`);
+    console.log(`      ${c.dim('>')} Use ${c.bright('planrla --database-path /path/to/db')} for custom database`);
+    console.log(`      ${c.dim('>')} Run ${c.bright('planrla help')} for all options`);
     console.log(`      ${c.dim('>')} Access the UI at http://localhost:${process.env.SERVER_PORT || process.env.PORT || '3001'}\n`);
 }
 
@@ -147,15 +147,15 @@ function showStatus() {
 function showHelp() {
     console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║              nomad - Command Line Tool               ║
+║              Planrla - Command Line Tool               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Usage:
   claude-code-ui [command] [options]
-  nomad [command] [options]
+  planrla [command] [options]
 
 Commands:
-  start            Start the nomad server (default)
+  start            Start the planrla server (default)
   sandbox          Manage Docker sandbox environments
   browser-use-mcp  Run the Browser MCP stdio server
   status           Show configuration and data locations
@@ -170,10 +170,10 @@ Options:
   -v, --version               Show version information
 
 Examples:
-  $ nomad                        # Start with defaults
-  $ nomad --port 8080            # Start on port 8080
-  $ nomad sandbox ~/my-project   # Run in a Docker sandbox
-  $ nomad status                 # Show configuration
+  $ planrla                        # Start with defaults
+  $ planrla --port 8080            # Start on port 8080
+  $ planrla sandbox ~/my-project   # Run in a Docker sandbox
+  $ planrla status                 # Show configuration
 
 Environment Variables:
   SERVER_PORT         Set server port (default: 3001)
@@ -183,10 +183,10 @@ Environment Variables:
   CONTEXT_WINDOW      Set context window size (default: 160000)
 
 Documentation:
-  ${packageJson.homepage || 'https://nomad.ai'}
+  ${packageJson.homepage || 'https://planrla.com'}
 
 Report Issues:
-  ${packageJson.bugs?.url || 'https://nomad.ai/support'}
+  ${packageJson.bugs?.url || 'https://planrla.com/support'}
 `);
 }
 
@@ -210,12 +210,12 @@ function isNewerVersion(v1, v2) {
 async function checkForUpdates(silent = false) {
     try {
         const { execSync } = await import('child_process');
-        const latestVersion = execSync('npm show nomad version', { encoding: 'utf8' }).trim();
+        const latestVersion = execSync('npm show planrla version', { encoding: 'utf8' }).trim();
         const currentVersion = packageJson.version;
 
         if (isNewerVersion(latestVersion, currentVersion)) {
             console.log(`\n${c.warn('[UPDATE]')} New version available: ${c.bright(latestVersion)} (current: ${currentVersion})`);
-            console.log(`         Run ${c.bright('nomad update')} to update\n`);
+            console.log(`         Run ${c.bright('planrla update')} to update\n`);
             return { hasUpdate: true, latestVersion, currentVersion };
         } else if (!silent) {
             console.log(`${c.ok('[OK]')} You are on the latest version (${currentVersion})`);
@@ -243,20 +243,20 @@ async function updatePackage() {
         }
 
         console.log(`${c.info('[INFO]')} Updating from ${currentVersion} to ${latestVersion}...`);
-        execSync('npm update -g nomad', { stdio: 'inherit' });
-        console.log(`${c.ok('[OK]')} Update complete! Restart nomad to use the new version.`);
+        execSync('npm update -g planrla', { stdio: 'inherit' });
+        console.log(`${c.ok('[OK]')} Update complete! Restart planrla to use the new version.`);
     } catch (e) {
         console.error(`${c.error('[ERROR]')} Update failed: ${e.message}`);
-        console.log(`${c.tip('[TIP]')} Try running manually: npm update -g nomad`);
+        console.log(`${c.tip('[TIP]')} Try running manually: npm update -g planrla`);
     }
 }
 
 // ── Sandbox command ─────────────────────────────────────────
 
 const SANDBOX_TEMPLATES = {
-    claude: 'docker.io/nomad/sandbox:claude-code',
-    codex: 'docker.io/nomad/sandbox:codex',
-    gemini: 'docker.io/nomad/sandbox:gemini',
+    claude: 'docker.io/planrla/sandbox:claude-code',
+    codex: 'docker.io/planrla/sandbox:codex',
+    gemini: 'docker.io/planrla/sandbox:gemini',
 };
 
 const SANDBOX_SECRETS = {
@@ -322,11 +322,11 @@ function parseSandboxArgs(args) {
 
 function showSandboxHelp() {
     console.log(`
-${c.bright('nomad Sandbox')} — Run nomad inside Docker Sandboxes
+${c.bright('Planrla Sandbox')} — Run planrla inside Docker Sandboxes
 
 Usage:
-  nomad sandbox <workspace>            Create and start a sandbox
-  nomad sandbox <subcommand> [name]    Manage sandboxes
+  planrla sandbox <workspace>            Create and start a sandbox
+  planrla sandbox <subcommand> [name]    Manage sandboxes
 
 Subcommands:
   ${c.bright('(default)')}    Create a sandbox and start the web UI
@@ -334,7 +334,7 @@ Subcommands:
   ${c.bright('start')}        Restart a stopped sandbox and re-launch the web UI
   ${c.bright('stop')}         Stop a sandbox (preserves state)
   ${c.bright('rm')}           Remove a sandbox
-  ${c.bright('logs')}         Show nomad server logs
+  ${c.bright('logs')}         Show planrla server logs
   ${c.bright('help')}         Show this help
 
 Options:
@@ -345,13 +345,13 @@ Options:
       --port <port>         Host port for the web UI (default: 3001)
 
 Examples:
-  $ nomad sandbox ~/my-project
-  $ nomad sandbox ~/my-project --agent codex --port 8080
-  $ nomad sandbox ~/my-project --env SERVER_PORT=8080 --env HOST=0.0.0.0
-  $ nomad sandbox ls
-  $ nomad sandbox stop my-project
-  $ nomad sandbox start my-project
-  $ nomad sandbox rm my-project
+  $ planrla sandbox ~/my-project
+  $ planrla sandbox ~/my-project --agent codex --port 8080
+  $ planrla sandbox ~/my-project --env SERVER_PORT=8080 --env HOST=0.0.0.0
+  $ planrla sandbox ls
+  $ planrla sandbox stop my-project
+  $ planrla sandbox start my-project
+  $ planrla sandbox rm my-project
 
 Prerequisites:
   1. Install sbx CLI: https://docs.docker.com/ai/sandboxes/get-started/
@@ -365,8 +365,8 @@ Advanced usage:
   For branch mode, multiple workspaces, memory limits, network policies,
   or passing prompts to the agent, use sbx directly with the template:
 
-    sbx run --template docker.io/nomad/sandbox:claude-code claude ~/my-project --branch my-feature
-    sbx run --template docker.io/nomad/sandbox:claude-code claude ~/project ~/libs:ro --memory 8g
+    sbx run --template docker.io/planrla/sandbox:claude-code claude ~/my-project --branch my-feature
+    sbx run --template docker.io/planrla/sandbox:claude-code claude ~/project ~/libs:ro --memory 8g
 
   Full Docker Sandboxes docs: https://docs.docker.com/ai/sandboxes/usage/
 `);
@@ -417,7 +417,7 @@ async function sandboxCommand(args) {
 
         case 'stop':
             if (!opts.name) {
-                console.error(`\n${c.error('❌')} Sandbox name required: nomad sandbox stop <name>\n`);
+                console.error(`\n${c.error('❌')} Sandbox name required: planrla sandbox stop <name>\n`);
                 process.exit(1);
             }
             sbx(['stop', opts.name], { inherit: true });
@@ -425,7 +425,7 @@ async function sandboxCommand(args) {
 
         case 'rm':
             if (!opts.name) {
-                console.error(`\n${c.error('❌')} Sandbox name required: nomad sandbox rm <name>\n`);
+                console.error(`\n${c.error('❌')} Sandbox name required: planrla sandbox rm <name>\n`);
                 process.exit(1);
             }
             sbx(['rm', opts.name], { inherit: true });
@@ -433,11 +433,11 @@ async function sandboxCommand(args) {
 
         case 'logs':
             if (!opts.name) {
-                console.error(`\n${c.error('❌')} Sandbox name required: nomad sandbox logs <name>\n`);
+                console.error(`\n${c.error('❌')} Sandbox name required: planrla sandbox logs <name>\n`);
                 process.exit(1);
             }
             try {
-                sbx(['exec', opts.name, 'bash', '-c', 'cat /tmp/nomad-ui.log'], { inherit: true });
+                sbx(['exec', opts.name, 'bash', '-c', 'cat /tmp/planrla-ui.log'], { inherit: true });
             } catch (e) {
                 console.error(`\n${c.error('❌')} Could not read logs: ${e.message || 'Is the sandbox running?'}\n`);
             }
@@ -445,7 +445,7 @@ async function sandboxCommand(args) {
 
         case 'start': {
             if (!opts.name) {
-                console.error(`\n${c.error('❌')} Sandbox name required: nomad sandbox start <name>\n`);
+                console.error(`\n${c.error('❌')} Sandbox name required: planrla sandbox start <name>\n`);
                 process.exit(1);
             }
             console.log(`\n${c.info('▶')} Starting sandbox ${c.bright(opts.name)}...`);
@@ -456,8 +456,8 @@ async function sandboxCommand(args) {
             restartRun.unref();
             await new Promise(resolve => setTimeout(resolve, 5000));
 
-            console.log(`${c.info('▶')} Launching nomad web server...`);
-            sbx(['exec', opts.name, 'bash', '-c', 'nohup nomad start --port 3001 > /tmp/nomad-ui.log 2>&1 & disown']);
+            console.log(`${c.info('▶')} Launching planrla web server...`);
+            sbx(['exec', opts.name, 'bash', '-c', 'nohup planrla start --port 3001 > /tmp/planrla-ui.log 2>&1 & disown']);
 
             console.log(`${c.info('▶')} Forwarding port ${opts.port} → 3001...`);
             try {
@@ -479,15 +479,15 @@ async function sandboxCommand(args) {
                 }
             }
 
-            console.log(`\n${c.ok('✔')} ${c.bright('nomad is ready!')}`);
+            console.log(`\n${c.ok('✔')} ${c.bright('planrla is ready!')}`);
             console.log(`  ${c.info('→')} ${c.bright(`http://localhost:${opts.port}`)}\n`);
             break;
         }
 
         case 'create': {
             if (!opts.workspace) {
-                console.error(`\n${c.error('❌')} Workspace path required: nomad sandbox <path>\n`);
-                console.log(`   Example: ${c.bright('nomad sandbox ~/my-project')}\n`);
+                console.error(`\n${c.error('❌')} Workspace path required: planrla sandbox <path>\n`);
+                console.log(`   Example: ${c.bright('planrla sandbox ~/my-project')}\n`);
                 process.exit(1);
             }
 
@@ -512,7 +512,7 @@ async function sandboxCommand(args) {
                 }
             } catch { /* sbx secret ls not available, skip check */ }
 
-            console.log(`\n${c.bright('nomad Sandbox')}`);
+            console.log(`\n${c.bright('Planrla Sandbox')}`);
             console.log(c.dim('─'.repeat(50)));
             console.log(`  Agent:     ${c.info(opts.agent)} ${c.dim(`(${secret} credentials)`)}`);
             console.log(`  Workspace: ${c.dim(workspace)}`);
@@ -554,9 +554,9 @@ async function sandboxCommand(args) {
                 }
             }
 
-            // Step 3: Start nomad inside the sandbox
-            console.log(`${c.info('▶')} Launching nomad web server...`);
-            sbx(['exec', opts.name, 'bash', '-c', 'nohup nomad start --port 3001 > /tmp/nomad-ui.log 2>&1 & disown']);
+            // Step 3: Start planrla inside the sandbox
+            console.log(`${c.info('▶')} Launching planrla web server...`);
+            sbx(['exec', opts.name, 'bash', '-c', 'nohup planrla start --port 3001 > /tmp/planrla-ui.log 2>&1 & disown']);
 
             // Step 4: Forward port
             console.log(`${c.info('▶')} Forwarding port ${opts.port} → 3001...`);
@@ -580,14 +580,14 @@ async function sandboxCommand(args) {
             }
 
             // Done
-            console.log(`\n${c.ok('✔')} ${c.bright('nomad is ready!')}`);
+            console.log(`\n${c.ok('✔')} ${c.bright('planrla is ready!')}`);
             console.log(`  ${c.info('→')} Open ${c.bright(`http://localhost:${opts.port}`)}`);
             console.log(`\n${c.dim('  Manage with:')}`);
             console.log(`  ${c.dim('$')} sbx ls`);
             console.log(`  ${c.dim('$')} sbx stop ${opts.name}`);
             console.log(`  ${c.dim('$')} sbx start ${opts.name}`);
             console.log(`  ${c.dim('$')} sbx rm ${opts.name}`);
-            console.log(`\n${c.dim('  Or install globally:')} npm install -g nomad\n`);
+            console.log(`\n${c.dim('  Or install globally:')} npm install -g planrla\n`);
             break;
         }
 
@@ -686,7 +686,7 @@ async function main() {
             break;
         default:
             console.error(`\n❌ Unknown command: ${command}`);
-            console.log('   Run "nomad help" for usage information.\n');
+            console.log('   Run "planrla help" for usage information.\n');
             process.exit(1);
     }
 }

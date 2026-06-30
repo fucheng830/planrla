@@ -20,7 +20,7 @@
     "runClaudeCli": "Führ Claude CLI in einem Projektverzeichnis aus, um zu beginnen"
   },
   "app": {
-    "title": "nomad",
+    "title": "Planrla",
     "subtitle": "KI-Programmierassistent-Oberfläche"
   },
   "sessions": {

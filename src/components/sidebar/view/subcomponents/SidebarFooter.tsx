@@ -2,7 +2,7 @@ import { Settings, ArrowUpCircle, Bug, AlertTriangle } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 
-const GITHUB_ISSUES_URL = 'https://nomad.ai/support';
+const GITHUB_ISSUES_URL = 'https://planrla.com/support';
 
 const DISCORD_INVITE_URL = 'https://discord.gg/buxwujPNRE';
 
@@ -144,7 +144,7 @@ export default function SidebarFooter({
       {/* Desktop version brand line */}
       <div className="hidden px-3 py-2 text-center md:block">
         <span className="text-[10px] text-muted-foreground/40">
-          nomad v{currentVersion}
+          Planrla v{currentVersion}
         </span>
       </div>
 

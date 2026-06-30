@@ -46,7 +46,7 @@ function Sidebar({
   const { isPWA } = useDeviceSettings({ trackMobile: false });
   const { updateAvailable, restartRequired, latestVersion, currentVersion, releaseInfo, installMode } = useVersionCheck(
     'fucheng830',
-    'nomad',
+    'planrla',
   );
   const { preferences, setPreference } = useUiPreferences();
   const { sidebarVisible } = preferences;

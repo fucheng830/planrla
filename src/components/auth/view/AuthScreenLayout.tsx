@@ -22,7 +22,7 @@ export default function AuthScreenLayout({
           <div className="text-center">
             <div className="mb-4 flex justify-center">
               {logo ?? (
-                <img src="/logo.svg" alt="nomad" className="h-16 w-16" />
+                <img src="/logo.svg" alt="Planrla" className="h-16 w-16" />
               )}
             </div>
             <h1 className="text-2xl font-bold text-foreground">{title}</h1>

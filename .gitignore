@@ -149,3 +149,13 @@ tasks/
 
 # Git worktrees
 .worktrees/
+
+# electron-builder 打包产物
+release/
+
+# 调试截图 / UI dump（开发产物，不提交）
+emulator-*.png
+emulator-*.xml
+phone-*.png
+phone-*.xml
+apps/android/docs/ui.xml

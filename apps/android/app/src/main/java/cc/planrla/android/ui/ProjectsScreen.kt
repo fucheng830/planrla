@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -62,10 +62,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
-import cc.nomad.android.data.Project
-import cc.nomad.android.data.RenameProjectRequest
-import cc.nomad.android.data.RenameSessionRequest
-import cc.nomad.android.data.SessionInfo
+import cc.planrla.android.data.Project
+import cc.planrla.android.data.RenameProjectRequest
+import cc.planrla.android.data.RenameSessionRequest
+import cc.planrla.android.data.SessionInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -125,7 +125,7 @@ class ProjectsViewModel : ViewModel() {
             _searching.value = true
             _search.value = emptyList()
             try {
-                cc.nomad.android.data.searchSessions(
+                cc.planrla.android.data.searchSessions(
                     serverUrl = s,
                     q = trimmed,
                     onResult = { hit ->
@@ -327,7 +327,7 @@ fun Sidebar(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // nomad logo — blue rounded square with chat icon (matches web LogoBlock)
+            // planrla logo — blue rounded square with chat icon (matches web LogoBlock)
             Box(
                 Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFF3B82F6)),
@@ -356,7 +356,7 @@ fun Sidebar(
             }
             Spacer(Modifier.width(10.dp))
             Text(
-                "nomad",
+                "planrla",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -523,7 +523,7 @@ fun Sidebar(
             Spacer(Modifier.height(8.dp))
             // Version brand line
             Text(
-                "nomad v${cc.nomad.android.BuildConfig.VERSION_NAME}",
+                "planrla v${cc.planrla.android.BuildConfig.VERSION_NAME}",
                 Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
@@ -1027,11 +1027,11 @@ private fun ClaudeAvatarSmall(sizeDp: Int = 24) {
 @Composable
 private fun ProviderAvatar(provider: String?, sizeDp: Int = 24) {
     val resId = when (provider?.lowercase()) {
-        "codex" -> cc.nomad.android.R.drawable.ic_codex
-        "cursor" -> cc.nomad.android.R.drawable.ic_cursor
-        "gemini" -> cc.nomad.android.R.drawable.ic_gemini
-        "opencode" -> cc.nomad.android.R.drawable.ic_opencode
-        else -> cc.nomad.android.R.drawable.ic_claude
+        "codex" -> cc.planrla.android.R.drawable.ic_codex
+        "cursor" -> cc.planrla.android.R.drawable.ic_cursor
+        "gemini" -> cc.planrla.android.R.drawable.ic_gemini
+        "opencode" -> cc.planrla.android.R.drawable.ic_opencode
+        else -> cc.planrla.android.R.drawable.ic_claude
     }
     val bgColor = when (provider?.lowercase()) {
         "codex" -> Color(0xFF1A1A2E)

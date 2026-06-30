@@ -5,17 +5,17 @@ plugins {
 }
 
 android {
-    namespace = "cc.nomad.android"
+    namespace = "cc.planrla.android"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "cc.nomad.android"
+        applicationId = "cc.planrla.android"
         minSdk = 26
         targetSdk = 34
         versionCode = 4
         versionName = "0.3.0"
         buildConfigField("String", "DEFAULT_SERVER", "\"http://192.168.0.13:3002\"")
-        buildConfigField("String", "UPDATE_REPO", "\"fucheng830/nomad-release\"")
+        buildConfigField("String", "UPDATE_REPO", "\"fucheng830/planrla-release\"")
     }
 
     buildFeatures {

@@ -1,14 +1,14 @@
-# nomad Android 客户端 设计
+# Planrla Android 客户端 设计
 
 ## Context
 
-Archie 要手机原生 app 控制家里的 Claude Code。nomad(siteboon/claudecodeui)已部署在 0.13:3002(nssm 服务,常驻 + 开机自启),提供 React web UI + REST/WebSocket API。web 版手机浏览器能用,但 Archie 要原生 app(更好 UX + 后台 + 推送潜力)。
+Archie 要手机原生 app 控制家里的 Claude Code。Planrla(siteboon/claudecodeui)已部署在 0.13:3002(nssm 服务,常驻 + 开机自启),提供 React web UI + REST/WebSocket API。web 版手机浏览器能用,但 Archie 要原生 app(更好 UX + 后台 + 推送潜力)。
 
-本设计:**原生 Android(Kotlin + Compose)客户端,调 nomad 后端 API**。后端不动,只做安卓前端。手机经 Tailscale 连 0.13:3002。
+本设计:**原生 Android(Kotlin + Compose)客户端,调 Planrla 后端 API**。后端不动,只做安卓前端。手机经 Tailscale 连 0.13:3002。
 
 ## MVP 范围(B)
 
-- 登录(连 nomad server)
+- 登录(连 Planrla server)
 - 项目 / session 列表 + 新建 session
 - chat:发消息 + 流式回复(逐 token)
 - 工具调用卡片(tool_use / tool_result,折叠)
@@ -28,7 +28,7 @@ Archie 要手机原生 app 控制家里的 Claude Code。nomad(siteboon/claudeco
 
 流式:`WebSocketListener` → `Channel<ChatEvent>` → ViewModel collect → Compose 增量 append(只更新最后一条消息,不重建列表)。
 
-## 数据契约(nomad API)
+## 数据契约(Planrla API)
 
 ### REST(Header:`Authorization: Bearer <JWT>`)
 
@@ -90,7 +90,7 @@ ToolResult 按 `toolId` merge 进对应 ToolUse 卡片。
 ## 关键实现点
 
 1. **流式增量渲染**:TextDelta 只更新最后一条 assistant 气泡的 text(Compose state 局部更新),不重建整个 LazyColumn —— 避免 m5 那种 innerHTML 全重建卡顿。
-2. **WS 认证**:token 在 query string(`?token=`)。JWT 过期:401 → 提示重登(nomad 有 #754 JWT refresh issue,MVP 不做自动 refresh)。
+2. **WS 认证**:token 在 query string(`?token=`)。JWT 过期:401 → 提示重登(Planrla 有 #754 JWT refresh issue,MVP 不做自动 refresh)。
 3. **WS 重连**:OkHttp 自动重连 + 指数退避。
 4. **权限队列**:多个 PermissionRequest 排队,逐个 dialog。
 5. **Markdown**:回复文本用 Compose-markdown 渲染。
@@ -105,7 +105,7 @@ ToolResult 按 `toolId` merge 进对应 ToolUse 卡片。
 - DataStore(Preferences)+ Coroutines / Flow
 - Compose-markdown 做 markdown 渲染
 
-## 待确认(实现第一步,扒 nomad 源码 / 抓真实报文)
+## 待确认(实现第一步,扒 Planrla 源码 / 抓真实报文)
 
 1. client→server 发消息的 `type` 精确值(读 `chat-websocket.service.ts` 或抓真实 WS 报文)。
 2. permission_request 的精确字段(requestId 确认 + toolName/input 字段名)。

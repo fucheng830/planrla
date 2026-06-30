@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="public/logo.svg" alt="nomad" width="64" height="64">
-  <h1>nomad</h1>
+  <img src="public/logo.svg" alt="Planrla" width="64" height="64">
+  <h1>Planrla</h1>
   <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, and <a href="https://geminicli.com/">Gemini-CLI</a>.<br>Use it locally or remotely to view your active projects and sessions from everywhere.</p>
 </div>
 
 <p align="center">
-  <a href="https://nomad.ai">nomad Hosted</a> · <a href="https://nomad.ai/docs">Documentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://nomad.ai/support">Bug Reports</a> · <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="https://planrla.com">Planrla Hosted</a> · <a href="https://planrla.com/docs">Documentation</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://planrla.com/support">Bug Reports</a> · <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
-  <a href="https://nomad.ai"><img src="https://img.shields.io/badge/nomad-Hosted-0066FF?style=for-the-badge" alt="nomad Hosted"></a>
+  <a href="https://planrla.com"><img src="https://img.shields.io/badge/Planrla-Hosted-0066FF?style=for-the-badge" alt="Planrla Hosted"></a>
   <a href="https://discord.gg/buxwujPNRE"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
   <br><br>
   <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="fucheng830%2Fnomad | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -60,47 +60,47 @@
 - **File Explorer** - Interactive file tree with syntax highlighting and live editing
 - **Git Explorer** - View, stage and commit your changes. You can also switch branches 
 - **Session Management** - Resume conversations, manage multiple sessions, and track history
-- **Plugin System** - Extend nomad with custom plugins — add new tabs, backend services, and integrations. [Build your own →](https://github.com/nomad/nomad-plugin-starter)
+- **Plugin System** - Extend Planrla with custom plugins — add new tabs, backend services, and integrations. [Build your own →](https://github.com/nomad/nomad-plugin-starter)
 - **TaskMaster AI Integration** *(Optional)* - Advanced project management with AI-powered task planning, PRD parsing, and workflow automation
 - **Model Compatibility** - Works with Claude, GPT, and Gemini model families (the full list of supported models is available at runtime via `GET /api/providers/:provider/models`)
 
 
 ## Quick Start
 
-### nomad Hosted (Recommended)
+### Planrla Hosted (Recommended)
 
 The fastest way to get started — no local setup required. Get a fully managed, containerized development environment accessible from the web, mobile app, API, or your favorite IDE.
 
-**[Get started with nomad Hosted](https://nomad.ai)**
+**[Get started with Planrla Hosted](https://planrla.com)**
 
 
 ### Self-Hosted
 
 #### npm
 
-Try nomad instantly with **npx** (requires **Node.js** v22+):
+Try Planrla instantly with **npx** (requires **Node.js** v22+):
 
 ```
-npx nomad
+npx planrla
 ```
 
 Or install **globally** for regular use:
 
 ```
-npm install -g nomad
-nomad
+npm install -g planrla
+Planrla
 ```
 
 Open `http://localhost:3001` — all your existing sessions are discovered automatically.
 
-Visit the **[documentation →](https://nomad.ai/docs)** for full configuration options, PM2, remote server setup and more.
+Visit the **[documentation →](https://planrla.com/docs)** for full configuration options, PM2, remote server setup and more.
 
 #### Docker Sandboxes (Experimental)
 
 Run agents in isolated sandboxes with hypervisor-level isolation. Starts Claude Code by default. Requires the [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/).
 
 ```
-npx nomad@latest sandbox ~/my-project
+npx planrla@latest sandbox ~/my-project
 ```
 
 Supports Claude Code, Codex, and Gemini CLI. See the [sandbox docs](docker/) for setup and advanced options.
@@ -110,13 +110,13 @@ Supports Claude Code, Codex, and Gemini CLI. See the [sandbox docs](docker/) for
 
 ## Which option is right for you?
 
-nomad is the UI layer that powers nomad Hosted. You can self-host it on your own machine, run it in a Docker sandbox for isolation, or use nomad Hosted for a fully managed environment.
+Planrla is the UI layer that powers Planrla Hosted. You can self-host it on your own machine, run it in a Docker sandbox for isolation, or use Planrla Hosted for a fully managed environment.
 
-| | Self-Hosted (npm) | Self-Hosted (Docker Sandbox) *(Experimental)* | nomad Hosted |
+| | Self-Hosted (npm) | Self-Hosted (Docker Sandbox) *(Experimental)* | Planrla Hosted |
 |---|---|---|---|
 | **Best for** | Local agent sessions on your own machine | Isolated agents with web/mobile IDE | Teams who want agents in the cloud |
 | **How you access it** | Browser via `[yourip]:port` | Browser via `localhost:port` | Browser, any IDE, REST API, n8n |
-| **Setup** | `npx nomad` | `npx nomad@latest sandbox ~/project` | No setup required |
+| **Setup** | `npx planrla` | `npx planrla@latest sandbox ~/project` | No setup required |
 | **Isolation** | Runs on your host | Hypervisor-level sandbox (microVM) | Full cloud isolation |
 | **Machine needs to stay on** | Yes | Yes | No |
 | **Mobile access** | Any browser on your network | Any browser on your network | Any device, native app coming |
@@ -127,7 +127,7 @@ nomad is the UI layer that powers nomad Hosted. You can self-host it on your own
 | **Team sharing** | No | No | Yes |
 | **Platform cost** | Included | Included | Starts at $7/month |
 
-> All options use your own AI subscriptions (Claude, Cursor, etc.) — nomad provides the environment, not the AI.
+> All options use your own AI subscriptions (Claude, Cursor, etc.) — Planrla provides the environment, not the AI.
 
 ---
 
@@ -156,7 +156,7 @@ To use Claude Code's full functionality, you'll need to manually enable tools:
 
 ## Plugins
 
-nomad has a plugin system that lets you add custom tabs with their own frontend UI and optional Node.js backend. Install plugins from git repos directly in **Settings > Plugins**, or build your own.
+Planrla has a plugin system that lets you add custom tabs with their own frontend UI and optional Node.js backend. Install plugins from git repos directly in **Settings > Plugins**, or build your own.
 
 ### Available Plugins
 
@@ -166,7 +166,7 @@ nomad has a plugin system that lets you add custom tabs with their own frontend 
 | **[Web Terminal](https://github.com/nomad/nomad-plugin-terminal)** | Full xterm.js terminal with multi-tab support |
 | **[Claude Watch](https://github.com/satsuki19980613/nomad-claude-watch)** | Watches long-running Claude Code sessions for hangs and exposes process controls |
 | **[nomad Scheduler](https://github.com/grostim/nomad-cron)** | Create workspace-scoped scheduled prompts and execute them through a local CLI such as Codex, Claude Code, or Gemini CLI |
-| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | Session intelligence for Claude Code inside nomad, including token burn visibility |
+| **[PRISM nomad](https://github.com/jakeefr/nomad-plugin-prism)** | Session intelligence for Claude Code inside Planrla, including token burn visibility |
 | **[Sessions](https://github.com/strykereye2/nomad-plugin-session-manager)** | View, manage, and kill active Claude Code sessions |
 | **[Token Cost Calculator](https://github.com/NightmareAway/nomad-plugin-token-cost-calculator)** | Calculate API costs from model prices and token usage, with preset model pricing support |
 | **[Task Queue](https://github.com/TadMSTR/nomad-plugin-task-queue)** | Task queue dashboard to view, filter, and launch agent tasks |
@@ -176,7 +176,7 @@ nomad has a plugin system that lets you add custom tabs with their own frontend 
 
 **[Plugin Starter Template →](https://github.com/nomad/nomad-plugin-starter)** — fork this repo to create your own plugin. It includes a working example with frontend rendering, live context updates, and RPC communication to a backend server.
 
-**[Plugin Documentation →](https://nomad.ai/docs/plugin-overview)** — full guide to the plugin API, manifest format, security model, and more.
+**[Plugin Documentation →](https://planrla.com/docs/plugin-overview)** — full guide to the plugin API, manifest format, security model, and more.
 
 ---
 ## FAQ
@@ -186,36 +186,36 @@ nomad has a plugin system that lets you add custom tabs with their own frontend 
 
 Claude Code Remote Control lets you send messages to a session already running in your local terminal. Your machine has to stay on, your terminal has to stay open, and sessions time out after roughly 10 minutes without a network connection.
 
-nomad and nomad Hosted extend Claude Code rather than sit alongside it — your MCP servers, permissions, settings, and sessions are the exact same ones Claude Code uses natively. Nothing is duplicated or managed separately.
+Planrla and Planrla Hosted extend Claude Code rather than sit alongside it — your MCP servers, permissions, settings, and sessions are the exact same ones Claude Code uses natively. Nothing is duplicated or managed separately.
 
 Here's what that means in practice:
 
-- **All your sessions, not just one** — nomad auto-discovers every session from your `~/.claude` folder. Remote Control only exposes the single active session to make it available in the Claude mobile app.
-- **Your settings are your settings** — MCP servers, tool permissions, and project config you change in nomad are written directly to your Claude Code config and take effect immediately, and vice versa.
+- **All your sessions, not just one** — Planrla auto-discovers every session from your `~/.claude` folder. Remote Control only exposes the single active session to make it available in the Claude mobile app.
+- **Your settings are your settings** — MCP servers, tool permissions, and project config you change in Planrla are written directly to your Claude Code config and take effect immediately, and vice versa.
 - **Works with more agents** — Claude Code, Cursor CLI, Codex, and Gemini CLI, not just Claude Code.
 - **Full UI, not just a chat window** — file explorer, Git integration, MCP management, and a shell terminal are all built in.
-- **nomad Hosted runs in the cloud** — close your laptop, the agent keeps running. No terminal to babysit, no machine to keep awake.
+- **Planrla Hosted runs in the cloud** — close your laptop, the agent keeps running. No terminal to babysit, no machine to keep awake.
 
 </details>
 
 <details>
 <summary>Do I need to pay for an AI subscription separately?</summary>
 
-Yes. nomad provides the environment, not the AI. You bring your own Claude, Cursor, Codex, or Gemini subscription. nomad Hosted starts at $7/month for the hosted environment on top of that.
+Yes. Planrla provides the environment, not the AI. You bring your own Claude, Cursor, Codex, or Gemini subscription. Planrla Hosted starts at $7/month for the hosted environment on top of that.
 
 </details>
 
 <details>
-<summary>Can I use nomad on my phone?</summary>
+<summary>Can I use Planrla on my phone?</summary>
 
-Yes. For self-hosted, run the server on your machine and open `[yourip]:port` in any browser on your network. For nomad Hosted, open it from any device — no VPN, no port forwarding, no setup. A native app is also in the works.
+Yes. For self-hosted, run the server on your machine and open `[yourip]:port` in any browser on your network. For Planrla Hosted, open it from any device — no VPN, no port forwarding, no setup. A native app is also in the works.
 
 </details>
 
 <details>
 <summary>Will changes I make in the UI affect my local Claude Code setup?</summary>
 
-Yes, for self-hosted. nomad reads from and writes to the same `~/.claude` config that Claude Code uses natively. MCP servers you add via the UI show up in Claude Code immediately and vice versa.
+Yes, for self-hosted. Planrla reads from and writes to the same `~/.claude` config that Claude Code uses natively. MCP servers you add via the UI show up in Claude Code immediately and vice versa.
 
 </details>
 
@@ -223,16 +223,16 @@ Yes, for self-hosted. nomad reads from and writes to the same `~/.claude` config
 
 ## Community & Support
 
-- **[Documentation](https://nomad.ai/docs)** — installation, configuration, features, and troubleshooting
+- **[Documentation](https://planrla.com/docs)** — installation, configuration, features, and troubleshooting
 - **[Discord](https://discord.gg/buxwujPNRE)** — get help and connect with other users
-- **[Support](https://nomad.ai/support)** — bug reports and feature requests
+- **[Support](https://planrla.com/support)** — bug reports and feature requests
 - **[Contributing Guide](CONTRIBUTING.md)** — how to contribute to the project
 
 ## License
 
 All rights reserved.
 
-nomad  - (https://nomad.ai).
+Planrla  - (https://planrla.com).
 
 ## Acknowledgments
 
@@ -249,7 +249,7 @@ nomad  - (https://nomad.ai).
 
 
 ### Sponsors
-- [nomad](https://nomad.ai)
+- [Planrla](https://planrla.com)
 ---
 
 <div align="center">

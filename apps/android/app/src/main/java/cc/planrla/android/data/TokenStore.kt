@@ -1,4 +1,4 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
-private val Context.dataStore by preferencesDataStore(name = "nomad")
+private val Context.dataStore by preferencesDataStore(name = "planrla")
 
 @Serializable
 data class Device(
@@ -20,8 +20,8 @@ data class Device(
     val name: String,
     val token: String,
     val lan: String? = null,      // LAN address host:port (e.g. 192.168.0.13:3002) for direct mode
-    val ccUser: String? = null,   // nomad username for LAN-direct login
-    val ccPass: String? = null,   // nomad password for LAN-direct login
+    val ccUser: String? = null,   // planrla username for LAN-direct login
+    val ccPass: String? = null,   // planrla password for LAN-direct login
 )
 
 class TokenStore(private val context: Context) {
@@ -68,6 +68,7 @@ class TokenStore(private val context: Context) {
     suspend fun setServer(url: String) = context.dataStore.edit { it[Keys.SERVER] = url }
     suspend fun setToken(t: String) = context.dataStore.edit { it[Keys.TOKEN] = t }
     suspend fun setRelayToken(t: String) = context.dataStore.edit { it[Keys.RELAY] = t }
+    suspend fun clearRelayToken() = context.dataStore.edit { it.remove(Keys.RELAY) }
     suspend fun setAccount(jwt: String, email: String) = context.dataStore.edit {
         it[Keys.ACCOUNT_JWT] = jwt; it[Keys.ACCOUNT_EMAIL] = email
     }
@@ -86,7 +87,17 @@ class TokenStore(private val context: Context) {
         prefs[Keys.DEVICES] = json.encodeToString(ListSerializer(Device.serializer()), list)
     }
     suspend fun removeDevice(id: String) = context.dataStore.edit { prefs ->
-        prefs[Keys.DEVICES] = json.encodeToString(ListSerializer(Device.serializer()), readDevices(prefs).filterNot { it.id == id })
+        val remaining = readDevices(prefs).filterNot { it.id == id }
+        prefs[Keys.DEVICES] = json.encodeToString(ListSerializer(Device.serializer()), remaining)
+        if (prefs[Keys.CURRENT] == id) {
+            remaining.firstOrNull()?.let { next ->
+                prefs[Keys.CURRENT] = next.id
+                prefs[Keys.RELAY] = next.token
+            } ?: run {
+                prefs.remove(Keys.CURRENT)
+                prefs.remove(Keys.RELAY)
+            }
+        }
     }
     suspend fun clear() = context.dataStore.edit { it.remove(Keys.TOKEN); it.remove(Keys.RELAY) }
 

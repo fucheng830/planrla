@@ -1,4 +1,4 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -116,29 +116,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
-import cc.nomad.android.data.ChatEvent
-import cc.nomad.android.data.ChatSocket
-import cc.nomad.android.data.CheckoutRequest
-import cc.nomad.android.data.CommitRequest
-import cc.nomad.android.data.CreateSessionRequest
-import cc.nomad.android.R
-import cc.nomad.android.data.FileDiff
-import cc.nomad.android.data.GenerateCommitMessageRequest
-import cc.nomad.android.data.GitOpResponse
-import cc.nomad.android.data.GitRemoteRequest
-import cc.nomad.android.data.GitStatus
-import cc.nomad.android.data.CommandInfo
-import cc.nomad.android.data.CommandListRequest
-import cc.nomad.android.data.CommandExecuteRequest
-import cc.nomad.android.data.CommitInfo
-import cc.nomad.android.data.DeleteBranchRequest
-import cc.nomad.android.data.Device
-import cc.nomad.android.data.DiscardRequest
-import cc.nomad.android.data.LoginRequest
-import cc.nomad.android.data.NormalizedMessage
-import cc.nomad.android.data.SessionInfo
-import cc.nomad.android.data.TokenBudget
-import cc.nomad.android.data.NetworkModule
+import cc.planrla.android.data.ChatEvent
+import cc.planrla.android.data.ChatSocket
+import cc.planrla.android.data.CheckoutRequest
+import cc.planrla.android.data.CommitRequest
+import cc.planrla.android.data.CreateSessionRequest
+import cc.planrla.android.R
+import cc.planrla.android.data.FileDiff
+import cc.planrla.android.data.GenerateCommitMessageRequest
+import cc.planrla.android.data.GitOpResponse
+import cc.planrla.android.data.GitRemoteRequest
+import cc.planrla.android.data.GitStatus
+import cc.planrla.android.data.CommandInfo
+import cc.planrla.android.data.CommandListRequest
+import cc.planrla.android.data.CommandExecuteRequest
+import cc.planrla.android.data.CommitInfo
+import cc.planrla.android.data.DeleteBranchRequest
+import cc.planrla.android.data.Device
+import cc.planrla.android.data.DiscardRequest
+import cc.planrla.android.data.LoginRequest
+import cc.planrla.android.data.NormalizedMessage
+import cc.planrla.android.data.SessionInfo
+import cc.planrla.android.data.TokenBudget
+import cc.planrla.android.data.NetworkModule
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
@@ -161,7 +161,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.ResponseBody
 
-// nomad shadcn palette (hardcoded tailwind values from the web app)
+// planrla shadcn palette (hardcoded tailwind values from the web app)
 private val UserBubbleBlue = Color(0xFF2563EB)     // bg-blue-600 (user bubble / Sign In)
 private val ClaudeCoral = Color(0xFFD97757)         // Claude brand mark
 private val ToolAvatarGray = Color(0xFF6B7280)      // gray-600 (tool avatar, used in both themes)
@@ -268,11 +268,13 @@ class ChatViewModel(
             var s: String = App.tokenStore.serverUrlSync() ?: return@launch
             var t: String? = App.tokenStore.tokenSync()
             var r: String? = dev?.token ?: App.tokenStore.relayTokenSync()
-            // LAN-direct: probe the device's local nomad (4s); fall back to relay if unreachable.
+            // LAN-direct: probe the device's local planrla (4s); fall back to relay if unreachable.
             if (dev != null && !dev.lan.isNullOrBlank() && !dev.ccUser.isNullOrBlank()) {
-                val lanUrl = if (dev.lan!!.startsWith("http")) dev.lan!!.trimEnd('/') else "http://${dev.lan}"
+                val lan = dev.lan
+                val username = dev.ccUser
+                val lanUrl = if (lan.startsWith("http")) lan.trimEnd('/') else "http://$lan"
                 val lanJwt = runCatching {
-                    withTimeout(4000) { App.api(lanUrl).auth.login(LoginRequest(dev.ccUser!!, dev.ccPass ?: "")) }
+                    withTimeout(4000) { App.api(lanUrl).auth.login(LoginRequest(username, dev.ccPass ?: "")) }
                 }.getOrNull()?.token
                 if (lanJwt != null) {
                     s = lanUrl; t = lanJwt; r = null
@@ -285,9 +287,9 @@ class ChatViewModel(
             serverUrl = s
             runCatching {
                 val resp = App.api(s).project.messages(sessionId, limit = 80)
-                android.util.Log.i("nomad", "history: ${resp.messages.size} msgs on $s sid=$sessionId")
+                android.util.Log.i("planrla", "history: ${resp.messages.size} msgs on $s sid=$sessionId")
                 if (resp.messages.isNotEmpty()) loadHistory(resp.messages)
-            }.onFailure { android.util.Log.e("nomad", "history load FAILED sid=$sessionId", it) }
+            }.onFailure { android.util.Log.e("planrla", "history load FAILED sid=$sessionId", it) }
             launch {
                 runCatching {
                     val c = App.api(s).command.list(CommandListRequest(provider = sessionProvider ?: "claude", sessionId = sessionId))
@@ -414,7 +416,7 @@ class ChatViewModel(
     private fun notifyRunCompleteIfBackground() {
         if (App.isForeground) return
         val ctx = App.appContext
-        val n = NotificationCompat.Builder(ctx, "nomad_run")
+        val n = NotificationCompat.Builder(ctx, "planrla_run")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(providerDisplayName(sessionProvider))
             .setContentText("运行完成")
@@ -690,13 +692,36 @@ class ChatViewModel(
 
     /**
      * Update TokenStore + tokenHolder to the given device. Does NOT reconnect in place —
-     * switching devices connects to a different nomad instance, so the caller navigates
+     * switching devices connects to a different planrla instance, so the caller navigates
      * to a fresh ChatScreen (chat/new) whose start() connects to the new current device.
      */
-    suspend fun applyDevice(id: String) {
+    suspend fun applyDevice(id: String): Boolean {
         App.tokenStore.setCurrentDevice(id)
-        val dev = App.tokenStore.currentDevice() ?: return
-        App.tokenHolder.relayToken = dev.token
+        val dev = App.tokenStore.currentDevice() ?: return false
+        return runCatching {
+            if (!dev.lan.isNullOrBlank()) {
+                val url = normalizeHostInput(dev.lan)
+                App.tokenStore.setServer(url)
+                if (!dev.ccUser.isNullOrBlank()) {
+                    val response = App.api(url).auth.login(LoginRequest(dev.ccUser, dev.ccPass ?: ""))
+                    val token = response.token ?: throw IllegalStateException("no token in response")
+                    App.tokenStore.setToken(token)
+                    App.tokenStore.clearRelayToken()
+                    App.tokenHolder.token = token
+                    App.tokenHolder.relayToken = null
+                }
+            } else if (dev.token.isNotBlank()) {
+                App.tokenStore.setRelayToken(dev.token)
+                App.tokenHolder.relayToken = dev.token
+            }
+        }.onFailure { error ->
+            val message = when {
+                error.message?.contains("401") == true -> "执行端登录失败：账号或密码不正确"
+                else -> "切换执行端失败：${error.message ?: "unknown"}"
+            }
+            _items.value = _items.value + ChatItem.Sys("⚠ $message")
+            android.util.Log.e("planrla", "applyDevice failed id=$id", error)
+        }.isSuccess
     }
 
     fun refreshDevices() {
@@ -781,7 +806,7 @@ fun ChatScreen(
 
     val projectName = remember(cwd) {
         cwd?.trimEnd('\\', '/')?.substringAfterLast('\\')?.substringAfterLast('/')
-            ?.takeIf { it.isNotBlank() } ?: "nomad"
+            ?.takeIf { it.isNotBlank() } ?: "planrla"
     }
 
     perms.firstOrNull()?.let { req ->
@@ -1118,7 +1143,7 @@ fun ChatScreen(
             currentDeviceId = currentDeviceId,
             onSelect = { id ->
                 showDeviceSheet = false
-                scope.launch { vm.applyDevice(id); onSwitchDevice() }
+                scope.launch { if (vm.applyDevice(id)) onSwitchDevice() }
             },
             onAdd = { showDeviceSheet = false; showAddDevice = true },
             onRefresh = { vm.refreshDevices() },
@@ -1128,18 +1153,20 @@ fun ChatScreen(
     }
     if (showAddDevice) {
         AddDeviceDialog(
-            onConfirm = { name, token, lan, ccUser, ccPass ->
-                val id = token.trim()
+            onConfirm = { name, deviceToken, lan, ccUser, ccPass ->
+                val normalizedLan = normalizeHostInput(lan)
+                val deviceRelayToken = deviceToken.trim()
+                val id = deviceRelayToken.ifBlank { normalizedLan }
                 scope.launch {
                     App.tokenStore.upsertDevice(Device(
                         id = id,
-                        name = name.trim().ifBlank { "Device" },
-                        token = id,
-                        lan = lan.trim().ifBlank { null },
+                        name = name.trim().ifBlank { normalizedLan.ifBlank { "Device" } },
+                        token = deviceRelayToken,
+                        lan = normalizedLan.ifBlank { null },
                         ccUser = ccUser.trim().ifBlank { null },
                         ccPass = ccPass.ifBlank { null },
                     ))
-                    vm.applyDevice(id); onSwitchDevice()
+                    if (vm.applyDevice(id)) onSwitchDevice()
                 }
                 showAddDevice = false
             },
@@ -1260,7 +1287,7 @@ private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long 
                 onClick = {},
                 onLongClick = {
                     val cb = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                    cb?.setPrimaryClip(ClipData.newPlainText("nomad", text))
+                    cb?.setPrimaryClip(ClipData.newPlainText("planrla", text))
                 },
             )
     ) {
@@ -1302,7 +1329,7 @@ private fun MessageMeta(time: Long, copyContent: String, alignEnd: Boolean) {
                 Modifier
                     .clip(RoundedCornerShape(4.dp))
                     .clickable {
-                        clipboard?.setPrimaryClip(ClipData.newPlainText("nomad", copyContent))
+                        clipboard?.setPrimaryClip(ClipData.newPlainText("planrla", copyContent))
                         copied = true
                     }
                     .padding(horizontal = 4.dp, vertical = 2.dp),
@@ -2662,7 +2689,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = token,
                     onValueChange = { token = it.trim() },
-                    label = { Text("Device token") },
+                    label = { Text("Device token / Relay token (可选)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -2670,13 +2697,13 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = lan,
                     onValueChange = { lan = it.trim() },
-                    label = { Text("内网地址 (可选, 如 192.168.0.13:3002)") },
+                    label = { Text("Desktop URL / 内网地址 (如 192.168.0.13:3002)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "同局域网时自动走内网直连(快、不耗云端);填了内网地址就再填 nomad 账号密码。",
+                    "直连 Desktop 可只填 Desktop URL + planrla 账号密码；Relay 模式才需要 Device token。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -2684,7 +2711,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = ccUser,
                     onValueChange = { ccUser = it },
-                    label = { Text("nomad 账号 (内网用)") },
+                    label = { Text("planrla 账号") },
                     singleLine = true,
                     enabled = lan.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
@@ -2693,7 +2720,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = ccPass,
                     onValueChange = { ccPass = it },
-                    label = { Text("nomad 密码 (内网用)") },
+                    label = { Text("planrla 密码") },
                     singleLine = true,
                     enabled = lan.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
@@ -2705,15 +2732,20 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 ) { Text("📷 扫码导入") }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Device token 从执行端的 relay agent 获取,或扫码导入。",
+                    "添加直连 Desktop 时不需要填写 Device token。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { Button({ onConfirm(name, token, lan, ccUser, ccPass) }, enabled = token.isNotBlank()) { Text("添加") } },
+        confirmButton = { Button({ onConfirm(name, token, lan, ccUser, ccPass) }, enabled = token.isNotBlank() || lan.isNotBlank()) { Text("添加") } },
         dismissButton = { TextButton(onDismiss) { Text("取消") } },
     )
+}
+
+private fun normalizeHostInput(input: String): String {
+    val trimmed = input.trim().trimEnd('/')
+    return if (trimmed.isBlank() || trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed else "http://$trimmed"
 }
 
 /** Parsed QR device payload. Supports compact JSON {t,n,lan,u,p} (lan/ccUser/ccPass optional)
@@ -2755,13 +2787,13 @@ private fun EditLanDialog(device: Device, onSave: (String, String, String) -> Un
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = ccUser, onValueChange = { ccUser = it },
-                    label = { Text("nomad 账号") },
+                    label = { Text("planrla 账号") },
                     singleLine = true, enabled = lan.isNotBlank(), modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = ccPass, onValueChange = { ccPass = it },
-                    label = { Text("nomad 密码") },
+                    label = { Text("planrla 密码") },
                     singleLine = true, enabled = lan.isNotBlank(), modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(6.dp))

@@ -38,11 +38,11 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0">
-        <DialogTitle>nomad Account</DialogTitle>
+        <DialogTitle>Planrla Account</DialogTitle>
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="nomad" className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">{mode === 'signup' ? 'Create nomad account' : 'Sign in to nomad'}</h2>
+            <img src="/logo.svg" alt="Planrla" className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">{mode === 'signup' ? 'Create Planrla account' : 'Sign in to Planrla'}</h2>
           </div>
           <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />
@@ -51,7 +51,7 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
 
         <div className="space-y-4 p-6">
           <p className="text-sm text-muted-foreground">
-            Connect your cc.brainmate.cc account to enable remote access from the phone app.
+            Connect your api.planrla.com account to enable remote access from the phone app.
           </p>
 
           <div className="space-y-1.5">

@@ -90,7 +90,7 @@ export const showCompletionTitleIndicator = (): void => {
     return;
   }
 
-  const baseTitle = stripIndicator(document.title || 'nomad');
+  const baseTitle = stripIndicator(document.title || 'Planrla');
   document.title = `${getIndicatorPrefix()}${baseTitle}`;
 
   if (pageIsActive()) {

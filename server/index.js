@@ -301,7 +301,7 @@ app.post('/api/system/update', authenticateToken, async (req, res) => {
             ? 'npm run update:platform'
             : installMode === 'git'
                 ? 'git checkout main && git pull && npm install'
-                : 'npm install -g nomad@latest';
+                : 'npm install -g planrla@latest';
 
         const updateCwd = IS_PLATFORM || installMode === 'git'
             ? projectRoot
@@ -1750,12 +1750,12 @@ async function startServer() {
 
             console.log('');
             console.log(c.dim('═'.repeat(63)));
-            console.log(`  ${c.bright('nomad Server - Ready')}`);
+            console.log(`  ${c.bright('planrla Server - Ready')}`);
             console.log(c.dim('═'.repeat(63)));
             console.log('');
             console.log(`${c.info('[INFO]')} Server URL:  ${c.bright('http://' + DISPLAY_HOST + ':' + SERVER_PORT)}`);
             console.log(`${c.info('[INFO]')} Installed at: ${c.dim(appInstallPath)}`);
-            console.log(`${c.tip('[TIP]')}  Run "nomad status" for full configuration details`);
+            console.log(`${c.tip('[TIP]')}  Run "planrla status" for full configuration details`);
             console.log('');
 
             // Start watching the projects folder for changes

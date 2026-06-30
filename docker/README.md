@@ -1,9 +1,9 @@
 <!-- Docker Hub short description (100 chars max): -->
 <!-- Sandbox templates for running AI coding agents with a web & mobile IDE (Claude Code, Codex, Gemini) -->
 
-# Sandboxed coding agents with a web & mobile IDE (nomad)
+# Sandboxed coding agents with a web & mobile IDE (Planrla)
 
-[Docker Sandbox](https://docs.docker.com/ai/sandboxes/) templates that add [nomad](https://nomad.ai) on top of Claude Code, Codex, and Gemini CLI. You get a full web and mobile IDE accessible from any browser on any device.
+[Docker Sandbox](https://docs.docker.com/ai/sandboxes/) templates that add [Planrla](https://planrla.com) on top of Claude Code, Codex, and Gemini CLI. You get a full web and mobile IDE accessible from any browser on any device.
 
 ## Get started
 
@@ -29,7 +29,7 @@ sbx secret set -g anthropic
 ### 3. Launch Claude Code
 
 ```bash
-npx nomad@latest sandbox ~/my-project
+npx planrla@latest sandbox ~/my-project
 ```
 
 Open **http://localhost:3001**. Set a password on first visit. Start building.
@@ -41,20 +41,20 @@ Store the matching API key and pass `--agent`:
 ```bash
 # OpenAI Codex
 sbx secret set -g openai
-npx nomad@latest sandbox ~/my-project --agent codex
+npx planrla@latest sandbox ~/my-project --agent codex
 
 # Gemini CLI
 sbx secret set -g google
-npx nomad@latest sandbox ~/my-project --agent gemini
+npx planrla@latest sandbox ~/my-project --agent gemini
 ```
 
 ### Available templates
 
 | Agent | Template |
 |-------|----------|
-| **Claude Code** (default) | `docker.io/nomad/sandbox:claude-code` |
-| OpenAI Codex | `docker.io/nomad/sandbox:codex` |
-| Gemini CLI | `docker.io/nomad/sandbox:gemini` |
+| **Claude Code** (default) | `docker.io/Planrla/sandbox:claude-code` |
+| OpenAI Codex | `docker.io/Planrla/sandbox:codex` |
+| Gemini CLI | `docker.io/Planrla/sandbox:gemini` |
 
 These are used with `--template` when running `sbx` directly (see [Advanced usage](#advanced-usage)).
 
@@ -68,12 +68,12 @@ sbx rm my-project                    # Remove everything
 sbx exec my-project bash             # Open a shell inside the sandbox
 ```
 
-If you install nomad globally (`npm install -g nomad`), you can also use:
+If you install Planrla globally (`npm install -g planrla`), you can also use:
 
 ```bash
-nomad sandbox ls
-nomad sandbox start my-project    # Restart and re-launch web UI
-nomad sandbox logs my-project     # View server logs
+Planrla sandbox ls
+Planrla sandbox start my-project    # Restart and re-launch web UI
+Planrla sandbox logs my-project     # View server logs
 ```
 
 ## What you get
@@ -92,7 +92,7 @@ Your project directory is mounted bidirectionally — edits propagate in real ti
 Set variables at creation time with `--env`:
 
 ```bash
-npx nomad@latest sandbox ~/my-project --env SERVER_PORT=8080
+npx planrla@latest sandbox ~/my-project --env SERVER_PORT=8080
 ```
 
 Or inside a running sandbox:
@@ -101,18 +101,18 @@ Or inside a running sandbox:
 sbx exec my-project bash -c 'echo "export SERVER_PORT=8080" >> /etc/sandbox-persistent.sh'
 ```
 
-Restart nomad for changes to take effect:
+Restart Planrla for changes to take effect:
 
 ```bash
 sbx exec my-project bash -c 'pkill -f "server/index.js"'
-sbx exec -d my-project nomad start --port 3001
+sbx exec -d my-project Planrla start --port 3001
 ```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SERVER_PORT` | `3001` | Web UI port |
 | `HOST` | `0.0.0.0` | Bind address (must be `0.0.0.0` for `sbx ports`) |
-| `DATABASE_PATH` | `~/.nomad/auth.db` | SQLite database location |
+| `DATABASE_PATH` | `~/.Planrla/auth.db` | SQLite database location |
 
 ## Advanced usage
 
@@ -120,20 +120,20 @@ For branch mode, multiple workspaces, memory limits, or the terminal agent exper
 
 ```bash
 # Terminal agent + web UI
-sbx run --template docker.io/nomad/sandbox:claude-code claude ~/my-project --name my-project
+sbx run --template docker.io/Planrla/sandbox:claude-code claude ~/my-project --name my-project
 sbx ports my-project --publish 3001:3001
 
 # Branch mode (Git worktree isolation)
-sbx run --template docker.io/nomad/sandbox:claude-code claude ~/my-project --branch my-feature
+sbx run --template docker.io/Planrla/sandbox:claude-code claude ~/my-project --branch my-feature
 
 # Multiple workspaces
-sbx run --template docker.io/nomad/sandbox:claude-code claude ~/project ~/shared-libs:ro
+sbx run --template docker.io/Planrla/sandbox:claude-code claude ~/project ~/shared-libs:ro
 
 # Pass a prompt directly
-sbx run --template docker.io/nomad/sandbox:claude-code claude ~/my-project -- "Fix the auth bug"
+sbx run --template docker.io/Planrla/sandbox:claude-code claude ~/my-project -- "Fix the auth bug"
 ```
 
-nomad auto-starts via `.bashrc` when using `sbx run`.
+Planrla auto-starts via `.bashrc` when using `sbx run`.
 
 Full options in the [Docker Sandboxes usage guide](https://docs.docker.com/ai/sandboxes/usage/).
 
@@ -150,8 +150,8 @@ The web UI itself doesn't need a policy — access it via `sbx ports`.
 
 ## Links
 
-- [nomad Hosted](https://nomad.ai) — fully managed, no setup required
-- [Documentation](https://nomad.ai/docs) — full configuration guide
+- [Planrla Hosted](https://planrla.com) — fully managed, no setup required
+- [Documentation](https://planrla.com/docs) — full configuration guide
 - [Discord](https://discord.gg/buxwujPNRE) — community support
 
 ## License

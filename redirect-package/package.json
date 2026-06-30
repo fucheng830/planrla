@@ -1,16 +1,16 @@
 {
   "name": "nomad",
   "version": "2.0.0",
-  "description": "This package has moved to nomad",
+  "description": "This package has moved to planrla",
   "type": "module",
   "main": "index.js",
   "bin": {
     "claude-code-ui": "./bin.js",
     "nomad": "./bin.js"
   },
-  "homepage": "https://nomad.ai",
+  "homepage": "https://planrla.com",
   "bugs": {
-    "url": "https://nomad.ai/support"
+    "url": "https://planrla.com/support"
   },
   "keywords": [
     "claude code",
@@ -30,11 +30,11 @@
     "ui",
     "mobile IDE"
   ],
-  "author": "nomad Contributors",
+  "author": "Planrla Contributors",
   "dependencies": {
-    "nomad": "*"
+    "planrla": "*"
   },
-  "deprecated": "This package has been renamed to nomad. Please install nomad instead.",
+  "deprecated": "This package has been renamed to planrla. Please install planrla instead.",
   "license": "UNLICENSED",
   "private": true
 }

@@ -107,7 +107,7 @@ export default function SidebarProjectList({
   );
 
   useEffect(() => {
-    let baseTitle = 'nomad';
+    let baseTitle = 'Planrla';
     const displayName = selectedProject?.displayName?.trim();
     if (displayName) {
       baseTitle = `${displayName} - ${baseTitle}`;

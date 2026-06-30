@@ -1,4 +1,4 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
 import android.content.Context
 import android.content.Intent
@@ -82,7 +82,7 @@ class UpdateChecker(private val context: Context) {
             val bytes = resp.body?.bytes() ?: return false
 
             // Write to cache dir (no storage permission needed)
-            val apkFile = java.io.File(context.cacheDir, "nomad-update.apk")
+            val apkFile = java.io.File(context.cacheDir, "planrla-update.apk")
             apkFile.writeBytes(bytes)
 
             // Launch installer via FileProvider (API 24+) or direct URI (older)

@@ -1,11 +1,11 @@
-# Contributing to nomad
+# Contributing to Planrla
 
-Thanks for your interest in contributing to nomad! Before you start, please take a moment to read through this guide.
+Thanks for your interest in contributing to Planrla! Before you start, please take a moment to read through this guide.
 
 ## Before You Start
 
-- **Search first.** Check [existing issues](https://nomad.ai/support) and [pull requests](https://nomad.ai/support) to avoid duplicating work.
-- **Discuss first** for new features. Open an [issue](https://nomad.ai/support) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
+- **Search first.** Check [existing issues](https://planrla.com/support) and [pull requests](https://planrla.com/support) to avoid duplicating work.
+- **Discuss first** for new features. Open an [issue](https://planrla.com/support) to discuss your idea before investing time in implementation. We may already have plans or opinions on how it should work.
 - **Bug fixes are always welcome.** If you spot a bug, feel free to open a PR directly.
 
 ## Prerequisites
@@ -18,8 +18,8 @@ Thanks for your interest in contributing to nomad! Before you start, please take
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/<your-username>/nomad.git
-   cd nomad
+   git clone https://github.com/<your-username>/Planrla.git
+   cd Planrla
    ```
 3. Install dependencies:
    ```bash
@@ -37,7 +37,7 @@ Thanks for your interest in contributing to nomad! Before you start, please take
 ## Project Structure
 
 ```
-nomad/
+Planrla/
 ├── src/              # React frontend (Vite + Tailwind)
 │   ├── components/   # UI components
 │   ├── contexts/     # React context providers

@@ -1,11 +1,11 @@
 FROM docker/sandbox-templates:claude-code
 
 USER root
-COPY shared/install-nomad.sh /tmp/install-nomad.sh
-RUN chmod +x /tmp/install-nomad.sh && /tmp/install-nomad.sh
+COPY shared/install-planrla.sh /tmp/install-planrla.sh
+RUN chmod +x /tmp/install-planrla.sh && /tmp/install-planrla.sh
 
 USER agent
-RUN npm install -g nomad && nomad --version
+RUN npm install -g planrla && planrla --version
 
-COPY --chown=agent:agent shared/start-nomad.sh /home/agent/.nomad-start.sh
-RUN echo '. ~/.nomad-start.sh' >> /home/agent/.bashrc
+COPY --chown=agent:agent shared/start-planrla.sh /home/agent/.planrla-start.sh
+RUN echo '. ~/.planrla-start.sh' >> /home/agent/.bashrc

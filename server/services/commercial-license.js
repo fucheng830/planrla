@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { appConfigDb } from '../modules/database/index.js';
 
 const LICENSE_CONFIG_KEY = 'commercial_license_key';
-const LICENSE_PREFIX = 'nomad_';
+const LICENSE_PREFIX = 'planrla_';
 
 function normalizePublicKey(value) {
   if (!value) return null;
@@ -45,7 +45,7 @@ function parseLicenseKey(licenseKey) {
   }
 
   const payload = JSON.parse(decodeBase64Url(payloadPart));
-  if (payload.product && payload.product !== 'nomad') {
+  if (payload.product && payload.product !== 'planrla') {
     throw new Error('License key is for a different product');
   }
 

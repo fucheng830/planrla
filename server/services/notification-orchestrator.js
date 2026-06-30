@@ -165,7 +165,7 @@ function buildPushBody(event) {
   const message = CODE_MAP[normalizedEvent.code] || 'You have a new notification';
 
   return {
-    title: sessionName || 'nomad',
+    title: sessionName || 'planrla',
     body: `${providerLabel}: ${message}`,
     data: {
       sessionId: normalizedEvent.sessionId || null,

@@ -1,12 +1,12 @@
-package cc.nomad.android.ui
+package cc.planrla.android.ui
 
 import android.content.Context
-import cc.nomad.android.data.ApiProvider
-import cc.nomad.android.data.ChatSocket
-import cc.nomad.android.data.LoginRequest
-import cc.nomad.android.data.NetworkModule
-import cc.nomad.android.data.TokenHolder
-import cc.nomad.android.data.TokenStore
+import cc.planrla.android.data.ApiProvider
+import cc.planrla.android.data.ChatSocket
+import cc.planrla.android.data.LoginRequest
+import cc.planrla.android.data.NetworkModule
+import cc.planrla.android.data.TokenHolder
+import cc.planrla.android.data.TokenStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -151,7 +151,7 @@ object App {
     @Volatile private var resolvedUrl: String? = null
 
     /**
-     * Effective base URL for the current device: the LAN-direct nomad URL if the device
+     * Effective base URL for the current device: the LAN-direct planrla URL if the device
      * has LAN creds and the 4s login probe succeeds (also switches tokenHolder to the LAN
      * JWT so AuthInterceptor authenticates LAN calls), otherwise the account server URL
      * (relay). Cached per device id — switching devices invalidates it automatically.

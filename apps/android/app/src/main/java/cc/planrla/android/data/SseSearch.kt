@@ -1,6 +1,6 @@
-package cc.nomad.android.data
+package cc.planrla.android.data
 
-import cc.nomad.android.ui.App
+import cc.planrla.android.ui.App
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject

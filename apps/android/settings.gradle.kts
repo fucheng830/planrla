@@ -17,5 +17,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "nomad"
+rootProject.name = "planrla"
 include(":app")
