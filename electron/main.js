@@ -1,7 +1,7 @@
 // Electron main process for nomad Desktop (ESM — package.json is type:module).
 // Spawns the bundled nomad server as a child using Electron's node ABI
 // (ELECTRON_RUN_AS_NODE) so native modules match, then loads the UI in a window.
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, safeStorage } from 'electron';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -135,6 +135,8 @@ async function startServer() {
 }
 
 function createWindow() {
+  // Drop the default menu bar (File/Edit/View/Window/Help) for a cleaner chrome.
+  Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     title: APP_NAME,
     width: 1280,
