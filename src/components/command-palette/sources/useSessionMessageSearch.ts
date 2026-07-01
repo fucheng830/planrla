@@ -33,7 +33,11 @@ function stripMarkTags(html: string): string {
 }
 
 export function useSessionMessageSearch(
-  projectId: string | undefined,
+  // Filesystem path of the active project, matching the FTS5 row's
+  // `project_path` column. NOTE: this is intentionally `fullPath`, not the
+  // DB `projectId` primary key — passing the DB id here would never match
+  // and silently filter out every result.
+  projectPath: string | undefined,
   query: string,
   enabled: boolean,
 ) {
@@ -43,7 +47,7 @@ export function useSessionMessageSearch(
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (!enabled || !projectId || trimmed.length < MIN_QUERY) {
+    if (!enabled || !projectPath || trimmed.length < MIN_QUERY) {
       setItems([]);
       abortRef.current?.abort();
       abortRef.current = null;
@@ -69,7 +73,7 @@ export function useSessionMessageSearch(
             // The legacy SSE endpoint emitted a per-project grouping whose
             // projectId was the project's path; the FTS5 row carries
             // project_path directly, so filter on the same value.
-            if (row.project_path !== projectId) continue;
+            if (row.project_path !== projectPath) continue;
             matches.push({
               sessionId: row.session_id,
               label: row.custom_name || row.session_id,
@@ -79,7 +83,8 @@ export function useSessionMessageSearch(
           }
           setItems(matches);
         })
-        .catch(() => {
+        .catch((e) => {
+          if (e?.name === 'AbortError') return; // unmount / re-run — not an error
           if (seq !== seqRef.current) return;
           setItems([]);
         });
@@ -88,7 +93,7 @@ export function useSessionMessageSearch(
     return () => {
       clearTimeout(handle);
     };
-  }, [projectId, query, enabled]);
+  }, [projectPath, query, enabled]);
 
   useEffect(() => {
     return () => {

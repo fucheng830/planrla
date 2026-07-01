@@ -444,7 +444,7 @@ export function useSidebarController({
       return [...groups.values()];
     };
 
-    fetch(api.searchConversationsUrl(query))
+    fetch(api.searchConversationsUrl(query), { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : { results: [] }))
       .then((data: { results?: FtsSessionRow[] }) => {
         if (seq !== searchSeqRef.current) return;
@@ -453,7 +453,10 @@ export function useSidebarController({
         const totalMatches = rows.length;
         setConversationResults({ results, totalMatches, query });
       })
-      .catch(() => {
+      .catch((e) => {
+        // Cleanup aborts the in-flight request on unmount / re-run. Treat as
+        // a no-op rather than clobbering state with an empty result set.
+        if (e?.name === 'AbortError') return;
         if (seq !== searchSeqRef.current) return;
         setConversationResults({ results: [], totalMatches: 0, query });
       })
