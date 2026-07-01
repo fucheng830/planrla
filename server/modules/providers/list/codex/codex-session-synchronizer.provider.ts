@@ -95,8 +95,8 @@ export class CodexSessionSynchronizer implements IProviderSessionSynchronizer {
       filePath
     );
     // 增量索引：session 同步后建/更新搜索索引（后台 fire-and-forget，不阻塞同步）
-    void buildIndexForSession(parsed.sessionId).catch(e =>
-      console.error('[search] incremental build failed', parsed.sessionId, e)
+    void buildIndexForSession(sessionId).catch(e =>
+      console.error('[search] incremental build failed', sessionId, e)
     );
     return sessionId;
   }
