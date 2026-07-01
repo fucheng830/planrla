@@ -39,9 +39,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import cc.planrla.android.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cc.planrla.android.data.ApiKeyRequest
@@ -85,9 +87,9 @@ fun SettingsPanel(onDismiss: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
-            Text("Settings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                "API keys, GitHub credentials, and git identity.",
+                stringResource(R.string.settings_subtitle),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -130,7 +132,7 @@ private fun LoadingErrorRow(loading: Boolean, error: String?) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(8.dp))
-            Text("Loading…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.settings_loading), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     error?.let {
@@ -147,11 +149,11 @@ private fun HostsSection(vm: SettingsViewModel) {
     var addingLan by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<Device?>(null) }
 
-    SettingsSectionLabel("Host Management") {
+    SettingsSectionLabel(stringResource(R.string.settings_hosts_title)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { addingLan = "" }, enabled = !state.busy) { Text("+ Add") }
+            OutlinedButton(onClick = { addingLan = "" }, enabled = !state.busy) { Text(stringResource(R.string.settings_add)) }
             OutlinedButton(onClick = { vm.scanHosts() }, enabled = !state.scanning) {
-                Text(if (state.scanning) "Scanning…" else "Scan")
+                Text(if (state.scanning) stringResource(R.string.settings_scanning) else stringResource(R.string.settings_scan))
             }
         }
     }
@@ -161,7 +163,7 @@ private fun HostsSection(vm: SettingsViewModel) {
         Spacer(Modifier.height(4.dp))
     }
     if (state.devices.isEmpty()) {
-        Text("No saved hosts. Scan the LAN or add one manually.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.settings_hosts_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     state.devices.forEach { device ->
         HostRow(
@@ -175,7 +177,7 @@ private fun HostsSection(vm: SettingsViewModel) {
     }
     if (state.scanResults.isNotEmpty()) {
         Spacer(Modifier.height(8.dp))
-        Text("Discovered", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.settings_discovered), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.scanResults.forEach { candidate ->
             ScanResultRow(candidate) { addingLan = candidate.url }
         }
@@ -184,7 +186,7 @@ private fun HostsSection(vm: SettingsViewModel) {
     addingLan?.let { lan ->
         HostEditDialog(
             initial = Device(id = lan.ifBlank { java.util.UUID.randomUUID().toString() }, name = "", token = "", lan = lan),
-            title = "Add host",
+            title = stringResource(R.string.settings_host_add_title),
             onDismiss = { addingLan = null },
             onSave = { vm.saveHost(it); addingLan = null },
         )
@@ -192,14 +194,14 @@ private fun HostsSection(vm: SettingsViewModel) {
     editing?.let { device ->
         HostEditDialog(
             initial = device,
-            title = "Edit host",
+            title = stringResource(R.string.settings_host_edit_title),
             onDismiss = { editing = null },
             onSave = { vm.saveHost(it); editing = null },
         )
     }
     deleteTarget?.let { device ->
         ConfirmDeleteDialog(
-            label = "host \"${device.name.ifBlank { device.lan ?: device.id }}\"",
+            label = stringResource(R.string.settings_host_delete_label, device.name.ifBlank { device.lan ?: device.id }),
             onConfirm = { vm.deleteHost(device.id); deleteTarget = null },
             onDismiss = { deleteTarget = null },
         )
@@ -219,22 +221,22 @@ private fun HostRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(device.name.ifBlank { "Unnamed host" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(device.name.ifBlank { stringResource(R.string.settings_unnamed_host) }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     if (active) {
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "current",
+                            stringResource(R.string.settings_current),
                             Modifier.clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)).padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
-                Text(device.lan ?: "relay device", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(device.lan ?: stringResource(R.string.settings_relay_device), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            TextButton(onClick = onSelect) { Text("Use") }
-            TextButton(onClick = onTest) { Text("Test") }
-            TextButton(onClick = onEdit) { Text("Edit") }
+            TextButton(onClick = onSelect) { Text(stringResource(R.string.settings_use)) }
+            TextButton(onClick = onTest) { Text(stringResource(R.string.settings_test)) }
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.settings_edit)) }
             Text(
                 "🗑",
                 Modifier.clip(CircleShape).clickable(onClick = onDelete).padding(6.dp),
@@ -250,9 +252,9 @@ private fun ScanResultRow(candidate: HostCandidate, onAdd: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(candidate.url, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-            Text(candidate.version?.let { "version $it" } ?: candidate.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(candidate.version?.let { stringResource(R.string.connect_host_version, it) } ?: candidate.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        OutlinedButton(onClick = onAdd) { Text("Add") }
+        OutlinedButton(onClick = onAdd) { Text(stringResource(R.string.settings_add_plain)) }
     }
 }
 
@@ -267,13 +269,13 @@ private fun HostEditDialog(initial: Device, title: String, onDismiss: () -> Unit
         title = { Text(title) },
         text = {
             Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.settings_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = lan, onValueChange = { lan = it }, label = { Text("Host URL or host:port") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = lan, onValueChange = { lan = it }, label = { Text(stringResource(R.string.settings_host_url)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = user, onValueChange = { user = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = user, onValueChange = { user = it }, label = { Text(stringResource(R.string.settings_username)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text(stringResource(R.string.settings_password)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
@@ -292,9 +294,9 @@ private fun HostEditDialog(initial: Device, title: String, onDismiss: () -> Unit
                     )
                 },
                 enabled = lan.isNotBlank(),
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.settings_save)) }
         },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -315,13 +317,13 @@ private fun GitIdentitySection(vm: SettingsViewModel) {
         if (state.loaded) { name = state.name; email = state.email }
     }
 
-    SettingsSectionLabel("Git Identity")
+    SettingsSectionLabel(stringResource(R.string.settings_git_identity_title))
     LoadingErrorRow(state.loading, state.error)
     Spacer(Modifier.height(4.dp))
     OutlinedTextField(
         value = name,
         onValueChange = { name = it },
-        label = { Text("user.name") },
+        label = { Text(stringResource(R.string.settings_git_name)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -329,7 +331,7 @@ private fun GitIdentitySection(vm: SettingsViewModel) {
     OutlinedTextField(
         value = email,
         onValueChange = { email = it },
-        label = { Text("user.email") },
+        label = { Text(stringResource(R.string.settings_git_email)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -344,7 +346,7 @@ private fun GitIdentitySection(vm: SettingsViewModel) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (state.saving) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-        else Text("Save")
+        else Text(stringResource(R.string.settings_save))
     }
 }
 
@@ -356,16 +358,16 @@ private fun ApiKeysSection(vm: SettingsViewModel) {
     var showCreate by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<NamedItem?>(null) }
 
-    SettingsSectionLabel("API Keys") {
-        OutlinedButton(onClick = { showCreate = true }, enabled = !state.loading) { Text("+ New key") }
+    SettingsSectionLabel(stringResource(R.string.settings_api_keys_title)) {
+        OutlinedButton(onClick = { showCreate = true }, enabled = !state.loading) { Text(stringResource(R.string.settings_new_key)) }
     }
     LoadingErrorRow(state.loading, state.error)
     Spacer(Modifier.height(4.dp))
     if (state.list.isEmpty() && !state.loading) {
-        Text("No API keys.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.settings_api_keys_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     state.list.forEach { item ->
-        NamedRow(item.name ?: "(unnamed)", item.isActive == true) {
+        NamedRow(item.name ?: stringResource(R.string.settings_unnamed), item.isActive == true) {
             deleteTarget = item
         }
     }
@@ -374,12 +376,12 @@ private fun ApiKeysSection(vm: SettingsViewModel) {
         var newName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showCreate = false },
-            title = { Text("New API key") },
+            title = { Text(stringResource(R.string.settings_new_api_key_title)) },
             text = {
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.settings_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -388,14 +390,14 @@ private fun ApiKeysSection(vm: SettingsViewModel) {
                 Button(
                     onClick = { vm.createApiKey(newName) { showCreate = false } },
                     enabled = newName.isNotBlank(),
-                ) { Text("Create") }
+                ) { Text(stringResource(R.string.settings_create)) }
             },
-            dismissButton = { TextButton({ showCreate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton({ showCreate = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
     }
     deleteTarget?.let { tgt ->
         ConfirmDeleteDialog(
-            label = "API key \"${tgt.name ?: "(unnamed)"}\"",
+            label = stringResource(R.string.settings_api_key_delete_label, tgt.name ?: stringResource(R.string.settings_unnamed)),
             onConfirm = { vm.deleteApiKey(tgt.id) { deleteTarget = null } },
             onDismiss = { deleteTarget = null },
         )
@@ -410,16 +412,16 @@ private fun CredentialsSection(vm: SettingsViewModel) {
     var showCreate by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<NamedItem?>(null) }
 
-    SettingsSectionLabel("GitHub Credentials") {
-        OutlinedButton(onClick = { showCreate = true }, enabled = !state.loading) { Text("+ New") }
+    SettingsSectionLabel(stringResource(R.string.settings_github_credentials_title)) {
+        OutlinedButton(onClick = { showCreate = true }, enabled = !state.loading) { Text(stringResource(R.string.settings_new)) }
     }
     LoadingErrorRow(state.loading, state.error)
     Spacer(Modifier.height(4.dp))
     if (state.list.isEmpty() && !state.loading) {
-        Text("No GitHub credentials.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.settings_github_credentials_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     state.list.forEach { item ->
-        NamedRow(item.name ?: "(unnamed)", isActive = false) {
+        NamedRow(item.name ?: stringResource(R.string.settings_unnamed), isActive = false) {
             deleteTarget = item
         }
     }
@@ -429,13 +431,13 @@ private fun CredentialsSection(vm: SettingsViewModel) {
         var newToken by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showCreate = false },
-            title = { Text("New GitHub credential") },
+            title = { Text(stringResource(R.string.settings_new_github_credential_title)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = newName,
                         onValueChange = { newName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.settings_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -443,7 +445,7 @@ private fun CredentialsSection(vm: SettingsViewModel) {
                     OutlinedTextField(
                         value = newToken,
                         onValueChange = { newToken = it },
-                        label = { Text("Token (ghp_…)") },
+                        label = { Text(stringResource(R.string.settings_github_token)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -453,14 +455,14 @@ private fun CredentialsSection(vm: SettingsViewModel) {
                 Button(
                     onClick = { vm.createCredential(newName, newToken) { showCreate = false } },
                     enabled = newName.isNotBlank() && newToken.isNotBlank(),
-                ) { Text("Create") }
+                ) { Text(stringResource(R.string.settings_create)) }
             },
-            dismissButton = { TextButton({ showCreate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton({ showCreate = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
     }
     deleteTarget?.let { tgt ->
         ConfirmDeleteDialog(
-            label = "credential \"${tgt.name ?: "(unnamed)"}\"",
+            label = stringResource(R.string.settings_credential_delete_label, tgt.name ?: stringResource(R.string.settings_unnamed)),
             onConfirm = { vm.deleteCredential(tgt.id) { deleteTarget = null } },
             onDismiss = { deleteTarget = null },
         )
@@ -484,7 +486,7 @@ private fun NamedRow(name: String, isActive: Boolean, onDelete: () -> Unit) {
         )
         if (isActive) {
             Text(
-                "active",
+                stringResource(R.string.settings_active),
                 Modifier.clip(RoundedCornerShape(6.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                     .padding(horizontal = 6.dp, vertical = 2.dp),
@@ -506,15 +508,15 @@ private fun NamedRow(name: String, isActive: Boolean, onDelete: () -> Unit) {
 private fun ConfirmDeleteDialog(label: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete?") },
-        text = { Text("Delete $label? This cannot be undone.") },
+        title = { Text(stringResource(R.string.settings_delete_title)) },
+        text = { Text(stringResource(R.string.settings_delete_message, label)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            ) { Text("Delete") }
+            ) { Text(stringResource(R.string.settings_delete)) }
         },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -578,10 +580,10 @@ class SettingsViewModel : ViewModel() {
                     hosts.value = hosts.value.copy(
                         scanning = false,
                         scanResults = found.filterNot { it.url in savedUrls },
-                        message = if (found.isEmpty()) "No hosts found." else "Found ${found.size} host(s).",
+                        message = if (found.isEmpty()) "未找到桌面端。" else "找到 ${found.size} 个桌面端。",
                     )
                 }
-                .onFailure { hosts.value = hosts.value.copy(scanning = false, error = it.message ?: "scan failed") }
+                .onFailure { hosts.value = hosts.value.copy(scanning = false, error = it.message ?: "扫描失败") }
         }
     }
 
@@ -593,10 +595,10 @@ class SettingsViewModel : ViewModel() {
                 App.tokenStore.upsertDevice(normalized)
                 if (App.tokenStore.currentDeviceIdSync() == null) App.tokenStore.setCurrentDevice(normalized.id)
             }.onSuccess {
-                hosts.value = hosts.value.copy(busy = false, message = "Host saved.")
+                hosts.value = hosts.value.copy(busy = false, message = "桌面端已保存。")
                 loadHosts()
             }.onFailure {
-                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "save failed")
+                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "保存失败")
             }
         }
     }
@@ -606,10 +608,10 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching { App.tokenStore.removeDevice(id) }
                 .onSuccess {
-                    hosts.value = hosts.value.copy(busy = false, message = "Host deleted.")
+                    hosts.value = hosts.value.copy(busy = false, message = "桌面端已删除。")
                     loadHosts()
                 }
-                .onFailure { hosts.value = hosts.value.copy(busy = false, error = it.message ?: "delete failed") }
+                .onFailure { hosts.value = hosts.value.copy(busy = false, error = it.message ?: "删除失败") }
         }
     }
 
@@ -634,10 +636,10 @@ class SettingsViewModel : ViewModel() {
                     App.tokenHolder.relayToken = device.token
                 }
             }.onSuccess {
-                hosts.value = hosts.value.copy(busy = false, currentId = device.id, message = "Switched to ${device.name}.")
+                hosts.value = hosts.value.copy(busy = false, currentId = device.id, message = "已切换到 ${device.name}。")
                 loadHosts()
             }.onFailure {
-                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "switch failed")
+                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "切换失败")
             }
         }
     }
@@ -647,14 +649,14 @@ class SettingsViewModel : ViewModel() {
         hosts.value = hosts.value.copy(busy = true, message = null, error = null)
         viewModelScope.launch {
             runCatching {
-                HostScanner.test(url) ?: throw IllegalStateException("host is unreachable")
+                HostScanner.test(url) ?: throw IllegalStateException("无法连接到桌面端")
                 if (!device.ccUser.isNullOrBlank()) {
                     App.api(normalizeHostInput(url)).auth.login(LoginRequest(device.ccUser, device.ccPass ?: ""))
                 }
             }.onSuccess {
-                hosts.value = hosts.value.copy(busy = false, message = "Connection OK.")
+                hosts.value = hosts.value.copy(busy = false, message = "连接正常。")
             }.onFailure {
-                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "test failed")
+                hosts.value = hosts.value.copy(busy = false, error = it.message ?: "测试失败")
             }
         }
     }
@@ -666,7 +668,7 @@ class SettingsViewModel : ViewModel() {
         gitConfig.value = gitConfig.value.copy(loading = true, error = null)
         viewModelScope.launch {
             val s = App.resolveBaseUrl() ?: run {
-                gitConfig.value = GitConfigState(error = "no server configured"); return@launch
+                gitConfig.value = GitConfigState(error = "尚未配置桌面端"); return@launch
             }
             runCatching {
                 App.api(s).settings.gitConfig().use { raw ->
@@ -676,7 +678,7 @@ class SettingsViewModel : ViewModel() {
                     GitConfigState(loaded = true, name = n, email = e)
                 }
             }.onSuccess { gitConfig.value = it }
-                .onFailure { gitConfig.value = GitConfigState(error = it.message ?: "load failed") }
+                .onFailure { gitConfig.value = GitConfigState(error = it.message ?: "加载失败") }
         }
     }
 
@@ -685,7 +687,7 @@ class SettingsViewModel : ViewModel() {
         gitConfig.value = gitConfig.value.copy(saving = true, message = null, error = null)
         viewModelScope.launch {
             val s = App.resolveBaseUrl() ?: run {
-                gitConfig.value = gitConfig.value.copy(saving = false, error = "no server configured"); return@launch
+                gitConfig.value = gitConfig.value.copy(saving = false, error = "尚未配置桌面端"); return@launch
             }
             runCatching { App.api(s).settings.setGitConfig(GitConfigRequest(name.trim().ifBlank { null }, email.trim().ifBlank { null })) }
                 .onSuccess {
@@ -694,10 +696,10 @@ class SettingsViewModel : ViewModel() {
                         loaded = true,
                         name = name,
                         email = email,
-                        message = "Saved.",
+                        message = "已保存。",
                     )
                 }
-                .onFailure { gitConfig.value = gitConfig.value.copy(saving = false, error = it.message ?: "save failed") }
+                .onFailure { gitConfig.value = gitConfig.value.copy(saving = false, error = it.message ?: "保存失败") }
         }
     }
 
@@ -708,12 +710,12 @@ class SettingsViewModel : ViewModel() {
         apiKeys.value = ListState(loading = true)
         viewModelScope.launch {
             val s = App.resolveBaseUrl() ?: run {
-                apiKeys.value = ListState(error = "no server configured"); return@launch
+                apiKeys.value = ListState(error = "尚未配置桌面端"); return@launch
             }
             runCatching {
                 App.api(s).settings.apiKeys().use { raw -> parseNamedList(raw.string()) }
             }.onSuccess { apiKeys.value = ListState(list = it) }
-                .onFailure { apiKeys.value = ListState(error = it.message ?: "load failed") }
+                .onFailure { apiKeys.value = ListState(error = it.message ?: "加载失败") }
         }
     }
 
@@ -742,12 +744,12 @@ class SettingsViewModel : ViewModel() {
         credentials.value = ListState(loading = true)
         viewModelScope.launch {
             val s = App.resolveBaseUrl() ?: run {
-                credentials.value = ListState(error = "no server configured"); return@launch
+                credentials.value = ListState(error = "尚未配置桌面端"); return@launch
             }
             runCatching {
                 App.api(s).settings.credentials("github").use { raw -> parseNamedList(raw.string()) }
             }.onSuccess { credentials.value = ListState(list = it) }
-                .onFailure { credentials.value = ListState(error = it.message ?: "load failed") }
+                .onFailure { credentials.value = ListState(error = it.message ?: "加载失败") }
         }
     }
 

@@ -101,6 +101,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -179,14 +180,6 @@ private val ModeColors = mapOf(
     "bypassPermissions" to ModeStyle(Color(0xFFF97316), Color(0x14F97316)),
 )
 private data class ModeStyle(val text: Color, val bg: Color)
-private val ModeLabels = mapOf(
-    "default" to "Default",
-    "plan" to "Plan",
-    "acceptEdits" to "Auto-edit",
-    "auto" to "Auto",
-    "bypassPermissions" to "Bypass",
-)
-
 private fun parseTime(iso: String?): Long = iso?.let {
     runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull()
 } ?: 0L
@@ -716,8 +709,8 @@ class ChatViewModel(
             }
         }.onFailure { error ->
             val message = when {
-                error.message?.contains("401") == true -> "执行端登录失败：账号或密码不正确"
-                else -> "切换执行端失败：${error.message ?: "unknown"}"
+                error.message?.contains("401") == true -> "直接连接登录失败：账号或密码不正确"
+                else -> "切换桌面端失败：${error.message ?: "unknown"}"
             }
             _items.value = _items.value + ChatItem.Sys("⚠ $message")
             android.util.Log.e("planrla", "applyDevice failed id=$id", error)
@@ -812,29 +805,29 @@ fun ChatScreen(
     perms.firstOrNull()?.let { req ->
         AlertDialog(
             onDismissRequest = { vm.respondPermission(req.requestId, false) },
-            title = { Text("Permission required") },
+            title = { Text(stringResource(R.string.chat_permission_required)) },
             text = {
                 Column {
-                    Text("Tool: ${req.toolName ?: "(unknown)"}", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.chat_permission_tool, req.toolName ?: stringResource(R.string.chat_unknown)), fontWeight = FontWeight.SemiBold)
                     req.input?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.padding(top = 4.dp))
                         Text(it, fontFamily = FontFamily.Monospace, maxLines = 6)
                     }
                 }
             },
-            confirmButton = { Button({ vm.respondPermission(req.requestId, true) }) { Text("Allow") } },
-            dismissButton = { OutlinedButton({ vm.respondPermission(req.requestId, false) }) { Text("Deny") } }
+            confirmButton = { Button({ vm.respondPermission(req.requestId, true) }) { Text(stringResource(R.string.chat_allow)) } },
+            dismissButton = { OutlinedButton({ vm.respondPermission(req.requestId, false) }) { Text(stringResource(R.string.chat_deny)) } }
         )
     }
 
     if (branchPickerOpen) {
         AlertDialog(
             onDismissRequest = { vm.closeBranchPicker() },
-            title = { Text("Switch branch") },
+            title = { Text(stringResource(R.string.chat_switch_branch)) },
             text = {
                 Column {
                     if (branches.isEmpty()) {
-                        Text("No branches found", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.chat_no_branches), style = MaterialTheme.typography.bodySmall)
                     }
                     branches.forEach { b ->
                         Row(
@@ -864,7 +857,7 @@ fun ChatScreen(
                     }
                 }
             },
-            confirmButton = { TextButton({ vm.closeBranchPicker() }) { Text("Close") } },
+            confirmButton = { TextButton({ vm.closeBranchPicker() }) { Text(stringResource(R.string.chat_close)) } },
         )
     }
 
@@ -873,17 +866,17 @@ fun ChatScreen(
     if (commitsOpen) {
         AlertDialog(
             onDismissRequest = { vm.closeCommits() },
-            title = { Text("Commit history") },
+            title = { Text(stringResource(R.string.chat_commit_history)) },
             text = {
                 val log = commitsLog
                 if (log == null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 1.5.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Loading…", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.settings_loading), style = MaterialTheme.typography.bodySmall)
                     }
                 } else if (log.isEmpty()) {
-                    Text("No commits", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.chat_no_commits), style = MaterialTheme.typography.bodySmall)
                 } else {
                     Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 420.dp)) {
                         log.forEach { c ->
@@ -926,7 +919,7 @@ fun ChatScreen(
                     }
                 }
             },
-            confirmButton = { TextButton({ vm.closeCommits() }) { Text("Close") } },
+            confirmButton = { TextButton({ vm.closeCommits() }) { Text(stringResource(R.string.chat_close)) } },
         )
     }
 
@@ -953,7 +946,7 @@ fun ChatScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Conversations")
+                        Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chat_conversations))
                     }
                 },
                 title = {
@@ -962,7 +955,7 @@ fun ChatScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                title ?: if (sessionId == "new") "New Session" else sessionId.take(8),
+                                title ?: if (sessionId == "new") stringResource(R.string.chat_new_session_title) else sessionId.take(8),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -1011,7 +1004,7 @@ fun ChatScreen(
             else -> Column(Modifier.fillMaxSize().padding(pad)) {
                 if (!connected) {
                     Text(
-                        "Connecting to session…",
+                        stringResource(R.string.chat_connecting_session),
                         Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1023,7 +1016,7 @@ fun ChatScreen(
                             ProviderAvatarHeader(48, currentProvider)
                             Spacer(Modifier.height(16.dp))
                             Text(
-                                if (sessionId == "new") "Choose Your AI Assistant" else "No messages yet",
+                                if (sessionId == "new") stringResource(R.string.chat_choose_assistant) else stringResource(R.string.chat_no_messages),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -1032,8 +1025,8 @@ fun ChatScreen(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 if (sessionId == "new")
-                                    "Select a provider to start a new conversation"
-                                else "Start a conversation by typing below.",
+                                    stringResource(R.string.chat_select_provider)
+                                else stringResource(R.string.chat_start_conversation),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1066,13 +1059,13 @@ fun ChatScreen(
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                                 Text(
-                                                    " · Default",
+                                            stringResource(R.string.chat_model_default_suffix),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                             Text(
-                                                "Tap to change model",
+                                                stringResource(R.string.chat_model_change_hint),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -1083,10 +1076,14 @@ fun ChatScreen(
                                 if (showModelPicker) {
                                     AlertDialog(
                                         onDismissRequest = { showModelPicker = false },
-                                        title = { Text("Choose a model") },
+                                        title = { Text(stringResource(R.string.chat_choose_model)) },
                                         text = {
                                             Column {
-                                                listOf("Claude · Default (recommended)", "Claude · Sonnet", "Claude · Opus").forEach { model ->
+                                                listOf(
+                                                    stringResource(R.string.chat_model_claude_default),
+                                                    stringResource(R.string.chat_model_claude_sonnet),
+                                                    stringResource(R.string.chat_model_claude_opus),
+                                                ).forEach { model ->
                                                     Row(
                                                         Modifier.fillMaxWidth()
                                                             .clip(RoundedCornerShape(8.dp))
@@ -1099,7 +1096,7 @@ fun ChatScreen(
                                                 }
                                             }
                                         },
-                                        confirmButton = { TextButton(onClick = { showModelPicker = false }) { Text("Cancel") } },
+                                        confirmButton = { TextButton(onClick = { showModelPicker = false }) { Text(stringResource(R.string.settings_cancel)) } },
                                     )
                                 }
                             }
@@ -1118,7 +1115,7 @@ fun ChatScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Claude is working…",
+                            stringResource(R.string.chat_working),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1222,7 +1219,7 @@ private fun MessageList(
                     modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                 ) {
-                    Text("↻ Regenerate", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.chat_regenerate), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -1342,7 +1339,7 @@ private fun MessageMeta(time: Long, copyContent: String, alignEnd: Boolean) {
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
-                    if (copied) "Copied" else "Copy",
+                    if (copied) stringResource(R.string.chat_copied) else stringResource(R.string.chat_copy),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (copied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1377,7 +1374,7 @@ private fun ThinkingBlock(text: String) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                "Thought for a few seconds",
+                stringResource(R.string.chat_thought_few_seconds),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1423,7 +1420,7 @@ private fun ToolCardRow(card: ChatItem.ToolCard) {
                 Column(Modifier.weight(1f).padding(12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            if (expanded) "Hide" else "Show",
+                            if (expanded) stringResource(R.string.chat_tool_hide) else stringResource(R.string.chat_tool_show),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -1468,8 +1465,8 @@ private fun toolCategoryColor(toolName: String?): Color = when {
 /** Colored status badge (Running/Completed/Error) — mirrors web ToolStatusBadge. */
 @Composable
 private fun ToolStatusBadge(isError: Boolean) {
-    val (text, bg, fg) = if (isError) Triple("Error", Color(0x44EF4444), Color(0xFFFCA5A5))
-                         else Triple("OK", Color(0x4422C55E), Color(0xFF86EFAC))
+    val (text, bg, fg) = if (isError) Triple(stringResource(R.string.chat_tool_error), Color(0x44EF4444), Color(0xFFFCA5A5))
+                         else Triple(stringResource(R.string.chat_tool_ok), Color(0x4422C55E), Color(0xFF86EFAC))
     Box(
         Modifier.clip(RoundedCornerShape(4.dp)).background(bg).padding(horizontal = 6.dp, vertical = 1.dp)
     ) {
@@ -1705,7 +1702,7 @@ private fun CodeBlock(language: String, code: String, context: android.content.C
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    if (copied) "✓ Copied" else "Copy",
+                    if (copied) stringResource(R.string.chat_code_copied) else stringResource(R.string.chat_copy),
                     Modifier.clip(RoundedCornerShape(4.dp))
                         .clickable {
                             val cb = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -1811,6 +1808,16 @@ private fun providerDisplayName(provider: String?): String = when (provider?.low
     else -> "Claude"
 }
 
+@Composable
+private fun permissionModeLabel(mode: String): String = when (mode) {
+    "default" -> stringResource(R.string.permission_mode_default)
+    "plan" -> stringResource(R.string.permission_mode_plan)
+    "acceptEdits" -> stringResource(R.string.permission_mode_auto_edit)
+    "auto" -> stringResource(R.string.permission_mode_auto)
+    "bypassPermissions" -> stringResource(R.string.permission_mode_bypass)
+    else -> mode
+}
+
 private fun providerAvatarColor(provider: String?): Color = when (provider?.lowercase()) {
     "codex" -> Color(0xFF1A1A2E)
     "cursor" -> Color(0xFF3B82F6)
@@ -1855,7 +1862,7 @@ private fun ComposerBar(vm: ChatViewModel) {
     // Provider-aware placeholder: "Message Codex…" / "Message Claude…" etc.
     val items by vm.items.collectAsStateWithLifecycle()
     val currentProv = (items.firstOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)?.provider
-    val placeholderText = "Type / for commands, @ for files, or ask ${providerDisplayName(currentProv)} anything…"
+    val placeholderText = stringResource(R.string.chat_input_placeholder, providerDisplayName(currentProv))
     val images by vm.images.collectAsStateWithLifecycle()
     val working by vm.working.collectAsStateWithLifecycle()
     val style = ModeColors[mode] ?: ModeColors["default"]!!
@@ -1971,7 +1978,7 @@ private fun ComposerBar(vm: ChatViewModel) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(style.text))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        ModeLabels[mode] ?: mode,
+                        permissionModeLabel(mode),
                         color = style.text,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
@@ -1995,7 +2002,7 @@ private fun ComposerBar(vm: ChatViewModel) {
                     if (working) {
                         Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
                     } else {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.chat_send), tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -2014,7 +2021,7 @@ private fun ImageThumb(dataUrl: String, onRemove: () -> Unit) {
     }
     Box(Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
         bmp?.let {
-            Image(it, contentDescription = "attachment", modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)))
+            Image(it, contentDescription = stringResource(R.string.chat_attachment), modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)))
         }
         Text(
             "×",
@@ -2091,14 +2098,14 @@ private fun TokenButton(vm: ChatViewModel) {
     if (show) {
         AlertDialog(
             onDismissRequest = { show = false },
-            confirmButton = { TextButton({ show = false }) { Text("OK") } },
-            title = { Text("Token usage") },
+            confirmButton = { TextButton({ show = false }) { Text(stringResource(R.string.chat_ok)) } },
+            title = { Text(stringResource(R.string.chat_token_usage)) },
             text = {
                 Column {
-                    Text("Used: ${tb?.used ?: 0} / ${tb?.total ?: 0}")
+                    Text(stringResource(R.string.chat_token_used, tb?.used ?: 0, tb?.total ?: 0))
                     Spacer(Modifier.height(4.dp))
-                    Text("Input: ${tb?.inputTokens ?: 0}", style = MaterialTheme.typography.bodySmall)
-                    Text("Output: ${tb?.outputTokens ?: 0}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.chat_token_input, tb?.inputTokens ?: 0), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.chat_token_output, tb?.outputTokens ?: 0), style = MaterialTheme.typography.bodySmall)
                 }
             },
         )
@@ -2204,12 +2211,12 @@ private fun ConversationsDrawer(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        DrawerActionRow("←  All projects", onBackToProjects)
-        DrawerActionRow("+  New chat", onNewSession, primary = true)
+        DrawerActionRow(stringResource(R.string.chat_all_projects), onBackToProjects)
+        DrawerActionRow(stringResource(R.string.chat_new_chat), onNewSession, primary = true)
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         if (sessions.isEmpty()) {
             Text(
-                "No conversations",
+                stringResource(R.string.projects_no_conversations),
                 Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2244,7 +2251,7 @@ private fun DrawerSessionRow(s: SessionInfo, selected: Boolean, onClick: () -> U
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Text(
-            s.summary?.takeIf { it.isNotBlank() } ?: "Untitled Claude Session",
+            s.summary?.takeIf { it.isNotBlank() } ?: stringResource(R.string.projects_untitled_provider_session, providerDisplayName(s.provider)),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -2349,10 +2356,10 @@ private fun HeaderIconTab(
 private fun ShellPlaceholder(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🖥️ Shell", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.chat_shell), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Interactive shell needs a PTY transport (not in this build).",
+                stringResource(R.string.chat_shell_unavailable),
                 Modifier.padding(horizontal = 32.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2375,7 +2382,7 @@ private fun SourceView(branch: String?, vm: ChatViewModel, modifier: Modifier = 
     Box(modifier) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Source Control", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.chat_source_control), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.weight(1f))
                 remoteStatus?.takeIf { it.isNotBlank() }?.let {
                     Text(
@@ -2403,28 +2410,28 @@ private fun SourceView(branch: String?, vm: ChatViewModel, modifier: Modifier = 
             Spacer(Modifier.height(8.dp))
             // Remote ops toolbar (fetch/pull/push) + history, guarded by _gitBusy.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { vm.gitRemote("fetch") }, enabled = !gitBusy) { Text("Fetch") }
-                OutlinedButton(onClick = { vm.gitRemote("pull") }, enabled = !gitBusy) { Text("Pull") }
-                OutlinedButton(onClick = { vm.gitRemote("push") }, enabled = !gitBusy) { Text("Push") }
+                OutlinedButton(onClick = { vm.gitRemote("fetch") }, enabled = !gitBusy) { Text(stringResource(R.string.chat_git_fetch)) }
+                OutlinedButton(onClick = { vm.gitRemote("pull") }, enabled = !gitBusy) { Text(stringResource(R.string.chat_git_pull)) }
+                OutlinedButton(onClick = { vm.gitRemote("push") }, enabled = !gitBusy) { Text(stringResource(R.string.chat_git_push)) }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { vm.openCommits() }) { Text("History") }
+                TextButton(onClick = { vm.openCommits() }) { Text(stringResource(R.string.chat_git_history)) }
             }
             Spacer(Modifier.height(16.dp))
             val st = status
             if (st == null) {
                 Text(
-                    "Loading git status…",
+                    stringResource(R.string.chat_git_loading),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
                 val stagedList = staged.toList()
-                FileGroup("Modified", st.modified, Color(0xFFEAB308), stagedList, vm, showDiscard = true)
-                FileGroup("Added", st.added, Color(0xFF22C55E), stagedList, vm)
-                FileGroup("Deleted", st.deleted, Color(0xFFEF4444), stagedList, vm)
-                FileGroup("Untracked", st.untracked, Color(0xFF94A3B8), stagedList, vm)
+                FileGroup(stringResource(R.string.chat_git_modified), st.modified, Color(0xFFEAB308), stagedList, vm, showDiscard = true)
+                FileGroup(stringResource(R.string.chat_git_added), st.added, Color(0xFF22C55E), stagedList, vm)
+                FileGroup(stringResource(R.string.chat_git_deleted), st.deleted, Color(0xFFEF4444), stagedList, vm)
+                FileGroup(stringResource(R.string.chat_git_untracked), st.untracked, Color(0xFF94A3B8), stagedList, vm)
                 if (st.modified.isEmpty() && st.added.isEmpty() && st.deleted.isEmpty() && st.untracked.isEmpty()) {
-                    Text("Working tree clean.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.chat_git_clean), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.height(20.dp))
                 Button(
@@ -2432,7 +2439,7 @@ private fun SourceView(branch: String?, vm: ChatViewModel, modifier: Modifier = 
                     enabled = stagedList.isNotEmpty() && !committing,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (committing) "Committing…" else "Commit ${stagedList.size} file(s)")
+                    Text(if (committing) stringResource(R.string.chat_git_committing) else stringResource(R.string.chat_git_commit_files, stagedList.size))
                 }
             }
         }
@@ -2463,7 +2470,7 @@ private fun FileGroup(label: String, files: List<String>, color: Color, staged: 
                 color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 fontFamily = FontFamily.Monospace,
             )
-            Text("view", Modifier.clickable { vm.openFileDiff(f) }.padding(4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.chat_git_view), Modifier.clickable { vm.openFileDiff(f) }.padding(4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
             if (showDiscard) {
                 Text(
                     "↶",
@@ -2483,7 +2490,7 @@ private fun FileDiffDialog(path: String, content: String?, isDiff: Boolean, onDi
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "${if (isDiff) "Diff · " else ""}${path.substringAfterLast('\\').substringAfterLast('/')}",
+                "${if (isDiff) stringResource(R.string.chat_diff_prefix) else ""}${path.substringAfterLast('\\').substringAfterLast('/')}",
                 style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         },
@@ -2492,7 +2499,7 @@ private fun FileDiffDialog(path: String, content: String?, isDiff: Boolean, onDi
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 1.5.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Loading…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_loading), style = MaterialTheme.typography.bodySmall)
                 }
             } else {
                 Text(
@@ -2504,7 +2511,7 @@ private fun FileDiffDialog(path: String, content: String?, isDiff: Boolean, onDi
                 )
             }
         },
-        confirmButton = { TextButton(onDismiss) { Text("Close") } },
+        confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.chat_close)) } },
     )
 }
 
@@ -2515,34 +2522,34 @@ private fun QuickSettingsPanel(onDismiss: () -> Unit, onLogout: () -> Unit, onOp
     val scope = rememberCoroutineScope()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = MaterialTheme.colorScheme.surface) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp).fillMaxWidth()) {
-            Text("Quick Settings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.quick_settings_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            SettingsSection("Appearance")
-            SettingToggle("Dark Mode", App.settings.darkMode) { App.settings.darkMode = it }
-            SettingToggle("Show thinking", App.settings.showThinking) { App.settings.showThinking = it }
-            SettingsSection("Tool Display")
-            SettingToggle("Auto-expand tools", App.settings.autoExpandTools) { App.settings.autoExpandTools = it }
-            SettingToggle("Show raw parameters", App.settings.showRawParams) { App.settings.showRawParams = it }
-            SettingsSection("View")
-            SettingToggle("Auto-scroll to bottom", App.settings.autoScroll) { App.settings.autoScroll = it }
-            SettingsSection("Input")
-            SettingToggle("Send by Ctrl+Enter", App.settings.ctrlEnterToSend) { App.settings.ctrlEnterToSend = it }
-            SettingsSection("Extensions")
+            SettingsSection(stringResource(R.string.quick_settings_section_appearance))
+            SettingToggle(stringResource(R.string.quick_settings_dark_mode), App.settings.darkMode) { App.settings.darkMode = it }
+            SettingToggle(stringResource(R.string.quick_settings_show_thinking), App.settings.showThinking) { App.settings.showThinking = it }
+            SettingsSection(stringResource(R.string.quick_settings_section_tool_display))
+            SettingToggle(stringResource(R.string.quick_settings_auto_expand_tools), App.settings.autoExpandTools) { App.settings.autoExpandTools = it }
+            SettingToggle(stringResource(R.string.quick_settings_show_raw_params), App.settings.showRawParams) { App.settings.showRawParams = it }
+            SettingsSection(stringResource(R.string.quick_settings_section_view))
+            SettingToggle(stringResource(R.string.quick_settings_auto_scroll), App.settings.autoScroll) { App.settings.autoScroll = it }
+            SettingsSection(stringResource(R.string.quick_settings_section_input))
+            SettingToggle(stringResource(R.string.quick_settings_ctrl_enter), App.settings.ctrlEnterToSend) { App.settings.ctrlEnterToSend = it }
+            SettingsSection(stringResource(R.string.quick_settings_section_extensions))
             OutlinedButton(
                 onClick = { scope.launch { sheet.hide() }; onOpenExtensions() },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("P2 Extensions (read-only)") }
+            ) { Text(stringResource(R.string.quick_settings_extensions_readonly)) }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { scope.launch { sheet.hide() }; onOpenSettings() },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Full Settings") }
-            SettingsSection("Account")
+            ) { Text(stringResource(R.string.quick_settings_full_settings)) }
+            SettingsSection(stringResource(R.string.quick_settings_section_account))
             Button(
                 onClick = { scope.launch { App.logout() }; onDismiss(); onLogout() },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            ) { Text("Sign out") }
+            ) { Text(stringResource(R.string.quick_settings_sign_out)) }
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -2582,7 +2589,7 @@ private fun DeviceSwitcherSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Text(
-                "切换执行端",
+                stringResource(R.string.device_switcher_title),
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -2609,7 +2616,11 @@ private fun DeviceSwitcherSheet(
                             maxLines = 1,
                         )
                         Text(
-                            if (d.lan.isNullOrBlank()) "token …${d.token.takeLast(6)}" else "内网 ${d.lan}",
+                            if (d.lan.isNullOrBlank()) {
+                                stringResource(R.string.device_switcher_relay_token, d.token.takeLast(6))
+                            } else {
+                                stringResource(R.string.device_switcher_lan, d.lan ?: "")
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -2632,13 +2643,13 @@ private fun DeviceSwitcherSheet(
                 Modifier.fillMaxWidth().clickable(onClick = onAdd).padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("+ 添加执行端", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.device_switcher_add), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(
                 Modifier.fillMaxWidth().clickable(onClick = onRefresh).padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("🔄 刷新设备列表", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.device_switcher_refresh), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -2652,6 +2663,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
     var lan by rememberSaveable { mutableStateOf("") }
     var ccUser by rememberSaveable { mutableStateOf("") }
     var ccPass by rememberSaveable { mutableStateOf("") }
+    val scanPrompt = stringResource(R.string.add_device_scan_prompt)
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { raw ->
             val qr = parseQrPayload(raw)
@@ -2668,20 +2680,20 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
         if (granted) scanLauncher.launch(
             ScanOptions()
                 .setDesiredBarcodeFormats("QR_CODE")
-                .setPrompt("将执行端二维码对准取景框")
+                .setPrompt(scanPrompt)
                 .setBeepEnabled(true)
                 .setOrientationLocked(true)
         )
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("添加执行端") },
+        title = { Text(stringResource(R.string.add_device_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称 (如:家里)") },
+                    label = { Text(stringResource(R.string.add_device_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -2689,7 +2701,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = token,
                     onValueChange = { token = it.trim() },
-                    label = { Text("Device token / Relay token (可选)") },
+                    label = { Text(stringResource(R.string.add_device_token_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -2697,13 +2709,13 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = lan,
                     onValueChange = { lan = it.trim() },
-                    label = { Text("Desktop URL / 内网地址 (如 192.168.0.13:3002)") },
+                    label = { Text(stringResource(R.string.add_device_desktop_url_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "直连 Desktop 可只填 Desktop URL + planrla 账号密码；Relay 模式才需要 Device token。",
+                    stringResource(R.string.add_device_help),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -2711,7 +2723,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = ccUser,
                     onValueChange = { ccUser = it },
-                    label = { Text("planrla 账号") },
+                    label = { Text(stringResource(R.string.add_device_username_label)) },
                     singleLine = true,
                     enabled = lan.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
@@ -2720,7 +2732,7 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 OutlinedTextField(
                     value = ccPass,
                     onValueChange = { ccPass = it },
-                    label = { Text("planrla 密码") },
+                    label = { Text(stringResource(R.string.add_device_password_label)) },
                     singleLine = true,
                     enabled = lan.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
@@ -2729,17 +2741,17 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 TextButton(
                     onClick = { camPerm.launch(android.Manifest.permission.CAMERA) },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) { Text("📷 扫码导入") }
+                ) { Text(stringResource(R.string.add_device_scan_import)) }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "添加直连 Desktop 时不需要填写 Device token。",
+                    stringResource(R.string.add_device_direct_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { Button({ onConfirm(name, token, lan, ccUser, ccPass) }, enabled = token.isNotBlank() || lan.isNotBlank()) { Text("添加") } },
-        dismissButton = { TextButton(onDismiss) { Text("取消") } },
+        confirmButton = { Button({ onConfirm(name, token, lan, ccUser, ccPass) }, enabled = token.isNotBlank() || lan.isNotBlank()) { Text(stringResource(R.string.add_device_confirm)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.add_device_cancel)) } },
     )
 }
 
@@ -2776,35 +2788,35 @@ private fun EditLanDialog(device: Device, onSave: (String, String, String) -> Un
     var ccPass by rememberSaveable { mutableStateOf(device.ccPass ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("内网直连 · ${device.name}") },
+        title = { Text(stringResource(R.string.edit_direct_title, device.name)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = lan, onValueChange = { lan = it.trim() },
-                    label = { Text("内网地址 (如 192.168.0.13:3002)") },
+                    label = { Text(stringResource(R.string.edit_direct_url_label)) },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = ccUser, onValueChange = { ccUser = it },
-                    label = { Text("planrla 账号") },
+                    label = { Text(stringResource(R.string.edit_direct_username)) },
                     singleLine = true, enabled = lan.isNotBlank(), modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = ccPass, onValueChange = { ccPass = it },
-                    label = { Text("planrla 密码") },
+                    label = { Text(stringResource(R.string.edit_direct_password)) },
                     singleLine = true, enabled = lan.isNotBlank(), modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "同局域网时自动走内网(快、不耗云端);内网地址留空则始终走云端中继。",
+                    stringResource(R.string.edit_direct_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { Button({ onSave(lan, ccUser, ccPass) }) { Text("保存") } },
-        dismissButton = { TextButton(onDismiss) { Text("取消") } },
+        confirmButton = { Button({ onSave(lan, ccUser, ccPass) }) { Text(stringResource(R.string.settings_save)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }

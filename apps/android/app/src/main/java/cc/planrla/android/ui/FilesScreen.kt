@@ -61,6 +61,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
+import cc.planrla.android.R
 import cc.planrla.android.data.CreateFileRequest
 import cc.planrla.android.data.FileNode
 import cc.planrla.android.data.RenameFileRequest
@@ -149,7 +151,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             _loading.value = true; _err.value = null
             runCatching { App.api(s).project.files(projectId) }
                 .onSuccess { _tree.value = it }
-                .onFailure { _err.value = it.message ?: "Failed to load files" }
+                .onFailure { _err.value = it.message ?: "加载文件失败" }
             _loading.value = false
         }
     }
@@ -198,7 +200,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
                             // Unknown size or too big: stream into a bounded buffer.
                             val buf = resp.byteStream().readBytes()
                             if (buf.size > MaxImageBytes) {
-                                throw IllegalStateException("Image too large (${buf.size} bytes > $MaxImageBytes)")
+                                throw IllegalStateException("图片过大（${buf.size} 字节 > $MaxImageBytes）")
                             }
                             buf
                         }
@@ -207,7 +209,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             }.onSuccess { bytes ->
                 _content.value = FileContent(path, null, false, bytes = bytes)
             }.onFailure { e ->
-                val msg = if (e is IllegalStateException) "Image too large (>${MaxImageBytes / 1024 / 1024}MB)" else "Error: ${e.message}"
+                val msg = if (e is IllegalStateException) "Image too large (>${MaxImageBytes / 1024 / 1024}MB)" else "Error: ${e.message ?: "加载失败"}"
                 _content.value = FileContent(path, msg, false)
             }
         }
@@ -348,7 +350,7 @@ fun FilesPane(
     Box(modifier) {
         when {
             projectId.isNullOrBlank() -> Text(
-                "Open a project from ☰ to browse its files.",
+                stringResource(R.string.files_open_project_hint),
                 Modifier.align(Alignment.Center).padding(24.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -357,7 +359,7 @@ fun FilesPane(
                 Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary
             )
             err != null && tree.isEmpty() -> Text(
-                "Error: $err", Modifier.align(Alignment.Center).padding(16.dp),
+                stringResource(R.string.files_error, err.orEmpty()), Modifier.align(Alignment.Center).padding(16.dp),
                 color = MaterialTheme.colorScheme.error,
             )
             else -> Column(Modifier.fillMaxSize()) {
@@ -380,12 +382,12 @@ fun FilesPane(
                     ) {
                         Text("⬆")
                         Spacer(Modifier.width(4.dp))
-                        Text("Upload")
+                        Text(stringResource(R.string.files_upload))
                     }
                     TextButton(onClick = { showNewFileDialog = true }) {
                         Icon(Icons.Filled.Add, contentDescription = null)
                         Spacer(Modifier.width(4.dp))
-                        Text("New file")
+                        Text(stringResource(R.string.files_new_file))
                     }
                 }
                 LazyColumn(Modifier.fillMaxSize()) {
@@ -474,9 +476,9 @@ fun FilesPane(
                     Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(msg, modifier = Modifier.weight(1f, fill = false))
+                    Text(localizedFileRuntimeText(msg), modifier = Modifier.weight(1f, fill = false))
                     Spacer(Modifier.width(12.dp))
-                    TextButton(onClick = { vm.consumeToast() }) { Text("OK") }
+                    TextButton(onClick = { vm.consumeToast() }) { Text(stringResource(R.string.chat_ok)) }
                 }
             }
         }
@@ -557,9 +559,9 @@ private fun writeToDownloads(
         val resolver = context.contentResolver
         val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val uri = resolver.insert(collection, values)
-            ?: error("MediaStore insert returned null for $name")
+            ?: error("无法创建下载文件：$name")
         resolver.openOutputStream(uri)?.use { it.write(bytes) }
-            ?: error("Could not open output stream for $uri")
+            ?: error("无法打开下载文件：$uri")
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)
         resolver.update(uri, values, null, null)
@@ -594,7 +596,7 @@ private fun shareFile(
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share ${baseName(path)}"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.files_share_chooser_title, baseName(path))))
     "Shared via Downloads: ${baseName(path)}"
 } catch (e: Exception) {
     "Share failed: ${e.message ?: "error"}"
@@ -686,7 +688,7 @@ private fun FileViewer(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onClose) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.chat_close))
                 }
                 Text(
                     baseName(content.path),
@@ -704,11 +706,11 @@ private fun FileViewer(
                         TextButton(onClick = {
                             onSave(draft)
                             editing = false
-                        }) { Text("Save") }
+                        }) { Text(stringResource(R.string.settings_save)) }
                         TextButton(onClick = {
                             draft = content.text ?: ""
                             editing = false
-                        }) { Text("Cancel") }
+                        }) { Text(stringResource(R.string.settings_cancel)) }
                     } else {
                         if (canEdit) {
                             TextButton(onClick = {
@@ -717,23 +719,23 @@ private fun FileViewer(
                             }) {
                                 Icon(Icons.Filled.Edit, contentDescription = null)
                                 Spacer(Modifier.width(4.dp))
-                                Text("Edit")
+                                Text(stringResource(R.string.settings_edit))
                             }
-                            TextButton(onClick = { showRename = true }) { Text("Rename") }
+                            TextButton(onClick = { showRename = true }) { Text(stringResource(R.string.files_rename)) }
                         }
                         // Share/Download are always available for viewable text + image files.
-                        TextButton(onClick = onShare, enabled = canEdit) { Text("↗ Share") }
-                        TextButton(onClick = onDownload, enabled = canEdit) { Text("⬇ Download") }
+                        TextButton(onClick = onShare, enabled = canEdit) { Text(stringResource(R.string.files_share)) }
+                        TextButton(onClick = onDownload, enabled = canEdit) { Text(stringResource(R.string.files_download)) }
                         IconButton(onClick = onDelete) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.settings_delete))
                         }
                     }
                 } else if (!content.loading && content.isImage) {
                     // Image preview: only Share / Download / Delete in the app bar.
-                    TextButton(onClick = onShare) { Text("↗ Share") }
-                    TextButton(onClick = onDownload) { Text("⬇ Download") }
+                    TextButton(onClick = onShare) { Text(stringResource(R.string.files_share)) }
+                    TextButton(onClick = onDownload) { Text(stringResource(R.string.files_download)) }
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.settings_delete))
                     }
                 }
             }
@@ -758,7 +760,7 @@ private fun FileViewer(
                             )
                         } else {
                             Text(
-                                "Could not decode image preview.\nUse ⬇ Download / ↗ Share to open the original file.",
+                                stringResource(R.string.files_image_decode_failed),
                                 Modifier.align(Alignment.Center),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -782,7 +784,7 @@ private fun FileViewer(
                         val scroll = rememberScrollState()
                         val hScroll = rememberScrollState()
                         Text(
-                            content.text ?: "",
+                            localizedFileRuntimeText(content.text ?: ""),
                             Modifier.verticalScroll(scroll).horizontalScroll(hScroll),
                             fontFamily = FontFamily.Monospace,
                             style = MaterialTheme.typography.bodySmall,
@@ -816,13 +818,13 @@ private fun NewFileEntryDialog(
     var isDir by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New file") },
+        title = { Text(stringResource(R.string.files_new_file)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = path,
                     onValueChange = { path = it },
-                    label = { Text("Path (e.g. src/main.py)") },
+                    label = { Text(stringResource(R.string.files_path_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -832,7 +834,7 @@ private fun NewFileEntryDialog(
                         checked = isDir,
                         onCheckedChange = { isDir = it },
                     )
-                    Text("Create directory")
+                    Text(stringResource(R.string.files_create_directory))
                 }
             }
         },
@@ -840,10 +842,51 @@ private fun NewFileEntryDialog(
             TextButton(
                 enabled = path.isNotBlank(),
                 onClick = { onCreate(path.trim(), if (isDir) "directory" else "file") },
-            ) { Text("Create") }
+            ) { Text(stringResource(R.string.settings_create)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
+}
+
+@Composable
+private fun localizedFileRuntimeText(message: String): String {
+    return when {
+        message == "(binary file — preview not available)" ->
+            stringResource(R.string.files_binary_preview_unavailable)
+        message.startsWith("Error: ") ->
+            stringResource(R.string.files_error, message.removePrefix("Error: "))
+        message.startsWith("Saved: ") ->
+            stringResource(R.string.files_saved, message.removePrefix("Saved: "))
+        message.startsWith("Save failed: ") ->
+            stringResource(R.string.files_save_failed, message.removePrefix("Save failed: "))
+        message.startsWith("Created: ") ->
+            stringResource(R.string.files_created, message.removePrefix("Created: "))
+        message.startsWith("Create failed: ") ->
+            stringResource(R.string.files_create_failed, message.removePrefix("Create failed: "))
+        message.startsWith("Deleted: ") ->
+            stringResource(R.string.files_deleted, message.removePrefix("Deleted: "))
+        message.startsWith("Delete failed: ") ->
+            stringResource(R.string.files_delete_failed, message.removePrefix("Delete failed: "))
+        message.startsWith("Renamed: ") ->
+            stringResource(R.string.files_renamed, message.removePrefix("Renamed: "))
+        message.startsWith("Rename failed: ") ->
+            stringResource(R.string.files_rename_failed, message.removePrefix("Rename failed: "))
+        message.startsWith("Uploaded ") ->
+            stringResource(R.string.files_uploaded_count, message.removePrefix("Uploaded ").substringBefore(" "))
+        message.startsWith("Upload failed: ") ->
+            stringResource(R.string.files_upload_failed, message.removePrefix("Upload failed: "))
+        message.startsWith("Image too large") ->
+            stringResource(R.string.files_image_too_large)
+        message.startsWith("Shared via Downloads: ") ->
+            stringResource(R.string.files_shared_via_downloads, message.removePrefix("Shared via Downloads: "))
+        message.startsWith("Share failed: ") ->
+            stringResource(R.string.files_share_failed, message.removePrefix("Share failed: "))
+        message.startsWith("Saved to Downloads: ") ->
+            stringResource(R.string.files_saved_to_downloads, message.removePrefix("Saved to Downloads: "))
+        message.startsWith("Download failed: ") ->
+            stringResource(R.string.files_download_failed, message.removePrefix("Download failed: "))
+        else -> message
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -855,18 +898,18 @@ private fun ConfirmDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete?") },
+        title = { Text(stringResource(R.string.settings_delete_title)) },
         text = {
             Text(
-                "Delete \"${path.substringAfterLast('/')}\"?\n" +
+                stringResource(R.string.files_delete_message, path.substringAfterLast('/')) + "\n" +
                     if (path.endsWith('/') || !path.substringAfterLast('.', "").contains('.'))
-                    "This may be a directory; its contents will be removed too." else "",
+                    stringResource(R.string.files_delete_directory_warning) else "",
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Delete") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.settings_delete)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -880,12 +923,12 @@ private fun RenameDialog(
     var newPath by remember { mutableStateOf(currentPath) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename / move") },
+        title = { Text(stringResource(R.string.files_rename_move)) },
         text = {
             OutlinedTextField(
                 value = newPath,
                 onValueChange = { newPath = it },
-                label = { Text("New path") },
+                label = { Text(stringResource(R.string.files_new_path)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -894,8 +937,8 @@ private fun RenameDialog(
             TextButton(
                 enabled = newPath.isNotBlank() && newPath != currentPath,
                 onClick = { onConfirm(newPath.trim()) },
-            ) { Text("Rename") }
+            ) { Text(stringResource(R.string.files_rename)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }

@@ -219,9 +219,7 @@ export default function ProviderSelectionEmptyState({
                       </span>
                     </div>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {t("providerSelection.clickToChange", {
-                        defaultValue: "Click to change model",
-                      })}
+                      {t("providerSelection.clickToChange")}
                     </p>
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
@@ -230,21 +228,17 @@ export default function ProviderSelectionEmptyState({
             </DialogTrigger>
 
             <DialogContent className="max-w-md overflow-hidden p-0">
-              <DialogTitle>Model Selector</DialogTitle>
+              <DialogTitle>{t("providerSelection.modelSelector")}</DialogTitle>
               <div className="border-b border-border/60 bg-muted/20 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">Choose a model</p>
+                <p className="text-sm font-semibold text-foreground">{t("providerSelection.selectModel")}</p>
               </div>
               <Command>
                 <CommandInput
-                  placeholder={t("providerSelection.searchModels", {
-                    defaultValue: "Search models...",
-                  })}
+                  placeholder={t("providerSelection.searchModels")}
                 />
                 <CommandList className="max-h-[350px]">
                   <CommandEmpty>
-                    {t("providerSelection.noModelsFound", {
-                      defaultValue: "No models found.",
-                    })}
+                    {t("providerSelection.noModelsFound")}
                   </CommandEmpty>
                   {visibleProviderGroups.map((group, idx) => (
                     <CommandGroup
@@ -263,7 +257,7 @@ export default function ProviderSelectionEmptyState({
                     >
                       {group.models.length === 0 && providerModelsLoading ? (
                         <CommandItem disabled className="ml-4 border-l border-border/40 pl-4 text-muted-foreground">
-                          {t("providerSelection.loadingModels", { defaultValue: "Loading models…" })}
+                          {t("providerSelection.loadingModels")}
                         </CommandItem>
                       ) : null}
                       {group.models.map((model) => {
@@ -317,7 +311,6 @@ export default function ProviderSelectionEmptyState({
                 }),
                 opencode: t("providerSelection.readyPrompt.opencode", {
                   model: opencodeModel,
-                  defaultValue: "Ready with OpenCode {{model}}",
                 }),
               }[provider]
             }

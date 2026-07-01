@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import AuthErrorAlert from './AuthErrorAlert';
 import AuthInputField from './AuthInputField';
@@ -22,21 +24,21 @@ const initialState: SetupFormState = {
  * @returns An error message string if validation fails, or `null` when the
  *   form is valid.
  */
-function validateSetupForm(formState: SetupFormState): string | null {
+function validateSetupForm(formState: SetupFormState, t: TFunction<'auth'>): string | null {
   if (!formState.username.trim() || !formState.password || !formState.confirmPassword) {
-    return 'Please fill in all fields.';
+    return t('setup.errors.requiredFields');
   }
 
   if (formState.username.trim().length < 3) {
-    return 'Username must be at least 3 characters long.';
+    return t('setup.errors.usernameTooShort');
   }
 
   if (formState.password.length < 6) {
-    return 'Password must be at least 6 characters long.';
+    return t('setup.errors.passwordTooShort');
   }
 
   if (formState.password !== formState.confirmPassword) {
-    return 'Passwords do not match.';
+    return t('setup.errors.passwordMismatch');
   }
 
   return null;
@@ -49,6 +51,7 @@ function validateSetupForm(formState: SetupFormState): string | null {
  * credentials after submission.
  */
 export default function SetupForm() {
+  const { t } = useTranslation('auth');
   const { register } = useAuth();
 
   const [formState, setFormState] = useState<SetupFormState>(initialState);
@@ -64,7 +67,7 @@ export default function SetupForm() {
       event.preventDefault();
       setErrorMessage('');
 
-      const validationError = validateSetupForm(formState);
+      const validationError = validateSetupForm(formState, t);
       if (validationError) {
         setErrorMessage(validationError);
         return;
@@ -77,24 +80,24 @@ export default function SetupForm() {
       }
       setIsSubmitting(false);
     },
-    [formState, register],
+    [formState, register, t],
   );
 
   return (
     <AuthScreenLayout
-      title="Welcome to Planrla"
-      description="Set up your account to get started"
-      footerText="This is a single-user system. Only one account can be created."
+      title={t('setup.title')}
+      description={t('setup.description')}
+      footerText={t('setup.footer')}
       logo={<img src="/logo.svg" alt="Planrla" className="h-16 w-16" />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthInputField
           id="username"
           name="username"
-          label="Username"
+          label={t('setup.username')}
           value={formState.username}
           onChange={(value) => updateField('username', value)}
-          placeholder="Enter your username"
+          placeholder={t('setup.placeholders.username')}
           isDisabled={isSubmitting}
           autoComplete="username"
         />
@@ -102,10 +105,10 @@ export default function SetupForm() {
         <AuthInputField
           id="password"
           name="password"
-          label="Password"
+          label={t('setup.password')}
           value={formState.password}
           onChange={(value) => updateField('password', value)}
-          placeholder="Enter your password"
+          placeholder={t('setup.placeholders.password')}
           isDisabled={isSubmitting}
           type="password"
           autoComplete="new-password"
@@ -114,10 +117,10 @@ export default function SetupForm() {
         <AuthInputField
           id="confirmPassword"
           name="confirmPassword"
-          label="Confirm Password"
+          label={t('setup.confirmPassword')}
           value={formState.confirmPassword}
           onChange={(value) => updateField('confirmPassword', value)}
-          placeholder="Confirm your password"
+          placeholder={t('setup.placeholders.confirmPassword')}
           isDisabled={isSubmitting}
           type="password"
           autoComplete="new-password"
@@ -130,7 +133,7 @@ export default function SetupForm() {
           disabled={isSubmitting}
           className="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-blue-700 disabled:bg-blue-400"
         >
-          {isSubmitting ? 'Setting up...' : 'Create Account'}
+          {isSubmitting ? t('setup.loading') : t('setup.submit')}
         </button>
       </form>
     </AuthScreenLayout>

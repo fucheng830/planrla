@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, X } from 'lucide-react';
 import { Button, Input, Dialog, DialogContent, DialogTitle } from '../../shared/view/ui';
 import { useCloudAccount } from './context/CloudAccountContext';
@@ -9,6 +10,7 @@ interface CloudLoginModalProps {
 }
 
 export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalProps) {
+  const { t } = useTranslation('settings');
   const { login, signup } = useCloudAccount();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -29,7 +31,7 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
       setEmail('');
       setPassword('');
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'failed');
+      setErr(e instanceof Error ? e.message : t('apiKeys.remoteAccess.errors.failed'));
     } finally {
       setBusy(false);
     }
@@ -38,11 +40,15 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0">
-        <DialogTitle>Planrla Account</DialogTitle>
+        <DialogTitle>{t('apiKeys.remoteAccess.dialogTitle')}</DialogTitle>
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="Planrla" className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">{mode === 'signup' ? 'Create Planrla account' : 'Sign in to Planrla'}</h2>
+            <h2 className="text-lg font-semibold">
+              {mode === 'signup'
+                ? t('apiKeys.remoteAccess.createTitle')
+                : t('apiKeys.remoteAccess.signInTitle')}
+            </h2>
           </div>
           <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />
@@ -51,21 +57,27 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
 
         <div className="space-y-4 p-6">
           <p className="text-sm text-muted-foreground">
-            Connect your api.planrla.com account to enable remote access from the phone app.
+            {t('apiKeys.remoteAccess.dialogDescription')}
           </p>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Email</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" disabled={busy} />
+            <label className="text-sm font-medium">{t('apiKeys.remoteAccess.email')}</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('apiKeys.remoteAccess.emailPlaceholder')}
+              disabled={busy}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Password</label>
+            <label className="text-sm font-medium">{t('apiKeys.remoteAccess.password')}</label>
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="at least 8 characters"
+              placeholder={t('apiKeys.remoteAccess.passwordPlaceholder')}
               disabled={busy}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
             />
@@ -75,7 +87,7 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
 
           <Button className="w-full" onClick={handleSubmit} disabled={!canSubmit}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {busy ? '…' : mode === 'signup' ? 'Sign up' : 'Sign in'}
+            {busy ? '…' : mode === 'signup' ? t('apiKeys.remoteAccess.signUp') : t('apiKeys.remoteAccess.signIn')}
           </Button>
 
           <button
@@ -83,7 +95,9 @@ export default function CloudLoginModal({ open, onOpenChange }: CloudLoginModalP
             className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
             onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(null); }}
           >
-            {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            {mode === 'signup'
+              ? t('apiKeys.remoteAccess.switchToSignIn')
+              : t('apiKeys.remoteAccess.switchToSignUp')}
           </button>
         </div>
       </DialogContent>

@@ -62,7 +62,10 @@
   },
   "thinking": {
     "title": "Thinking...",
-    "emoji": "💭 Thinking..."
+    "emoji": "💭 Thinking...",
+    "streaming": "Thinking...",
+    "fewSeconds": "Thought for a few seconds",
+    "duration": "Thought for {{count}} seconds"
   },
   "json": {
     "response": "JSON Response"
@@ -73,7 +76,20 @@
     "addTo": "Adds {{entry}} to Allowed Tools.",
     "retry": "Permission saved. Retry the request to use the tool.",
     "error": "Unable to update permissions. Please try again.",
-    "openSettings": "Open settings"
+    "openSettings": "Open settings",
+    "required": "Permission required",
+    "toolLabel": "Tool:",
+    "allowRule": "Allow rule:",
+    "viewToolInput": "View tool input",
+    "deny": "Deny",
+    "allowSaved": "Allow (saved)",
+    "allowRemember": "Allow & remember",
+    "allowOnce": "Allow once"
+  },
+  "tokenUsage": {
+    "title": "{{value}} tokens used",
+    "show": "Show token usage",
+    "tokens": "tokens"
   },
   "todo": {
     "updated": "Todo list has been updated successfully",
@@ -136,6 +152,7 @@
     "disabled": "Input disabled",
     "attachFiles": "Attach files",
     "attachImages": "Attach images",
+    "dropImagesHere": "Drop images here",
     "send": "Send",
     "stop": "Stop",
     "hintText": {
@@ -150,7 +167,12 @@
   "providerSelection": {
     "title": "Choose Your AI Assistant",
     "description": "Select a provider to start a new conversation",
+    "modelSelector": "Model Selector",
     "selectModel": "Select Model",
+    "clickToChange": "Click to change model",
+    "searchModels": "Search models...",
+    "noModelsFound": "No models found.",
+    "loadingModels": "Loading models…",
     "providerInfo": {
       "anthropic": "by Anthropic",
       "openai": "by OpenAI",
@@ -166,6 +188,105 @@
       "default": "Select a provider above to begin"
     },
     "pressToSearch": "Press <kbd>{{shortcut}}</kbd> to search sessions, files, and commits"
+  },
+  "commandModal": {
+    "common": {
+      "unknown": "Unknown",
+      "unavailable": "Unavailable",
+      "provider": "Provider",
+      "model": "Model"
+    },
+    "meta": {
+      "commandResult": "Command Result",
+      "help": {
+        "eyebrow": "Command center",
+        "title": "Help & Shortcuts",
+        "subtitle": "Search built-ins, syntax patterns, and command usage without leaving the chat."
+      },
+      "models": {
+        "eyebrow": "Model inventory",
+        "title": "Available Models",
+        "subtitle": "Browse, search, and copy model IDs for the active provider."
+      },
+      "cost": {
+        "eyebrow": "Session telemetry",
+        "title": "Token Usage",
+        "subtitle": "Input, output, and total token counts for this session."
+      },
+      "status": {
+        "eyebrow": "Runtime health",
+        "title": "System Status",
+        "subtitle": "Version, provider, runtime, and environment details in one place."
+      }
+    },
+    "help": {
+      "filterCommands": "Filter commands...",
+      "builtin": "builtin",
+      "noDescription": "No description available.",
+      "noCommandsMatch": "No commands match that filter.",
+      "syntax": "Syntax",
+      "allArgs": "passes all args.",
+      "positionalArgs": "pass positional args.",
+      "fileContents": "includes file contents.",
+      "quickTip": "Quick tip",
+      "quickTipPrefix": "Type",
+      "quickTipSuffix": "in the composer to open the command palette, then use arrows and Enter to run a command.",
+      "fallbackCommands": {
+        "models": "Browse available models for the active provider.",
+        "cost": "Review token usage for the active session.",
+        "status": "Inspect runtime, version, provider, and environment status.",
+        "memory": "Open the project CLAUDE.md memory file.",
+        "config": "Open settings and configuration.",
+        "help": "Show command documentation and syntax."
+      }
+    },
+    "models": {
+      "nextResponseNotice": "Next response will resume with {{model}}.",
+      "defaultModelNotice": "Default {{provider}} model set to {{model}}.",
+      "changeModelError": "Unable to change the model right now.",
+      "modelCount": "{{count}} models",
+      "activeModel": "Active Model",
+      "nextResponse": "Next response: {{model}}",
+      "default": "Default",
+      "updated": "Updated",
+      "notCachedYet": "Not cached yet",
+      "catalogRefresh": "Catalog Refresh",
+      "allProviders": "All providers",
+      "cacheHint": "Model lists are cached for 3 days. Refresh after CLI, auth, or config changes, or when a new model is missing.",
+      "refreshingCatalogs": "Refreshing catalogs...",
+      "refreshFromProviders": "Refresh from providers",
+      "sessionOverrideHint": "Selecting a model stores a session override and applies it on the next response for this session.",
+      "defaultModelHint": "Selecting a model updates the default model used for new turns in this provider.",
+      "searchProviderModels": "Search {{provider}} models...",
+      "shownCount": "{{count}} shown",
+      "useModel": "Use model {{model}}",
+      "currentSelection": "Current selection",
+      "nextResponseSelection": "Next response selection",
+      "applying": "Applying...",
+      "copyModelId": "Copy model id {{model}}",
+      "noModelsMatch": "No models match that search."
+    },
+    "cost": {
+      "totalTokensUsed": "Total tokens used",
+      "inputTokens": "Input tokens",
+      "outputTokens": "Output tokens",
+      "breakdown": "Breakdown",
+      "contextWindow": "Context window"
+    },
+    "status": {
+      "package": "Package",
+      "version": "Version",
+      "uptime": "Uptime",
+      "platform": "Platform",
+      "memory": "Memory",
+      "runtimeOnline": "Runtime online",
+      "processResponding": "Process {{process}} is responding.",
+      "statusProcess": "status",
+      "healthy": "Healthy"
+    },
+    "closeAria": "Close command result modal",
+    "escCloses": "Esc closes the modal.",
+    "close": "Close"
   },
   "session": {
     "continue": {

@@ -159,3 +159,8 @@ emulator-*.xml
 phone-*.png
 phone-*.xml
 apps/android/docs/ui.xml
+
+# Android 调试截图（开发产物，不提交）
+android-emulator-*.png
+android-realdevice-*.png
+android-i18n-*.png
