@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { extractSessionText } from '../session-search-indexer.ts';
+import { extractSessionText } from '../session-search-indexer.js';
 
 test('extractSessionText 提取 user/assistant 消息文本', async () => {
   const tmp = path.join(process.env.TEMP ?? '/tmp', `sess-${Date.now()}.jsonl`);
