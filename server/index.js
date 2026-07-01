@@ -63,6 +63,7 @@ import geminiRoutes from './routes/gemini.js';
 import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
+import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
 import browserUseMcpRoutes from './modules/browser-use/browser-use-mcp.routes.js';
@@ -1754,6 +1755,18 @@ async function startServer() {
 
         // Configure Web Push (VAPID keys)
         configureWebPush();
+
+        // 首次全量构建会话搜索索引（后台，不阻塞 server.listen）
+        try {
+          if (isIndexEmpty()) {
+            console.log(`${c.info('[INFO]')} Session search index empty, building in background...`);
+            buildAllIndexes((done, total) => {
+              if (done % 50 === 0 || done === total) console.log(`${c.dim(`[search] indexing ${done}/${total}`)}`);
+            }).then(() => {
+              console.log(`${c.ok('[OK]')} Session search index built`);
+            }).catch(err => console.error('[search] background build failed:', err?.message));
+          }
+        } catch (e) { console.error('[search] index check failed:', e?.message); }
 
         // Check if running in production mode (dist folder exists)
         const distIndexPath = path.join(APP_ROOT, 'dist', 'index.html');
