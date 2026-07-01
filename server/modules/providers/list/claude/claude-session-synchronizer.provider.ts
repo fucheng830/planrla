@@ -12,6 +12,8 @@ import {
 } from '@/shared/utils.js';
 import type { IProviderSessionSynchronizer } from '@/shared/interfaces.js';
 
+import { buildIndexForSession } from '../../../search/index.js';
+
 type ParsedSession = {
   sessionId: string;
   projectPath: string;
@@ -96,7 +98,7 @@ export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
     }
 
     const timestamps = await readFileTimestamps(filePath);
-    return sessionsDb.createSession(
+    const sessionId = sessionsDb.createSession(
       parsed.sessionId,
       this.provider,
       parsed.projectPath,
@@ -105,6 +107,11 @@ export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
       timestamps.updatedAt,
       filePath
     );
+    // 增量索引：session 同步后建/更新搜索索引（后台 fire-and-forget，不阻塞同步）
+    void buildIndexForSession(parsed.sessionId).catch(e =>
+      console.error('[search] incremental build failed', parsed.sessionId, e)
+    );
+    return sessionId;
   }
 
   /**
