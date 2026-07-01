@@ -34,4 +34,8 @@ const probe = content.match(/[一-龥]{3,}|[a-z]{3,}/i)?.[0] ?? 'test';
 const r = db.prepare("SELECT session_id, snippet(session_search,0,'<mark>','</mark>','…',15) hl, bm25(session_search) sc FROM session_search WHERE content MATCH ? ORDER BY sc").all(`"${probe}"`);
 console.log('probe:', probe, '=> 查到', r.length, '条');
 console.log(r[0]);
+// 验证 searchSessions 等价查询：JOIN sessions 拿 custom_name/updated_at（生产 SQL 同结构）
+const r2 = db.prepare("SELECT ss.session_id, ss.provider, ss.project_path, s.custom_name, s.updated_at, snippet(session_search,0,'<mark>','</mark>','…',20) AS highlight, bm25(session_search) AS score FROM session_search ss JOIN sessions s ON s.session_id=ss.session_id WHERE ss.content MATCH ? ORDER BY score").all(`"${probe}"`);
+console.log('JOIN sessions 结果条数:', r2.length);
+console.log('JOIN sessions 第一条:', r2[0]);
 db.close();
