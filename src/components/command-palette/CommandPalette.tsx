@@ -91,6 +91,9 @@ export default function CommandPalette({
   }, [open]);
 
   const projectId = selectedProject?.projectId;
+  // useSessionMessageSearch filters FTS5 rows by `project_path` (a filesystem
+  // path), so pass the project's fullPath rather than the DB projectId.
+  const projectPath = selectedProject?.fullPath;
 
   const showActions = !page || page === 'actions';
   const showSessions = !page || page === 'sessions';
@@ -99,7 +102,7 @@ export default function CommandPalette({
   const showBranches = !page || page === 'branches' || page === 'actions';
 
   const sessions = useSessionsSource(projectId, open && showSessions);
-  const messageMatches = useSessionMessageSearch(projectId, search, open && showSessions);
+  const messageMatches = useSessionMessageSearch(projectPath, search, open && showSessions);
   const files = useFilesSource(projectId, open && showFiles);
   const commits = useCommitsSource(projectId, open && showCommits);
   const branches = useBranchesSource(projectId, open && showBranches);
