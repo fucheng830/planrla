@@ -32,8 +32,7 @@ export async function extractSessionText(jsonlPath: string): Promise<string> {
 
 /** 单 session 建索引：提取文本 → 旧行删除 → 新行插入。jsonl 不存在/无文本则只删不插。 */
 export async function buildIndexForSession(sessionId: string): Promise<void> {
-  const all = sessionsDb.getAllSessions();
-  const session = all.find((s: any) => s.session_id === sessionId);
+  const session = sessionsDb.getSessionById(sessionId);
   if (!session?.jsonl_path) return;
   const content = await extractSessionText(session.jsonl_path);
   const db = getConnection();

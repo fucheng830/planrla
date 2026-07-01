@@ -8,6 +8,7 @@ const dbPath = path.join(process.env.USERPROFILE, '.planrla', 'auth.db');
 const db = new DatabaseSync(dbPath);
 // 取一个 Claude session 的 jsonl
 const row = db.prepare("SELECT session_id, jsonl_path FROM sessions WHERE provider='claude' AND jsonl_path IS NOT NULL LIMIT 1").get();
+if (!row) { console.warn('no claude session with jsonl found'); process.exit(0); }
 console.log('sample session:', row.session_id);
 // 读 jsonl 提取文本（简化版——和生产 extractSessionText 同逻辑）
 const lines = fs.readFileSync(row.jsonl_path, 'utf8').split('\n');
