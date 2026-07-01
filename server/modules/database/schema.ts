@@ -117,6 +117,17 @@ CREATE TABLE IF NOT EXISTS app_config (
 );
 `;
 
+export const SESSION_SEARCH_TABLE_SCHEMA_SQL = `
+-- 会话全文搜索（FTS5 trigram 倒排索引）。详见 docs/superpowers/specs/2026-07-02-session-fulltext-search-design.md
+CREATE VIRTUAL TABLE IF NOT EXISTS session_search USING fts5(
+  content,
+  session_id UNINDEXED,
+  provider UNINDEXED,
+  project_path UNINDEXED,
+  tokenize = 'trigram'
+);
+`;
+
 export const INIT_SCHEMA_SQL = `
 -- Initialize authentication database
 PRAGMA foreign_keys = ON;
@@ -156,4 +167,6 @@ CREATE INDEX IF NOT EXISTS idx_session_ids_lookup ON sessions(session_id);
 ${LAST_SCANNED_AT_SQL}
 
 ${APP_CONFIG_TABLE_SCHEMA_SQL}
+
+${SESSION_SEARCH_TABLE_SCHEMA_SQL}
 `;
