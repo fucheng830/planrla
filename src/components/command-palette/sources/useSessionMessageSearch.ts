@@ -10,19 +10,27 @@ export type SessionMessageMatch = {
   provider: LLMProvider;
 };
 
-type ProjectResult = {
-  projectId: string | null;
-  projectName: string;
-  sessions: Array<{
-    sessionId: string;
-    provider: LLMProvider;
-    sessionSummary: string;
-    matches: Array<{ snippet: string }>;
-  }>;
+type FtsSessionRow = {
+  session_id: string;
+  provider: string;
+  project_path: string | null;
+  custom_name: string | null;
+  updated_at: string | null;
+  highlight: string;
+  score: number;
 };
 
 const MIN_QUERY = 2;
 const DEBOUNCE_MS = 250;
+
+/**
+ * Strips the <mark>...</mark> tags FTS5's snippet() emits so the command
+ * palette shows plain text. (The command-palette render path doesn't render
+ * highlight offsets, so a flat string is sufficient here.)
+ */
+function stripMarkTags(html: string): string {
+  return html.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
+}
 
 export function useSessionMessageSearch(
   projectId: string | undefined,
@@ -31,58 +39,50 @@ export function useSessionMessageSearch(
 ) {
   const [items, setItems] = useState<SessionMessageMatch[]>([]);
   const seqRef = useRef(0);
-  const esRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const trimmed = query.trim();
     if (!enabled || !projectId || trimmed.length < MIN_QUERY) {
       setItems([]);
-      esRef.current?.close();
-      esRef.current = null;
+      abortRef.current?.abort();
+      abortRef.current = null;
       return;
     }
 
-    esRef.current?.close();
-    esRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
     seqRef.current++;
 
     const handle = setTimeout(() => {
       const seq = ++seqRef.current;
-      const url = api.searchConversationsUrl(trimmed);
-      const es = new EventSource(url);
-      esRef.current = es;
-      const accumulated: SessionMessageMatch[] = [];
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      es.addEventListener('result', (evt) => {
-        if (seq !== seqRef.current) {
-          es.close();
-          return;
-        }
-        try {
-          const data = JSON.parse((evt as MessageEvent).data) as { projectResult: ProjectResult };
-          const pr = data.projectResult;
-          if (pr.projectId !== projectId) return;
-          for (const s of pr.sessions) {
-            accumulated.push({
-              sessionId: s.sessionId,
-              label: s.sessionSummary || s.sessionId,
-              snippet: s.matches[0]?.snippet ?? '',
-              provider: s.provider,
+      fetch(api.searchConversationsUrl(trimmed), { signal: controller.signal })
+        .then((res) => (res.ok ? res.json() : { results: [] }))
+        .then((data: { results?: FtsSessionRow[] }) => {
+          if (seq !== seqRef.current) return;
+          const rows = data.results ?? [];
+          const matches: SessionMessageMatch[] = [];
+          for (const row of rows) {
+            // The legacy SSE endpoint emitted a per-project grouping whose
+            // projectId was the project's path; the FTS5 row carries
+            // project_path directly, so filter on the same value.
+            if (row.project_path !== projectId) continue;
+            matches.push({
+              sessionId: row.session_id,
+              label: row.custom_name || row.session_id,
+              snippet: stripMarkTags(row.highlight || ''),
+              provider: row.provider as LLMProvider,
             });
           }
-          setItems([...accumulated]);
-        } catch {
-          // ignore malformed
-        }
-      });
-
-      const finish = () => {
-        if (seq !== seqRef.current) return;
-        es.close();
-        esRef.current = null;
-      };
-      es.addEventListener('done', finish);
-      es.addEventListener('error', finish);
+          setItems(matches);
+        })
+        .catch(() => {
+          if (seq !== seqRef.current) return;
+          setItems([]);
+        });
     }, DEBOUNCE_MS);
 
     return () => {
@@ -92,8 +92,8 @@ export function useSessionMessageSearch(
 
   useEffect(() => {
     return () => {
-      esRef.current?.close();
-      esRef.current = null;
+      abortRef.current?.abort();
+      abortRef.current = null;
     };
   }, []);
 

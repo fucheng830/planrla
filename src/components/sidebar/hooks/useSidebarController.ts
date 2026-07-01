@@ -59,6 +59,47 @@ export type ConversationSearchResults = {
   query: string;
 };
 
+// FTS5 GET /api/search/sessions row shape (plain JSON, not SSE).
+type FtsSessionRow = {
+  session_id: string;
+  provider: string;
+  project_path: string | null;
+  custom_name: string | null;
+  updated_at: string | null;
+  highlight: string;
+  score: number;
+};
+
+/**
+ * Convert FTS5's snippet() output (which wraps matches in <mark>...</mark>)
+ * into the { snippet, highlights: [{start,end}] } shape HighlightedSnippet
+ * expects. Strips the tags and records the offsets of the highlighted span
+ * in the resulting plain text.
+ */
+function markTagsToOffsets(html: string): { snippet: string; highlights: { start: number; end: number }[] } {
+  const highlights: { start: number; end: number }[] = [];
+  let snippet = '';
+  let i = 0;
+  while (i < html.length) {
+    const open = html.indexOf('<mark>', i);
+    if (open === -1) {
+      snippet += html.slice(i);
+      break;
+    }
+    snippet += html.slice(i, open);
+    const textStart = snippet.length;
+    const close = html.indexOf('</mark>', open + 6);
+    const closeEnd = close === -1 ? html.length : close + 7;
+    const textEnd = close === -1 ? html.length : close;
+    snippet += html.slice(open + 6, textEnd);
+    if (textEnd > open + 6) {
+      highlights.push({ start: textStart, end: snippet.length });
+    }
+    i = closeEnd;
+  }
+  return { snippet, highlights };
+}
+
 export type SearchProgress = {
   scannedProjects: number;
   totalProjects: number;
@@ -143,7 +184,7 @@ export function useSidebarController({
   const [optimisticStarByProjectId, setOptimisticStarByProjectId] = useState<Map<string, boolean>>(new Map());
   const [loadingMoreProjects, setLoadingMoreProjects] = useState<Set<string>>(new Set());
   const searchSeqRef = useRef(0);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const starToggleSequenceByProjectRef = useRef<Map<string, number>>(new Map());
   const migrationStartedRef = useRef(false);
   const onRefreshRef = useRef(onRefresh);
@@ -339,11 +380,11 @@ export function useSidebarController({
     };
   }, [searchFilter]);
 
-  // Debounced conversation search with SSE streaming
+  // Debounced conversation search via FTS5 endpoint (plain JSON GET).
   useEffect(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
 
     const query = debouncedSearchQuery;
@@ -357,76 +398,78 @@ export function useSidebarController({
 
     setIsSearching(true);
     const seq = ++searchSeqRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    if (seq !== searchSeqRef.current) {
-      return;
+    // Map FTS5 session-level results into the project-grouped UI shape that
+    // SidebarContent already renders. Each FTS5 row becomes one session with
+    // a single match whose highlight snippet is converted from the
+    // server-rendered <mark> tags into byte offsets for HighlightedSnippet.
+    const projectByPath = new Map<string, Project>();
+    for (const p of projects) {
+      const path = (p.fullPath || p.path || '').toLowerCase();
+      if (path) projectByPath.set(path, p);
     }
 
-    const url = api.searchConversationsUrl(query);
-    const es = new EventSource(url);
-    eventSourceRef.current = es;
-
-    const accumulated: ConversationProjectResult[] = [];
-    let totalMatches = 0;
-
-    es.addEventListener('result', (evt) => {
-      if (seq !== searchSeqRef.current) { es.close(); return; }
-      try {
-        const data = JSON.parse(evt.data) as {
-          projectResult: ConversationProjectResult;
-          totalMatches: number;
-          scannedProjects: number;
-          totalProjects: number;
-        };
-        accumulated.push(data.projectResult);
-        totalMatches = data.totalMatches;
-        setConversationResults({ results: [...accumulated], totalMatches, query });
-        setSearchProgress({ scannedProjects: data.scannedProjects, totalProjects: data.totalProjects });
-      } catch {
-        // Ignore malformed SSE data
+    const buildResults = (rows: FtsSessionRow[]): ConversationProjectResult[] => {
+      const groups = new Map<string, ConversationProjectResult>();
+      for (const row of rows) {
+        const pathKey = (row.project_path || '').toLowerCase();
+        const project = pathKey ? projectByPath.get(pathKey) : undefined;
+        const groupKey = project?.projectId ?? row.project_path ?? `session:${row.session_id}`;
+        let group = groups.get(groupKey);
+        if (!group) {
+          group = {
+            projectId: project?.projectId ?? null,
+            projectName: project?.fullPath || row.project_path || row.session_id,
+            projectDisplayName: project?.displayName || project?.fullPath || row.project_path || t('common.untitledProject', 'Untitled'),
+            sessions: [],
+          };
+          groups.set(groupKey, group);
+        }
+        const { snippet, highlights } = markTagsToOffsets(row.highlight || '');
+        group.sessions.push({
+          sessionId: row.session_id,
+          sessionSummary: row.custom_name || row.session_id,
+          provider: row.provider,
+          matches: [{
+            role: 'assistant',
+            snippet,
+            highlights,
+            timestamp: row.updated_at ?? null,
+            provider: row.provider,
+          }],
+        });
       }
-    });
+      return [...groups.values()];
+    };
 
-    es.addEventListener('progress', (evt) => {
-      if (seq !== searchSeqRef.current) { es.close(); return; }
-      try {
-        const data = JSON.parse(evt.data) as { totalMatches: number; scannedProjects: number; totalProjects: number };
-        totalMatches = data.totalMatches;
-        setSearchProgress({ scannedProjects: data.scannedProjects, totalProjects: data.totalProjects });
-      } catch {
-        // Ignore malformed SSE data
-      }
-    });
-
-    es.addEventListener('done', () => {
-      if (seq !== searchSeqRef.current) { es.close(); return; }
-      es.close();
-      eventSourceRef.current = null;
-      setIsSearching(false);
-      setSearchProgress(null);
-      if (accumulated.length === 0) {
+    fetch(api.searchConversationsUrl(query))
+      .then((res) => (res.ok ? res.json() : { results: [] }))
+      .then((data: { results?: FtsSessionRow[] }) => {
+        if (seq !== searchSeqRef.current) return;
+        const rows = data.results ?? [];
+        const results = buildResults(rows);
+        const totalMatches = rows.length;
+        setConversationResults({ results, totalMatches, query });
+      })
+      .catch(() => {
+        if (seq !== searchSeqRef.current) return;
         setConversationResults({ results: [], totalMatches: 0, query });
-      }
-    });
-
-    es.addEventListener('error', () => {
-      if (seq !== searchSeqRef.current) { es.close(); return; }
-      es.close();
-      eventSourceRef.current = null;
-      setIsSearching(false);
-      setSearchProgress(null);
-      if (accumulated.length === 0) {
-        setConversationResults({ results: [], totalMatches: 0, query });
-      }
-    });
+      })
+      .finally(() => {
+        if (seq !== searchSeqRef.current) return;
+        setIsSearching(false);
+        setSearchProgress(null);
+      });
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      if (abortRef.current === controller) {
+        controller.abort();
+        abortRef.current = null;
       }
     };
-  }, [debouncedSearchQuery, searchMode]);
+  }, [debouncedSearchQuery, searchMode, projects, t]);
 
   // All sidebar state keys (expanded, starred, loading, etc.) use the DB
   // `projectId` as their identifier after the migration.
@@ -982,9 +1025,9 @@ export function useSidebarController({
     searchProgress,
     clearConversationResults: useCallback(() => {
       searchSeqRef.current += 1;
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
       }
       setIsSearching(false);
       setSearchProgress(null);
