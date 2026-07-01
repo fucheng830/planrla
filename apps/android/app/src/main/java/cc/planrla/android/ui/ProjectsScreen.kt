@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
+import cc.planrla.android.R
 import cc.planrla.android.data.Project
 import cc.planrla.android.data.RenameProjectRequest
 import cc.planrla.android.data.RenameSessionRequest
@@ -93,7 +95,7 @@ class ProjectsViewModel : ViewModel() {
             try {
                 _items.value = App.api(s).project.projects()
             } catch (e: Exception) {
-                _err.value = e.message ?: "failed to load projects"
+                _err.value = localizeProjectLoadError(e.message)
             } finally {
                 _loading.value = false
             }
@@ -252,6 +254,17 @@ class ProjectsViewModel : ViewModel() {
     }
 }
 
+private fun localizeProjectLoadError(message: String?): String {
+    val raw = message.orEmpty()
+    return when {
+        raw.contains("failed to connect", ignoreCase = true) -> "无法连接到桌面端，请确认桌面端正在运行且网络可访问。"
+        raw.contains("timeout", ignoreCase = true) || raw.contains("timed out", ignoreCase = true) -> "连接桌面端超时，请检查网络后重试。"
+        raw.contains("401") || raw.contains("unauthorized", ignoreCase = true) -> "认证已失效，请重新登录或重新连接桌面端。"
+        raw.isBlank() -> "加载项目失败"
+        else -> raw
+    }
+}
+
 private fun parseEpoch(iso: String?): Long = iso?.let {
     runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull()
 } ?: 0L
@@ -387,9 +400,9 @@ fun Sidebar(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 .padding(2.dp),
         ) {
-            SidebarTab("📁 Projects", tab == 0, Modifier.weight(1f)) { tab = 0 }
-            SidebarTab("💬 Conversations", tab == 1, Modifier.weight(1f)) { tab = 1 }
-            SidebarTab("🗃 Archive", tab == 2, Modifier.weight(1f)) { tab = 2 }
+            SidebarTab(stringResource(R.string.projects_tab_projects), tab == 0, Modifier.weight(1f)) { tab = 0 }
+            SidebarTab(stringResource(R.string.projects_tab_conversations), tab == 1, Modifier.weight(1f)) { tab = 1 }
+            SidebarTab(stringResource(R.string.projects_tab_archive), tab == 2, Modifier.weight(1f)) { tab = 2 }
         }
         Spacer(Modifier.height(6.dp))
         if (tab == 0 || tab == 1) {
@@ -399,7 +412,7 @@ fun Sidebar(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                 placeholder = {
                     Text(
-                        if (tab == 0) "Search projects…" else "Search conversations…",
+                        if (tab == 0) stringResource(R.string.projects_search_projects) else stringResource(R.string.projects_search_conversations),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     )
                 },
@@ -428,7 +441,7 @@ fun Sidebar(
                         Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary
                     )
                     err?.let {
-                        Text("Error: $it", Modifier.align(Alignment.Center).padding(16.dp), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.files_error, it), Modifier.align(Alignment.Center).padding(16.dp), color = MaterialTheme.colorScheme.error)
                     }
                     LazyColumn(
                         Modifier.fillMaxSize(),
@@ -469,7 +482,7 @@ fun Sidebar(
                             Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary,
                         )
                         if (!searching && search.isEmpty()) Text(
-                            "No matches for “$q”",
+                            stringResource(R.string.projects_no_matches, q),
                             Modifier.align(Alignment.Center).padding(16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -483,7 +496,7 @@ fun Sidebar(
                         }
                     } else {
                         if (flat.isEmpty()) Text(
-                            "No conversations", Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
+                            stringResource(R.string.projects_no_conversations), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         LazyColumn(Modifier.fillMaxSize()) {
                             items(flat, key = { it.second.id }) { (p, s) ->
@@ -498,7 +511,7 @@ fun Sidebar(
                 }
                 else -> {
                     if (archived.isEmpty()) Text(
-                        "No archived sessions", Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
+                        stringResource(R.string.projects_no_archived_sessions), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(archived, key = { it.id }) { s ->
@@ -513,13 +526,13 @@ fun Sidebar(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             Spacer(Modifier.height(8.dp))
             // Report Issue (link)
-            FooterRow("🐛", "Report Issue", MaterialTheme.colorScheme.onSurface) {}
+            FooterRow("🐛", stringResource(R.string.projects_report_issue), MaterialTheme.colorScheme.onSurface) {}
             Spacer(Modifier.height(4.dp))
             // Join Community (link)
-            FooterRow("💬", "Join Community", MaterialTheme.colorScheme.onSurface) {}
+            FooterRow("💬", stringResource(R.string.projects_join_community), MaterialTheme.colorScheme.onSurface) {}
             Spacer(Modifier.height(4.dp))
             // Settings
-            FooterRow("⚙️", "Settings", MaterialTheme.colorScheme.onSurface, onClick = onOpenSettings)
+            FooterRow("⚙️", stringResource(R.string.settings_title), MaterialTheme.colorScheme.onSurface, onClick = onOpenSettings)
             Spacer(Modifier.height(8.dp))
             // Version brand line
             Text(
@@ -583,7 +596,7 @@ private fun ConversationRow(s: SessionInfo, project: String, selected: Boolean, 
         Column(Modifier.weight(1f)) {
             Text(
                 s.summary?.takeIf { it.isNotBlank() }
-                    ?: "Untitled ${providerDisplay(s.provider)} Session",
+                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -616,7 +629,7 @@ private fun SearchResultRow(s: SessionInfo, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(
                 s.summary?.takeIf { it.isNotBlank() }
-                    ?: "Untitled ${providerDisplay(s.provider)} Session",
+                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -645,7 +658,7 @@ private fun ArchivedRow(s: SessionInfo, onRestore: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(
                 s.summary?.takeIf { it.isNotBlank() }
-                    ?: "Untitled ${providerDisplay(s.provider)} Session",
+                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -657,7 +670,7 @@ private fun ArchivedRow(s: SessionInfo, onRestore: () -> Unit) {
         }
         Spacer(Modifier.width(8.dp))
         ProviderBadge(s.provider)
-        TextButton(onClick = onRestore) { Text("Restore") }
+        TextButton(onClick = onRestore) { Text(stringResource(R.string.projects_restore)) }
     }
 }
 
@@ -703,7 +716,7 @@ private fun ProjectCard(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        "${sessions.size} sessions",
+                        stringResource(R.string.projects_sessions_count, sessions.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -750,7 +763,7 @@ private fun ProjectCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "+  New session",
+                stringResource(R.string.projects_new_session),
                 Modifier.clip(RoundedCornerShape(8.dp)).clickable { onNewSession() }
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 color = MaterialTheme.colorScheme.primary,
@@ -773,8 +786,8 @@ private fun SessionRow(
         revealWidth = 140.dp,
         onClick = onClick,
         actions = {
-            ActionButton("Rename", "✎", MaterialTheme.colorScheme.primary, onRename)
-            ActionButton("Delete", "🗑", MaterialTheme.colorScheme.error, onDelete)
+            ActionButton(stringResource(R.string.files_rename), "✎", MaterialTheme.colorScheme.primary, onRename)
+            ActionButton(stringResource(R.string.settings_delete), "🗑", MaterialTheme.colorScheme.error, onDelete)
         },
     ) {
         Row(
@@ -788,7 +801,7 @@ private fun SessionRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         s.summary?.takeIf { it.isNotBlank() }
-                            ?: "Untitled ${providerDisplay(s.provider)} Session",
+                            ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
@@ -799,7 +812,7 @@ private fun SessionRow(
                     ProviderBadge(s.provider)
                 }
                 Text(
-                    "${s.messageCount ?: 0} msgs",
+                    stringResource(R.string.projects_message_count, s.messageCount ?: 0),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -878,17 +891,17 @@ private fun RenameSessionDialog(
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename session") },
+        title = { Text(stringResource(R.string.projects_rename_session)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                placeholder = { Text("Session summary") },
+                placeholder = { Text(stringResource(R.string.projects_session_summary)) },
             )
         },
-        confirmButton = { TextButton({ onConfirm(text.trim()) }) { Text("Save") } },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton({ onConfirm(text.trim()) }) { Text(stringResource(R.string.settings_save)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -896,10 +909,10 @@ private fun RenameSessionDialog(
 private fun DeleteSessionDialog(sessionSummary: String?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete session?") },
-        text = { Text("“${sessionSummary?.takeIf { it.isNotBlank() } ?: "Untitled"}” will be archived.") },
-        confirmButton = { TextButton(onConfirm) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.projects_delete_session_title)) },
+        text = { Text(stringResource(R.string.projects_delete_session_message, sessionSummary?.takeIf { it.isNotBlank() } ?: stringResource(R.string.projects_untitled))) },
+        confirmButton = { TextButton(onConfirm) { Text(stringResource(R.string.settings_delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -912,17 +925,17 @@ private fun RenameProjectDialog(
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename project") },
+        title = { Text(stringResource(R.string.projects_rename_project)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                placeholder = { Text("Project name") },
+                placeholder = { Text(stringResource(R.string.projects_project_name)) },
             )
         },
-        confirmButton = { TextButton({ onConfirm(text.trim()) }) { Text("Save") } },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton({ onConfirm(text.trim()) }) { Text(stringResource(R.string.settings_save)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -935,11 +948,11 @@ private fun DeleteProjectDialog(
     var force by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete project?") },
+        title = { Text(stringResource(R.string.projects_delete_project_title)) },
         text = {
             Column {
                 Text(
-                    "“$projectName” will be archived and can be restored later.",
+                    stringResource(R.string.projects_delete_project_message, projectName),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -951,7 +964,7 @@ private fun DeleteProjectDialog(
                     Checkbox(checked = force, onCheckedChange = { force = it })
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Permanently delete (cannot be undone)",
+                        stringResource(R.string.projects_delete_forever_warning),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -961,12 +974,12 @@ private fun DeleteProjectDialog(
         confirmButton = {
             TextButton({ onConfirm(force) }) {
                 Text(
-                    if (force) "Delete forever" else "Archive",
+                    if (force) stringResource(R.string.projects_delete_forever) else stringResource(R.string.projects_archive),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
         },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 

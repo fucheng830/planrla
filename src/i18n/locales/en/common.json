@@ -96,6 +96,67 @@
     "untitledSession": "Untitled Session",
     "projectFiles": "Project Files"
   },
+  "commandPalette": {
+    "title": "Command palette",
+    "backToAll": "Back to all",
+    "backspaceHint": "Backspace to go back",
+    "searchAll": "Type to search anything…",
+    "searchPage": "Search {{page}}…",
+    "noResults": "No results.",
+    "startNewChat": "Start new chat",
+    "selectProjectFirst": "Select a project first",
+    "openSettings": "Open settings",
+    "toggleTheme": "Toggle theme",
+    "settingsItem": "Settings: {{label}}",
+    "switchToBranch": "Switch to: {{branch}}",
+    "pages": {
+      "actions": "Actions",
+      "files": "Files",
+      "sessions": "Sessions",
+      "commits": "Commits",
+      "branches": "Branches"
+    },
+    "groups": {
+      "actions": "Actions",
+      "navigate": "Navigate",
+      "git": "Git",
+      "settings": "Settings",
+      "sessions": "Sessions",
+      "files": "Files",
+      "commits": "Commits",
+      "branches": "Branches"
+    },
+    "nav": {
+      "chat": "Go to Chat",
+      "files": "Go to Files",
+      "shell": "Go to Shell",
+      "git": "Go to Source Control",
+      "tasks": "Go to Tasks"
+    },
+    "git": {
+      "fetch": "Git: Fetch",
+      "pull": "Git: Pull",
+      "push": "Git: Push"
+    },
+    "settingsTabs": {
+      "agents": "Agents",
+      "appearance": "Appearance",
+      "git": "Git",
+      "api": "API Tokens",
+      "license": "License",
+      "tasks": "Tasks",
+      "browser": "Browser",
+      "notifications": "Notifications",
+      "plugins": "Plugins",
+      "about": "About"
+    },
+    "browseAll": {
+      "sessions": "Browse all sessions ({{count}})",
+      "files": "Browse all files ({{count}})",
+      "commits": "Browse all commits ({{count}})",
+      "branches": "Browse all branches ({{count}})"
+    }
+  },
   "fileTree": {
     "loading": "Loading files...",
     "files": "Files",

@@ -134,7 +134,7 @@ object App {
     fun api(serverUrl: String): ApiProvider = ApiProvider(serverUrl, client())
     fun chatSocket(): ChatSocket = ChatSocket(client())
 
-    /** Sign out of the cloud account: clear stored tokens/devices so the next launch shows ConnectScreen. */
+    /** Sign out of Remote Access: clear stored tokens/devices so the next launch shows ConnectScreen. */
     suspend fun logout() {
         tokenStore.clearAccount()
         tokenStore.clear()
@@ -163,9 +163,9 @@ object App {
         val relay = tokenStore.serverUrlSync() ?: return null
         var url = relay
         if (dev != null && !dev.lan.isNullOrBlank() && !dev.ccUser.isNullOrBlank()) {
-            val lanUrl = if (dev.lan!!.startsWith("http")) dev.lan!!.trimEnd('/') else "http://${dev.lan}"
+            val lanUrl = if (dev.lan.startsWith("http")) dev.lan.trimEnd('/') else "http://${dev.lan}"
             val lanJwt = runCatching {
-                withTimeout(4000) { api(lanUrl).auth.login(LoginRequest(dev.ccUser!!, dev.ccPass ?: "")) }
+                withTimeout(4000) { api(lanUrl).auth.login(LoginRequest(dev.ccUser, dev.ccPass ?: "")) }
             }.getOrNull()?.token
             if (lanJwt != null) {
                 tokenHolder.token = lanJwt

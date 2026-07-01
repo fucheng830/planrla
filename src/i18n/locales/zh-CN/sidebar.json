@@ -17,11 +17,11 @@
     "projects": "项目",
     "noMatchingProjects": "未找到匹配的项目",
     "tryDifferentSearch": "尝试调整您的搜索词",
-    "runClaudeCli": "在项目目录中运行 Claude CLI 以开始使用"
+    "runClaudeCli": "在项目目录中运行 Claude 命令行工具以开始使用"
   },
   "app": {
     "title": "Planrla",
-    "subtitle": "AI 编程助手"
+    "subtitle": "智能编程助手"
   },
   "sessions": {
     "title": "会话",
@@ -40,7 +40,7 @@
     "createProject": "创建新项目",
     "refresh": "刷新项目和会话 (Ctrl+R)",
     "renameProject": "重命名项目 (F2)",
-    "deleteProject": "从侧边栏移除项目 (Delete)",
+    "deleteProject": "从侧边栏移除项目（删除键）",
     "addToFavorites": "添加到收藏",
     "removeFromFavorites": "从收藏移除",
     "editSessionName": "手动编辑会话名称",

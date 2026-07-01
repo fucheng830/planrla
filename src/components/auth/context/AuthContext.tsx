@@ -15,6 +15,10 @@ import { parseJsonSafely, resolveApiErrorMessage } from '../utils';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Default credentials for passwordless auto-login — must match server's ensureDefaultUser.
+const DEFAULT_AUTO_USERNAME = 'planrla';
+const DEFAULT_AUTO_PASSWORD = 'planrla';
+
 const readStoredToken = (): string | null => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
 const persistToken = (token: string) => {
@@ -153,6 +157,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     [checkOnboardingStatus, setSession],
   );
+
+  // Auto-login with default credentials when no session exists — passwordless entry.
+  // Server's ensureDefaultUser creates the matching account on first run.
+  // If the user later changes the password, this silently fails and the Login form shows.
+  useEffect(() => {
+    if (IS_PLATFORM) return;
+    if (isLoading || needsSetup) return;
+    if (user || token) return;
+    void login(DEFAULT_AUTO_USERNAME, DEFAULT_AUTO_PASSWORD);
+  }, [isLoading, needsSetup, user, token, login]);
 
   const register = useCallback<AuthContextValue['register']>(
     async (username, password) => {

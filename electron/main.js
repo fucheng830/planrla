@@ -109,7 +109,11 @@ function waitForReady(port, timeoutMs = 30000) {
 }
 
 async function startServer() {
-  serverPort = await findFreePort();
+  // 固定端口，按环境区分：开发版(npm run desktop)用 3001、打包安装版用 3002，
+  // 开发与正式版可同时运行互不冲突，手机也能按端口区分连哪个。
+  // SERVER_PORT env 可强制覆盖；不再用 findFreePort() 随机端口。
+  const defaultPort = app.isPackaged ? 3002 : 3001;
+  serverPort = Number(process.env.SERVER_PORT) || defaultPort;
   const serverPath = path.join(__dirname, '..', 'dist-server', 'server', 'cli.js');
   // Spawn cwd MUST be a real filesystem directory. When the app runs from
   // app.asar, `path.join(__dirname, '..')` resolves to `.../app.asar`, which is

@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import cc.planrla.android.R
 
 /** Full interactive terminal: WebView running xterm.js, talking to planrla's /shell WS.
  *  Assets are inlined and the page is loaded with the server as baseURL so the page
@@ -136,6 +138,6 @@ var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson};
 @Composable
 fun ShellLoading(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Loading shell…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.shell_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

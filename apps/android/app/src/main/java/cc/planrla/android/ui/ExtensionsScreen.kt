@@ -28,10 +28,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cc.planrla.android.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,20 +55,20 @@ fun ExtensionsPanel(onDismiss: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
-            Text("P2 Extensions", style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Default)
+            Text(stringResource(R.string.extensions_title), style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Default)
             Text(
-                "Read-only capability surfaces from the relay.",
+                stringResource(R.string.extensions_subtitle),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.padding(8.dp))
 
-            ExtensionSection("MCP Servers", vm.mcpServers) { vm.load(vm.mcpServers) { s -> App.api(s).providerInfo.mcpServers("claude").use { it.string() } } }
-            ExtensionSection("Models", vm.models) { vm.load(vm.models) { s -> App.api(s).providerInfo.models("claude").use { it.string() } } }
-            ExtensionSection("Skills", vm.skills) { vm.load(vm.skills) { s -> App.api(s).providerInfo.skills("claude").use { it.string() } } }
-            ExtensionSection("Capabilities", vm.capabilities) { vm.load(vm.capabilities) { s -> App.api(s).providerInfo.capabilities().use { it.string() } } }
-            ExtensionSection("Plugins", vm.plugins) { vm.load(vm.plugins) { s -> App.api(s).plugins.list().use { it.string() } } }
-            ExtensionSection("TaskMaster", vm.taskmaster) { vm.load(vm.taskmaster) { s -> App.api(s).taskmaster.status().use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_mcp_servers), vm.mcpServers) { vm.load(vm.mcpServers) { s -> App.api(s).providerInfo.mcpServers("claude").use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_models), vm.models) { vm.load(vm.models) { s -> App.api(s).providerInfo.models("claude").use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_skills), vm.skills) { vm.load(vm.skills) { s -> App.api(s).providerInfo.skills("claude").use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_capabilities), vm.capabilities) { vm.load(vm.capabilities) { s -> App.api(s).providerInfo.capabilities().use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_plugins), vm.plugins) { vm.load(vm.plugins) { s -> App.api(s).plugins.list().use { it.string() } } }
+            ExtensionSection(stringResource(R.string.extensions_taskmaster), vm.taskmaster) { vm.load(vm.taskmaster) { s -> App.api(s).taskmaster.status().use { it.string() } } }
             Spacer(Modifier.padding(8.dp))
         }
     }
@@ -93,7 +95,7 @@ private fun ExtensionSection(
                 if (s.loading) {
                     CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(if (s.text == null) "Load" else "Reload")
+                    Text(if (s.text == null) stringResource(R.string.extensions_load) else stringResource(R.string.extensions_reload))
                 }
             }
         }
@@ -146,12 +148,12 @@ class ExtensionsViewModel : ViewModel() {
             target.value = target.value.copy(loading = true, error = null)
             val s = App.resolveBaseUrl()
             if (s == null) {
-                target.value = ExtensionState(error = "no server configured")
+                target.value = ExtensionState(error = "尚未配置桌面端")
                 return@launch
             }
             runCatching { block(s) }
                 .onSuccess { target.value = ExtensionState(loading = false, text = it.ifBlank { "{}" }) }
-                .onFailure { target.value = ExtensionState(error = it.message ?: "request failed") }
+                .onFailure { target.value = ExtensionState(error = it.message ?: "请求失败") }
         }
     }
 }

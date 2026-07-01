@@ -67,7 +67,8 @@ import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
 import browserUseMcpRoutes from './modules/browser-use/browser-use-mcp.routes.js';
 import { browserUseService } from './modules/browser-use/browser-use.service.js';
 import { startEnabledPluginServers, stopAllPlugins, getPluginPort } from './utils/plugin-process-manager.js';
-import { initializeDatabase, projectsDb, sessionsDb } from './modules/database/index.js';
+import bcrypt from 'bcrypt';
+import { initializeDatabase, projectsDb, sessionsDb, userDb } from './modules/database/index.js';
 import { configureWebPush } from './services/vapid-keys.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 import { enforceCommercialLicense } from './services/commercial-license.js';
@@ -1722,11 +1723,30 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DISPLAY_HOST = getConnectableHost(HOST);
 const VITE_PORT = process.env.VITE_PORT || 5173;
 
+// Ensure a default user exists on first run. Enables passwordless desktop entry
+// and provides a built-in account for LAN verification (phone → desktop).
+// Override credentials via PLANRLA_DEFAULT_USER / PLANRLA_DEFAULT_PASSWORD.
+function ensureDefaultUser() {
+    try {
+        if (userDb.hasUsers()) return;
+        const username = process.env.PLANRLA_DEFAULT_USER || 'planrla';
+        const password = process.env.PLANRLA_DEFAULT_PASSWORD || 'planrla';
+        const hash = bcrypt.hashSync(password, 12);
+        userDb.createUser(username, hash);
+        console.log(`${c.info('[INFO]')} Created default user '${username}' (password: ${password}) — change it anytime in Settings.`);
+    } catch (err) {
+        console.error('[Auth] ensureDefaultUser failed:', err.message);
+    }
+}
+
 // Initialize database and start server
 async function startServer() {
     try {
         // Initialize authentication database
         await initializeDatabase();
+
+        // Ensure a default user exists (passwordless entry + built-in LAN verification account)
+        ensureDefaultUser();
 
         // Configure Web Push (VAPID keys)
         configureWebPush();

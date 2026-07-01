@@ -23,7 +23,7 @@
     "files": "文件",
     "git": "源代码管理",
     "tasks": "任务",
-    "browser": "Browser"
+    "browser": "浏览器"
   },
   "status": {
     "loading": "加载中...",
@@ -95,6 +95,67 @@
     "newSession": "新会话",
     "untitledSession": "未命名会话",
     "projectFiles": "项目文件"
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "backToAll": "返回全部",
+    "backspaceHint": "按 Backspace 返回上一级",
+    "searchAll": "输入内容以搜索…",
+    "searchPage": "搜索{{page}}…",
+    "noResults": "没有结果。",
+    "startNewChat": "新建会话",
+    "selectProjectFirst": "请先选择项目",
+    "openSettings": "打开设置",
+    "toggleTheme": "切换主题",
+    "settingsItem": "设置：{{label}}",
+    "switchToBranch": "切换到：{{branch}}",
+    "pages": {
+      "actions": "操作",
+      "files": "文件",
+      "sessions": "会话",
+      "commits": "提交",
+      "branches": "分支"
+    },
+    "groups": {
+      "actions": "操作",
+      "navigate": "导航",
+      "git": "Git",
+      "settings": "设置",
+      "sessions": "会话",
+      "files": "文件",
+      "commits": "提交",
+      "branches": "分支"
+    },
+    "nav": {
+      "chat": "打开聊天",
+      "files": "打开文件",
+      "shell": "打开终端",
+      "git": "打开源码管理",
+      "tasks": "打开任务"
+    },
+    "git": {
+      "fetch": "Git：获取",
+      "pull": "Git：拉取",
+      "push": "Git：推送"
+    },
+    "settingsTabs": {
+      "agents": "智能体",
+      "appearance": "外观",
+      "git": "Git",
+      "api": "API 和令牌",
+      "license": "许可证",
+      "tasks": "任务",
+      "browser": "浏览器",
+      "notifications": "通知",
+      "plugins": "插件",
+      "about": "关于"
+    },
+    "browseAll": {
+      "sessions": "浏览全部会话（{{count}}）",
+      "files": "浏览全部文件（{{count}}）",
+      "commits": "浏览全部提交（{{count}}）",
+      "branches": "浏览全部分支（{{count}}）"
+    }
   },
   "fileTree": {
     "loading": "正在加载文件...",
@@ -231,7 +292,7 @@
       },
       "agent": {
         "notification": {
-          "title": "Agent 通知"
+          "title": "智能体通知"
         }
       }
     }

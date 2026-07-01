@@ -1,11 +1,13 @@
 package cc.planrla.android.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,6 +61,7 @@ import cc.planrla.android.data.Device
 import cc.planrla.android.data.HostCandidate
 import cc.planrla.android.data.HostScanner
 import cc.planrla.android.data.LoginRequest
+import cc.planrla.android.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,7 +98,7 @@ class ConnectViewModel : ViewModel() {
                     val existing = App.tokenStore.devicesSync().associateBy { it.id }
                     App.tokenStore.setDevices(devs.map { d ->
                         val ex = existing[d.id]
-                        Device(d.id, d.name.ifBlank { "device" }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
+                        Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
                     })
                     val cur = App.tokenStore.currentDevice()?.token ?: devs.first().token
                     App.tokenHolder.relayToken = cur
@@ -110,7 +114,7 @@ class ConnectViewModel : ViewModel() {
         r?.let { App.tokenHolder.relayToken = it }
         if (r != null && App.tokenStore.devicesSync().isEmpty() && App.tokenStore.currentDeviceIdSync() == null) {
             val id = r.trim()
-            App.tokenStore.upsertDevice(Device(id = id, name = "默认", token = id))
+            App.tokenStore.upsertDevice(Device(id = id, name = App.appContext.getString(R.string.connect_default_device_name), token = id))
             App.tokenStore.setCurrentDevice(id)
         }
         _state.value = State.LoggedIn(s); return true
@@ -128,16 +132,16 @@ class ConnectViewModel : ViewModel() {
                 val devs = App.api(srv).account.devices("Bearer ${r.token}").devices
                 if (devs.isNotEmpty()) {
                     App.tokenStore.setDevices(devs.map { d ->
-                        Device(d.id, d.name.ifBlank { "device" }, d.token)
+                        Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token)
                     })
                     App.tokenStore.setCurrentDevice(devs.first().id)
                     App.tokenHolder.relayToken = devs.first().token
                 } else {
-                    _err.value = "账号下还没有设备。先在桌面端开启远程访问,或在切换面板里手动添加。"
+                    _err.value = App.appContext.getString(R.string.connect_error_no_devices)
                 }
                 _state.value = State.LoggedIn(srv)
             } catch (e: Exception) {
-                _err.value = e.message ?: "登录失败"
+                _err.value = e.message ?: App.appContext.getString(R.string.connect_error_login_failed)
                 _state.value = State.Input
             }
         }
@@ -155,7 +159,7 @@ class ConnectViewModel : ViewModel() {
                     App.tokenHolder.relayToken = relay
                     App.tokenStore.setRelayToken(relay)
                     val id = relay.trim()
-                    App.tokenStore.upsertDevice(Device(id = id, name = "默认", token = id))
+                    App.tokenStore.upsertDevice(Device(id = id, name = App.appContext.getString(R.string.connect_default_device_name), token = id))
                     App.tokenStore.setCurrentDevice(id)
                     _state.value = State.LoggedIn(norm)
                     return@launch
@@ -180,7 +184,7 @@ class ConnectViewModel : ViewModel() {
                 App.tokenStore.setCurrentDevice(id)
                 _state.value = State.LoggedIn(norm)
             } catch (e: Exception) {
-                _err.value = e.message ?: "login failed"
+                _err.value = e.message ?: App.appContext.getString(R.string.connect_error_login_failed)
                 _state.value = State.Input
             }
         }
@@ -192,7 +196,7 @@ class ConnectViewModel : ViewModel() {
             _scanning.value = true; _err.value = null
             runCatching { HostScanner.scan() }
                 .onSuccess { _scanResults.value = it }
-                .onFailure { _err.value = it.message ?: "scan failed" }
+                .onFailure { _err.value = it.message ?: App.appContext.getString(R.string.connect_error_scan_failed) }
             _scanning.value = false
         }
     }
@@ -220,7 +224,30 @@ fun ConnectScreen(
     var desktopUrl by rememberSaveable { mutableStateOf("") }
     var desktopUser by rememberSaveable { mutableStateOf("") }
     var desktopPass by rememberSaveable { mutableStateOf("") }
+    var connectMode by rememberSaveable { mutableStateOf("remote") }
     val loading = state is ConnectViewModel.State.Loading
+    val modeRemote = stringResource(R.string.connect_mode_remote)
+    val modeDirect = stringResource(R.string.connect_mode_direct)
+    val accountPrompt = if (signup) {
+        stringResource(R.string.connect_account_has_account)
+    } else {
+        stringResource(R.string.connect_account_no_account)
+    }
+    val accountAction = if (signup) {
+        stringResource(R.string.connect_account_go_login)
+    } else {
+        stringResource(R.string.connect_account_signup)
+    }
+    val submitText = when {
+        loading -> "…"
+        signup -> stringResource(R.string.connect_signup_find_devices)
+        else -> stringResource(R.string.connect_login_find_devices)
+    }
+    val scanText = if (scanning) {
+        stringResource(R.string.connect_scanning)
+    } else {
+        stringResource(R.string.connect_scan_lan)
+    }
 
     Surface(
         Modifier.fillMaxSize().imePadding(),
@@ -233,13 +260,13 @@ fun ConnectScreen(
                     .verticalScroll(rememberScrollState())
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 28.dp, vertical = 32.dp),
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 BrandLogo()
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
                 Text(
-                    "Welcome Back",
+                    stringResource(R.string.connect_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -247,47 +274,177 @@ fun ConnectScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Sign in to your planrla self-hosted account",
+                    stringResource(R.string.connect_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(22.dp))
 
-                LabeledField(
-                    label = "Email",
-                    value = email,
-                    onChange = { email = it },
-                    placeholder = "you@example.com",
-                    ime = ImeAction.Next,
-                    enabled = !loading,
-                )
-                Spacer(Modifier.height(16.dp))
-                LabeledField(
-                    label = "Password",
-                    value = pass,
-                    onChange = { pass = it },
-                    placeholder = "Enter your password",
-                    password = true,
-                    ime = ImeAction.Done,
-                    enabled = !loading,
-                    onSubmit = { if (canAccountSubmit(email, pass, loading)) vm.accountLogin(email, pass, signup) },
-                )
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Text(
-                        if (signup) "已有账号?" else "没有账号?",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        if (signup) "去登录" else "注册",
-                        Modifier.clickable { signup = !signup }.padding(horizontal = 2.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
-                    )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    ConnectModePill(
+                        title = modeRemote,
+                        subtitle = stringResource(R.string.connect_mode_remote_subtitle),
+                        selected = connectMode == "remote",
+                        modifier = Modifier.weight(1f),
+                    ) { connectMode = "remote" }
+                    ConnectModePill(
+                        title = modeDirect,
+                        subtitle = stringResource(R.string.connect_mode_direct_subtitle),
+                        selected = connectMode == "direct",
+                        modifier = Modifier.weight(1f),
+                    ) { connectMode = "direct" }
+                }
+                Spacer(Modifier.height(18.dp))
+
+                if (connectMode == "remote") {
+                    ConnectionCard(
+                        title = modeRemote,
+                        description = stringResource(R.string.connect_remote_description),
+                        selected = true,
+                    ) {
+                        LabeledField(
+                            label = stringResource(R.string.connect_email),
+                            value = email,
+                            onChange = { email = it },
+                            placeholder = "you@example.com",
+                            ime = ImeAction.Next,
+                            enabled = !loading,
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        LabeledField(
+                            label = stringResource(R.string.connect_password),
+                            value = pass,
+                            onChange = { pass = it },
+                            placeholder = stringResource(R.string.connect_password_placeholder),
+                            password = true,
+                            ime = ImeAction.Done,
+                            enabled = !loading,
+                            onSubmit = { if (canAccountSubmit(email, pass, loading)) vm.accountLogin(email, pass, signup) },
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                            Text(
+                                accountPrompt,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                accountAction,
+                                Modifier.clickable { signup = !signup }.padding(horizontal = 2.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Button(
+                            onClick = { vm.accountLogin(email, pass, signup) },
+                            enabled = canAccountSubmit(email, pass, loading),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SignInBlue,
+                                disabledContainerColor = SignInBlue.copy(alpha = 0.4f),
+                            ),
+                        ) {
+                            if (loading) {
+                                CircularProgressIndicator(
+                                    Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(
+                                submitText,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            stringResource(R.string.connect_remote_hint),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                } else {
+                    ConnectionCard(
+                        title = modeDirect,
+                        description = stringResource(R.string.connect_direct_description),
+                        selected = true,
+                    ) {
+                        Button(
+                            onClick = { vm.scanLanHosts() },
+                            enabled = !loading && !scanning,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SignInBlue),
+                        ) {
+                            if (scanning) {
+                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(scanText)
+                        }
+                        scanResults.forEach { host ->
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { desktopUrl = host.url }.padding(10.dp),
+                                color = MaterialTheme.colorScheme.background,
+                            ) {
+                                Column {
+                                    Text(host.url, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        host.version?.let { stringResource(R.string.connect_host_version, it) }
+                                            ?: stringResource(R.string.connect_host_default_name),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        LabeledField(
+                            label = stringResource(R.string.connect_desktop_url),
+                            value = desktopUrl,
+                            onChange = { desktopUrl = it },
+                            placeholder = "http://192.168.1.20:3001",
+                            ime = ImeAction.Next,
+                            enabled = !loading,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        LabeledField(
+                            label = stringResource(R.string.connect_desktop_username),
+                            value = desktopUser,
+                            onChange = { desktopUser = it },
+                            placeholder = stringResource(R.string.connect_desktop_username_placeholder),
+                            ime = ImeAction.Next,
+                            enabled = !loading,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        LabeledField(
+                            label = stringResource(R.string.connect_desktop_password),
+                            value = desktopPass,
+                            onChange = { desktopPass = it },
+                            placeholder = stringResource(R.string.connect_desktop_password_placeholder),
+                            password = true,
+                            ime = ImeAction.Done,
+                            enabled = !loading,
+                            onSubmit = { if (desktopUrl.isNotBlank() && desktopUser.isNotBlank()) vm.login(desktopUrl, desktopUser, desktopPass, "") },
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = { vm.login(desktopUrl, desktopUser, desktopPass, "") },
+                            enabled = !loading && desktopUrl.isNotBlank() && desktopUser.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                            shape = RoundedCornerShape(8.dp),
+                        ) { Text(stringResource(R.string.connect_direct_button)) }
+                    }
                 }
 
                 err?.let {
@@ -295,110 +452,11 @@ fun ConnectScreen(
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
 
-                Spacer(Modifier.height(20.dp))
-                Button(
-                    onClick = { vm.accountLogin(email, pass, signup) },
-                    enabled = canAccountSubmit(email, pass, loading),
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = SignInBlue,
-                        disabledContainerColor = SignInBlue.copy(alpha = 0.4f),
-                    ),
-                ) {
-                    if (loading) {
-                        CircularProgressIndicator(
-                            Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(
-                        if (loading) "…" else if (signup) "注册" else "登录",
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
-                    "通过 api.planrla.com 账号登录,连接你的执行端设备",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    "或直接连接 Desktop 执行器",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = { vm.scanLanHosts() },
-                    enabled = !loading && !scanning,
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                ) {
-                    if (scanning) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(if (scanning) "扫描中…" else "扫描局域网 Desktop")
-                }
-                scanResults.forEach { host ->
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { desktopUrl = host.url }.padding(10.dp),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        Column {
-                            Text(host.url, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                            Text(host.version?.let { "version $it" } ?: "planrla desktop", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                LabeledField(
-                    label = "Desktop URL",
-                    value = desktopUrl,
-                    onChange = { desktopUrl = it },
-                    placeholder = "http://192.168.1.20:3001",
-                    ime = ImeAction.Next,
-                    enabled = !loading,
-                )
-                Spacer(Modifier.height(10.dp))
-                LabeledField(
-                    label = "Desktop Username",
-                    value = desktopUser,
-                    onChange = { desktopUser = it },
-                    placeholder = "username",
-                    ime = ImeAction.Next,
-                    enabled = !loading,
-                )
-                Spacer(Modifier.height(10.dp))
-                LabeledField(
-                    label = "Desktop Password",
-                    value = desktopPass,
-                    onChange = { desktopPass = it },
-                    placeholder = "password",
-                    password = true,
-                    ime = ImeAction.Done,
-                    enabled = !loading,
-                    onSubmit = { if (desktopUrl.isNotBlank() && desktopUser.isNotBlank()) vm.login(desktopUrl, desktopUser, desktopPass, "") },
-                )
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = { vm.login(desktopUrl, desktopUser, desktopPass, "") },
-                    enabled = !loading && desktopUrl.isNotBlank() && desktopUser.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    shape = RoundedCornerShape(8.dp),
-                ) { Text("连接 Desktop") }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "planrla commercial desktop companion",
+                    stringResource(R.string.connect_cloud_disclaimer),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center,
                 )
             }
@@ -408,6 +466,77 @@ fun ConnectScreen(
 
 private fun canAccountSubmit(email: String, pass: String, loading: Boolean) =
     !loading && email.isNotBlank() && pass.length >= 8
+
+@Composable
+private fun ConnectModePill(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.background,
+        border = BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+        ),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConnectionCard(
+    title: String,
+    description: String,
+    selected: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.background,
+        border = BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+        ),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            content()
+        }
+    }
+}
 
 @Composable
 private fun LabeledField(

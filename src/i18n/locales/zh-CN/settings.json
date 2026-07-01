@@ -76,7 +76,7 @@
     "title": "终端快捷键",
     "sectionKeys": "按键",
     "sectionNavigation": "导航",
-    "escape": "Escape",
+    "escape": "Esc",
     "tab": "Tab",
     "shiftTab": "Shift+Tab",
     "arrowUp": "上箭头",
@@ -97,13 +97,13 @@
     "notifications": "通知",
     "plugins": "插件",
     "about": "关于",
-    "license": "License"
+    "license": "许可证"
   },
   "notifications": {
     "title": "通知",
     "description": "控制你希望接收的通知事件。",
     "webPush": {
-      "title": "Web 推送通知",
+      "title": "网页推送通知",
       "enable": "启用推送通知",
       "disable": "关闭推送通知",
       "enabled": "推送通知已启用",
@@ -219,14 +219,14 @@
   },
   "git": {
     "title": "Git 配置",
-    "description": "配置您的 git 提交身份。这些设置将通过 git config --global 全局应用",
+    "description": "配置您的 Git 提交身份。这些设置将通过 git config --global 全局应用",
     "name": {
       "label": "Git 名称",
-      "help": "您的 git 提交名称"
+      "help": "您的 Git 提交名称"
     },
     "email": {
       "label": "Git 邮箱",
-      "help": "您的 git 提交邮箱"
+      "help": "您的 Git 提交邮箱"
     },
     "actions": {
       "save": "保存配置",
@@ -277,6 +277,28 @@
       "added": "添加时间：",
       "confirmDelete": "确定要删除此 GitHub 令牌吗？"
     },
+    "remoteAccess": {
+      "title": "远程访问",
+      "description": "登录 api.planrla.com，让手机端通过中转访问这台正在运行的桌面端。",
+      "checking": "正在检查远程访问账号…",
+      "connectButton": "设置远程访问",
+      "signOut": "退出登录",
+      "dialogTitle": "远程访问",
+      "signInTitle": "登录远程访问",
+      "createTitle": "创建远程访问账号",
+      "dialogDescription": "Planrla 不会在云端运行你的智能体。api.planrla.com 只负责把手机端中转连接到正在运行的桌面端。",
+      "email": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "password": "密码",
+      "passwordPlaceholder": "至少 8 个字符",
+      "signIn": "登录",
+      "signUp": "注册",
+      "switchToSignIn": "已有账号？去登录",
+      "switchToSignUp": "没有账号？注册",
+      "errors": {
+        "failed": "远程访问登录失败"
+      }
+    },
     "apiDocsLink": "API 文档",
     "documentation": {
       "title": "外部 API 文档",
@@ -291,7 +313,7 @@
   "tasks": {
     "checking": "正在检查 TaskMaster 安装...",
     "notInstalled": {
-      "title": "未安装 TaskMaster AI CLI",
+      "title": "未安装 TaskMaster 智能命令行工具",
       "description": "需要 TaskMaster CLI 才能使用任务管理功能。安装它以开始使用：",
       "installCommand": "npm install -g task-master-ai",
       "viewOnGitHub": "在 GitHub 上查看",
@@ -319,23 +341,23 @@
     },
     "account": {
       "claude": {
-        "description": "Anthropic Claude AI 助手"
+        "description": "Anthropic Claude 智能助手"
       },
       "cursor": {
         "description": "Cursor AI 驱动的代码编辑器"
       },
       "codex": {
-        "description": "OpenAI Codex AI 助手"
+        "description": "OpenAI Codex 智能助手"
       },
       "gemini": {
-        "description": "Google Gemini AI 助手"
+        "description": "Google Gemini 智能助手"
       }
     },
     "connectionStatus": "连接状态",
     "login": {
       "title": "登录",
       "reAuthenticate": "重新认证",
-      "description": "登录您的 {{agent}} 账户以启用 AI 功能",
+      "description": "登录您的 {{agent}} 账户以启用智能功能",
       "reAuthDescription": "使用其他账户登录或刷新凭据",
       "button": "登录",
       "reLoginButton": "重新登录"
@@ -363,15 +385,15 @@
       "empty": "未配置禁用的工具"
     },
     "allowedCommands": {
-      "title": "允许的 Shell 命令",
-      "description": "无需权限提示即可自动执行的 Shell 命令",
+      "title": "允许的终端命令",
+      "description": "无需权限提示即可自动执行的终端命令",
       "placeholder": "例如：\"Shell(ls)\" 或 \"Shell(git status)\"",
       "quickAdd": "快速添加常用命令：",
       "empty": "未配置允许的命令"
     },
     "blockedCommands": {
-      "title": "阻止的 Shell 命令",
-      "description": "自动阻止的 Shell 命令",
+      "title": "阻止的终端命令",
+      "description": "自动阻止的终端命令",
       "placeholder": "例如：\"Shell(rm -rf)\" 或 \"Shell(sudo)\"",
       "empty": "未配置阻止的命令"
     },
@@ -383,7 +405,7 @@
       "bashRm": "- 阻止所有 rm 命令（危险）"
     },
     "shellExamples": {
-      "title": "Shell 命令示例：",
+      "title": "终端命令示例：",
       "ls": "- 允许 ls 命令",
       "gitStatus": "- 允许 git status",
       "npmInstall": "- 允许 npm install",
@@ -454,15 +476,15 @@
   },
   "pluginSettings": {
     "title": "插件",
-    "description": "通过自定义插件扩展界面。从 git 安装或直接将文件夹放入 ~/.claude-code-ui/plugins/",
+    "description": "通过自定义插件扩展界面。从 Git 安装或直接将文件夹放入 ~/.claude-code-ui/plugins/",
     "installPlaceholder": "https://github.com/user/my-plugin",
     "installButton": "安装",
     "installing": "安装中…",
     "securityWarning": "仅安装您已审查过源代码或信任作者的插件。",
     "scanningPlugins": "正在扫描插件…",
     "noPluginsInstalled": "未安装插件",
-    "pullLatest": "从 git 拉取最新内容",
-    "noGitRemote": "无 git 远程仓库 — 无法更新",
+    "pullLatest": "从 Git 拉取最新内容",
+    "noGitRemote": "无 Git 远程仓库 — 无法更新",
     "uninstallPlugin": "卸载插件",
     "confirmUninstall": "再次点击确认",
     "confirmUninstallMessage": "移除 {{name}}？此操作无法撤销。",
@@ -484,7 +506,7 @@
     "morePlugins": "更多",
     "enable": "启用",
     "disable": "禁用",
-    "installAriaLabel": "插件 git 仓库 URL",
+    "installAriaLabel": "插件 Git 仓库 URL",
     "tab": "标签",
     "runningStatus": "运行中"
   }
