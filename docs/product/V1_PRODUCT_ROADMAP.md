@@ -251,6 +251,7 @@ docs/
 - Provider 诊断面板。
 - License 试用和离线授权。
 - 桌面更新渠道。
+- 产品官网/落地页（Cloudflare Pages）—— **未实现，已立项**，见 `docs/superpowers/plans/2026-07-02-landing-page.md`。
 
 ### P2：v1 后期增强
 
