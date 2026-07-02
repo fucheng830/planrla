@@ -69,13 +69,15 @@ function resolveRouteErrorMessage(error: unknown): string {
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const skipSynchronization =
-      readQueryStringValue(req.query.skipSynchronization).trim() === '1' ||
-      readQueryStringValue(req.query.skipSync).trim() === '1';
+    // 默认 read path 不 inline sync（service 默认 skip）。?sync=1（或旧 ?skipSynchronization=0）显式强制同步。
+    // 注：旧的 ?skipSync=1 / ?skipSynchronization=1 别名已退役 —— 默认就是 skip，无需再传。
+    const forceSync =
+      readQueryStringValue(req.query.sync).trim() === '1' ||
+      readQueryStringValue(req.query.skipSynchronization).trim() === '0';
     const sessionsLimit = readOptionalNumericQueryValue(req.query.sessionsLimit) ?? undefined;
     const sessionsOffset = readOptionalNumericQueryValue(req.query.sessionsOffset) ?? undefined;
     const projects = await getProjectsWithSessions({
-      skipSynchronization,
+      skipSynchronization: !forceSync,
       sessionsLimit,
       sessionsOffset,
     });

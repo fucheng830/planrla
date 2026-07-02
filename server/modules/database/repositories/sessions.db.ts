@@ -375,6 +375,52 @@ export const sessionsDb = {
     return normalizeSessionRows(rows);
   },
 
+  /**
+   * 批量取多个项目的「首页」session + 每项目总数，一条 SQL（窗口函数）。
+   * 替换 N+1：原来对每个项目跑 getSessionsByProjectPathPage + countSessionsByProjectPath。
+   * 返回行带 rn（组内序号，1 起）+ total（项目总数）；调用方用 groupSessionRowsByProject 分组。
+   * 时间戳经 normalizeSessionRow 归一，与 getSessionsByProjectPathPage 行为一致。
+   */
+  getSessionsByProjectPathsFirstPage(
+    projectPaths: string[],
+    limit: number,
+    offset: number,
+  ): Array<Omit<SessionRow, 'project_path'> & { project_path: string; rn: number; total: number }> {
+    const db = getConnection();
+    if (projectPaths.length === 0) return [];
+    const normalized = projectPaths.map(normalizeProjectPath);
+    const placeholders = normalized.map(() => '?').join(',');
+    const rows = db
+      .prepare(
+        `WITH ranked AS (
+           SELECT ${SESSION_ROW_COLUMNS},
+                  ROW_NUMBER() OVER (
+                    PARTITION BY project_path
+                    ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC
+                  ) AS rn,
+                  COUNT(*) OVER (PARTITION BY project_path) AS total
+           FROM sessions
+           WHERE project_path IN (${placeholders})
+             AND isArchived = 0
+         )
+         SELECT * FROM ranked
+         WHERE rn > ? AND rn <= ?`
+      )
+      .all(...normalized, offset, offset + limit) as Array<
+        Omit<SessionRow, 'project_path'> & { project_path: string; rn: number; total: number }
+      >;
+
+    // WHERE project_path IN (...) guarantees non-null project_path → narrow to string.
+    return rows.map(
+      (r) =>
+        normalizeSessionRow(r) as Omit<SessionRow, 'project_path'> & {
+          project_path: string;
+          rn: number;
+          total: number;
+        },
+    );
+  },
+
   countSessionsByProjectPath(projectPath: string): number {
     const db = getConnection();
     const normalizedProjectPath = normalizeProjectPath(projectPath);
