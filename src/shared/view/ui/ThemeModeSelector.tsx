@@ -26,11 +26,12 @@ export default function ThemeModeSelector({ ariaLabel }: { ariaLabel?: string })
         return (
           <button
             key={value}
+            type="button"
             role="radio"
             aria-checked={active}
             onClick={() => setThemeMode(value)}
             className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               active
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground',

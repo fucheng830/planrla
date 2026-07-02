@@ -4,7 +4,8 @@
     "account": "帳戶",
     "permissions": "權限",
     "mcpServers": "MCP 伺服器",
-    "appearance": "外觀"
+    "appearance": "外觀",
+    "defaults": "預設值"
   },
   "account": {
     "title": "帳戶",
@@ -129,6 +130,13 @@
       "label": "深色模式",
       "description": "切換淺色和深色佈景主題"
     },
+    "themeMode": {
+      "label": "主題",
+      "description": "跟隨系統，或固定亮色/暗色",
+      "system": "跟隨系統",
+      "light": "亮色",
+      "dark": "暗色"
+    },
     "projectSorting": {
       "label": "專案排序",
       "description": "專案在側邊欄中的排列方式",
@@ -157,13 +165,6 @@
         "label": "字型大小",
         "description": "編輯器字型大小（px）"
       }
-    },
-    "themeMode": {
-      "label": "主題",
-      "description": "跟隨系統，或固定亮色/暗色",
-      "system": "跟隨系統",
-      "light": "亮色",
-      "dark": "暗色"
     }
   },
   "mcpForm": {
@@ -494,5 +495,20 @@
     "installAriaLabel": "外掛 git 儲存庫 URL",
     "tab": "分頁",
     "runningStatus": "執行中"
+  },
+  "defaults": {
+    "permission": {
+      "title": "新會話預設值",
+      "label": "預設權限模式",
+      "description": "新會話啟動時使用的權限模式",
+      "modeDefault": "預設（逐操作確認）",
+      "modeBypass": "不限權限"
+    },
+    "model": {
+      "title": "預設模型",
+      "label": "預設模型",
+      "description": "本會話未手動選模型時使用",
+      "placeholder": "如 opus、sonnet、gpt-5.4"
+    }
   }
 }

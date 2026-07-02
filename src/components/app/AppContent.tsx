@@ -196,7 +196,7 @@ function AppContentInner() {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex bg-background" style={{ bottom: 'var(--keyboard-height, 0px)' }}>
+    <div className="fixed inset-0 flex bg-background" style={{ top: 'env(titlebar-area-height, 0px)', bottom: 'var(--keyboard-height, 0px)' }}>
       {!isMobile ? (
         <div className="h-full flex-shrink-0 border-r border-border/50">
           <Sidebar {...sidebarSharedProps} />

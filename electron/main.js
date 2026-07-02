@@ -8,6 +8,7 @@ import path from 'node:path';
 import http from 'node:http';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
+import { readThemeCache, writeThemeCache } from './themeCache.cjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Planrla';
@@ -78,6 +79,11 @@ ipcMain.handle('cloud-auth:get', () => readCloudToken());
 ipcMain.handle('cloud-auth:set', (_e, token) => { writeCloudToken(token); });
 ipcMain.handle('cloud-auth:remove', () => deleteCloudToken());
 
+// Renderer 主题变化时同步缓存，供下次启动选背景色（见 createWindow）
+ipcMain.on('theme-cache:set', (_e, effectiveDark) => {
+  if (typeof effectiveDark === 'boolean') writeThemeCache(app.getPath('userData'), effectiveDark);
+});
+
 function findFreePort() {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
@@ -141,12 +147,25 @@ async function startServer() {
 function createWindow() {
   // Drop the default menu bar (File/Edit/View/Window/Help) for a cleaner chrome.
   Menu.setApplicationMenu(null);
+
+  // 启动期主题色（消除闪屏）：读上次 effectiveDark 缓存；无则暗色（历史默认）
+  const cache = readThemeCache(app.getPath('userData'));
+  const effectiveDark = cache ? cache.effectiveDark : true;
+  const titlebarBg = effectiveDark ? '#0b1120' : '#ffffff';
+  const symbolColor = effectiveDark ? '#e5e7eb' : '#374151';
+  const titleBarStyle = process.platform === 'darwin' ? 'hiddenInset' : 'hidden';
+
   mainWindow = new BrowserWindow({
     title: APP_NAME,
     width: 1280,
     height: 840,
     icon: resolveAppIcon(),
-    backgroundColor: '#0b1120',
+    backgroundColor: titlebarBg,
+    titleBarStyle,
+    // Win/Linux: 系统绘制 minimize/maximize/close 按钮，颜色/高度可控（Electron 15+，38 完整支持）
+    titleBarOverlay: process.platform !== 'darwin'
+      ? { color: titlebarBg, symbolColor, height: 40 }
+      : undefined,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
