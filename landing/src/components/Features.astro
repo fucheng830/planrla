@@ -1,0 +1,33 @@
+---
+const features = [
+  { title: '多 Provider 一体化', desc: 'Claude、Codex、Gemini、Cursor 在同一工作台切换，共享会话与项目。', icon: '⇄' },
+  { title: '本地优先', desc: '本地运行模型 CLI，凭据与数据不离机；远程访问按需开启。', icon: '/local' },
+  { title: '桌面原生体验', desc: 'Electron 桌面端，三态主题、自绘标题栏、系统级集成。', icon: '▥' },
+  { title: '会话全文搜索', desc: 'FTS5 全文索引，跨会话毫秒级检索历史对话。', icon: '⌕' },
+];
+---
+<section id="features" class="section">
+  <div class="container">
+    <h2 class="section-title">核心功能</h2>
+    <p class="section-subtitle">为高频 AI 编程协作而设计</p>
+    <div class="grid">
+      {features.map((f) => (
+        <div class="card">
+          <div class="card-icon">{f.icon}</div>
+          <h3>{f.title}</h3>
+          <p>{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; }
+  .card-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--color-primary); color: var(--color-primary-fg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .card h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+  .card p { font-size: 14px; color: var(--color-muted); margin: 0; line-height: 1.55; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+</style>
