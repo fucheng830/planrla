@@ -24,6 +24,16 @@ export function searchSessions(
   const trimmed = (query ?? '').trim();
   if (!trimmed) return [];
   const db = getConnection();
+  // PERF NOTE: latency is dominated by snippet() — SQLite computes it per
+  // *matching* row, not per returned row, so lowering LIMIT does NOT reduce
+  // snippet cost (measured: "session" L50=152ms ≈ L20=122ms; rank-only L20
+  // without snippet = 18ms). Two-phase (rank without snippet, then snippet the
+  // winners) was measured and rejected: it helps only pathological broad terms
+  // (session 122→76ms, still >50ms) while regressing mid-frequency queries
+  // (typescript 64→83ms, 全文搜索 87→98ms). The real lever is scoping MATCH to
+  // the active project — pass projectPath server-side (the route already
+  // accepts it; the frontend currently filters client-side). See
+  // debug/latency-twophase.cjs and the plan's 验证证据 section.
   const limit = Math.min(opts.limit ?? 50, 200);
   let sql = `
     SELECT ss.session_id, ss.provider, ss.project_path,
