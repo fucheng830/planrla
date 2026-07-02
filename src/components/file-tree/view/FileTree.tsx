@@ -9,6 +9,7 @@ import { useFileTreeData } from '../hooks/useFileTreeData';
 import { useFileTreeOperations } from '../hooks/useFileTreeOperations';
 import { useFileTreeViewMode } from '../hooks/useFileTreeViewMode';
 import { useFileTreeUpload } from '../hooks/useFileTreeUpload';
+import { useFileTreeSearch } from '../hooks/useFileTreeSearch';
 import type { FileTreeImageSelection, FileTreeNode } from '../types/types';
 import { flattenVisibleNodes } from '../utils/flattenVisibleNodes';
 import { pathToDirKey } from '../utils/pathToDirKey';
@@ -52,9 +53,8 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
   const { entriesByDir, loadingDir, errorDir, ensureDir, refreshAll } = useFileTreeData(selectedProject);
   const { viewMode, changeViewMode } = useFileTreeViewMode();
   const { expandedDirs, toggleDirectory, collapseAll } = useExpandedDirectories();
-  // 搜索状态内联(增量模型下不再走 useFileTreeSearch 的树形过滤)。
-  // FT10 会改成"搜已缓存目录"的增量语义;此处先做客户端过滤(仅可见/已加载节点)。
-  const [searchQuery, setSearchQuery] = useState('');
+  // 搜索适配增量缓存（FT10）：搜所有已缓存目录的 entries（含未展开但已 fetch 的）。
+  const { searchQuery, setSearchQuery, filteredNodes, isSearching } = useFileTreeSearch({ entriesByDir });
 
   const projectRoot = selectedProject?.fullPath || selectedProject?.path || '';
 
@@ -144,12 +144,15 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
     [entriesByDir, expandedDirs, projectRoot],
   );
 
-  // 客户端过滤(FT9 临时;FT10 改为增量搜已缓存目录)。
-  const filteredVisibleRows = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return visibleRows;
-    return visibleRows.filter((row) => row.node.name.toLowerCase().includes(query));
-  }, [visibleRows, searchQuery]);
+  // 搜索态：用 filteredNodes 扁平渲染（level 0，作为搜索结果列表）；
+  // 非搜索态：用 visibleRows（树）。FT10。
+  const rows = useMemo(
+    () =>
+      isSearching
+        ? filteredNodes.map((node) => ({ node, level: 0 }))
+        : visibleRows,
+    [isSearching, filteredNodes, visibleRows],
+  );
 
   const hasAnyEntries = entriesByDir.size > 0;
 
@@ -220,7 +223,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
 
       <FileTreeUploadProgress upload={upload.uploadProgress} />
 
-      {viewMode === 'detailed' && filteredVisibleRows.length > 0 && <FileTreeDetailedColumns />}
+      {viewMode === 'detailed' && rows.length > 0 && <FileTreeDetailedColumns />}
 
       <ScrollArea className="flex-1 px-2 py-1">
         {/* New item input */}
@@ -257,7 +260,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
 
         <div ref={containerRef} className="flex-1 min-h-0 min-w-0">
           <FileTreeBody
-            visibleRows={filteredVisibleRows}
+            visibleRows={rows}
             hasAnyEntries={hasAnyEntries}
             searchQuery={searchQuery}
             viewMode={viewMode}
