@@ -273,7 +273,11 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== claudeModel) {
         setClaudeModel(next);
       }
-      if (localStorage.getItem('claude-model') !== next) {
+      // 只在用户曾显式选过（<provider>-model 已存在）时 reconcile 写回；
+      // 否则不污染 storage，让 resolveInitialModel 每次启动重新走配置默认链，
+      // 这样设置页改 default-model 对未显式选过模型的用户/provider 也能生效（I1）。
+      const existing = localStorage.getItem('claude-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('claude-model', next);
       }
     }
@@ -286,7 +290,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== cursorModel) {
         setCursorModel(next);
       }
-      if (localStorage.getItem('cursor-model') !== next) {
+      const existing = localStorage.getItem('cursor-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('cursor-model', next);
       }
     }
@@ -299,7 +304,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== codexModel) {
         setCodexModel(next);
       }
-      if (localStorage.getItem('codex-model') !== next) {
+      const existing = localStorage.getItem('codex-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('codex-model', next);
       }
     }
@@ -312,7 +318,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== geminiModel) {
         setGeminiModel(next);
       }
-      if (localStorage.getItem('gemini-model') !== next) {
+      const existing = localStorage.getItem('gemini-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('gemini-model', next);
       }
     }
@@ -325,7 +332,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== opencodeModel) {
         setOpenCodeModel(next);
       }
-      if (localStorage.getItem('opencode-model') !== next) {
+      const existing = localStorage.getItem('opencode-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('opencode-model', next);
       }
     }
