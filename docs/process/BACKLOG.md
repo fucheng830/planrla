@@ -8,11 +8,12 @@
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|
 | REQ-001 | 官网落地页(Cloudflare Pages + release feed) | — | P1 | feat | plan | [spec](../superpowers/specs/2026-07-02-landing-page-design.md) | [plan](../superpowers/plans/2026-07-02-landing-page-impl.md) | — |
+| REQ-010 | 桌面打包模式禁用 restartRequired 误报 | M1 | P1 | fix | spec | [spec](../superpowers/specs/2026-07-02-req010-restart-required-fix-design.md) | — | — |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
 |----|------|--------|-----|------|------|
-| _(暂无;从 Backlog 补齐四要素后置此)_ | | | | | |
+| _(暂无)_ | | | | | |
 
 ## Backlog(待细化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | 备注 |
@@ -25,6 +26,7 @@
 | REQ-007 | 桌面更新渠道(stable/beta/internal) | M6 | P1 | feat | backlog | |
 | REQ-008 | Android 多主机扫描/管理恢复 | M4 | P0 | feat | backlog | 状态待核对(近期 Android 工作) |
 | REQ-009 | 项目级工作台(需求/方案/任务/验收/归档) | — | P1 | feat | backlog | 见 PROJECT_WORKBENCH_FUNCTIONAL_REQUIREMENTS.md |
+| REQ-011 | 桌面端自动更新(auto-update 全流程) | M6 | P1 | feat | backlog | electron-updater 下载/安装/重启 + 前端更新 UI + 更新源 + latest.yml + 代码签名 + 渠道(stable/beta/internal);现状只检测不下载(autoDownload=false) |
 
 ## Released(已发版)
 | ID | 标题 | 版本 | spec |
