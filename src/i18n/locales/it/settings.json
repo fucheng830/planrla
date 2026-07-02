@@ -126,10 +126,6 @@
     }
   },
   "appearanceSettings": {
-    "darkMode": {
-      "label": "Modalità scura",
-      "description": "Alterna tra tema chiaro e scuro"
-    },
     "themeMode": {
       "label": "Theme",
       "description": "Follow system, or force light/dark",

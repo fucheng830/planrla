@@ -126,10 +126,6 @@
     }
   },
   "appearanceSettings": {
-    "darkMode": {
-      "label": "Mode sombre",
-      "description": "Basculer entre les thèmes clair et sombre"
-    },
     "themeMode": {
       "label": "Theme",
       "description": "Follow system, or force light/dark",

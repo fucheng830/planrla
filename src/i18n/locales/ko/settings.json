@@ -126,10 +126,6 @@
     }
   },
   "appearanceSettings": {
-    "darkMode": {
-      "label": "다크 모드",
-      "description": "라이트/다크 테마 전환"
-    },
     "themeMode": {
       "label": "Theme",
       "description": "Follow system, or force light/dark",
