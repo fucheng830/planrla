@@ -40,7 +40,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) themeColorMeta.setAttribute('content', isDarkMode ? '#0c1117' : '#ffffff');
 
-    const electronAPI = typeof window !== 'undefined' ? (window as any).electronAPI : null;
+    const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
     if (electronAPI?.themeCache?.set) {
       try {
         electronAPI.themeCache.set(isDarkMode);
