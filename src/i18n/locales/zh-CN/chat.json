@@ -340,5 +340,14 @@
   },
   "tasks": {
     "nextTaskPrompt": "开始下一个任务"
+  },
+  "defaults": {
+    "permission": {
+      "ackTitle": "默认：不限权限",
+      "ackTitleAccessible": "权限模式确认",
+      "ackMessage": "新会话默认使用不限权限模式。AI 可直接执行任意命令（含终端、写文件、删除），无需逐条确认。是否继续？",
+      "ackConfirm": "我已了解，设为默认",
+      "ackCancel": "取消"
+    }
   }
 }

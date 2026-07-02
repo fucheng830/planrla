@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTasksSettings } from '../../../contexts/TasksSettingsContext';
@@ -11,6 +11,16 @@ import { useChatSessionState } from '../hooks/useChatSessionState';
 import { useChatRealtimeHandlers } from '../hooks/useChatRealtimeHandlers';
 import { useChatComposerState } from '../hooks/useChatComposerState';
 import { useSessionStore } from '../../../stores/useSessionStore';
+import { isPermissionAcked, setPermissionAcked } from '../../../shared/defaults/permissionDefaults';
+import {
+  Confirmation,
+  ConfirmationTitle,
+  ConfirmationActions,
+  ConfirmationAction,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '../../../shared/view/ui';
 
 import ChatMessagesPane from './subcomponents/ChatMessagesPane';
 import ChatComposer from './subcomponents/ChatComposer';
@@ -285,6 +295,45 @@ function ChatInterface({
     handlePermissionDecision,
   }), [pendingPermissionRequests, handlePermissionDecision]);
 
+  // 首次启用"默认不限权限"时的一次性风险确认（确认前拦截发送）
+  // 未用 plan 的 useEffect 自动弹窗——会在会话加载时无意义弹出；改为拦截提交路径，仅在实际发送时触发
+  const [showPermissionAck, setShowPermissionAck] = useState(false);
+  const needsPermissionAck = !isPermissionAcked() && permissionMode !== 'default';
+  // 危险模式确认：拦截遮罩点击触发的关闭。Dialog 的 onPointerDownOutside 在 onOpenChange(false)
+  // 之前同步触发——置标志位，onOpenChange 读后即焚，从而屏蔽遮罩点击（仍允许 Escape / 取消按钮）。
+  const suppressOutsideCloseRef = useRef(false);
+  const handleAckOpenChange = useCallback((next: boolean) => {
+    if (!next && suppressOutsideCloseRef.current) {
+      suppressOutsideCloseRef.current = false;
+      return;
+    }
+    setShowPermissionAck(next);
+  }, []);
+  const handleAckPointerDownOutside = useCallback(() => {
+    suppressOutsideCloseRef.current = true;
+  }, []);
+
+  // 确认后不自动发送本次消息——需用户再次点击发送（设计预期，见 spec）
+  const guardedSubmit = useCallback(
+    (event: Parameters<typeof handleSubmit>[0]) => {
+      if (needsPermissionAck) {
+        setShowPermissionAck(true);
+        return;
+      }
+      handleSubmit(event);
+    },
+    [handleSubmit, needsPermissionAck],
+  );
+
+  const handleAckConfirm = useCallback(() => {
+    setPermissionAcked();
+    setShowPermissionAck(false);
+  }, []);
+
+  const handleAckCancel = useCallback(() => {
+    setShowPermissionAck(false);
+  }, []);
+
   if (!selectedProject) {
     const selectedProviderLabel =
       provider === 'cursor'
@@ -382,7 +431,7 @@ function ChatInterface({
           isUserScrolledUp={isUserScrolledUp}
           hasMessages={chatMessages.length > 0}
           onScrollToBottom={scrollToBottomAndReset}
-          onSubmit={handleSubmit}
+          onSubmit={guardedSubmit}
           isDragActive={isDragActive}
           attachedImages={attachedImages}
           onRemoveImage={(index) =>
@@ -446,6 +495,32 @@ function ChatInterface({
         currentSessionId={currentSessionId || selectedSession?.id || null}
         onSelectProviderModel={selectProviderModel}
       />
+
+      <Dialog open={showPermissionAck} onOpenChange={handleAckOpenChange}>
+        <DialogContent
+          className="max-w-md rounded-2xl border-border/80 bg-popover p-5 shadow-2xl"
+          // 危险模式确认：点击遮罩不关闭（避免隐式取消）；Escape 仍可显式取消
+          onPointerDownOutside={handleAckPointerDownOutside}
+        >
+          <DialogTitle>{t('defaults.permission.ackTitleAccessible')}</DialogTitle>
+          <Confirmation className="border-0 px-0 py-0">
+            <ConfirmationTitle className="text-base font-semibold text-foreground">
+              {t('defaults.permission.ackTitle')}
+            </ConfirmationTitle>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t('defaults.permission.ackMessage')}
+            </p>
+            <ConfirmationActions className="mt-4">
+              <ConfirmationAction variant="outline" onClick={handleAckCancel}>
+                {t('defaults.permission.ackCancel')}
+              </ConfirmationAction>
+              <ConfirmationAction onClick={handleAckConfirm}>
+                {t('defaults.permission.ackConfirm')}
+              </ConfirmationAction>
+            </ConfirmationActions>
+          </Confirmation>
+        </DialogContent>
+      </Dialog>
     </PermissionContext.Provider>
   );
 }
