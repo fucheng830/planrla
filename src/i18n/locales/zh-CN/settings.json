@@ -126,10 +126,6 @@
     }
   },
   "appearanceSettings": {
-    "darkMode": {
-      "label": "深色模式",
-      "description": "切换浅色和深色主题"
-    },
     "themeMode": {
       "label": "主题",
       "description": "跟随系统，或固定亮色/暗色",

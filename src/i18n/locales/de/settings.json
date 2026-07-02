@@ -126,10 +126,6 @@
     }
   },
   "appearanceSettings": {
-    "darkMode": {
-      "label": "Darkmode",
-      "description": "Zwischen hellem und dunklem Design wechseln"
-    },
     "themeMode": {
       "label": "Theme",
       "description": "Follow system, or force light/dark",
