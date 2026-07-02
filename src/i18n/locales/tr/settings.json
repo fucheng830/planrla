@@ -4,7 +4,8 @@
     "account": "Hesap",
     "permissions": "İzinler",
     "mcpServers": "MCP Sunucuları",
-    "appearance": "Görünüm"
+    "appearance": "Görünüm",
+    "defaults": "Varsayılanlar"
   },
   "account": {
     "title": "Hesap",
@@ -129,6 +130,13 @@
       "label": "Koyu Mod",
       "description": "Açık ve koyu temalar arasında geçiş yap"
     },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "projectSorting": {
       "label": "Proje Sıralama",
       "description": "Projelerin kenar çubuğunda nasıl sıralanacağı",
@@ -157,13 +165,6 @@
         "label": "Yazı Tipi Boyutu",
         "description": "Editör yazı tipi boyutu (piksel)"
       }
-    },
-    "themeMode": {
-      "label": "Theme",
-      "description": "Follow system, or force light/dark",
-      "system": "System",
-      "light": "Light",
-      "dark": "Dark"
     }
   },
   "mcpForm": {
@@ -500,5 +501,20 @@
     "installAriaLabel": "Eklenti git deposu URL'si",
     "tab": "sekme",
     "runningStatus": "çalışıyor"
+  },
+  "defaults": {
+    "permission": {
+      "title": "New session defaults",
+      "label": "Default permission mode",
+      "description": "What permission mode new sessions start in",
+      "modeDefault": "Default (prompt each action)",
+      "modeBypass": "Unrestricted"
+    },
+    "model": {
+      "title": "Default model",
+      "label": "Default model",
+      "description": "Used when you haven't picked a model this session",
+      "placeholder": "e.g. opus, sonnet, gpt-5.4"
+    }
   }
 }

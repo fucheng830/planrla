@@ -6,12 +6,12 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, 
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './Collapsible';
 export { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from './Command';
 export { default as DarkModeToggle } from './DarkModeToggle';
+export { default as ThemeModeSelector } from './ThemeModeSelector';
 export { Dialog, DialogTrigger, DialogContent, DialogTitle } from './Dialog';
 export { Input } from './Input';
 export { ScrollArea } from './ScrollArea';
 export { Reasoning, ReasoningTrigger, ReasoningContent, useReasoning } from './Reasoning';
 export { Shimmer } from './Shimmer';
-export { default as ThemeModeSelector } from './ThemeModeSelector';
 export { default as Tooltip } from './Tooltip';
 export { PromptInput, PromptInputHeader, PromptInputBody, PromptInputTextarea, PromptInputFooter, PromptInputTools, PromptInputButton, PromptInputSubmit } from './PromptInput';
 export { PillBar, Pill } from './PillBar';

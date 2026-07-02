@@ -253,5 +253,14 @@
   },
   "tasks": {
     "nextTaskPrompt": "開始下一個任務"
+  },
+  "defaults": {
+    "permission": {
+      "ackTitle": "預設：不限權限",
+      "ackTitleAccessible": "權限模式確認",
+      "ackMessage": "新會話預設使用不限權限模式。AI 可直接執行任意命令（含終端、寫檔案、刪除），無需逐條確認。是否繼續？",
+      "ackConfirm": "我已了解，設為預設",
+      "ackCancel": "取消"
+    }
   }
 }

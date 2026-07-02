@@ -367,5 +367,14 @@
   },
   "tasks": {
     "nextTaskPrompt": "Start the next task"
+  },
+  "defaults": {
+    "permission": {
+      "ackTitle": "Default: unrestricted permissions",
+      "ackTitleAccessible": "Permission mode confirmation",
+      "ackMessage": "New sessions default to unrestricted permission mode. The AI can execute any command (shell, file write, delete) without per-step confirmation. Continue?",
+      "ackConfirm": "I understand, enable by default",
+      "ackCancel": "Cancel"
+    }
   }
 }

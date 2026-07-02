@@ -8,6 +8,8 @@ import type {
   ProviderModelsCacheInfo,
   ProviderModelsDefinition,
 } from '../../../types/app';
+import { resolveSessionPermissionMode } from '../../../shared/defaults/permissionDefaults';
+import { resolveInitialModel } from '../../../shared/defaults/modelDefaults';
 
 const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   claude: 'opus',
@@ -73,25 +75,30 @@ type ChangeActiveModelApiResponse = {
 };
 
 export function useChatProviderState({ selectedSession, selectedProject }: UseChatProviderStateArgs) {
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(() =>
+    resolveSessionPermissionMode(
+      (localStorage.getItem('selected-provider') as LLMProvider) || 'claude',
+      null, // 启动期无 session，走全局默认
+    ),
+  );
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
   const [provider, setProvider] = useState<LLMProvider>(() => {
     return (localStorage.getItem('selected-provider') as LLMProvider) || 'claude';
   });
   const [cursorModel, setCursorModel] = useState<string>(() => {
-    return localStorage.getItem('cursor-model') || FALLBACK_DEFAULT_MODEL.cursor;
+    return resolveInitialModel('cursor', FALLBACK_DEFAULT_MODEL.cursor);
   });
   const [claudeModel, setClaudeModel] = useState<string>(() => {
-    return localStorage.getItem('claude-model') || FALLBACK_DEFAULT_MODEL.claude;
+    return resolveInitialModel('claude', FALLBACK_DEFAULT_MODEL.claude);
   });
   const [codexModel, setCodexModel] = useState<string>(() => {
-    return localStorage.getItem('codex-model') || FALLBACK_DEFAULT_MODEL.codex;
+    return resolveInitialModel('codex', FALLBACK_DEFAULT_MODEL.codex);
   });
   const [geminiModel, setGeminiModel] = useState<string>(() => {
-    return localStorage.getItem('gemini-model') || FALLBACK_DEFAULT_MODEL.gemini;
+    return resolveInitialModel('gemini', FALLBACK_DEFAULT_MODEL.gemini);
   });
   const [opencodeModel, setOpenCodeModel] = useState<string>(() => {
-    return localStorage.getItem('opencode-model') || FALLBACK_DEFAULT_MODEL.opencode;
+    return resolveInitialModel('opencode', FALLBACK_DEFAULT_MODEL.opencode);
   });
 
   /**
@@ -266,7 +273,11 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== claudeModel) {
         setClaudeModel(next);
       }
-      if (localStorage.getItem('claude-model') !== next) {
+      // 只在用户曾显式选过（<provider>-model 已存在）时 reconcile 写回；
+      // 否则不污染 storage，让 resolveInitialModel 每次启动重新走配置默认链，
+      // 这样设置页改 default-model 对未显式选过模型的用户/provider 也能生效（I1）。
+      const existing = localStorage.getItem('claude-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('claude-model', next);
       }
     }
@@ -279,7 +290,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== cursorModel) {
         setCursorModel(next);
       }
-      if (localStorage.getItem('cursor-model') !== next) {
+      const existing = localStorage.getItem('cursor-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('cursor-model', next);
       }
     }
@@ -292,7 +304,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== codexModel) {
         setCodexModel(next);
       }
-      if (localStorage.getItem('codex-model') !== next) {
+      const existing = localStorage.getItem('codex-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('codex-model', next);
       }
     }
@@ -305,7 +318,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== geminiModel) {
         setGeminiModel(next);
       }
-      if (localStorage.getItem('gemini-model') !== next) {
+      const existing = localStorage.getItem('gemini-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('gemini-model', next);
       }
     }
@@ -318,21 +332,19 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       if (next !== opencodeModel) {
         setOpenCodeModel(next);
       }
-      if (localStorage.getItem('opencode-model') !== next) {
+      const existing = localStorage.getItem('opencode-model');
+      if (existing !== null && existing !== next) {
         localStorage.setItem('opencode-model', next);
       }
     }
   }, [providerModelCatalog.opencode, opencodeModel]);
 
   useEffect(() => {
-    if (!selectedSession?.id) {
-      return;
-    }
-
-    const savedMode = localStorage.getItem(`permissionMode-${selectedSession.id}`) as PermissionMode | null;
-    const validModes = getPermissionModesForProvider(provider);
-    setPermissionMode(savedMode && validModes.includes(savedMode) ? savedMode : 'default');
-  }, [selectedSession?.id, provider, getPermissionModesForProvider]);
+    // 优先 per-session 记忆，其次全局默认 default-permission-mode[provider]，最后 'default'
+    // 用 resolveSessionPermissionMode 替代旧的 validModes 校验：capabilities 的 validModes
+    // 不含 gemini 'yolo'，旧守卫会拒绝它；resolver 直接返回保存值，gemini 不限权限可生效。
+    setPermissionMode(resolveSessionPermissionMode(provider, selectedSession?.id));
+  }, [selectedSession?.id, provider]);
 
   useEffect(() => {
     if (!selectedSession?.__provider || selectedSession.__provider === provider) {

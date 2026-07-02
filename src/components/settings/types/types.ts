@@ -5,7 +5,7 @@ import type { ProviderAuthStatus } from '../../provider-auth/types';
 
 export type SettingsMainTab = 'agents' | 'appearance' | 'git' | 'api' | 'license' | 'voice' | 'tasks' | 'browser' | 'notifications' | 'plugins' | 'about';
 export type AgentProvider = LLMProvider;
-export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills';
+export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills' | 'defaults';
 export type ProjectSortOrder = 'name' | 'date';
 export type SaveStatus = 'success' | 'error' | null;
 export type CodexPermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions';

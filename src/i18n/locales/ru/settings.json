@@ -4,7 +4,8 @@
     "account": "Аккаунт",
     "permissions": "Разрешения",
     "mcpServers": "MCP серверы",
-    "appearance": "Внешний вид"
+    "appearance": "Внешний вид",
+    "defaults": "Значения по умолчанию"
   },
   "account": {
     "title": "Аккаунт",
@@ -129,6 +130,13 @@
       "label": "Темная тема",
       "description": "Переключение между светлой и темной темами"
     },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "projectSorting": {
       "label": "Сортировка проектов",
       "description": "Как проекты упорядочены на боковой панели",
@@ -157,13 +165,6 @@
         "label": "Размер шрифта",
         "description": "Размер шрифта редактора в пикселях"
       }
-    },
-    "themeMode": {
-      "label": "Theme",
-      "description": "Follow system, or force light/dark",
-      "system": "System",
-      "light": "Light",
-      "dark": "Dark"
     }
   },
   "mcpForm": {
@@ -494,5 +495,20 @@
     "installAriaLabel": "URL git-репозитория плагина",
     "tab": "вкладка",
     "runningStatus": "запущен"
+  },
+  "defaults": {
+    "permission": {
+      "title": "New session defaults",
+      "label": "Default permission mode",
+      "description": "What permission mode new sessions start in",
+      "modeDefault": "Default (prompt each action)",
+      "modeBypass": "Unrestricted"
+    },
+    "model": {
+      "title": "Default model",
+      "label": "Default model",
+      "description": "Used when you haven't picked a model this session",
+      "placeholder": "e.g. opus, sonnet, gpt-5.4"
+    }
   }
 }

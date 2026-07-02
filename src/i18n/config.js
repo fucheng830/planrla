@@ -96,17 +96,16 @@ import zhTWTasks from './locales/zh-TW/tasks.json';
 // Import supported languages configuration
 import { languages } from './languages.js';
 
-// Get saved language preference from localStorage
+// 读 localStorage 已保存的语言偏好；未设置时返回 null，让 detection 链（navigator）兜底
 const getSavedLanguage = () => {
   try {
     const saved = localStorage.getItem('userLanguage');
-    // Validate that the saved language is supported
-    if (saved && languages.some(lang => lang.value === saved)) {
+    if (saved && languages.some((lang) => lang.value === saved)) {
       return saved;
     }
-    return 'en';
+    return null;
   } catch {
-    return 'en';
+    return null;
   }
 };
 
@@ -234,13 +233,13 @@ i18n
 
     // Detection options
     detection: {
-      // Order of language detection (local storage first)
-      order: ['localStorage'],
+      // localStorage 优先（用户手动选过的覆盖系统）；其次用 navigator（系统语言，首次启动生效）
+      order: ['localStorage', 'navigator'],
 
       // Keys to look for in localStorage
       lookupLocalStorage: 'userLanguage',
 
-      // Cache user language
+      // Cache user language（手动选过后写入 localStorage，之后不再跟随系统）
       caches: ['localStorage'],
     },
   });
