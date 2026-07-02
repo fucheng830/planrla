@@ -150,6 +150,9 @@ tasks/
 # Git worktrees
 .worktrees/
 
+# superpowers brainstorming (可视化伴侣临时产物)
+.superpowers/
+
 # electron-builder 打包产物
 release/
 

@@ -59,7 +59,10 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
   },
   gemini: {
     provider: 'gemini',
-    permissionModes: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
+    // gemini-cli only recognizes default / auto_edit / yolo (server/gemini-cli.js).
+    // auto_edit stays in the settings PermissionsContent path; the chat cycle only
+    // toggles default↔yolo (both chat PermissionMode values the runtime accepts).
+    permissionModes: ['default', 'yolo'],
     defaultPermissionMode: 'default',
     supportsImages: false,
     supportsAbort: true,
