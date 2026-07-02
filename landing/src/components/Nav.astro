@@ -1,0 +1,38 @@
+---
+const links = [
+  { href: '#features', label: '功能' },
+  { href: '#download', label: '下载' },
+  { href: '#changelog', label: '更新日志' },
+];
+---
+<header class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark"></span>
+      <span>Planrla</span>
+    </a>
+    <nav class="nav-links">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+    <a class="nav-gh" href="https://github.com/fucheng830/planrla" target="_blank" rel="noopener" aria-label="GitHub">GitHub ↗</a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
+  .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--color-primary); }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a { color: var(--color-muted); font-size: 14px; font-weight: 500; }
+  .nav-links a:hover { color: var(--color-fg); }
+  .nav-gh { font-size: 13px; font-weight: 600; color: var(--color-primary); }
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+  }
+</style>
