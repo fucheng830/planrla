@@ -131,6 +131,7 @@ async function startServer() {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       SERVER_PORT: String(serverPort),
+      PLANRLA_PACKAGED: app.isPackaged ? '1' : '0',
     },
     cwd: process.resourcesPath,
     stdio: ['ignore', 'pipe', 'pipe'],

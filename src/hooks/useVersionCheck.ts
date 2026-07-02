@@ -5,20 +5,37 @@ import { ReleaseInfo } from '../types/sharedTypes';
 /**
  * Compare two semantic version strings
  * Works only with numeric versions separated by dots (e.g. "1.2.3")
- * @param {string} v1 
+ * @param {string} v1
  * @param {string} v2
  * @returns positive if v1 > v2, negative if v1 < v2, 0 if equal
  */
 const compareVersions = (v1: string, v2: string) => {
   const parts1 = v1.split('.').map(Number);
   const parts2 = v2.split('.').map(Number);
-  
+
   for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
     const p1 = parts1[i] || 0;
     const p2 = parts2[i] || 0;
     if (p1 !== p2) return p1 - p2;
   }
   return 0;
+};
+
+/**
+ * 是否需要提示「重启服务器」。
+ * 打包桌面模式(app.isPackaged)下永远 false —— Electron 每次启动都重启 server,
+ * 不存在 server 跑旧代码的场景;仅 npm/git 源码模式自更新后提示。
+ *
+ * 抽成纯函数便于单测(见 useVersionCheck.test.ts)。REQ-010。
+ */
+export const computeRestartRequired = (
+  isPackaged: boolean,
+  serverVersion: string | null,
+  bundleVersion: string
+): boolean => {
+  if (isPackaged) return false;
+  if (typeof serverVersion !== 'string' || serverVersion.length === 0) return false;
+  return serverVersion !== bundleVersion;
 };
 
 export type InstallMode = 'git' | 'npm';
@@ -41,13 +58,15 @@ export const useVersionCheck = (_owner?: string, _repo?: string) => {
         }
         // `data.version` is the version the server process is actually running.
         // This module's `version` is baked into the frontend bundle at build
-        // time, so it reflects the installed (on-disk) package. If they differ,
-        // the package was updated but the server process was not restarted, and
-        // DB-backed actions may silently fail until it is.
-        if (typeof data.version === 'string' && data.version.length > 0) {
-          setRunningVersion(data.version);
-          setRestartRequired(data.version !== version);
-        }
+        // time, so it reflects the installed (on-disk) package. If they differ
+        // (and we're not in a packaged desktop app), the package was updated
+        // but the server process was not restarted, and DB-backed actions may
+        // silently fail until it is. Packaged desktop always restarts the
+        // server on launch, so the check is skipped there (REQ-010).
+        setRunningVersion(
+          typeof data.version === 'string' && data.version.length > 0 ? data.version : null
+        );
+        setRestartRequired(computeRestartRequired(!!data.isPackaged, data.version, version));
       } catch {
         // Default to git / no restart hint on error
       }

@@ -8,7 +8,7 @@
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|
 | REQ-001 | 官网落地页(Cloudflare Pages + release feed) | — | P1 | feat | plan | [spec](../superpowers/specs/2026-07-02-landing-page-design.md) | [plan](../superpowers/plans/2026-07-02-landing-page-impl.md) | — |
-| REQ-010 | 桌面打包模式禁用 restartRequired 误报 | M1 | P1 | fix | spec | [spec](../superpowers/specs/2026-07-02-req010-restart-required-fix-design.md) | — | — |
+| REQ-010 | 桌面打包模式禁用 restartRequired 误报 | M1 | P1 | fix | review | [spec](../superpowers/specs/2026-07-02-req010-restart-required-fix-design.md) | [plan](../superpowers/plans/2026-07-02-req010-restart-required-fix-impl.md) | — |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |

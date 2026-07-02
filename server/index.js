@@ -176,7 +176,8 @@ app.get('/health', (req, res) => {
         status: 'ok',
         timestamp: new Date().toISOString(),
         installMode,
-        version: RUNNING_VERSION
+        version: RUNNING_VERSION,
+        isPackaged: process.env.PLANRLA_PACKAGED === '1'
     });
 });
 
