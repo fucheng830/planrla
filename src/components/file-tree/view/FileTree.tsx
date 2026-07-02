@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, X, Loader2, Folder, Upload } from 'lucide-react';
 
@@ -7,10 +7,11 @@ import { ICON_SIZE_CLASS, getFileIconData } from '../constants/fileIcons';
 import { useExpandedDirectories } from '../hooks/useExpandedDirectories';
 import { useFileTreeData } from '../hooks/useFileTreeData';
 import { useFileTreeOperations } from '../hooks/useFileTreeOperations';
-import { useFileTreeSearch } from '../hooks/useFileTreeSearch';
 import { useFileTreeViewMode } from '../hooks/useFileTreeViewMode';
 import { useFileTreeUpload } from '../hooks/useFileTreeUpload';
 import type { FileTreeImageSelection, FileTreeNode } from '../types/types';
+import { flattenVisibleNodes } from '../utils/flattenVisibleNodes';
+import { pathToDirKey } from '../utils/pathToDirKey';
 import { formatFileSize, formatRelativeTime, isImageFile } from '../utils/fileTreeUtils';
 import { Project } from '../../../types/app';
 import { ScrollArea, Input } from '../../../shared/view/ui';
@@ -48,25 +49,26 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
     }
   }, [toast]);
 
-  const { files, loading, refreshFiles } = useFileTreeData(selectedProject);
+  const { entriesByDir, loadingDir, errorDir, ensureDir, refreshAll } = useFileTreeData(selectedProject);
   const { viewMode, changeViewMode } = useFileTreeViewMode();
-  const { expandedDirs, toggleDirectory, expandDirectories, collapseAll } = useExpandedDirectories();
-  const { searchQuery, setSearchQuery, filteredFiles } = useFileTreeSearch({
-    files,
-    expandDirectories,
-  });
+  const { expandedDirs, toggleDirectory, collapseAll } = useExpandedDirectories();
+  // 搜索状态内联(增量模型下不再走 useFileTreeSearch 的树形过滤)。
+  // FT10 会改成"搜已缓存目录"的增量语义;此处先做客户端过滤(仅可见/已加载节点)。
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const projectRoot = selectedProject?.fullPath || selectedProject?.path || '';
 
   // File operations
   const operations = useFileTreeOperations({
     selectedProject,
-    onRefresh: refreshFiles,
+    onRefresh: refreshAll,
     showToast,
   });
 
   // File upload (drag and drop)
   const upload = useFileTreeUpload({
     selectedProject,
-    onRefresh: refreshFiles,
+    onRefresh: refreshAll,
     showToast,
   });
   const operationLoading = operations.operationLoading || upload.operationLoading;
@@ -92,11 +94,25 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
     return <Icon className={cn(ICON_SIZE_CLASS, color)} />;
   }, []);
 
+  // 展开目录:toggle + 展开时触发懒 fetch(ensureDir)。
+  // dirKey 一致性:node.path(绝对) → pathToDirKey → 相对项目根 dir key;
+  // 必须与 flattenVisibleNodes 内部 name 累积 + useFileTreeData.fetchDir(dir) 一致。
+  const handleToggleDir = useCallback(
+    (absPath: string) => {
+      toggleDirectory(absPath);
+      // toggleDirectory 是异步 setState;用 !expandedDirs.has 判断"将展开"。
+      if (!expandedDirs.has(absPath)) {
+        ensureDir(pathToDirKey(absPath, projectRoot));
+      }
+    },
+    [expandedDirs, toggleDirectory, ensureDir, projectRoot],
+  );
+
   // Centralized click behavior keeps file actions identical across all presentation modes.
   const handleItemClick = useCallback(
     (item: FileTreeNode) => {
       if (item.type === 'directory') {
-        toggleDirectory(item.path);
+        handleToggleDir(item.path);
         return;
       }
 
@@ -114,7 +130,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
 
       onFileOpen?.(item.path);
     },
-    [onFileOpen, selectedProject, toggleDirectory],
+    [onFileOpen, selectedProject, handleToggleDir],
   );
 
   const formatRelativeTimeLabel = useCallback(
@@ -122,7 +138,48 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
     [t],
   );
 
-  if (loading) {
+  // 扁平化可见节点(FT5):增量缓存 + 展开状态 → DFS 可见列表。
+  const visibleRows = useMemo(
+    () => flattenVisibleNodes(entriesByDir, expandedDirs, projectRoot),
+    [entriesByDir, expandedDirs, projectRoot],
+  );
+
+  // 客户端过滤(FT9 临时;FT10 改为增量搜已缓存目录)。
+  const filteredVisibleRows = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return visibleRows;
+    return visibleRows.filter((row) => row.node.name.toLowerCase().includes(query));
+  }, [visibleRows, searchQuery]);
+
+  const hasAnyEntries = entriesByDir.size > 0;
+
+  // loading 态:根目录缓存未就绪 → 全屏 loading 占位。
+  const rootLoading = loadingDir.has('') && entriesByDir.size === 0;
+
+  // 容器测高(react-window 需 px height)。
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(400);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setContainerHeight(el.clientHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // 节点 path(绝对) → dirKey 后查 loading/error。
+  const isLoadingDir = useCallback(
+    (absPath: string) => loadingDir.has(pathToDirKey(absPath, projectRoot)),
+    [loadingDir, projectRoot],
+  );
+  const errorOfDir = useCallback(
+    (absPath: string) => errorDir.get(pathToDirKey(absPath, projectRoot)),
+    [errorDir, projectRoot],
+  );
+
+  if (rootLoading) {
     return <FileTreeLoadingState />;
   }
 
@@ -153,9 +210,9 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
         onUploadFiles={upload.handleFileSelect}
         onNewFile={() => operations.handleStartCreate('', 'file')}
         onNewFolder={() => operations.handleStartCreate('', 'directory')}
-        onRefresh={refreshFiles}
+        onRefresh={refreshAll}
         onCollapseAll={collapseAll}
-        loading={loading}
+        loading={rootLoading}
         operationLoading={operationLoading}
         isUploading={upload.uploadProgress?.status === 'uploading'}
         uploadProgress={upload.uploadProgress?.progress ?? null}
@@ -163,7 +220,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
 
       <FileTreeUploadProgress upload={upload.uploadProgress} />
 
-      {viewMode === 'detailed' && filteredFiles.length > 0 && <FileTreeDetailedColumns />}
+      {viewMode === 'detailed' && filteredVisibleRows.length > 0 && <FileTreeDetailedColumns />}
 
       <ScrollArea className="flex-1 px-2 py-1">
         {/* New item input */}
@@ -198,32 +255,38 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
           </div>
         )}
 
-        <FileTreeBody
-          files={files}
-          filteredFiles={filteredFiles}
-          searchQuery={searchQuery}
-          viewMode={viewMode}
-          expandedDirs={expandedDirs}
-          onItemClick={handleItemClick}
-          renderFileIcon={renderFileIcon}
-          formatFileSize={formatFileSize}
-          formatRelativeTime={formatRelativeTimeLabel}
-          onRename={operations.handleStartRename}
-          onDelete={operations.handleStartDelete}
-          onNewFile={(path) => operations.handleStartCreate(path, 'file')}
-          onNewFolder={(path) => operations.handleStartCreate(path, 'directory')}
-          onCopyPath={operations.handleCopyPath}
-          onDownload={operations.handleDownload}
-          onRefresh={refreshFiles}
-          // Pass rename state and handlers for inline editing
-          renamingItem={operations.renamingItem}
-          renameValue={operations.renameValue}
-          setRenameValue={operations.setRenameValue}
-          handleConfirmRename={operations.handleConfirmRename}
-          handleCancelRename={operations.handleCancelRename}
-          renameInputRef={renameInputRef}
-          operationLoading={operationLoading}
-        />
+        <div ref={containerRef} className="flex-1 min-h-0 min-w-0">
+          <FileTreeBody
+            visibleRows={filteredVisibleRows}
+            hasAnyEntries={hasAnyEntries}
+            searchQuery={searchQuery}
+            viewMode={viewMode}
+            expandedDirs={expandedDirs}
+            onItemClick={handleItemClick}
+            renderFileIcon={renderFileIcon}
+            formatFileSize={formatFileSize}
+            formatRelativeTime={formatRelativeTimeLabel}
+            onRename={operations.handleStartRename}
+            onDelete={operations.handleStartDelete}
+            onNewFile={(path) => operations.handleStartCreate(path, 'file')}
+            onNewFolder={(path) => operations.handleStartCreate(path, 'directory')}
+            onCopyPath={operations.handleCopyPath}
+            onDownload={operations.handleDownload}
+            onRefresh={refreshAll}
+            onToggleDir={handleToggleDir}
+            isLoadingDir={isLoadingDir}
+            errorOfDir={errorOfDir}
+            // Pass rename state and handlers for inline editing
+            renamingItem={operations.renamingItem}
+            renameValue={operations.renameValue}
+            setRenameValue={operations.setRenameValue}
+            handleConfirmRename={operations.handleConfirmRename}
+            handleCancelRename={operations.handleCancelRename}
+            renameInputRef={renameInputRef}
+            operationLoading={operationLoading}
+            height={containerHeight}
+          />
+        </div>
       </ScrollArea>
 
       {selectedImage && (
