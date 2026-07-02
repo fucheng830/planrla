@@ -4,7 +4,8 @@
     "account": "Account",
     "permissions": "Permessi",
     "mcpServers": "Server MCP",
-    "appearance": "Aspetto"
+    "appearance": "Aspetto",
+    "defaults": "Valori predefiniti"
   },
   "account": {
     "title": "Account",
@@ -500,5 +501,20 @@
     "installAriaLabel": "URL repository git del plugin",
     "tab": "scheda",
     "runningStatus": "in esecuzione"
+  },
+  "defaults": {
+    "permission": {
+      "title": "New session defaults",
+      "label": "Default permission mode",
+      "description": "What permission mode new sessions start in",
+      "modeDefault": "Default (prompt each action)",
+      "modeBypass": "Unrestricted"
+    },
+    "model": {
+      "title": "Default model",
+      "label": "Default model",
+      "description": "Used when you haven't picked a model this session",
+      "placeholder": "e.g. opus, sonnet, gpt-5.4"
+    }
   }
 }

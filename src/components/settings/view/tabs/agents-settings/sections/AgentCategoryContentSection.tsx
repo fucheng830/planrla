@@ -5,6 +5,7 @@ import type { SkillsProject } from '../../../../../skills/types';
 import { ProviderSkills } from '../../../../../skills';
 
 import AccountContent from './content/AccountContent';
+import DefaultModeContent from './content/DefaultModeContent';
 import PermissionsContent from './content/PermissionsContent';
 
 export default function AgentCategoryContentSection({
@@ -97,6 +98,10 @@ export default function AgentCategoryContentSection({
             path: project.path,
           }))}
         />
+      )}
+
+      {selectedCategory === 'defaults' && (
+        <DefaultModeContent selectedAgent={selectedAgent} />
       )}
     </div>
   );

@@ -351,7 +351,7 @@ export default function ChatComposer({
                     ? 'border-green-300/60 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-600/40 dark:bg-green-900/15 dark:text-green-300 dark:hover:bg-green-900/25'
                     : permissionMode === 'auto'
                       ? 'border-blue-300/60 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-600/40 dark:bg-blue-900/15 dark:text-blue-300 dark:hover:bg-blue-900/25'
-                      : permissionMode === 'bypassPermissions'
+                      : permissionMode === 'bypassPermissions' || permissionMode === 'yolo'
                         ? 'border-orange-300/60 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-600/40 dark:bg-orange-900/15 dark:text-orange-300 dark:hover:bg-orange-900/25'
                         : 'border-primary/20 bg-primary/5 text-primary hover:bg-primary/10'
               }`}
@@ -366,7 +366,7 @@ export default function ChatComposer({
                         ? 'bg-green-500'
                         : permissionMode === 'auto'
                           ? 'bg-blue-500'
-                          : permissionMode === 'bypassPermissions'
+                          : permissionMode === 'bypassPermissions' || permissionMode === 'yolo'
                             ? 'bg-orange-500'
                             : 'bg-primary'
                   }`}
@@ -375,7 +375,7 @@ export default function ChatComposer({
                   {permissionMode === 'default' && t('codex.modes.default')}
                   {permissionMode === 'acceptEdits' && t('codex.modes.acceptEdits')}
                   {permissionMode === 'auto' && t('codex.modes.auto')}
-                  {permissionMode === 'bypassPermissions' && t('codex.modes.bypassPermissions')}
+                  {(permissionMode === 'bypassPermissions' || permissionMode === 'yolo') && t('codex.modes.bypassPermissions')}
                   {permissionMode === 'plan' && t('codex.modes.plan')}
                 </span>
               </div>
