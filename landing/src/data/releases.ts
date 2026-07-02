@@ -37,3 +37,39 @@ export function normalizeRelease(raw: RawRelease): FeedEntry | null {
     publishedAt: raw.published_at || '',
   };
 }
+
+const REPO = 'fucheng830/planrla';
+const API_URL = `https://api.github.com/repos/${REPO}/releases`;
+
+/** fetch 失败时的兜底（与 public/desktop/latest.json 静态版保持一致） */
+export const STATIC_FALLBACK: FeedEntry = {
+  version: 'v0.2.0',
+  title: 'v0.2.0 — 桌面端三态主题',
+  body: '桌面端外观设置新增 system / light / dark 三态主题切换。',
+  htmlUrl: 'https://github.com/fucheng830/planrla/releases/tag/v0.2.0',
+  publishedAt: '2026-07-02T10:43:00Z',
+};
+
+/**
+ * 构建时 fetch GitHub Releases，返回归一化后的 FeedEntry[]（已过滤 draft/非法）。
+ * fetch 失败（限流 / 断网）返回 [STATIC_FALLBACK]，构建不挂。
+ * token 可选：传 GITHUB_TOKEN 提升匿名 60/hr 限流到 5000/hr。
+ */
+export async function fetchReleases(token?: string): Promise<FeedEntry[]> {
+  try {
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'planrla-landing',
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(API_URL, { headers });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const raw = (await res.json()) as RawRelease[];
+    const entries = raw.map(normalizeRelease).filter((r): r is FeedEntry => r !== null);
+    if (entries.length === 0) throw new Error('no releases');
+    return entries;
+  } catch (e) {
+    console.warn(`[releases] fetch failed (${(e as Error).message}), using static fallback`);
+    return [STATIC_FALLBACK];
+  }
+}

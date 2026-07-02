@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "npm run gen-feed && astro build",
     "gen-feed": "tsx scripts/gen-feed.ts",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "validate": "node scripts/validate-feed.mjs",
