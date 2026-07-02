@@ -180,7 +180,9 @@ function broadcastProgress(progress: ProgressUpdate) {
 export async function getProjectsWithSessions(
   options: GetProjectsWithSessionsOptions = {}
 ): Promise<ProjectListItem[]> {
-  if (!options.skipSynchronization) {
+  // Read path 默认不 inline sync（watchers + WS 负责新鲜度）。显式 skipSynchronization:false 才同步。
+  const skipSynchronization = options.skipSynchronization ?? true;
+  if (!skipSynchronization) {
     await sessionSynchronizerService.synchronizeSessions();
   }
 
@@ -248,7 +250,8 @@ export async function getProjectsWithSessions(
 export async function getArchivedProjectsWithSessions(
   options: Pick<GetProjectsWithSessionsOptions, 'skipSynchronization'> = {},
 ): Promise<ArchivedProjectListItem[]> {
-  if (!options.skipSynchronization) {
+  const skipSynchronization = options.skipSynchronization ?? true;
+  if (!skipSynchronization) {
     await sessionSynchronizerService.synchronizeSessions();
   }
 
