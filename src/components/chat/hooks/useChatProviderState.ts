@@ -9,6 +9,7 @@ import type {
   ProviderModelsDefinition,
 } from '../../../types/app';
 import { resolveSessionPermissionMode } from '../../../shared/defaults/permissionDefaults';
+import { resolveInitialModel } from '../../../shared/defaults/modelDefaults';
 
 const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   claude: 'opus',
@@ -85,19 +86,19 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     return (localStorage.getItem('selected-provider') as LLMProvider) || 'claude';
   });
   const [cursorModel, setCursorModel] = useState<string>(() => {
-    return localStorage.getItem('cursor-model') || FALLBACK_DEFAULT_MODEL.cursor;
+    return resolveInitialModel('cursor', FALLBACK_DEFAULT_MODEL.cursor);
   });
   const [claudeModel, setClaudeModel] = useState<string>(() => {
-    return localStorage.getItem('claude-model') || FALLBACK_DEFAULT_MODEL.claude;
+    return resolveInitialModel('claude', FALLBACK_DEFAULT_MODEL.claude);
   });
   const [codexModel, setCodexModel] = useState<string>(() => {
-    return localStorage.getItem('codex-model') || FALLBACK_DEFAULT_MODEL.codex;
+    return resolveInitialModel('codex', FALLBACK_DEFAULT_MODEL.codex);
   });
   const [geminiModel, setGeminiModel] = useState<string>(() => {
-    return localStorage.getItem('gemini-model') || FALLBACK_DEFAULT_MODEL.gemini;
+    return resolveInitialModel('gemini', FALLBACK_DEFAULT_MODEL.gemini);
   });
   const [opencodeModel, setOpenCodeModel] = useState<string>(() => {
-    return localStorage.getItem('opencode-model') || FALLBACK_DEFAULT_MODEL.opencode;
+    return resolveInitialModel('opencode', FALLBACK_DEFAULT_MODEL.opencode);
   });
 
   /**
