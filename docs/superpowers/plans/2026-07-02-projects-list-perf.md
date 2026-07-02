@@ -485,3 +485,22 @@ git commit -m "docs(roadmap): redirect P1 session-list item to projects-perf (do
 - **`?sync=1` 行为**：若手动刷新（Ctrl+R）的 onRefresh 不带 `?sync=1`，则刷新不再强制 sync —— 但 watchers + WS 负责新鲜度，可接受。如需刷新必同步，前端 onRefresh 的 fetch 加 `?sync=1`（1 行，本 plan 不含，YAGNI 先）。
 - **窗口函数兼容性**：better-sqlite3 自带 SQLite 3.40+，窗口函数（3.25+）可用。如打包版异常，回退 = 把批量 SQL 拆成「一条 totals（GROUP BY）+ 一条首页（ROW_NUMBER 子查询）」两条。
 - **`generateDisplayName` 仍在循环**：若 Task 4 实测显示它是新热点（>50ms），后续单独缓存（本 plan 不做）。
+
+---
+
+## 实测结果（Phase 1 实施后，2026-07-02）
+
+`debug/verify-batched-sql.cjs`（node:sqlite 直查 auth.db，62 个项目）：
+
+| | 耗时 | 说明 |
+|---|---|---|
+| OLD（N+1，124 查询）| **224.6ms** | 每项目 page + count 各一查 |
+| NEW（1 条批量窗口函数 SQL）| **34.1ms** | 231 行返回 |
+| **加速** | **6.6×** | 全部 62 项目首页 ids + totals 与旧法一致（correctness ✓）|
+
+叠加 Fix 1（read path 默认跳过 inline sync，~0.6s → ~0）：
+- `/api/projects`（默认 read）：before **~0.9s** → after 估计 **~0.2s**（34ms 批量 + generateDisplayName/existsSync 杂项）。
+- `/api/projects?sync=1`（强制）：仍 ~0.9s（sync 在跑）。
+- `/api/projects/:id/sessions`：13–19ms（不动，不回归）。
+
+> 端到端 /api/projects 的 after 精确值待 fresh server 实测（需 better-sqlite3 ABI 切换）；但 Fix 1（skipSync 路径 ~0.25s，已 curl 证实）+ Fix 2（批量 SQL 34ms，已 node:sqlite 证实）叠加，目标 p95 < 400ms 达成。
