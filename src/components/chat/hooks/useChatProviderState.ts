@@ -8,6 +8,7 @@ import type {
   ProviderModelsCacheInfo,
   ProviderModelsDefinition,
 } from '../../../types/app';
+import { resolveSessionPermissionMode } from '../../../shared/defaults/permissionDefaults';
 
 const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   claude: 'opus',
@@ -73,7 +74,12 @@ type ChangeActiveModelApiResponse = {
 };
 
 export function useChatProviderState({ selectedSession, selectedProject }: UseChatProviderStateArgs) {
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(() =>
+    resolveSessionPermissionMode(
+      (localStorage.getItem('selected-provider') as LLMProvider) || 'claude',
+      null, // 启动期无 session，走全局默认
+    ),
+  );
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
   const [provider, setProvider] = useState<LLMProvider>(() => {
     return (localStorage.getItem('selected-provider') as LLMProvider) || 'claude';
@@ -325,14 +331,11 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   }, [providerModelCatalog.opencode, opencodeModel]);
 
   useEffect(() => {
-    if (!selectedSession?.id) {
-      return;
-    }
-
-    const savedMode = localStorage.getItem(`permissionMode-${selectedSession.id}`) as PermissionMode | null;
-    const validModes = getPermissionModesForProvider(provider);
-    setPermissionMode(savedMode && validModes.includes(savedMode) ? savedMode : 'default');
-  }, [selectedSession?.id, provider, getPermissionModesForProvider]);
+    // 优先 per-session 记忆，其次全局默认 default-permission-mode[provider]，最后 'default'
+    // 用 resolveSessionPermissionMode 替代旧的 validModes 校验：capabilities 的 validModes
+    // 不含 gemini 'yolo'，旧守卫会拒绝它；resolver 直接返回保存值，gemini 不限权限可生效。
+    setPermissionMode(resolveSessionPermissionMode(provider, selectedSession?.id));
+  }, [selectedSession?.id, provider]);
 
   useEffect(() => {
     if (!selectedSession?.__provider || selectedSession.__provider === provider) {
