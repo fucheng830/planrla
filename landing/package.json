@@ -1,0 +1,20 @@
+{
+  "name": "planrla-landing",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "gen-feed": "tsx scripts/gen-feed.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "validate": "node scripts/validate-feed.mjs",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
