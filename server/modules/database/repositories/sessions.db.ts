@@ -385,7 +385,7 @@ export const sessionsDb = {
     projectPaths: string[],
     limit: number,
     offset: number,
-  ): Array<SessionRow & { rn: number; total: number }> {
+  ): Array<Omit<SessionRow, 'project_path'> & { project_path: string; rn: number; total: number }> {
     const db = getConnection();
     if (projectPaths.length === 0) return [];
     const normalized = projectPaths.map(normalizeProjectPath);
@@ -406,9 +406,19 @@ export const sessionsDb = {
          SELECT * FROM ranked
          WHERE rn > ? AND rn <= ?`
       )
-      .all(...normalized, offset, offset + limit) as Array<SessionRow & { rn: number; total: number }>;
+      .all(...normalized, offset, offset + limit) as Array<
+        Omit<SessionRow, 'project_path'> & { project_path: string; rn: number; total: number }
+      >;
 
-    return rows.map((r) => normalizeSessionRow(r) as SessionRow & { rn: number; total: number });
+    // WHERE project_path IN (...) guarantees non-null project_path → narrow to string.
+    return rows.map(
+      (r) =>
+        normalizeSessionRow(r) as Omit<SessionRow, 'project_path'> & {
+          project_path: string;
+          rn: number;
+          total: number;
+        },
+    );
   },
 
   countSessionsByProjectPath(projectPath: string): number {
