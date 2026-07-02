@@ -4,14 +4,14 @@
 
 **Goal:** 文件树从 depth-10 全扫+全渲改为按目录懒加载 + react-window 虚拟化 + 5min 缓存，解决开大项目/展开大目录/切回重扫三大痛点。
 
-**Architecture:** 后端 `/files` 路由复用现有 `getFileTree(path, maxDepth=1)` 做单层扫描（加 `?dir=` + 路径穿越校验 + scan 耗时日志）；前端 `useFileTreeData` 改 `Map<dir, {entries, fetchedAt}>` 懒加载 + TTL 缓存；渲染层用纯函数 `flattenVisibleNodes` 扁平化可见树 + `react-window` `FixedSizeList` 虚拟化；`FileTreeNode` 从递归组件改为单行单元。
+**Architecture:** 后端 `/files` 路由复用现有 `getFileTree(path, maxDepth=0)` 做严格单层扫描（`currentDepth < maxDepth` 即 `0<0=false`，不递归，目录项无 children；加 `?dir=` + 路径穿越校验 + scan 耗时日志）；前端 `useFileTreeData` 改 `Map<dir, {entries, fetchedAt}>` 懒加载 + TTL 缓存；渲染层用纯函数 `flattenVisibleNodes` 扁平化可见树 + `react-window` `FixedSizeList` 虚拟化；`FileTreeNode` 从递归组件改为单行单元。
 
 **Tech Stack:** Express（后端）、React + `react-window`（前端虚拟化）、TypeScript、`node:test`（纯函数测试，`npx tsx --test`）。
 
 **Spec:** `docs/superpowers/specs/2026-07-02-file-tree-incremental-design.md`
 
 **Plan 阶段相对 spec 的两点简化（YAGNI）：**
-1. **不新建 `getFileTreeShallow`**：`getFileTree` 已支持 `maxDepth` 参数（`/browse-filesystem` 已用 `maxDepth=1`），`/files` 路由直接调 `getFileTree(targetPath, 1, 0, true)` 即单层。少一个新函数 + 少一份测试。
+1. **不新建 `getFileTreeShallow`**：`getFileTree` 已支持 `maxDepth` 参数（`/browse-filesystem` 已用 `maxDepth=1`），`/files` 路由调 `getFileTree(targetPath, 0, 0, true)` 做严格单层（`0<0=false` 不递归，目录项无 children）。少一个新函数 + 少一份测试。
 2. **不带 `childrenCount`**：每个目录多一次 `readdir` 计数会在含大量目录的项目里抵消增量收益。改为：目录始终显示展开箭头，空目录展开后显示空状态。前端不需要预知子项数。
 
 ---
@@ -74,8 +74,8 @@ if (relative.startsWith('..') || path.isAbsolute(relative)) {
 
 const t0 = performance.now();
 try {
-  // 单层扫描（maxDepth=1）：复用现有 getFileTree，不递归子目录
-  const files = await getFileTree(targetPath, 1, 0, true);
+  // 严格单层扫描（maxDepth=0）：currentDepth < maxDepth 即 0<0=false，不递归，目录项无 children
+  const files = await getFileTree(targetPath, 0, 0, true);
   console.log(`[files] scan dir="${dir || '.'}" took ${Math.round(performance.now() - t0)}ms (${files.length} entries)`);
   res.json(files);
 } catch (error) {
@@ -102,7 +102,7 @@ curl -sS "http://127.0.0.1:3001/api/projects/<some-project-id>/files?dir=src" -H
 curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:3001/api/projects/<some-project-id>/files?dir=../etc" -H "Authorization: Bearer $TOKEN"
 kill %1
 ```
-Expected: 顶层返回单层 entries（`hasChildren: false`，因 maxDepth=1 不递归）；`dir=src` 返回 src 下的单层；`dir=../etc` 返回 400；server 日志见 `[files] scan ... took Nms`。
+Expected: 顶层返回单层 entries（目录项无 children，因 maxDepth=0 不递归）；`dir=src` 返回 src 下的单层；`dir=../etc` 返回 400；server 日志见 `[files] scan ... took Nms`。
 
 - [ ] **Step 4: Commit**
 
@@ -349,7 +349,7 @@ export function useFileTreeData(selectedProject: Project | null): UseFileTreeDat
 }
 ```
 
-> 注：`cleanEntries` 把目录的 `children` 清 undefined（后端 maxDepth=1 不会递归填 children，但保险清掉，避免前端误用旧递归数据）。
+> 注：`cleanEntries` 把目录的 `children` 清 undefined（后端 maxDepth=0 不递归、目录项本就无 children，但保险清掉，避免前端误用旧递归数据）。
 
 - [ ] **Step 2: typecheck**
 

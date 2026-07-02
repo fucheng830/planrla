@@ -669,7 +669,22 @@ app.get('/api/projects/:projectId/files', authenticateToken, async (req, res) =>
             return res.status(404).json({ error: `Project path not found: ${actualPath}` });
         }
 
-        const files = await getFileTree(actualPath, 10, 0, true);
+        // dir query：省略 / '.' / '' = 项目根；否则相对项目根的子目录
+        const dir = typeof req.query.dir === 'string' ? req.query.dir : '';
+        const targetPath = dir === '' || dir === '.'
+            ? actualPath
+            : path.resolve(actualPath, dir);
+
+        // 路径穿越校验：targetPath 必须在 actualPath 内（含本身）
+        const relative = path.relative(actualPath, targetPath);
+        if (relative.startsWith('..') || path.isAbsolute(relative)) {
+            return res.status(400).json({ error: 'Invalid directory path' });
+        }
+
+        const t0 = performance.now();
+        // 严格单层扫描（maxDepth=0）：currentDepth < maxDepth 即 0<0=false，不递归，目录项无 children
+        const files = await getFileTree(targetPath, 0, 0, true);
+        console.log(`[files] scan dir="${dir || '.'}" took ${Math.round(performance.now() - t0)}ms (${files.length} entries)`);
         res.json(files);
     } catch (error) {
         console.error('[ERROR] File tree error:', error.message);
