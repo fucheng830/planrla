@@ -129,6 +129,13 @@
       "label": "深色模式",
       "description": "切换浅色和深色主题"
     },
+    "themeMode": {
+      "label": "主题",
+      "description": "跟随系统，或固定亮色/暗色",
+      "system": "跟随系统",
+      "light": "亮色",
+      "dark": "暗色"
+    },
     "projectSorting": {
       "label": "项目排序",
       "description": "项目在侧边栏中的排列方式",

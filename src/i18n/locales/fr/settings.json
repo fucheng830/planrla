@@ -129,6 +129,13 @@
       "label": "Mode sombre",
       "description": "Basculer entre les thèmes clair et sombre"
     },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "projectSorting": {
       "label": "Tri des projets",
       "description": "Ordre d'affichage des projets dans la barre latérale",
