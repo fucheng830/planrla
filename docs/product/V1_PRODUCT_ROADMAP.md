@@ -246,7 +246,7 @@ docs/
 ### P1：v1 必须完成
 
 - 文件树增量加载。
-- 会话列表分页/缓存。
+- 会话列表分页/缓存 —— 已分页（20/页）；实测瓶颈转去 sidebar 打开性能（projects 端点 inline sync + N+1），见 `docs/superpowers/specs/2026-07-02-projects-list-perf-design.md`（已修）。
 - WebSocket 消息节流。
 - Provider 诊断面板。
 - License 试用和离线授权。
