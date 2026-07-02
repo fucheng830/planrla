@@ -1,6 +1,12 @@
 # 桌面端体验默认值 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ✅ **完成记录（2026-07-02）** — A/B/C/D + I1 全部落地 `main`，本 plan 已归档。
+> - **Group A（主题三态）**：PR [#1](https://github.com/fucheng830/planrla/pull/1) `feat/desktop-theme`（已 merge）—— `src/shared/theme/themeMode.ts`、`src/shared/view/ui/ThemeModeSelector.tsx`、三态 `ThemeContext`。
+> - **Group B/C/D + I1**：`147d4e4 Merge worktree-desktop-defaults` —— i18n `navigator` detection、`titleBarOverlay` + `src/components/chrome/TitleBar.tsx`、`src/shared/defaults/{permission,model}Defaults.ts`。
+> - **本会话核实**：四组代码均在 main；theme + defaults 纯函数 `node:test` 绿。
+> - **手动验收项**（UI 跟随系统亮暗、标题栏按钮、重启无闪屏、徽标颜色等）在别的 session 已验过，**未在本会话独立复核** —— 见下方验收清单。
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 落地 4 个桌面端体验默认值优化 —— 主题三态（默认跟随系统）、语言首次跟随系统、现代化窗口标题栏（方案 A）、新会话默认不限权限 + 默认模型可配置。
 
@@ -55,7 +61,7 @@
 - Create: `src/shared/theme/themeMode.ts`
 - Test: `src/shared/theme/themeMode.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `src/shared/theme/themeMode.test.ts`：
 
@@ -99,7 +105,7 @@ test('DEFAULT_THEME_MODE 是 system', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -107,7 +113,7 @@ npx tsx --test src/shared/theme/themeMode.test.ts
 ```
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 实现纯函数**
+- [x] **Step 3: 实现纯函数**
 
 `src/shared/theme/themeMode.ts`：
 
@@ -136,14 +142,14 @@ export function resolveEffectiveDark(mode: ThemeMode, prefersDark: boolean): boo
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 ```bash
 npx tsx --test src/shared/theme/themeMode.test.ts
 ```
 Expected: 7 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/theme/themeMode.ts src/shared/theme/themeMode.test.ts
@@ -157,7 +163,7 @@ git commit -m "feat(theme): theme mode pure fns (system/light/dark)"
 **Files:**
 - Modify: `src/contexts/ThemeContext.jsx`
 
-- [ ] **Step 1: 改 ThemeContext 用三态 + system 始终监听**
+- [x] **Step 1: 改 ThemeContext 用三态 + system 始终监听**
 
 把 `src/contexts/ThemeContext.jsx` 整体替换为：
 
@@ -237,7 +243,7 @@ export const ThemeProvider = ({ children }) => {
 
 > 注：`systemDark` state 是关键 —— system 模式下系统亮暗变化触发它的 setState，从而重渲染让派生 `isDarkMode` 更新，DOM class / theme-color 由上面的 effect 同步。
 
-- [ ] **Step 2: typecheck（typecheck 是项目脚本）**
+- [x] **Step 2: typecheck（typecheck 是项目脚本）**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -245,7 +251,7 @@ npx tsc --noEmit -p tsconfig.json 2>&1 | grep -i "ThemeContext\|themeMode" || ec
 ```
 Expected: 无 ThemeContext 相关错误
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/contexts/ThemeContext.jsx
@@ -259,7 +265,7 @@ git commit -m "feat(theme): ThemeContext three-state (system/light/dark)"
 **Files:**
 - Create: `src/shared/view/ui/ThemeModeSelector.tsx`
 
-- [ ] **Step 1: 实现三态选择器**
+- [x] **Step 1: 实现三态选择器**
 
 `src/shared/view/ui/ThemeModeSelector.tsx`：
 
@@ -312,7 +318,7 @@ export default function ThemeModeSelector({ ariaLabel }: { ariaLabel?: string })
 }
 ```
 
-- [ ] **Step 2: 在 shared/view/ui/index.ts 导出**
+- [x] **Step 2: 在 shared/view/ui/index.ts 导出**
 
 找到 `src/shared/view/ui/index.ts`，加：
 
@@ -320,7 +326,7 @@ export default function ThemeModeSelector({ ariaLabel }: { ariaLabel?: string })
 export { default as ThemeModeSelector } from './ThemeModeSelector';
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/shared/view/ui/ThemeModeSelector.tsx src/shared/view/ui/index.ts
@@ -335,7 +341,7 @@ git commit -m "feat(theme): ThemeModeSelector three-state segmented control"
 - Modify: `src/components/settings/view/tabs/AppearanceSettingsTab.tsx`
 - Modify: `src/i18n/locales/*/settings.json`（11 语言）
 
-- [ ] **Step 1: 主外观主题那处换 ThemeModeSelector**
+- [x] **Step 1: 主外观主题那处换 ThemeModeSelector**
 
 `src/components/settings/view/tabs/AppearanceSettingsTab.tsx`：
 
@@ -361,7 +367,7 @@ import { ThemeModeSelector } from '../../../../shared/view/ui';
 
 3. **保留** L70-137 的代码编辑器主题区（它仍用 `DarkModeToggle` 两态，不改）。
 
-- [ ] **Step 2: 补 i18n key（11 语言）**
+- [x] **Step 2: 补 i18n key（11 语言）**
 
 对 `src/i18n/locales/{en,zh-CN,zh-TW,ja,ko,ru,de,tr,it,fr}` 每个目录的 `settings.json`，在 `appearanceSettings` 对象内加（en 和 zh-CN 给完整文案，其余语言复制 en 文案占位、由翻译流程后续补全 —— 同一 key 结构）：
 
@@ -389,7 +395,7 @@ zh-CN/settings.json：
 
 其余 9 语言：复制 en 结构（key 不缺失即可，文案可暂用 en，翻译流程后续覆盖）。
 
-- [ ] **Step 3: build client 确认无报错**
+- [x] **Step 3: build client 确认无报错**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -397,7 +403,7 @@ npm run build:client 2>&1 | tail -5
 ```
 Expected: build 成功（无 unresolved import / missing key 不阻塞 build）
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/settings/view/tabs/AppearanceSettingsTab.tsx src/i18n/locales
@@ -413,7 +419,7 @@ git commit -m "feat(theme): appearance tab uses ThemeModeSelector + i18n"
 **Files:**
 - Modify: `src/i18n/config.js:100-111, 236-245`
 
-- [ ] **Step 1: getSavedLanguage 不再强制 'en'，让 detection 链生效**
+- [x] **Step 1: getSavedLanguage 不再强制 'en'，让 detection 链生效**
 
 `src/i18n/config.js` L99-111 替换为：
 
@@ -432,7 +438,7 @@ const getSavedLanguage = () => {
 };
 ```
 
-- [ ] **Step 2: detection order 加 navigator**
+- [x] **Step 2: detection order 加 navigator**
 
 L236-245 的 `detection` 块替换为：
 
@@ -450,7 +456,7 @@ L236-245 的 `detection` 块替换为：
     },
 ```
 
-- [ ] **Step 3: 验证（清 localStorage 模拟首次，看是否随系统）**
+- [x] **Step 3: 验证（清 localStorage 模拟首次，看是否随系统）**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -465,7 +471,7 @@ kill %1
 ```
 Expected: 清掉 userLanguage 后 reload，UI 跟随浏览器/系统语言
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/i18n/config.js
@@ -483,7 +489,7 @@ git commit -m "feat(i18n): detect system language on first launch (navigator)"
 - Modify: `electron/main.js`
 - Modify: `electron/preload.cjs`
 
-- [ ] **Step 1: 实现 themeCache 读写模块**
+- [x] **Step 1: 实现 themeCache 读写模块**
 
 `electron/themeCache.cjs`：
 
@@ -522,7 +528,7 @@ function writeThemeCache(userDataDir, effectiveDark) {
 module.exports = { readThemeCache, writeThemeCache };
 ```
 
-- [ ] **Step 2: main.js 引入 cache + 改 createWindow**
+- [x] **Step 2: main.js 引入 cache + 改 createWindow**
 
 `electron/main.js`：
 
@@ -580,7 +586,7 @@ ipcMain.on('theme-cache:set', (_e, effectiveDark) => {
 });
 ```
 
-- [ ] **Step 3: preload 暴露 themeCache API**
+- [x] **Step 3: preload 暴露 themeCache API**
 
 `electron/preload.cjs` 找到现有 `contextBridge.exposeInWorld` 调用（cloudAuth 那块），在暴露的 api 对象里加：
 
@@ -600,7 +606,7 @@ ipcMain.on('theme-cache:set', (_e, effectiveDark) => {
 > ```
 > 并保留原有 cloudAuth 暴露。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add electron/themeCache.cjs electron/main.js electron/preload.cjs
@@ -614,7 +620,7 @@ git commit -m "feat(desktop): theme cache + titleBarOverlay (plan A chrome)"
 **Files:**
 - Create: `src/components/chrome/TitleBar.tsx`
 
-- [ ] **Step 1: 实现 TitleBar**
+- [x] **Step 1: 实现 TitleBar**
 
 `src/components/chrome/TitleBar.tsx`：
 
@@ -650,7 +656,7 @@ export default function TitleBar() {
 
 > 注：`process.platform` 在 renderer 需通过 preload 注入；若未注入，改用 `navigator.userAgent` 含 'Mac' 判断，或 preload 暴露 `electronAPI.platform`。下方 Step 2 给 fallback。
 
-- [ ] **Step 2: preload 暴露 platform（如尚无）**
+- [x] **Step 2: preload 暴露 platform（如尚无）**
 
 `electron/preload.cjs` 的 electronAPI 对象内加：
 ```js
@@ -662,7 +668,7 @@ TitleBar.tsx 顶部 `process.platform === 'darwin'` 改为：
 if (window.electronAPI?.platform === 'darwin') return null;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/chrome/TitleBar.tsx electron/preload.cjs
@@ -676,7 +682,7 @@ git commit -m "feat(desktop): TitleBar component (self-drawn container)"
 **Files:**
 - Modify: `src/App.tsx`
 
-- [ ] **Step 1: App.tsx 顶部挂载 TitleBar**
+- [x] **Step 1: App.tsx 顶部挂载 TitleBar**
 
 找到 `src/App.tsx` 的根 layout（`<Router>` 或 `<AuthProvider>` 之内的最外层 layout）。在主布局最顶部加：
 
@@ -688,7 +694,7 @@ import TitleBar from './components/chrome/TitleBar';
 
 > 具体插入点：App.tsx 当前返回结构的第一个子元素位置（在 ThemeProvider 内、主内容外）。`TitleBar` 内部已判断非 Electron 时返回 null，所以 Web/Android 安全。
 
-- [ ] **Step 2: build + desktop 手动验证**
+- [x] **Step 2: build + desktop 手动验证**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -706,7 +712,7 @@ kill %1
 ```
 Expected: 上述行为全部正常
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/App.tsx
@@ -723,7 +729,7 @@ git commit -m "feat(desktop): mount TitleBar at app root"
 - Create: `src/shared/defaults/permissionDefaults.ts`
 - Test: `src/shared/defaults/permissionDefaults.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `src/shared/defaults/permissionDefaults.test.ts`：
 
@@ -787,7 +793,7 @@ test('isPermissionAcked / setPermissionAcked', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -795,7 +801,7 @@ npx tsx --test src/shared/defaults/permissionDefaults.test.ts
 ```
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 `src/shared/defaults/permissionDefaults.ts`：
 
@@ -867,14 +873,14 @@ export function setPermissionAcked(): void {
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 ```bash
 npx tsx --test src/shared/defaults/permissionDefaults.test.ts
 ```
 Expected: 6 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/defaults/permissionDefaults.ts src/shared/defaults/permissionDefaults.test.ts
@@ -888,7 +894,7 @@ git commit -m "feat(defaults): permission default resolve fns + bypass map"
 **Files:**
 - Modify: `src/components/chat/hooks/useChatProviderState.ts`
 
-- [ ] **Step 1: 初始 permissionMode 读全局默认**
+- [x] **Step 1: 初始 permissionMode 读全局默认**
 
 L3 import 改为：
 ```ts
@@ -905,7 +911,7 @@ L76 的 `useState<PermissionMode>('default')` 改为：
   );
 ```
 
-- [ ] **Step 2: 切 session 时用新解析链**
+- [x] **Step 2: 切 session 时用新解析链**
 
 L327-335 的 effect 替换为：
 ```ts
@@ -915,7 +921,7 @@ L327-335 的 effect 替换为：
   }, [selectedSession?.id, provider]);
 ```
 
-- [ ] **Step 3: typecheck**
+- [x] **Step 3: typecheck**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -923,7 +929,7 @@ npx tsc --noEmit -p tsconfig.json 2>&1 | grep -i "useChatProviderState" || echo 
 ```
 Expected: 无错误
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/chat/hooks/useChatProviderState.ts
@@ -939,7 +945,7 @@ git commit -m "feat(defaults): new session uses global default permission mode"
 - Test: `src/shared/defaults/modelDefaults.test.ts`
 - Modify: `src/components/chat/hooks/useChatProviderState.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `src/shared/defaults/modelDefaults.test.ts`：
 
@@ -974,7 +980,7 @@ test('resolveInitialModel: 全无 → 硬编码 fallback', () => {
 });
 ```
 
-- [ ] **Step 2: 跑确认失败 + 实现**
+- [x] **Step 2: 跑确认失败 + 实现**
 
 ```bash
 npx tsx --test src/shared/defaults/modelDefaults.test.ts
@@ -1017,14 +1023,14 @@ export function getDefaultModel(provider: LLMProvider): string | null {
 }
 ```
 
-- [ ] **Step 3: 跑测试确认通过**
+- [x] **Step 3: 跑测试确认通过**
 
 ```bash
 npx tsx --test src/shared/defaults/modelDefaults.test.ts
 ```
 Expected: 3 tests PASS
 
-- [ ] **Step 4: useChatProviderState 5 处模型初始值接入**
+- [x] **Step 4: useChatProviderState 5 处模型初始值接入**
 
 `src/components/chat/hooks/useChatProviderState.ts` 顶部 import：
 ```ts
@@ -1046,7 +1052,7 @@ L81-95 的 5 个 provider model useState 初始值，把 `|| FALLBACK_DEFAULT_MO
     resolveInitialModel('opencode', FALLBACK_DEFAULT_MODEL.opencode));
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/defaults/modelDefaults.ts src/shared/defaults/modelDefaults.test.ts src/components/chat/hooks/useChatProviderState.ts
@@ -1060,7 +1066,7 @@ git commit -m "feat(defaults): configurable default model per provider"
 **Files:**
 - Modify: `src/components/chat/view/ChatInterface.tsx`
 
-- [ ] **Step 1: 首次发消息前确认**
+- [x] **Step 1: 首次发消息前确认**
 
 `src/components/chat/view/ChatInterface.tsx` 顶部 import：
 ```tsx
@@ -1108,7 +1114,7 @@ ChatInterface 把 `useChatComposerState` 返回的 `handleSubmit` 传给 ChatCom
       )}
 ```
 
-- [ ] **Step 2: 补 i18n key（chat namespace，en + zh-CN + 其他同步）**
+- [x] **Step 2: 补 i18n key（chat namespace，en + zh-CN + 其他同步）**
 
 `src/i18n/locales/en/chat.json` 加：
 ```json
@@ -1133,7 +1139,7 @@ ChatInterface 把 `useChatComposerState` 返回的 `handleSubmit` 传给 ChatCom
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/chat/view/ChatInterface.tsx src/i18n/locales
@@ -1151,7 +1157,7 @@ git commit -m "feat(defaults): one-time ack before default unrestricted permissi
 - Modify: `src/components/settings/view/tabs/agents-settings/sections/AgentCategoryContentSection.tsx`
 - Modify: `src/components/chat/view/subcomponents/ChatComposer.tsx`
 
-- [ ] **Step 1: types.ts 加 'defaults' category**
+- [x] **Step 1: types.ts 加 'defaults' category**
 
 `src/components/settings/view/tabs/agents-settings/types.ts` 找到 `AgentCategory` 类型，把字面量加 `'defaults'`：
 
@@ -1159,7 +1165,7 @@ git commit -m "feat(defaults): one-time ack before default unrestricted permissi
 export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills' | 'defaults';
 ```
 
-- [ ] **Step 2: AgentsSettingsTab visibleCategories 加 defaults**
+- [x] **Step 2: AgentsSettingsTab visibleCategories 加 defaults**
 
 `src/components/settings/view/tabs/agents-settings/AgentsSettingsTab.tsx` L25-29 替换：
 
@@ -1173,7 +1179,7 @@ export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills' | 'defa
 
 并在 AgentCategoryTabsSection 的 category 标签映射处（看该组件 i18n key）确保 `defaults` 有标签 —— 在 `src/i18n/locales/en/settings.json` 的 agents category 文案处加 `defaults: "Defaults"`（zh-CN: `defaults: "默认值"`）。
 
-- [ ] **Step 3: 实现 DefaultModeContent**
+- [x] **Step 3: 实现 DefaultModeContent**
 
 `src/components/settings/view/tabs/agents-settings/sections/content/DefaultModeContent.tsx`：
 
@@ -1279,7 +1285,7 @@ export default function DefaultModeContent({ selectedAgent }: DefaultModeContent
 }
 ```
 
-- [ ] **Step 4: AgentCategoryContentSection 渲染 DefaultModeContent**
+- [x] **Step 4: AgentCategoryContentSection 渲染 DefaultModeContent**
 
 `src/components/settings/view/tabs/agents-settings/sections/AgentCategoryContentSection.tsx` 顶部 import：
 ```tsx
@@ -1293,7 +1299,7 @@ import DefaultModeContent from './content/DefaultModeContent';
   }
 ```
 
-- [ ] **Step 5: 补 settings i18n keys（en + zh-CN + 其他同步）**
+- [x] **Step 5: 补 settings i18n keys（en + zh-CN + 其他同步）**
 
 `src/i18n/locales/en/settings.json` 加：
 ```json
@@ -1332,7 +1338,7 @@ import DefaultModeContent from './content/DefaultModeContent';
 }
 ```
 
-- [ ] **Step 6: ChatComposer yolo 徽标警示色**
+- [x] **Step 6: ChatComposer yolo 徽标警示色**
 
 `src/components/chat/view/subcomponents/ChatComposer.tsx` L344-369 的权限按钮 className 条件，把 `yolo` 与 `bypassPermissions` 合并到同一橙色警示分支。把：
 
@@ -1351,7 +1357,7 @@ import DefaultModeContent from './content/DefaultModeContent';
 
 同样，圆点 className（L361-369 那段 `bg-orange-500` 条件）把 `bypassPermissions` 分支扩展为 `(permissionMode === 'bypassPermissions' || permissionMode === 'yolo')`，保持 `bg-orange-500`。
 
-- [ ] **Step 7: build + 手动验证**
+- [x] **Step 7: build + 手动验证**
 
 ```bash
 cd D:/workspace/projects/ai/apps/planrla
@@ -1366,7 +1372,7 @@ kill %1
 ```
 Expected: 默认权限/模型设置生效，徽标 yolo/bypassPermissions 均橙色
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/settings/view/tabs/agents-settings src/components/chat/view/subcomponents/ChatComposer.tsx src/i18n/locales
@@ -1377,28 +1383,30 @@ git commit -m "feat(defaults): settings UI for default permission/model + yolo b
 
 ## 验收清单
 
+> 注：下列各项 `[x]` = 工作已落地（代码在 main）。其中「测试全绿」类为本会话自动复核；UI/标题栏/重启/徽标等手动项在别的 session 验过，**未在本会话独立复核**（详见顶部完成记录）。
+
 **Group A 主题**
-- [ ] `npx tsx --test src/shared/theme/themeMode.test.ts` 全绿
-- [ ] 设置页主题三态可选，选"跟随系统"后切系统亮暗 → app 即时跟随
-- [ ] 旧 localStorage `theme='dark'` 升级后仍识别为暗色固定
-- [ ] desktop 重启背景色与上次主题一致（无闪屏）
+- [x] `npx tsx --test src/shared/theme/themeMode.test.ts` 全绿
+- [x] 设置页主题三态可选，选"跟随系统"后切系统亮暗 → app 即时跟随
+- [x] 旧 localStorage `theme='dark'` 升级后仍识别为暗色固定
+- [x] desktop 重启背景色与上次主题一致（无闪屏）
 
 **Group B 语言**
-- [ ] 清 `userLanguage` 后 reload，UI 跟随系统/浏览器语言
-- [ ] 设置页改语言后重启仍保持
+- [x] 清 `userLanguage` 后 reload，UI 跟随系统/浏览器语言
+- [x] 设置页改语言后重启仍保持
 
 **Group C 标题栏**
-- [ ] Win：最小/最大/关闭按钮可用、双击最大化、拖拽、Aero Snap 正常
-- [ ] 标题栏背景跟主题切换
-- [ ] macOS 保留原生红黄绿（hiddenInset）
+- [x] Win：最小/最大/关闭按钮可用、双击最大化、拖拽、Aero Snap 正常
+- [x] 标题栏背景跟主题切换
+- [x] macOS 保留原生红黄绿（hiddenInset）
 
 **Group D 默认权限 + 模型**
-- [ ] `npx tsx --test src/shared/defaults/*.test.ts` 全绿
-- [ ] 新会话默认不限权限（claude/codex/cursor→bypassPermissions，gemini→yolo）
-- [ ] 首次启用弹一次性确认，确认前不发消息
-- [ ] per-session 记忆优先于全局默认
-- [ ] 默认模型设置后生效（三级读取链）
-- [ ] yolo / bypassPermissions 徽标均为橙色警示
+- [x] `npx tsx --test src/shared/defaults/*.test.ts` 全绿
+- [x] 新会话默认不限权限（claude/codex/cursor→bypassPermissions，gemini→yolo）
+- [x] 首次启用弹一次性确认，确认前不发消息
+- [x] per-session 记忆优先于全局默认
+- [x] 默认模型设置后生效（三级读取链）
+- [x] yolo / bypassPermissions 徽标均为橙色警示
 
 ## 风险与回退
 
