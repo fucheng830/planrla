@@ -1,93 +1,72 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+import { parseStoredTheme, resolveEffectiveDark } from '../shared/theme/themeMode';
 
 const ThemeContext = createContext();
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
   return context;
 };
 
-export const ThemeProvider = ({ children }) => {
-  // Check for saved theme preference or default to system preference
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage first
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme === 'dark';
-    }
-    
-    // Check system preference
-    if (window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    
-    return false;
-  });
+const prefersDark = () =>
+  typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+    : false;
 
-  // Update document class and localStorage when theme changes
+export const ThemeProvider = ({ children }) => {
+  // 三态 themeMode：默认 system（跟随系统）；light/dark 强制固定。
+  const [themeMode, setThemeModeState] = useState(() =>
+    parseStoredTheme(typeof window !== 'undefined' ? localStorage.getItem('theme') : null),
+  );
+  // system 模式下跟踪系统亮暗；变化时 setSystemDark 触发重渲染，派生 isDarkMode 自动更新
+  const [systemDark, setSystemDark] = useState(() => prefersDark());
+
+  const isDarkMode = resolveEffectiveDark(themeMode, systemDark);
+
+  // 写 document class + localStorage + theme-color meta + 桌面端 theme-cache
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      
-      // Update iOS status bar style and theme color for dark mode
-      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (statusBarMeta) {
-        statusBarMeta.setAttribute('content', 'black-translucent');
-      }
-      
-      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', '#0c1117'); // Dark background color (hsl(222.2 84% 4.9%))
-      }
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      
-      // Update iOS status bar style and theme color for light mode
-      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (statusBarMeta) {
-        statusBarMeta.setAttribute('content', 'default');
-      }
-      
-      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', '#ffffff'); // Light background color
-      }
     }
-  }, [isDarkMode]);
+    localStorage.setItem('theme', themeMode);
 
-  // Listen for system theme changes
+    const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (statusBarMeta) statusBarMeta.setAttribute('content', isDarkMode ? 'black-translucent' : 'default');
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isDarkMode ? '#0c1117' : '#ffffff');
+
+    // 桌面端：同步主题到 main 进程缓存（消除下次启动闪屏）。Web/Android 下无该 API，忽略。
+    if (typeof window !== 'undefined' && window.electronAPI?.themeCache?.set) {
+      try { window.electronAPI.themeCache.set(isDarkMode); } catch { /* electronAPI unavailable on web/android */ }
+    }
+  }, [themeMode, isDarkMode]);
+
+  // system 模式下始终监听系统亮暗（修复旧逻辑"toggle 一次就锁死不再跟系统"）
   useEffect(() => {
-    if (!window.matchMedia) return;
-
+    if (themeMode !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      // Only update if user hasn't manually set a preference
-      const savedTheme = localStorage.getItem('theme');
-      if (!savedTheme) {
-        setIsDarkMode(e.matches);
-      }
-    };
+    const handler = () => setSystemDark(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, [themeMode]);
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+  const setThemeMode = useCallback((mode) => setThemeModeState(mode), []);
+
+  // 向后兼容旧调用方（DarkModeToggle 仍用 isDarkMode + toggleDarkMode）
+  const toggleDarkMode = useCallback(() => {
+    setThemeModeState((prev) => {
+      const effective = resolveEffectiveDark(prev, prefersDark());
+      return effective ? 'light' : 'dark';
+    });
   }, []);
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
-  };
-
-  const value = {
-    isDarkMode,
-    toggleDarkMode,
-  };
-
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{ themeMode, setThemeMode, isDarkMode, toggleDarkMode }}>
       {children}
     </ThemeContext.Provider>
   );
