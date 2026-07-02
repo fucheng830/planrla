@@ -45,6 +45,10 @@ type SessionUpsertedEvent = ServerEvent & {
 
 type FetchProjectsOptions = {
   showLoadingState?: boolean;
+  // Force the server to re-run session synchronization before responding
+  // (?sync=1). Only the manual sidebar refresh sets this; cold-open reads
+  // rely on the watcher/WS freshness backstop (server default = no sync).
+  forceSync?: boolean;
 };
 
 type RegisterOptimisticSessionArgs = {
@@ -409,12 +413,12 @@ export function useProjectsState({
   const activeSessionsRef = useRef(activeSessions);
   activeSessionsRef.current = activeSessions;
 
-  const fetchProjects = useCallback(async ({ showLoadingState = true }: FetchProjectsOptions = {}) => {
+  const fetchProjects = useCallback(async ({ showLoadingState = true, forceSync = false }: FetchProjectsOptions = {}) => {
     try {
       if (showLoadingState) {
         setIsLoadingProjects(true);
       }
-      const response = await api.projects();
+      const response = await api.projects({ forceSync });
       const projectData = (await response.json()) as Project[];
 
       setProjects((prevProjects) => {
@@ -440,7 +444,9 @@ export function useProjectsState({
 
   const refreshProjectsSilently = useCallback(async () => {
     // Keep chat view stable while still syncing sidebar/session metadata in background.
-    await fetchProjects({ showLoadingState: false });
+    // forceSync: the manual refresh is the one path that should re-run server-side
+    // synchronization (catches changes watchers might miss, e.g. external processes).
+    await fetchProjects({ showLoadingState: false, forceSync: true });
   }, [fetchProjects]);
 
   const registerOptimisticSession = useCallback(({
