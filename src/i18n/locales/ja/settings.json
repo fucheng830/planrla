@@ -129,6 +129,13 @@
       "label": "ダークモード",
       "description": "ライトテーマとダークテーマを切り替えます"
     },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "projectSorting": {
       "label": "プロジェクトの並び順",
       "description": "サイドバーでのプロジェクトの並び順を設定します",

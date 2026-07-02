@@ -129,6 +129,13 @@
       "label": "Темная тема",
       "description": "Переключение между светлой и темной темами"
     },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "projectSorting": {
       "label": "Сортировка проектов",
       "description": "Как проекты упорядочены на боковой панели",
