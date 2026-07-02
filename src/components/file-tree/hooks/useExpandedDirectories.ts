@@ -24,6 +24,7 @@ export function useExpandedDirectories(): UseExpandedDirectoriesResult {
     });
   }, []);
 
+  // TODO(file-tree-cleanup): no consumer after FT10; kept in case incremental search later needs batch-expand.
   const expandDirectories = useCallback((paths: string[]) => {
     if (paths.length === 0) {
       return;

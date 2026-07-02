@@ -1033,3 +1033,27 @@ git commit -m "feat(files): loading placeholder + error polish"
 - **react-window 新依赖**：+~6KB gzip；React 18 兼容。回退：换 hand-rolled（复用消息列表窗口模式）。
 - **dir key 一致性**：node.path（绝对）→ dirKey（相对根，正斜杠）转换在 `flattenVisibleNodes` / `useFileTreeData.fetchDir` / `handleToggleDir` / `isLoadingDir` / `errorOfDir` 五处必须一致。Task 9 抽 `pathToDirKey` helper 统一。**这是最易出 bug 的点，仔细测**。
 - **搜索体验降级**：仅搜已缓存目录。接受（spec 验收）；用户展开根目录可扩大搜索范围。
+
+## Manual Verification (for Archie)
+
+After `npm run desktop`, verify (subagent can't see UI — human must):
+
+**性能（核心收益）**
+- [ ] 开大项目（千+ 文件）首屏 <500ms（顶层秒出；server 日志 [files] scan took Nms）
+- [ ] 展开 1000+ 子文件目录流畅（虚拟化只渲染可见 ~30 行）
+- [ ] 切走再切回项目瞬切（前端缓存命中，无 network）
+- [ ] 5min TTL：等 5 分钟后展开某目录 → 重新 fetch
+- [ ] 手动刷新按钮 → 清缓存重 fetch 根
+
+**功能保留**
+- [ ] 视图模式 simple/compact/detailed 切换 → 行高 + 列正确
+- [ ] 文件/文件夹点击 → 正常
+- [ ] 右键菜单（新建/重命名/删除/复制路径/下载）→ 正常
+- [ ] 重命名 inline 编辑 → 正常
+- [ ] 上传 → 正常
+- [ ] 搜索 → 搜已加载目录的文件（结果扁平列表）
+- [ ] 图像预览（ImageViewer）→ 正常
+
+**无回归**
+- [ ] 无 console error
+- [ ] 滚动流畅（react-window 拥有滚动，无双滚动条）

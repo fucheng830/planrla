@@ -15,7 +15,7 @@ import { flattenVisibleNodes } from '../utils/flattenVisibleNodes';
 import { pathToDirKey } from '../utils/pathToDirKey';
 import { formatFileSize, formatRelativeTime, isImageFile } from '../utils/fileTreeUtils';
 import { Project } from '../../../types/app';
-import { ScrollArea, Input } from '../../../shared/view/ui';
+import { Input } from '../../../shared/view/ui';
 
 import FileTreeBody from './FileTreeBody';
 import FileTreeDetailedColumns from './FileTreeDetailedColumns';
@@ -225,7 +225,14 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
 
       {viewMode === 'detailed' && rows.length > 0 && <FileTreeDetailedColumns />}
 
-      <ScrollArea className="flex-1 px-2 py-1">
+      {/*
+        List region: plain flex column, NO ScrollArea.
+        react-window's FixedSizeList owns its own scroll viewport (overflow on its inner div);
+        wrapping it in ScrollArea (which renders an extra overflow-auto div) created two nested
+        scroll containers — wheel events conflicted and react-window could not be the scroll parent.
+        The containerRef div below is measured via ResizeObserver and feeds containerHeight to the list.
+      */}
+      <div className="flex flex-1 min-h-0 flex-col px-2 py-1">
         {/* New item input */}
         {operations.isCreating && (
           <div
@@ -290,7 +297,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
             height={containerHeight}
           />
         </div>
-      </ScrollArea>
+      </div>
 
       {selectedImage && (
         <ImageViewer
