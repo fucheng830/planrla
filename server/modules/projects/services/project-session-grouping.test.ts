@@ -45,3 +45,12 @@ test('每条 session 映射为 SessionSummary（id/provider/summary/lastActivity
   assert.equal(s.summary, '');
   assert.equal(s.lastActivity, '2026-07-02T10:00:00Z');
 });
+
+test('offset >= total：SQL 不返回行时 total 保持 0（首页用例不受影响，文档化）', () => {
+  // 模拟 offset=10 但项目只有 3 条 → SQL 返回 0 行 → total 保持初始 0（无法恢复真实 3）。
+  // 当前调用方只用 offset=0，不受影响；本测试固化该已知边界，避免后续误用。
+  const map = groupSessionRowsByProject([], ['/a'], { limit: 20, offset: 10 });
+  assert.equal(map.get('/a')!.total, 0);
+  assert.equal(map.get('/a')!.sessions.length, 0);
+  assert.equal(map.get('/a')!.hasMore, false);
+});
