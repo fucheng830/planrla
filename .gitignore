@@ -164,3 +164,8 @@ apps/android/docs/ui.xml
 android-emulator-*.png
 android-realdevice-*.png
 android-i18n-*.png
+
+# Verification / debug artifacts (FTS5 search closeout)
+.playwright-mcp/
+debug/.token
+debug/*.png
