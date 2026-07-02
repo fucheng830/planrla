@@ -5,7 +5,6 @@ import { providerCapabilitiesService } from '@/modules/providers/services/provid
 import { providerMcpService } from '@/modules/providers/services/mcp.service.js';
 import { providerModelsService } from '@/modules/providers/services/provider-models.service.js';
 import { providerSkillsService } from '@/modules/providers/services/skills.service.js';
-import { sessionConversationsSearchService } from '@/modules/providers/services/session-conversations-search.service.js';
 import { sessionsService } from '@/modules/providers/services/sessions.service.js';
 import type {
   LLMProvider,
@@ -324,35 +323,6 @@ const parseSessionRenameSummary = (payload: unknown): string => {
   return summary;
 };
 
-const parseSessionSearchQuery = (value: unknown): string => {
-  const query = readOptionalQueryString(value) ?? '';
-  if (query.length < 2) {
-    throw new AppError('Query must be at least 2 characters', {
-      code: 'INVALID_SEARCH_QUERY',
-      statusCode: 400,
-    });
-  }
-
-  return query;
-};
-
-const parseSessionSearchLimit = (value: unknown): number => {
-  const raw = readOptionalQueryString(value);
-  if (!raw) {
-    return 50;
-  }
-
-  const parsed = Number.parseInt(raw, 10);
-  if (Number.isNaN(parsed)) {
-    throw new AppError('limit must be a valid integer.', {
-      code: 'INVALID_QUERY_PARAMETER',
-      statusCode: 400,
-    });
-  }
-
-  return Math.max(1, Math.min(parsed, 100));
-};
-
 const parseChangeActiveModelPayload = (payload: unknown): ProviderChangeActiveModelInput => {
   if (!payload || typeof payload !== 'object') {
     throw new AppError('Request body must be an object.', {
@@ -617,57 +587,5 @@ router.get(
     res.json(createApiSuccessResponse(result));
   }),
 );
-
-router.get('/search/sessions', asyncHandler(async (req: Request, res: Response) => {
-  const query = parseSessionSearchQuery(req.query.q);
-  const limit = parseSessionSearchLimit(req.query.limit);
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-
-  let closed = false;
-  const abortController = new AbortController();
-  req.on('close', () => {
-    closed = true;
-    abortController.abort();
-  });
-
-  try {
-    await sessionConversationsSearchService.search({
-      query,
-      limit,
-      signal: abortController.signal,
-      onProgress: ({ projectResult, totalMatches, scannedProjects, totalProjects }) => {
-        if (closed) {
-          return;
-        }
-
-        if (projectResult) {
-          res.write(`event: result\ndata: ${JSON.stringify({ projectResult, totalMatches, scannedProjects, totalProjects })}\n\n`);
-          return;
-        }
-
-        res.write(`event: progress\ndata: ${JSON.stringify({ totalMatches, scannedProjects, totalProjects })}\n\n`);
-      },
-    });
-
-    if (!closed) {
-      res.write('event: done\ndata: {}\n\n');
-    }
-  } catch (error) {
-    console.error('Error searching conversations:', error);
-    if (!closed) {
-      res.write(`event: error\ndata: ${JSON.stringify({ error: 'Search failed' })}\n\n`);
-    }
-  } finally {
-    if (!closed) {
-      res.end();
-    }
-  }
-}));
 
 export default router;
