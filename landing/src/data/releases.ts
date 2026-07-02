@@ -41,11 +41,11 @@ export function normalizeRelease(raw: RawRelease): FeedEntry | null {
 const REPO = 'fucheng830/planrla';
 const API_URL = `https://api.github.com/repos/${REPO}/releases`;
 
-/** fetch 失败时的兜底（与 public/desktop/latest.json 静态版保持一致） */
+/** 兜底数据。⚠️ 修改 body/version 等字段时需同步 public/desktop/latest.json（两份必须一致） */
 export const STATIC_FALLBACK: FeedEntry = {
   version: 'v0.2.0',
   title: 'v0.2.0 — 桌面端三态主题',
-  body: '桌面端外观设置新增 system / light / dark 三态主题切换。',
+  body: '桌面端外观设置新增 system / light / dark 三态主题切换。\n\n- feat(theme): theme mode pure fns (system/light/dark)\n- feat(theme): three-state theme context\n- feat(theme): theme mode selector control\n- feat(theme): appearance tab + i18n (11 locales)',
   htmlUrl: 'https://github.com/fucheng830/planrla/releases/tag/v0.2.0',
   publishedAt: '2026-07-02T10:43:00Z',
 };

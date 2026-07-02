@@ -1,5 +1,5 @@
 // 构建前脚本：fetch GitHub Releases，把最新版写入 public/desktop/latest.json。
-// fetch 失败时静默保留 git 中的兜底静态文件（gen-feed 不覆盖），构建不挂。
+// fetch 失败时用 STATIC_FALLBACK 覆盖（内容与 git 兜底一致），构建不挂。
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
