@@ -157,6 +157,13 @@
         "label": "Yazı Tipi Boyutu",
         "description": "Editör yazı tipi boyutu (piksel)"
       }
+    },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "mcpForm": {

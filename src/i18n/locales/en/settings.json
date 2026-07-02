@@ -176,6 +176,13 @@
         "label": "Font Size",
         "description": "Editor font size in pixels"
       }
+    },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "mcpForm": {
