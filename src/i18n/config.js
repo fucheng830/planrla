@@ -84,6 +84,15 @@ import itCodeEditor from './locales/it/codeEditor.json';
 // eslint-disable-next-line import-x/order
 import itTasks from './locales/it/tasks.json';
 
+import frCommon from './locales/fr/common.json';
+import frSettings from './locales/fr/settings.json';
+import frAuth from './locales/fr/auth.json';
+import frSidebar from './locales/fr/sidebar.json';
+import frChat from './locales/fr/chat.json';
+import frCodeEditor from './locales/fr/codeEditor.json';
+// eslint-disable-next-line import-x/order
+import frTasks from './locales/fr/tasks.json';
+
 import zhTWCommon from './locales/zh-TW/common.json';
 import zhTWSettings from './locales/zh-TW/settings.json';
 import zhTWAuth from './locales/zh-TW/auth.json';
@@ -186,6 +195,15 @@ i18n
         codeEditor: itCodeEditor,
         tasks: itTasks,
       },
+      fr: {
+        common: frCommon,
+        settings: frSettings,
+        auth: frAuth,
+        sidebar: frSidebar,
+        chat: frChat,
+        codeEditor: frCodeEditor,
+        tasks: frTasks,
+      },
       'zh-TW': {
         common: zhTWCommon,
         settings: zhTWSettings,
@@ -202,6 +220,9 @@ i18n
 
     // Fallback language when a translation is missing
     fallbackLng: 'en',
+
+    // 让无 region 的语言码（如 navigator 返回 'zh'）匹配已注册的 region 变体（zh-CN/zh-TW）
+    nonExplicitSupportedLngs: true,
 
     // Enable debug mode in development (logs missing keys to console)
     debug: false,
