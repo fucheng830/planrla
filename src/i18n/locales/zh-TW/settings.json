@@ -157,6 +157,13 @@
         "label": "字型大小",
         "description": "編輯器字型大小（px）"
       }
+    },
+    "themeMode": {
+      "label": "主題",
+      "description": "跟隨系統，或固定亮色/暗色",
+      "system": "跟隨系統",
+      "light": "亮色",
+      "dark": "暗色"
     }
   },
   "mcpForm": {

@@ -157,6 +157,13 @@
         "label": "글꼴 크기",
         "description": "에디터 글꼴 크기 (픽셀)"
       }
+    },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "mcpForm": {

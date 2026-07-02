@@ -157,6 +157,13 @@
         "label": "Dimensione carattere",
         "description": "Dimensione del carattere dell'editor in pixel"
       }
+    },
+    "themeMode": {
+      "label": "Theme",
+      "description": "Follow system, or force light/dark",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "mcpForm": {
