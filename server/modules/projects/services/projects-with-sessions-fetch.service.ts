@@ -6,6 +6,7 @@ import { sessionSynchronizerService } from '@/modules/providers/index.js';
 import { WS_OPEN_STATE, connectedClients } from '@/modules/websocket/index.js';
 import type { RealtimeClientConnection } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
+import { groupSessionRowsByProject } from './project-session-grouping.js';
 
 type SessionSummary = {
   id: string;
@@ -193,52 +194,51 @@ export async function getProjectsWithSessions(
     isStarred?: number;
   }>;
   const totalProjects = projectRows.length;
+  const projectPaths = projectRows.map((r) => r.project_path);
+
+  // 批量取所有项目的首页 session + total（一条 SQL，替换原 N+1 per-project 循环）
+  const pagination = normalizeSessionPagination({
+    limit: options.sessionsLimit,
+    offset: options.sessionsOffset,
+  });
+  const batchRows = sessionsDb.getSessionsByProjectPathsFirstPage(
+    projectPaths,
+    pagination.limit,
+    pagination.offset,
+  );
+  const pagesByPath = groupSessionRowsByProject(batchRows, projectPaths, pagination);
+
+  broadcastProgress({ phase: 'loading', current: 0, total: totalProjects });
+
   const projects: ProjectListItem[] = [];
   let processedProjects = 0;
-
   for (const row of projectRows) {
     processedProjects += 1;
-
-    const projectId = row.project_id;
-    const projectPath = row.project_path;
-
     broadcastProgress({
       phase: 'loading',
       current: processedProjects,
       total: totalProjects,
-      currentProject: projectPath,
+      currentProject: row.project_path,
     });
 
     const displayName =
       row.custom_project_name && row.custom_project_name.trim().length > 0
         ? row.custom_project_name
-        : await generateDisplayName(path.basename(projectPath) || projectPath, projectPath);
+        : await generateDisplayName(path.basename(row.project_path) || row.project_path, row.project_path);
 
-    const sessionsPage = readProjectSessionsPageByPath(projectPath, {
-      limit: options.sessionsLimit,
-      offset: options.sessionsOffset,
-    });
-
+    const page = pagesByPath.get(row.project_path) ?? { sessions: [], total: 0, hasMore: false };
     projects.push({
-      projectId,
-      path: projectPath,
+      projectId: row.project_id,
+      path: row.project_path,
       displayName,
-      fullPath: projectPath,
+      fullPath: row.project_path,
       isStarred: Boolean(row.isStarred),
-      sessions: sessionsPage.sessions,
-      sessionMeta: {
-        hasMore: sessionsPage.hasMore,
-        total: sessionsPage.total,
-      },
+      sessions: page.sessions,
+      sessionMeta: { hasMore: page.hasMore, total: page.total },
     });
   }
 
-  broadcastProgress({
-    phase: 'complete',
-    current: totalProjects,
-    total: totalProjects,
-  });
-
+  broadcastProgress({ phase: 'complete', current: totalProjects, total: totalProjects });
   return projects;
 }
 
