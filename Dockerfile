@@ -8,12 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential python3 make \
     && rm -rf /var/lib/apt/lists/*
 
-# package.json + scripts（postinstall 跑 fix-node-pty.js）
+# 装依赖：--ignore-scripts 跳过 prepare(husky,devDep 没装会 exit 127) + postinstall(fix-node-pty,macOS only)
 COPY package.json ./
-COPY scripts ./scripts
-RUN npm install --production
+RUN npm install --production --ignore-scripts
 
-# 构建产物（client 静态 + server 编译 + assets）
+# 显式 rebuild 3 个 native（node-gyp 从源码编译 Linux ABI）
+RUN npm rebuild bcrypt better-sqlite3 node-pty
+
+# 构建产物
 COPY dist ./dist
 COPY dist-server ./dist-server
 COPY public ./public

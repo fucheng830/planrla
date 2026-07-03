@@ -1,0 +1,7 @@
+node_modules
+release
+.git
+landing
+.claude
+.serena
+*.log
