@@ -15,6 +15,7 @@ export const sessionSynchronizerService = {
    * Runs all provider synchronizers and updates scan_state.last_scanned_at.
    */
   async synchronizeSessions(): Promise<SessionSynchronizeResult> {
+    const syncT0 = performance.now();
     const lastScanAt = scanStateDb.getLastScannedAt();
     const scanBoundary = new Date();
     const processedByProvider: Record<LLMProvider, number> = {
@@ -51,6 +52,8 @@ export const sessionSynchronizerService = {
       );
     }
 
+    console.log(`[perf] session sync (batch) took ${Math.round(performance.now() - syncT0)}ms`);
+
     return {
       processedByProvider,
       failures,
@@ -64,8 +67,13 @@ export const sessionSynchronizerService = {
     provider: LLMProvider,
     filePath: string
   ): Promise<{ provider: LLMProvider; indexed: boolean; sessionId: string | null }> {
+    const fileT0 = performance.now();
     const resolvedProvider = providerRegistry.resolveProvider(provider);
     const sessionId = await resolvedProvider.sessionSynchronizer.synchronizeFile(filePath);
+    const elapsedMs = Math.round(performance.now() - fileT0);
+    if (elapsedMs > 50) {
+      console.log(`[perf] session sync (file) took ${elapsedMs}ms`);
+    }
     return {
       provider,
       indexed: Boolean(sessionId),

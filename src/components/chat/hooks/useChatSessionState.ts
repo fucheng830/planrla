@@ -9,6 +9,7 @@ import type { ChatMessage } from '../types/types';
 import { createCachedDiffCalculator, type DiffCalculator } from '../utils/messageTransforms';
 
 import { normalizedToChatMessages } from './useChatMessages';
+import { measureAsync } from '../../../shared/perf/timing';
 
 const MESSAGES_PER_PAGE = 20;
 const INITIAL_VISIBLE_MESSAGES = 100;
@@ -476,52 +477,58 @@ export function useChatSessionState({
       return;
     }
 
-    const sessionChanged = currentSessionId !== null && currentSessionId !== selectedSessionId;
-    if (sessionChanged) {
-      resetStreamingState();
-    }
-
-    // Reset pagination/scroll state
-    messagesOffsetRef.current = 0;
-    setHasMoreMessages(false);
-    setTotalMessages(0);
-    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
-    setAllMessagesLoaded(false);
-    allMessagesLoadedRef.current = false;
-    setIsLoadingAllMessages(false);
-    setLoadAllJustFinished(false);
-    setShowLoadAllOverlay(false);
-    setViewHiddenCount(0);
-    if (loadAllOverlayTimerRef.current) clearTimeout(loadAllOverlayTimerRef.current);
-    if (loadAllFinishedTimerRef.current) clearTimeout(loadAllFinishedTimerRef.current);
-
-    if (sessionChanged) {
-      setTokenBudget(null);
-    }
-
-    setCurrentSessionId(selectedSessionId);
-
-    // Subscribe to the session's live run (if any): the ack reconciles the
-    // processing indicator, re-attaches a mid-flight stream to this socket,
-    // and replays any live events missed since `lastSeq`. Recording the send
-    // time lets the ack handler discard idle acks that a newer request has
-    // since outdated.
-    subscribeToSelectedSession();
-
-    lastLoadedSessionKeyRef.current = sessionKey;
-
-    // Fetch from server → store updates → chatMessages re-derives automatically
-    setIsLoadingSessionMessages(true);
-    sessionStore.fetchFromServer(selectedSessionId, {
-      limit: MESSAGES_PER_PAGE,
-      offset: 0,
-    }).then(slot => {
-      if (slot) {
-        setHasMoreMessages(slot.hasMore);
-        setTotalMessages(slot.total);
-        if (slot.tokenUsage) setTokenBudget(slot.tokenUsage as Record<string, unknown>);
+    // 性能测点 session-switch:包"会话切换触发的 messages 加载"——
+    // 边界 = 状态重置 + subscribe + fetchFromServer（实际工作负载，不含缓存命中早退）。
+    void measureAsync('session-switch', async () => {
+      const sessionChanged = currentSessionId !== null && currentSessionId !== selectedSessionId;
+      if (sessionChanged) {
+        resetStreamingState();
       }
-      setIsLoadingSessionMessages(false);
+
+      // Reset pagination/scroll state
+      messagesOffsetRef.current = 0;
+      setHasMoreMessages(false);
+      setTotalMessages(0);
+      setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
+      setAllMessagesLoaded(false);
+      allMessagesLoadedRef.current = false;
+      setIsLoadingAllMessages(false);
+      setLoadAllJustFinished(false);
+      setShowLoadAllOverlay(false);
+      setViewHiddenCount(0);
+      if (loadAllOverlayTimerRef.current) clearTimeout(loadAllOverlayTimerRef.current);
+      if (loadAllFinishedTimerRef.current) clearTimeout(loadAllFinishedTimerRef.current);
+
+      if (sessionChanged) {
+        setTokenBudget(null);
+      }
+
+      setCurrentSessionId(selectedSessionId);
+
+      // Subscribe to the session's live run (if any): the ack reconciles the
+      // processing indicator, re-attaches a mid-flight stream to this socket,
+      // and replays any live events missed since `lastSeq`. Recording the send
+      // time lets the ack handler discard idle acks that a newer request has
+      // since outdated.
+      subscribeToSelectedSession();
+
+      lastLoadedSessionKeyRef.current = sessionKey;
+
+      // Fetch from server → store updates → chatMessages re-derives automatically
+      setIsLoadingSessionMessages(true);
+      try {
+        const slot = await sessionStore.fetchFromServer(selectedSessionId, {
+          limit: MESSAGES_PER_PAGE,
+          offset: 0,
+        });
+        if (slot) {
+          setHasMoreMessages(slot.hasMore);
+          setTotalMessages(slot.total);
+          if (slot.tokenUsage) setTokenBudget(slot.tokenUsage as Record<string, unknown>);
+        }
+      } finally {
+        setIsLoadingSessionMessages(false);
+      }
     }).catch(() => {
       setIsLoadingSessionMessages(false);
     });

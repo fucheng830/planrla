@@ -269,6 +269,7 @@ async function onUpdate(
  * Starts provider filesystem watchers and performs initial DB synchronization.
  */
 export async function initializeSessionsWatcher(): Promise<void> {
+  const startupT0 = performance.now();
   console.log('Setting up session watchers');
 
   const initialSync = await sessionSynchronizerService.synchronizeSessions();
@@ -278,6 +279,7 @@ export async function initializeSessionsWatcher(): Promise<void> {
   });
 
   for (const { provider, rootPath } of PROVIDER_WATCH_PATHS) {
+    const providerT0 = performance.now();
     try {
       await fsPromises.mkdir(rootPath, { recursive: true });
 
@@ -305,6 +307,7 @@ export async function initializeSessionsWatcher(): Promise<void> {
         });
 
       watchers.push(watcher);
+      console.log(`[perf] provider ${provider} startup took ${Math.round(performance.now() - providerT0)}ms`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Failed to initialize session watcher for provider "${provider}"`, {
@@ -313,6 +316,8 @@ export async function initializeSessionsWatcher(): Promise<void> {
       });
     }
   }
+
+  console.log(`[perf] provider watcher startup took ${Math.round(performance.now() - startupT0)}ms`);
 }
 
 /**

@@ -16,6 +16,7 @@ import { pathToDirKey } from '../utils/pathToDirKey';
 import { formatFileSize, formatRelativeTime, isImageFile } from '../utils/fileTreeUtils';
 import { Project } from '../../../types/app';
 import { Input } from '../../../shared/view/ui';
+import { measure } from '../../../shared/perf/timing';
 
 import FileTreeBody from './FileTreeBody';
 import FileTreeDetailedColumns from './FileTreeDetailedColumns';
@@ -97,13 +98,18 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
   // 展开目录:toggle + 展开时触发懒 fetch(ensureDir)。
   // dirKey 一致性:node.path(绝对) → pathToDirKey → 相对项目根 dir key;
   // 必须与 flattenVisibleNodes 内部 name 累积 + useFileTreeData.fetchDir(dir) 一致。
+  // 性能测点 file-tree-expand:包 toggle + ensureDir(同步调度 fetch)。
+  // 注:ensureDir 返回 void(异步 fetch 在内部触发,不返回 promise),故用同步 measure;
+  // fetch 耗时由 loadingDir 态独立跟踪。
   const handleToggleDir = useCallback(
     (absPath: string) => {
-      toggleDirectory(absPath);
-      // toggleDirectory 是异步 setState;用 !expandedDirs.has 判断"将展开"。
-      if (!expandedDirs.has(absPath)) {
-        ensureDir(pathToDirKey(absPath, projectRoot));
-      }
+      measure('file-tree-expand', () => {
+        toggleDirectory(absPath);
+        // toggleDirectory 是异步 setState;用 !expandedDirs.has 判断"将展开"。
+        if (!expandedDirs.has(absPath)) {
+          ensureDir(pathToDirKey(absPath, projectRoot));
+        }
+      });
     },
     [expandedDirs, toggleDirectory, ensureDir, projectRoot],
   );
