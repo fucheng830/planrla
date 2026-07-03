@@ -42,7 +42,10 @@ backlog → ready → spec → plan → doing → review → accepted → releas
 - **ready gate 四要素**:背景 + 目标 + 范围 + 验收标准草稿,缺一不进 brainstorming
 - roadmap 仅作分类锚(M1-M6 / P0-P1-P2),不细动
 
-### ② 分发任务(复用 superpowers)
+### ② 分发任务(复用 superpowers + worktree 隔离)
+- **在独立 worktree 开发**(强制,见 `CLAUDE.md`「worktree 开发约定」):`git worktree add .claude/worktrees/req<NNN>-<topic> -b feat/req<NNN>-<topic> main`,主 worktree 只留 main
+- 在 worktree 内走完 spec → plan → subagent 执行 → 验收
+
 | 步骤 | 产物 | 状态流转 |
 |------|------|---------|
 | 规格化 | `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` | ready→spec |

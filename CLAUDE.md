@@ -37,6 +37,15 @@
 - 架构:`docs/architecture/API_CONTRACT.md`、`PROVIDER_CONTRACT.md`
 - 设计依据:`docs/superpowers/specs/2026-07-02-release-lifecycle-design.md`
 
+## worktree 开发约定(强制)
+
+主 worktree(`D:/workspace/projects/ai/apps/planrla`)**只放 `main` 分支**(发版用)。所有需求开发在独立 worktree 进行,避免分支混乱(站错分支 / 多终端干扰)。
+
+- **新需求**:在主 worktree `git worktree add .claude/worktrees/<name> -b feat/<name> main`,在 worktree 内走 spec → plan → 实施 → 验收
+- **验收通过**:回主 worktree `git merge --no-ff feat/<name>` 合入 main → `git worktree remove .claude/worktrees/<name>` + `git branch -d feat/<name>`
+- **发版**:只在主 worktree(main)跑 `release-checklist`
+- **命名**:`.claude/worktrees/req<NNN>-<topic>`(如 `req010-toast-fix`)
+
 ## 项目约定(继承 workspace)
 - 称呼用户:**Archie**;回复语言:**中文**
 - 提交前确认根目录**无 `nul` 文件**
