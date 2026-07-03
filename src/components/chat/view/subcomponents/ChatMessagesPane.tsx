@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import type { ChatMessage } from '../../types/types';
 import type {
@@ -14,8 +15,6 @@ import { getIntrinsicMessageKey } from '../../utils/messageKeys';
 import MessageComponent from './MessageComponent';
 import ProviderSelectionEmptyState from './ProviderSelectionEmptyState';
 
-const VIRTUALIZATION_THRESHOLD = 240;
-const ESTIMATED_MESSAGE_HEIGHT = 104;
 const VIRTUALIZATION_OVERSCAN = 18;
 
 interface ChatMessagesPaneProps {
@@ -122,7 +121,6 @@ export default function ChatMessagesPane({
   const messageKeyMapRef = useRef<WeakMap<ChatMessage, string>>(new WeakMap());
   const allocatedKeysRef = useRef<Set<string>>(new Set());
   const generatedMessageKeyCounterRef = useRef(0);
-  const [scrollSnapshot, setScrollSnapshot] = useState({ top: 0, height: 0 });
 
   // Keep keys stable across prepends so existing MessageComponent instances retain local state.
   const getMessageKey = useCallback((message: ChatMessage) => {
@@ -148,70 +146,12 @@ export default function ChatMessagesPane({
     return candidateKey;
   }, []);
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return undefined;
-    }
-
-    let animationFrame = 0;
-
-    const readScroll = () => {
-      animationFrame = 0;
-      setScrollSnapshot({
-        top: container.scrollTop,
-        height: container.clientHeight,
-      });
-    };
-
-    const scheduleRead = () => {
-      if (animationFrame) {
-        return;
-      }
-      animationFrame = window.requestAnimationFrame(readScroll);
-    };
-
-    readScroll();
-    container.addEventListener('scroll', scheduleRead, { passive: true });
-    window.addEventListener('resize', scheduleRead);
-
-    return () => {
-      if (animationFrame) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-      container.removeEventListener('scroll', scheduleRead);
-      window.removeEventListener('resize', scheduleRead);
-    };
-  }, [scrollContainerRef]);
-
-  const virtualizedMessages = useMemo(() => {
-    if (visibleMessages.length <= VIRTUALIZATION_THRESHOLD) {
-      return {
-        enabled: false,
-        start: 0,
-        messages: visibleMessages,
-        topSpacer: 0,
-        bottomSpacer: 0,
-      };
-    }
-
-    const viewportHeight = scrollSnapshot.height || 800;
-    const firstVisibleIndex = Math.floor(scrollSnapshot.top / ESTIMATED_MESSAGE_HEIGHT);
-    const visibleWindowSize = Math.ceil(viewportHeight / ESTIMATED_MESSAGE_HEIGHT);
-    const start = Math.max(0, firstVisibleIndex - VIRTUALIZATION_OVERSCAN);
-    const end = Math.min(
-      visibleMessages.length,
-      firstVisibleIndex + visibleWindowSize + VIRTUALIZATION_OVERSCAN * 2,
-    );
-
-    return {
-      enabled: true,
-      start,
-      messages: visibleMessages.slice(start, end),
-      topSpacer: start * ESTIMATED_MESSAGE_HEIGHT,
-      bottomSpacer: Math.max(0, visibleMessages.length - end) * ESTIMATED_MESSAGE_HEIGHT,
-    };
-  }, [scrollSnapshot.height, scrollSnapshot.top, visibleMessages]);
+  const virtualizer = useVirtualizer({
+    count: visibleMessages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 104,
+    overscan: VIRTUALIZATION_OVERSCAN,
+  });
 
   return (
     <div
@@ -322,40 +262,41 @@ export default function ChatMessagesPane({
             </div>
           )}
 
-          {virtualizedMessages.enabled && (
-            <div
-              aria-hidden="true"
-              style={{ height: virtualizedMessages.topSpacer }}
-            />
-          )}
-
-          {virtualizedMessages.messages.map((message, index) => {
-            const absoluteIndex = virtualizedMessages.start + index;
-            const prevMessage = absoluteIndex > 0 ? visibleMessages[absoluteIndex - 1] : null;
-            return (
-              <MessageComponent
-                key={getMessageKey(message)}
-                message={message}
-                prevMessage={prevMessage}
-                createDiff={createDiff}
-                onFileOpen={onFileOpen}
-                onShowSettings={onShowSettings}
-                onGrantToolPermission={onGrantToolPermission}
-                autoExpandTools={autoExpandTools}
-                showRawParameters={showRawParameters}
-                showThinking={showThinking}
-                selectedProject={selectedProject}
-                provider={provider}
-              />
-            );
-          })}
-
-          {virtualizedMessages.enabled && (
-            <div
-              aria-hidden="true"
-              style={{ height: virtualizedMessages.bottomSpacer }}
-            />
-          )}
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+            {virtualizer.getVirtualItems().map((vItem) => {
+              const message = visibleMessages[vItem.index];
+              const prevMessage = vItem.index > 0 ? visibleMessages[vItem.index - 1] : null;
+              return (
+                <div
+                  key={getMessageKey(message)}
+                  data-index={vItem.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${vItem.start}px)`,
+                    paddingBottom: '0.75rem',
+                  }}
+                >
+                  <MessageComponent
+                    message={message}
+                    prevMessage={prevMessage}
+                    createDiff={createDiff}
+                    onFileOpen={onFileOpen}
+                    onShowSettings={onShowSettings}
+                    onGrantToolPermission={onGrantToolPermission}
+                    autoExpandTools={autoExpandTools}
+                    showRawParameters={showRawParameters}
+                    showThinking={showThinking}
+                    selectedProject={selectedProject}
+                    provider={provider}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
     </div>
