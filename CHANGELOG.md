@@ -3,6 +3,33 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.4.0](https://github.com/fucheng830/planrla/compare/v0.3.0...v0.4.0) (2026-07-03)
+
+### New Features
+
+* **files:** api.getFiles accepts dir parameter ([b472a05](https://github.com/fucheng830/planrla/commit/b472a0570ea0887e1e714a8d02c7d8efab54ae81))
+* **files:** dir cache ttl pure fns ([9ef8121](https://github.com/fucheng830/planrla/commit/9ef8121e6fe92b0c5d7816c1136747f6156c8d98))
+* **files:** error polish smoke ready manual checklist ([a0a2d30](https://github.com/fucheng830/planrla/commit/a0a2d30af4ebe9e70dbccc8a2c1e9fb68d928c75))
+* **files:** file tree list react-window virtualization ([09282cc](https://github.com/fucheng830/planrla/commit/09282cc78f4774aa34c2bd108929329686e0d7fb))
+* **files:** flatten visible nodes pure fn ([dc56683](https://github.com/fucheng830/planrla/commit/dc566832a6a17a647853adf50424c0d3477724b0))
+* **files:** incremental single-level scan with dir query ([cd3e8b6](https://github.com/fucheng830/planrla/commit/cd3e8b6a9c9c384a3619d6b12dbe177487007b3e))
+* **files:** search adapts to incremental cached dirs ([5f1f730](https://github.com/fucheng830/planrla/commit/5f1f7302ae88602ce1cdf9bdc7e20812a7654b1a))
+* **files:** useFileTreeData incremental lazy load and cache ([7995f3e](https://github.com/fucheng830/planrla/commit/7995f3ecf7e4535957b9075250c6a2d560fde833))
+* **files:** wire incremental data flatten virtualized list ([92ce10c](https://github.com/fucheng830/planrla/commit/92ce10c991457577566df4b0a7cf6ff0a4df0ff0))
+
+### Bug Fixes
+
+* **cli:** disable startup update check for private package ([a91f3df](https://github.com/fucheng830/planrla/commit/a91f3dfe06a1eadc4ab50f0ee20a7ecea745a231))
+* **files:** path to dir key boundary and case ([bced290](https://github.com/fucheng830/planrla/commit/bced29013172e4c7b35a2f9f9820ff7c911f5149))
+
+### Refactoring
+
+* **files:** file tree node single-row no recursion ([28eaeb5](https://github.com/fucheng830/planrla/commit/28eaeb5d5619ad62332bc563df44d576a899be0f))
+
+### Maintenance
+
+* **files:** add react-window for virtualization ([8118954](https://github.com/fucheng830/planrla/commit/81189545b124c13247a1e1768ceabf34632159ea))
+
 ## [0.3.0](https://github.com/fucheng830/planrla/compare/v0.2.0...v0.3.0) (2026-07-03)
 
 ### New Features
