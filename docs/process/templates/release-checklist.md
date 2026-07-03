@@ -23,10 +23,10 @@
 - [ ] Planrla 桌面应用未运行
 - [ ] `rm -rf release/win-unpacked release/win-unpacked.tmp`(如存在)
 
-## ⑤ 打包(读 package.json 版本,无需 extraMetadata)
-- [ ] `npm run build`
-- [ ] `npx electron-builder --win nsis zip`
-- [ ] 产物:`release/planrla-<ver>-x64.exe` + `.zip`
+## ⑤ 打包(一条命令:自动 sync native ABI + build + electron-builder)
+- [ ] `npm run desktop:dist:win`(= `sync:electron && build && electron-builder --win nsis zip`)
+  - `sync:electron` 显式把 better-sqlite3 / bcrypt / node-pty rebuild 为 Electron ABI,绕开 electron-builder 内部 rebuild 不调用本机 VS 工具链的坑(`build.npmRebuild=false`,见 `scripts/sync-native-abi.js`)
+- [ ] 产物:`release/planrla-<ver>-x64.exe` + `.zip`(版本号读 package.json,无需 extraMetadata)
 
 ## ⑥ 上传(后台,大文件 5-10 分钟)
 - [ ] `gh release upload v0.x.x release/planrla-<ver>-x64.{exe,zip} --clobber`
