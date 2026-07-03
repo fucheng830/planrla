@@ -30,11 +30,11 @@
     "client": "vite",
     "desktop": "electron electron/main.js",
     "desktop:dev": "cross-env ELECTRON_DEV_URL=http://127.0.0.1:5173 electron electron/main.js",
-    "desktop:pack": "npm run build && electron-builder --dir",
-    "desktop:dist": "npm run build && electron-builder",
-    "desktop:dist:mac": "npm run build && electron-builder --mac dmg zip",
-    "desktop:dist:win": "npm run build && electron-builder --win nsis zip",
-    "desktop:dist:linux": "npm run build && electron-builder --linux AppImage deb",
+    "desktop:pack": "npm run sync:electron && npm run build && electron-builder --dir",
+    "desktop:dist": "npm run sync:electron && npm run build && electron-builder",
+    "desktop:dist:mac": "npm run sync:electron && npm run build && electron-builder --mac dmg zip",
+    "desktop:dist:win": "npm run sync:electron && npm run build && electron-builder --win nsis zip",
+    "desktop:dist:linux": "npm run sync:electron && npm run build && electron-builder --linux AppImage deb",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "prebuild:server": "node -e \"require('node:fs').rmSync('dist-server', { recursive: true, force: true })\"",
@@ -49,12 +49,15 @@
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/fix-node-pty.js",
     "prepare": "husky",
-    "update:platform": "./update-platform.sh"
+    "update:platform": "./update-platform.sh",
+    "sync:electron": "node scripts/sync-native-abi.js --target=electron",
+    "sync:node": "node scripts/sync-native-abi.js --target=node"
   },
   "build": {
     "appId": "cc.planrla.desktop",
     "productName": "Planrla",
     "artifactName": "planrla-${version}-${arch}.${ext}",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },
