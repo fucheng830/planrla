@@ -2,12 +2,15 @@ import type { ReactNode, RefObject } from 'react';
 import { Folder, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FileTreeNode, FileTreeViewMode } from '../types/types';
+import type { VisibleNode } from '../utils/flattenVisibleNodes';
 import FileTreeEmptyState from './FileTreeEmptyState';
 import FileTreeList from './FileTreeList';
 
 type FileTreeBodyProps = {
-  files: FileTreeNode[];
-  filteredFiles: FileTreeNode[];
+  /** 当前扁平化的可见节点（flattenVisibleNodes 输出，已应用展开状态）。 */
+  visibleRows: VisibleNode[];
+  /** 是否有任意根级条目已加载（用于区分“空项目”与“未加载”）。 */
+  hasAnyEntries: boolean;
   searchQuery: string;
   viewMode: FileTreeViewMode;
   expandedDirs: Set<string>;
@@ -22,6 +25,9 @@ type FileTreeBodyProps = {
   onCopyPath?: (item: FileTreeNode) => void;
   onDownload?: (item: FileTreeNode) => void;
   onRefresh?: () => void;
+  onToggleDir?: (path: string) => void;
+  isLoadingDir: (path: string) => boolean;
+  errorOfDir: (path: string) => string | undefined;
   // Rename state for inline editing
   renamingItem?: FileTreeNode | null;
   renameValue?: string;
@@ -30,11 +36,13 @@ type FileTreeBodyProps = {
   handleCancelRename?: () => void;
   renameInputRef?: RefObject<HTMLInputElement>;
   operationLoading?: boolean;
+  // 列表高度(外层容器 px 高度,虚拟化需要)
+  height: number;
 };
 
 export default function FileTreeBody({
-  files,
-  filteredFiles,
+  visibleRows,
+  hasAnyEntries,
   searchQuery,
   viewMode,
   expandedDirs,
@@ -49,6 +57,9 @@ export default function FileTreeBody({
   onCopyPath,
   onDownload,
   onRefresh,
+  onToggleDir,
+  isLoadingDir,
+  errorOfDir,
   renamingItem,
   renameValue,
   setRenameValue,
@@ -56,18 +67,19 @@ export default function FileTreeBody({
   handleCancelRename,
   renameInputRef,
   operationLoading,
+  height,
 }: FileTreeBodyProps) {
   const { t } = useTranslation();
 
   return (
     <>
-      {files.length === 0 ? (
+      {!hasAnyEntries ? (
         <FileTreeEmptyState
           icon={Folder}
           title={t('fileTree.noFilesFound')}
           description={t('fileTree.checkProjectPath')}
         />
-      ) : filteredFiles.length === 0 && searchQuery ? (
+      ) : visibleRows.length === 0 && searchQuery ? (
         <FileTreeEmptyState
           icon={Search}
           title={t('fileTree.noMatchesFound')}
@@ -75,7 +87,7 @@ export default function FileTreeBody({
         />
       ) : (
         <FileTreeList
-          items={filteredFiles}
+          visibleRows={visibleRows}
           viewMode={viewMode}
           expandedDirs={expandedDirs}
           onItemClick={onItemClick}
@@ -89,6 +101,9 @@ export default function FileTreeBody({
           onCopyPath={onCopyPath}
           onDownload={onDownload}
           onRefresh={onRefresh}
+          onToggleDir={onToggleDir}
+          isLoadingDir={isLoadingDir}
+          errorOfDir={errorOfDir}
           renamingItem={renamingItem}
           renameValue={renameValue}
           setRenameValue={setRenameValue}
@@ -96,6 +111,7 @@ export default function FileTreeBody({
           handleCancelRename={handleCancelRename}
           renameInputRef={renameInputRef}
           operationLoading={operationLoading}
+          height={height}
         />
       )}
     </>

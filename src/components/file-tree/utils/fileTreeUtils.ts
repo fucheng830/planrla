@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import { IMAGE_FILE_EXTENSIONS } from '../constants/constants';
 import type { FileTreeNode } from '../types/types';
 
+// TODO(file-tree-cleanup): unused after incremental migration (FT10). Safe to remove once search/tree code stabilizes.
 export function filterFileTree(items: FileTreeNode[], query: string): FileTreeNode[] {
   return items.reduce<FileTreeNode[]>((filteredItems, item) => {
     const matchesName = item.name.toLowerCase().includes(query);
@@ -20,6 +21,7 @@ export function filterFileTree(items: FileTreeNode[], query: string): FileTreeNo
 }
 
 // During search we auto-expand every directory present in the filtered subtree.
+// TODO(file-tree-cleanup): unused after incremental migration (FT10). Safe to remove once search/tree code stabilizes.
 export function collectExpandedDirectoryPaths(items: FileTreeNode[]): string[] {
   const paths: string[] = [];
 

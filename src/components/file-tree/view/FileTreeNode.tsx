@@ -29,22 +29,45 @@ type FileTreeNodeProps = {
   handleCancelRename?: () => void;
   renameInputRef?: RefObject<HTMLInputElement>;
   operationLoading?: boolean;
+  onToggleDir?: (path: string) => void;
+  isLoading?: boolean;
+  errorMessage?: string;
 };
 
 type TreeItemIconProps = {
   item: FileTreeNodeType;
   isOpen: boolean;
   renderFileIcon: (filename: string) => ReactNode;
+  onToggleDir?: (path: string) => void;
+  isLoading?: boolean;
+  errorMessage?: string;
 };
 
-function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
+function TreeItemIcon({
+  item,
+  isOpen,
+  renderFileIcon,
+  onToggleDir,
+  isLoading,
+  errorMessage,
+}: TreeItemIconProps) {
   if (item.type === 'directory') {
     return (
-      <span className="flex flex-shrink-0 items-center gap-0.5">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-label={isOpen ? `Collapse ${item.name}` : `Expand ${item.name}`}
+        className="flex flex-shrink-0 items-center gap-0.5 cursor-pointer bg-transparent p-0 border-0"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleDir?.(item.path);
+        }}
+      >
         <ChevronRight
           className={cn(
             'w-3.5 h-3.5 text-muted-foreground/70 transition-transform duration-150',
             isOpen && 'rotate-90',
+            isLoading && 'animate-pulse',
           )}
         />
         {isOpen ? (
@@ -52,7 +75,17 @@ function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
         ) : (
           <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
         )}
-      </span>
+        {errorMessage && (
+          <span
+            role="img"
+            aria-label={`Error: ${errorMessage}`}
+            className="text-[10px] text-red-500"
+            title={errorMessage}
+          >
+            !
+          </span>
+        )}
+      </button>
     );
   }
 
@@ -82,10 +115,12 @@ export default function FileTreeNode({
   handleCancelRename,
   renameInputRef,
   operationLoading,
+  onToggleDir,
+  isLoading,
+  errorMessage,
 }: FileTreeNodeProps) {
   const isDirectory = item.type === 'directory';
   const isOpen = isDirectory && expandedDirs.has(item.path);
-  const hasChildren = Boolean(isDirectory && item.children && item.children.length > 0);
   const isRenaming = renamingItem?.path === item.path;
 
   const nameClassName = cn(
@@ -112,7 +147,14 @@ export default function FileTreeNode({
         style={{ paddingLeft: `${level * 16 + 4}px` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
+        <TreeItemIcon
+          item={item}
+          isOpen={isOpen}
+          renderFileIcon={renderFileIcon}
+          onToggleDir={onToggleDir}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+        />
         <Input
           ref={renameInputRef}
           type="text"
@@ -144,7 +186,14 @@ export default function FileTreeNode({
       {viewMode === 'detailed' ? (
         <>
           <div className="col-span-5 flex min-w-0 items-center gap-1.5">
-            <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
+            <TreeItemIcon
+              item={item}
+              isOpen={isOpen}
+              renderFileIcon={renderFileIcon}
+              onToggleDir={onToggleDir}
+              isLoading={isLoading}
+              errorMessage={errorMessage}
+            />
             <span className={nameClassName}>{item.name}</span>
           </div>
           <div className="col-span-2 text-sm tabular-nums text-muted-foreground">
@@ -156,7 +205,14 @@ export default function FileTreeNode({
       ) : viewMode === 'compact' ? (
         <>
           <div className="flex min-w-0 items-center gap-1.5">
-            <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
+            <TreeItemIcon
+              item={item}
+              isOpen={isOpen}
+              renderFileIcon={renderFileIcon}
+              onToggleDir={onToggleDir}
+              isLoading={isLoading}
+              errorMessage={errorMessage}
+            />
             <span className={nameClassName}>{item.name}</span>
           </div>
           <div className="ml-2 flex flex-shrink-0 items-center gap-3 text-sm text-muted-foreground">
@@ -170,7 +226,14 @@ export default function FileTreeNode({
         </>
       ) : (
         <>
-          <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
+          <TreeItemIcon
+            item={item}
+            isOpen={isOpen}
+            renderFileIcon={renderFileIcon}
+            onToggleDir={onToggleDir}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+          />
           <span className={nameClassName}>{item.name}</span>
         </>
       )}
@@ -180,9 +243,9 @@ export default function FileTreeNode({
   // Check if context menu callbacks are provided
   const hasContextMenu = onRename || onDelete || onNewFile || onNewFolder || onCopyPath || onDownload || onRefresh;
 
-  return (
-    <div className="select-none">
-      {hasContextMenu ? (
+  if (hasContextMenu) {
+    return (
+      <div className="select-none">
         <FileContextMenu
           item={item}
           onRename={onRename}
@@ -195,46 +258,9 @@ export default function FileTreeNode({
         >
           {rowContent}
         </FileContextMenu>
-      ) : (
-        rowContent
-      )}
+      </div>
+    );
+  }
 
-      {isDirectory && isOpen && hasChildren && (
-        <div className="relative">
-          <span
-            className="absolute bottom-0 top-0 border-l border-border/40"
-            style={{ left: `${level * 16 + 14}px` }}
-            aria-hidden="true"
-          />
-          {item.children?.map((child) => (
-            <FileTreeNode
-              key={child.path}
-              item={child}
-              level={level + 1}
-              viewMode={viewMode}
-              expandedDirs={expandedDirs}
-              onItemClick={onItemClick}
-              renderFileIcon={renderFileIcon}
-              formatFileSize={formatFileSize}
-              formatRelativeTime={formatRelativeTime}
-              onRename={onRename}
-              onDelete={onDelete}
-              onNewFile={onNewFile}
-              onNewFolder={onNewFolder}
-              onCopyPath={onCopyPath}
-              onDownload={onDownload}
-              onRefresh={onRefresh}
-              renamingItem={renamingItem}
-              renameValue={renameValue}
-              setRenameValue={setRenameValue}
-              handleConfirmRename={handleConfirmRename}
-              handleCancelRename={handleCancelRename}
-              renameInputRef={renameInputRef}
-              operationLoading={operationLoading}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <div className="select-none">{rowContent}</div>;
 }

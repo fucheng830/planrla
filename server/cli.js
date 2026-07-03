@@ -600,8 +600,9 @@ async function sandboxCommand(args) {
 
 // Start the server
 async function startServer() {
-    // Check for updates silently on startup
-    checkForUpdates(true);
+    // Update check disabled: planrla is a private package (not in npm registry),
+    // so `npm show planrla version` E404s every launch — harmless but noisy.
+    // checkForUpdates(true);
 
     // Import and run the server
     await import('./index.js');
