@@ -8,6 +8,7 @@ import type { MarkSessionCompleted, MarkSessionIdle, MarkSessionProcessing } fro
 import type { PendingPermissionRequest } from '../types/types';
 import type { ProjectSession, LLMProvider } from '../../../types/app';
 import type { SessionStore, NormalizedMessage } from '../../../stores/useSessionStore';
+import { measure } from '../../../shared/perf/timing';
 
 const isActionablePermissionRequest = (request: { toolName?: unknown } | null | undefined): boolean => {
   return request?.toolName !== 'ExitPlanMode' && request?.toolName !== 'exit_plan_mode';
@@ -85,6 +86,11 @@ export function useChatRealtimeHandlers({
   // listener so back-to-back permission events can dedupe and re-arm the
   // notification sound before React finishes a rerender.
   const pendingPermissionRequestsRef = useRef(pendingPermissionRequests);
+
+  // first-token probe: fires only on the FIRST stream_delta of each response.
+  // Reset on stream_end/complete so the next response measures again.
+  // Avoids ~200 misleading `[perf] first-token` log lines per long reply.
+  const firstTokenLoggedRef = useRef(false);
 
   useEffect(() => {
     pendingPermissionRequestsRef.current = pendingPermissionRequests;
@@ -178,18 +184,31 @@ export function useChatRealtimeHandlers({
       if (msg.kind === 'stream_delta') {
         const text = (msg.content as string) || '';
         if (!text) return;
-        accumulatedStreamRef.current += text;
-        if (!streamTimerRef.current) {
-          streamTimerRef.current = window.setTimeout(() => {
-            streamTimerRef.current = null;
-            if (sid) {
-              sessionStore.updateStreaming(sid, accumulatedStreamRef.current, provider);
-            }
-          }, 100);
-        }
-        // Also route to store for non-active sessions
-        if (sid && sid !== activeViewSessionId) {
-          sessionStore.appendRealtime(sid, msg as unknown as NormalizedMessage);
+        // 性能测点 first-token:仅在每个响应的「首条 stream_delta」触发一次,
+        // 对应 spec「send → first stream token」间隔。后续 delta 走原逻辑但不
+        // 包裹 measure,避免长回复产生 ~200 条误导性 `[perf] first-token` 日志。
+        // 两条分支的处理逻辑完全一致(累加 + buffer timer 注册 + store 路由),
+        // 仅差异是否用 measure 包裹;抽出 processDelta 保证逻辑体一致。
+        const processDelta = () => {
+          accumulatedStreamRef.current += text;
+          if (!streamTimerRef.current) {
+            streamTimerRef.current = window.setTimeout(() => {
+              streamTimerRef.current = null;
+              if (sid) {
+                sessionStore.updateStreaming(sid, accumulatedStreamRef.current, provider);
+              }
+            }, 100);
+          }
+          // Also route to store for non-active sessions
+          if (sid && sid !== activeViewSessionId) {
+            sessionStore.appendRealtime(sid, msg as unknown as NormalizedMessage);
+          }
+        };
+        if (!firstTokenLoggedRef.current) {
+          firstTokenLoggedRef.current = true;
+          measure('first-token', processDelta);
+        } else {
+          processDelta();
         }
         return;
       }
@@ -206,6 +225,8 @@ export function useChatRealtimeHandlers({
           sessionStore.finalizeStreaming(sid);
         }
         accumulatedStreamRef.current = '';
+        // Re-arm first-token probe so the next response's first delta is measured.
+        firstTokenLoggedRef.current = false;
         return;
       }
 
