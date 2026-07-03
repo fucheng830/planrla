@@ -5,8 +5,10 @@
  */
 
 // 模块级 dev 开关：默认从 import.meta.env（Vite）检测；__setDevMode 供测试注入。
-// 项目 tsconfig 已 types:["vite/client"]，import.meta.env.DEV 类型安全。
-let devMode = !!import.meta.env.DEV;
+// 防御式写法：node:test (tsx) 下 import.meta.env 为 undefined，optional-chain 返回 undefined 不抛。
+let devMode =
+  typeof import.meta !== 'undefined' &&
+  !!(import.meta as any).env?.DEV;
 
 /** @internal 测试 hook —— 注入 dev/prod 模式。生产代码勿调。 */
 export function __setDevMode(v: boolean): void {

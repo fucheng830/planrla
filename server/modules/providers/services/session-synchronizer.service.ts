@@ -52,7 +52,7 @@ export const sessionSynchronizerService = {
       );
     }
 
-    console.log(`[perf] session sync took ${Math.round(performance.now() - syncT0)}ms`);
+    console.log(`[perf] session sync (batch) took ${Math.round(performance.now() - syncT0)}ms`);
 
     return {
       processedByProvider,
@@ -72,7 +72,7 @@ export const sessionSynchronizerService = {
     const sessionId = await resolvedProvider.sessionSynchronizer.synchronizeFile(filePath);
     const elapsedMs = Math.round(performance.now() - fileT0);
     if (elapsedMs > 50) {
-      console.log(`[perf] session sync took ${elapsedMs}ms`);
+      console.log(`[perf] session sync (file) took ${elapsedMs}ms`);
     }
     return {
       provider,
