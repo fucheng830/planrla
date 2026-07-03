@@ -436,7 +436,7 @@ Expected: 先跑 gen-feed 写 latest.json，再 astro build 产出 `dist/index.h
 
 ```bash
 cd ..
-git add landing/src/data/releases.ts landing/scripts/gen-feed.ts landing/public/desktop/latest.json
+git add landing/src/data/releases.ts landing/scripts/gen-feed.ts landing/public/desktop/latest.json landing/package.json
 git commit -m "feat(landing): gen-feed script + static fallback for release feed"
 ```
 
@@ -656,7 +656,7 @@ git commit -m "feat(landing): Hero section with CTAs + provider chips"
 ---
 const features = [
   { title: '多 Provider 一体化', desc: 'Claude、Codex、Gemini、Cursor 在同一工作台切换，共享会话与项目。', icon: '⇄' },
-  { title: '本地优先', desc: '本地运行模型 CLI，凭据与数据不离机；远程访问按需开启。', icon: '/local' },
+  { title: '本地优先', desc: '本地运行模型 CLI，凭据与数据不离机；远程访问按需开启。', icon: '⌂' },
   { title: '桌面原生体验', desc: 'Electron 桌面端，三态主题、自绘标题栏、系统级集成。', icon: '▥' },
   { title: '会话全文搜索', desc: 'FTS5 全文索引，跨会话毫秒级检索历史对话。', icon: '⌕' },
 ];
@@ -668,7 +668,7 @@ const features = [
     <div class="grid">
       {features.map((f) => (
         <div class="card">
-          <div class="card-icon">{f.icon}</div>
+          <div class="card-icon" aria-hidden="true">{f.icon}</div>
           <h3>{f.title}</h3>
           <p>{f.desc}</p>
         </div>
