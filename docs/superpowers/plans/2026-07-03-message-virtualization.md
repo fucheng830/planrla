@@ -188,6 +188,8 @@ virtualizer.scrollToIndex(visibleMessages.length - 1, { align: 'end' });
 > 如果 auto-scroll 在上层（ChatInterface 等，无 virtualizer 访问），需把 virtualizer 暴露（forwardRef / context）或把 scroll 逻辑移入 ChatMessagesPane。
 > 优先：scroll 逻辑在 ChatMessagesPane 内（virtualizer 可访问）。
 
+> **实际实现（E3）**：评估后保留原 `scrollContainerRef.current.scrollTop = scrollHeight`（useChatSessionState.scrollToBottom）。virtualizer 的 getScrollElement 用同 scrollContainerRef，plain scroll 仍 anchor bottom；useChatSessionState 的 RAF reflow loop（L403-434）覆盖 virtualizer measureElement 动态测量的 scrollHeight jitter。未转 scrollToIndex（避免 expose virtualizer via ref 大重构，YAGNI）。
+
 ### Step 3 — typecheck + build:client
 
 ```bash
@@ -226,7 +228,7 @@ git commit -m "feat(chat): auto scroll via virtualizer scrolltoindex"
 - [ ] useVirtualizer + measureElement 替代（动态行高）
 - [ ] 1000+ 消息滚动流畅（virtualizer 渲染可见 ~30 行）
 - [ ] 长消息（tool diffs/markdown）滚动锚点不漂移（measureElement 真实高）
-- [ ] auto-scroll to bottom 正常（virtualizer.scrollToIndex）
+- [ ] auto-scroll to bottom 正常（保留原 scrollTop=scrollHeight，同 scrollContainerRef virtualizer 用 + RAF reflow 覆盖动态测量 jitter；未转 scrollToIndex 避免 expose virtualizer 大重构）
 - [ ] session 切换 scroll-to-bottom 正常
 - [ ] loadEarlier 分页正常
 - [ ] B baseline session-switch 不回归（或改善）
