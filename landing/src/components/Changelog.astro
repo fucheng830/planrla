@@ -1,0 +1,45 @@
+---
+import { fetchReleases } from '../data/releases.ts';
+// build 时拉取（fetch 失败走 STATIC_FALLBACK，不挂构建）
+const entries = (await fetchReleases(process.env.GITHUB_TOKEN)).slice(0, 5);
+const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';
+---
+<section id="changelog" class="section">
+  <div class="container">
+    <h2 class="section-title">更新日志</h2>
+    <p class="section-subtitle">来自 GitHub Releases</p>
+    {entries.length === 0 ? (
+      <p class="empty">暂无发布记录</p>
+    ) : (
+      <ul class="log">
+        {entries.map((e) => (
+          <li class="log-item">
+            <div class="log-meta">
+              <span class="log-version">{e.version}</span>
+              <span class="log-date">{fmtDate(e.publishedAt)}</span>
+            </div>
+            <a class="log-title" href={e.htmlUrl} target="_blank" rel="noopener">{e.title}</a>
+          </li>
+        ))}
+      </ul>
+    )}
+    <p class="log-more"><a href="https://github.com/fucheng830/planrla/releases">查看全部版本 →</a></p>
+  </div>
+</section>
+
+<style>
+  .log { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--color-border); }
+  .log-item { display: flex; align-items: baseline; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+  .log-meta { min-width: 160px; display: flex; flex-direction: column; gap: 2px; }
+  .log-version { font-weight: 700; font-size: 15px; }
+  .log-date { font-size: 12px; color: var(--color-muted); }
+  .log-title { font-size: 15px; color: var(--color-fg); }
+  .log-title:hover { color: var(--color-primary); }
+  .empty { color: var(--color-muted); }
+  .log-more { margin-top: 24px; font-size: 14px; }
+  .log-more a { color: var(--color-primary); }
+  @media (max-width: 640px) {
+    .log-item { flex-direction: column; gap: 4px; }
+    .log-meta { flex-direction: row; gap: 12px; align-items: baseline; }
+  }
+</style>

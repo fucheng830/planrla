@@ -1,0 +1,38 @@
+---
+// 链接到 GitHub Release latest，自动指向最新版安装包
+const LATEST = 'https://github.com/fucheng830/planrla/releases/latest';
+const RELEASES = 'https://github.com/fucheng830/planrla/releases';
+const platforms = [
+  { label: 'Windows', detail: '.exe 安装包', href: LATEST, primary: true },
+  { label: 'macOS', detail: '即将上线', href: RELEASES, primary: false },
+  { label: 'Linux', detail: '即将上线', href: RELEASES, primary: false },
+];
+---
+<section id="download" class="section" style="background:var(--color-surface)">
+  <div class="container download-inner">
+    <h2 class="section-title">下载 Planrla</h2>
+    <p class="section-subtitle">免费开始使用，本地优先</p>
+    <div class="download-grid">
+      {platforms.map((p) => (
+        <a class={p.primary ? 'dl-card dl-card-primary' : 'dl-card'} href={p.href} target="_blank" rel="noopener">
+          <span class="dl-label">{p.label}</span>
+          <span class="dl-detail">{p.detail}</span>
+        </a>
+      ))}
+    </div>
+    <p class="download-note">所有平台安装包见 <a href={RELEASES}>GitHub Releases</a></p>
+  </div>
+</section>
+
+<style>
+  .download-inner { text-align: center; }
+  .download-grid { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .dl-card { display: flex; flex-direction: column; gap: 4px; padding: 22px 28px; border-radius: var(--radius); border: 1px solid var(--color-border); background: var(--color-bg); min-width: 160px; }
+  .dl-card-primary { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
+  .dl-card-primary:hover { background: var(--color-primary-hover); }
+  .dl-card:not(.dl-card-primary):hover { background: var(--color-surface-2); }
+  .dl-label { font-size: 17px; font-weight: 700; }
+  .dl-detail { font-size: 13px; opacity: .85; }
+  .download-note { margin-top: 24px; font-size: 13px; color: var(--color-muted); }
+  .download-note a { color: var(--color-primary); text-decoration: underline; }
+</style>
