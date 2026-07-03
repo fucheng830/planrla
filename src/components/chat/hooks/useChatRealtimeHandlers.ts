@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 import type { ServerEvent } from '../../../contexts/WebSocketContext';
@@ -9,6 +9,7 @@ import type { PendingPermissionRequest } from '../types/types';
 import type { ProjectSession, LLMProvider } from '../../../types/app';
 import type { SessionStore, NormalizedMessage } from '../../../stores/useSessionStore';
 import { measure } from '../../../shared/perf/timing';
+import { batchBySession, type BatchEntry } from '../utils/batchBySession';
 
 const isActionablePermissionRequest = (request: { toolName?: unknown } | null | undefined): boolean => {
   return request?.toolName !== 'ExitPlanMode' && request?.toolName !== 'exit_plan_mode';
@@ -91,6 +92,28 @@ export function useChatRealtimeHandlers({
   // Reset on stream_end/complete so the next response measures again.
   // Avoids ~200 misleading `[perf] first-token` log lines per long reply.
   const firstTokenLoggedRef = useRef(false);
+
+  // 非流 shouldPersist 事件批量：rAF 16ms 窗口累积，flush 时 per-session appendRealtimeBatch，
+  // 把 N 次 appendRealtime 合并为 per-session 一次 store set → 降低 re-render 频率。
+  // stream_delta 不进（已有 100ms accumulatedStream 合并）；status/permission/complete 不进（shouldPersist=false）。
+  const batchQueueRef = useRef<BatchEntry[]>([]);
+  const rafIdRef = useRef<number | null>(null);
+
+  const flushBatch = useCallback(() => {
+    rafIdRef.current = null;
+    const queue = batchQueueRef.current;
+    batchQueueRef.current = [];
+    if (queue.length === 0) return;
+    const grouped = batchBySession(queue);
+    for (const [sid, msgs] of grouped) {
+      sessionStore.appendRealtimeBatch(sid, msgs);
+    }
+  }, [sessionStore]);
+
+  const scheduleFlush = useCallback(() => {
+    if (rafIdRef.current !== null) return; // 已调度
+    rafIdRef.current = requestAnimationFrame(flushBatch);
+  }, [flushBatch]);
 
   useEffect(() => {
     pendingPermissionRequestsRef.current = pendingPermissionRequests;
@@ -224,6 +247,11 @@ export function useChatRealtimeHandlers({
           }
           sessionStore.finalizeStreaming(sid);
         }
+        // finalize 后立即 flush 批量（避免批量 tool_use 滞后于 stream finalize）
+        if (rafIdRef.current !== null) {
+          cancelAnimationFrame(rafIdRef.current);
+          flushBatch();
+        }
         accumulatedStreamRef.current = '';
         // Re-arm first-token probe so the next response's first delta is measured.
         firstTokenLoggedRef.current = false;
@@ -238,7 +266,9 @@ export function useChatRealtimeHandlers({
         && msg.kind !== 'permission_cancelled';
 
       if (sid && shouldPersist) {
-        sessionStore.appendRealtime(sid, msg as unknown as NormalizedMessage);
+        // 批量：累积到 rAF 队列，flush 时 appendRealtimeBatch（一次 set per session）
+        batchQueueRef.current.push({ sessionId: sid, msg: msg as unknown as NormalizedMessage });
+        scheduleFlush();
       }
 
       // --- UI side effects for specific kinds ---
@@ -252,6 +282,11 @@ export function useChatRealtimeHandlers({
           if (sid && accumulatedStreamRef.current) {
             sessionStore.updateStreaming(sid, accumulatedStreamRef.current, provider);
             sessionStore.finalizeStreaming(sid);
+          }
+          // finalize 后立即 flush 批量（complete 终态，避免批量消息滞后）
+          if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            flushBatch();
           }
           accumulatedStreamRef.current = '';
 
@@ -358,7 +393,15 @@ export function useChatRealtimeHandlers({
       }
     };
 
-    return subscribe(handleEvent);
+    const unsubscribe = subscribe(handleEvent);
+    return () => {
+      unsubscribe();
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      flushBatch(); // flush 残留（best-effort）
+    };
   }, [
     subscribe,
     provider,
@@ -376,5 +419,7 @@ export function useChatRealtimeHandlers({
     onSessionCompleted,
     onWebSocketReconnect,
     sessionStore,
+    flushBatch,
+    scheduleFlush,
   ]);
 }
