@@ -18,7 +18,7 @@
 ## Backlog(待细化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | 备注 |
 |----|------|--------|-----|------|------|------|
-| REQ-002 | 文件树增量加载 | M2 | P1 | perf | backlog | 避免一次性扫描大目录 |
+| REQ-002 | 文件树增量加载 | M2 | P1 | perf | released | v0.4.0(2026-07-03)破例直发,详见 [releases/v0.4.0.md](releases/v0.4.0.md) |
 | REQ-003 | 会话列表分页/缓存 | M2 | P1 | perf | backlog | |
 | REQ-004 | WebSocket 消息节流/合并 | M2 | P1 | perf | backlog | |
 | REQ-005 | Provider 诊断面板 | M3 | P1 | feat | backlog | |
