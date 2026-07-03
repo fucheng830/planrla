@@ -26,6 +26,11 @@
 | REQ-009 | 项目级工作台(需求/方案/任务/验收/归档) | — | P1 | feat | backlog | 见 PROJECT_WORKBENCH_FUNCTIONAL_REQUIREMENTS.md |
 | REQ-011 | 桌面端自动更新(auto-update 全流程) | M6 | P1 | feat | backlog | electron-updater 下载/安装/重启 + 前端更新 UI + 更新源 + latest.yml + 代码签名 + 渠道;现状只检测不下载 |
 
+## Blocked(冻结/待想清楚)
+| ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
+|----|------|---|------|------|----------|----------------------|
+| REQ-013 | 会话自动重命名(LLM 生成标题) | P2 | feat | blocked | LLM 接入未定:server 端调 Haiku 需 ANTHROPIC_API_KEY,但 Claude Code 走 OAuth 时 server 拿不到 API key。待想清楚接入方式(API key / 复用 Claude Code 凭据 / 本地 Ollama / claude-agent-sdk) + 触发时机/成本后再做 | **痛点**:现有标题=第一条消息全文(4462 中 4400 是消息片段,长/重复/无区分;codex 62 Untitled)。**方案**:Claude Haiku 读会话内容(extractSessionText 取前 N 条)生成 5-15 字主题 + 全量4462 重生成 + 增量(synchronizer hook 同搜索 Task 7 点) + 去重后缀(同 project 冲突加 #2)。**3 个 LLM 请求点**:批量(retile-all)/增量(新 session)/手动单个(:id/retile)。**成本估**:批量 ~$1.2(Haiku),增量/手动极低 |
+
 ## Released(已发版)
 | ID | 标题 | 版本 | spec |
 |----|------|------|------|
