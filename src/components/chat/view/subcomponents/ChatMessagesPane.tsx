@@ -15,7 +15,6 @@ import { getIntrinsicMessageKey } from '../../utils/messageKeys';
 import MessageComponent from './MessageComponent';
 import ProviderSelectionEmptyState from './ProviderSelectionEmptyState';
 
-const VIRTUALIZATION_THRESHOLD = 240;
 const VIRTUALIZATION_OVERSCAN = 18;
 
 interface ChatMessagesPaneProps {
@@ -278,6 +277,7 @@ export default function ChatMessagesPane({
                     left: 0,
                     width: '100%',
                     transform: `translateY(${vItem.start}px)`,
+                    paddingBottom: '0.75rem',
                   }}
                 >
                   <MessageComponent
