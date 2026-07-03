@@ -171,3 +171,7 @@ android-i18n-*.png
 .playwright-mcp/
 debug/.token
 debug/*.png
+
+# Build artifacts (landing Astro cache + packaged server tarballs)
+landing/.astro/
+*.tar.gz
