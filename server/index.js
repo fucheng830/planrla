@@ -181,6 +181,18 @@ app.get('/health', (req, res) => {
     });
 });
 
+// 性能 baseline：API 请求 latency 日志（>50ms 才记，过滤噪音）
+app.use('/api', (req, res, next) => {
+    const t0 = performance.now();
+    res.on('finish', () => {
+        const ms = Math.round(performance.now() - t0);
+        if (ms > 50) {
+            console.log(`[api] ${req.method} ${req.path} took ${ms}ms`);
+        }
+    });
+    next();
+});
+
 // Public commercial update metadata endpoint. Set NOMAD_UPDATE_CHECK_URL to a
 // JSON endpoint returning { version, title, body, htmlUrl, publishedAt }.
 app.get('/api/version/latest', async (req, res) => {
