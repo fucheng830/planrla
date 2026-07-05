@@ -25,6 +25,10 @@
 | REQ-014 | 项目右键「新需求」入口 + 需求收集流程 | — | P1 | feat | backlog | **依赖 REQ-009**(项目内需求对象);合并到 REQ-009 首切片一起做 |
 | REQ-015 | 跨对话上下文共享(总) | — | P1 | feat | backlog | 分阶段 **L1**(同主机)→**L2**(协议转换)→**L3**(跨设备)× **C1**(@引用单条)→**C2**(整段历史)→**C3**(摘要)→**C4**(持久记忆);首切片 = REQ-016(L1×C1+C2) |
 | REQ-016 | 同主机 @引用 + 整段历史(L1 × C1+C2) | — | P1 | feat | backlog | Provider 无关(纯文本注入,Claude↔Codex 同样工作,不做协议转换);复用现有 session messages API + chat mentions 基建(`useFileMentions`);不做摘要/记忆/自动同步。设计草案见 [design-drafts/req016-context-share-draft.md](./design-drafts/req016-context-share-draft.md) |
+| REQ-019 | Kanban 看板(项目任务可视化) | — | P1 | feat | backlog | **关联 REQ-009**(看板 = 项目工作台任务对象的 Kanban 视图);建议随 REQ-009 任务对象建模一起设计。**待澄清**:看板维度(状态列 / 负责人 / 优先级?)。⚠️ 编号修正:原 recap 误用 REQ-017,与已发版的 Linux Docker 撞号,改用 019 |
+| REQ-020 | A2A(Agent-to-Agent 通信/协作) | — | P2 | feat | backlog | **待澄清范围**(澄清前不进 brainstorming):(a) Google A2A 协议(agent2agent 标准化通信) / (b) planrla 内部多 Agent(Claude/Codex/Gemini session)互相对话/委派 / (c) 其他。⚠️ 编号修正:原 recap 误用 REQ-018,与已发版的 i18n+Android 撞号,改用 020 |
+| REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | — | P1 | feat | backlog | 独立 UX 专项,是 REQ-022(UX 子集),可先行。范围:打开网页预览 / 打开图片预览 / 动效 / 交互优化(对齐 Codex 视觉与交互)。⚠️ 编号修正:原 recap 误用 REQ-019,改用 021 |
+| REQ-022 | 对齐 Codex 全特性集(功能 + UX,母) | — | P2 | feat | backlog | **母需求**,含 REQ-021(UX 部分)。**需先列 Codex 特性清单 → Archie 标优先级**,再拆子 REQ;当前不直接 brainstorming。P 默认 P2(范围未定)。⚠️ 编号修正:原 recap 误用 REQ-020,改用 022 |
 
 ## Blocked(冻结/待想清楚)
 | ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
