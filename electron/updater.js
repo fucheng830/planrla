@@ -1,13 +1,17 @@
 // Electron main: electron-updater 封装。事件 → IPC push 'updater:state';
 // IPC handlers: updater:check / :download / :quit-install。
-import { ipcMain } from 'electron';
-import { autoUpdater } from 'electron-updater';
+// electron-updater 是 CommonJS,用 createRequire 拿 autoUpdater。ipcMain 不在这里
+// require(会触发 electron 的 CJS 加载,破坏入口 main.js 的 ESM named import)——
+// 改由 initAutoUpdater(mainWindow, ipcMain) 从 main.js 入口传入(入口 named import 工作)。
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { autoUpdater } = require('electron-updater');
 
 const FEED_URL = process.env.PLANRLA_UPDATE_URL || 'https://updates.planrla.com/desktop';
 
 let initialized = false;
 
-export function initAutoUpdater(mainWindow) {
+export function initAutoUpdater(mainWindow, ipcMain) {
   if (initialized) return;
   initialized = true;
 

@@ -1,7 +1,11 @@
 // Electron main process for Planrla Desktop (ESM — package.json is type:module).
 // Spawns the bundled Planrla server as a child using Electron's node ABI
 // (ELECTRON_RUN_AS_NODE) so native modules match, then loads the UI in a window.
-import { app, BrowserWindow, Menu, ipcMain, safeStorage } from 'electron';
+// electron 是 CJS(npm 包 index.js 只 export exe 路径;运行时 require('electron') 才被
+// electron 拦截返回 API)。ESM named import 拿不到 API —— 用 createRequire 走 CJS require。
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { app, BrowserWindow, Menu, ipcMain, safeStorage } = require('electron');
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +13,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { readThemeCache, writeThemeCache } from './themeCache.cjs';
+import { initAutoUpdater } from './updater.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Planrla';
@@ -26,32 +31,6 @@ if (process.platform === 'win32') {
 function resolveAppIcon() {
   const iconPath = path.join(__dirname, '..', 'public', 'logo-512.png');
   return fs.existsSync(iconPath) ? iconPath : undefined;
-}
-
-async function setupAutoUpdater() {
-  if (process.env.ELECTRON_DEV_URL) return;
-
-  try {
-    const updaterMod = await import('electron-updater');
-    // CJS package re-exported via dynamic import: autoUpdater may live on the
-    // namespace or under .default depending on the bundler/ESM interop layer.
-    const autoUpdater = updaterMod.autoUpdater || updaterMod.default?.autoUpdater;
-    if (!autoUpdater) throw new Error('electron-updater did not export autoUpdater');
-    const updateFeedUrl = process.env.PLANRLA_UPDATE_URL;
-
-    autoUpdater.autoDownload = false;
-    if (updateFeedUrl) {
-      autoUpdater.setFeedURL({ provider: 'generic', url: updateFeedUrl });
-    }
-
-    autoUpdater.on('error', (error) => console.error('[desktop:update] error:', error?.message || error));
-    autoUpdater.on('update-available', (info) => console.log('[desktop:update] available:', info.version));
-    autoUpdater.on('update-not-available', (info) => console.log('[desktop:update] current:', info.version));
-
-    await autoUpdater.checkForUpdates();
-  } catch (error) {
-    console.error('[desktop:update] failed to initialize:', error?.message || error);
-  }
 }
 
 // ---- Cloud-account JWT (api.planrla.com) persisted via safeStorage ----
@@ -187,7 +166,7 @@ app.whenReady().then(async () => {
   try {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
     createWindow();
-    await setupAutoUpdater();
+    if (!process.env.ELECTRON_DEV_URL) initAutoUpdater(mainWindow, ipcMain);
   } catch (e) {
     console.error('[desktop] failed to start:', e);
     app.quit();
