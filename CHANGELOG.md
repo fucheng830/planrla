@@ -3,6 +3,28 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.6.0](https://github.com/fucheng830/planrla/compare/v0.5.0...v0.6.0) (2026-07-05)
+
+### New Features
+
+* **req011:** add UpdaterState type and window.updater declaration ([224158c](https://github.com/fucheng830/planrla/commit/224158c12f601978519eb189091a3123d2bb9f83))
+* **req011:** main-side electron-updater module ([c849fb2](https://github.com/fucheng830/planrla/commit/c849fb294693f13ba0ef36b03ed81eb5a6068ec9))
+* **req011:** mount UpdateNotification + Settings about section ([915aa77](https://github.com/fucheng830/planrla/commit/915aa77fffafecdd170a6a8126988aa7d7c99264))
+* **req011:** publish-r2 script (wrangler upload latest.yml + exe + zip + blockmap) ([497fde8](https://github.com/fucheng830/planrla/commit/497fde8abf692b79644c9d37402315d8416ca03e))
+* **req011:** update notification UI component ([1867710](https://github.com/fucheng830/planrla/commit/1867710573a4fd653a4533dcec29551abba2d911))
+* **req011:** useAutoUpdater hook ([182024a](https://github.com/fucheng830/planrla/commit/182024a21b2e1fd09a8591f41e1c914929d72583))
+* **req011:** wire auto-updater IPC bridge (main + preload + updater) ([b57f195](https://github.com/fucheng830/planrla/commit/b57f195702b2fba79e21b2848f6cab409cc32e29))
+
+### Documentation
+
+* **backlog:** mark REQ-011 doing (Tasks 1-8 merged, Task 9 R2 pending) ([69926eb](https://github.com/fucheng830/planrla/commit/69926eb42b6b47daa1056c7a242d6725991df3e4))
+* **release:** v0.5.0 note + REQ-017/018 released ([4fd3dda](https://github.com/fucheng830/planrla/commit/4fd3dda6d4a779d3664e74cf7a0311597fd547ea))
+* **req011:** publish:update script + release-checklist R2 step + NOMAD→PLANRLA rename ([bfecb8f](https://github.com/fucheng830/planrla/commit/bfecb8f14352c373e28ea56533b434f4219cb2a3))
+
+### Maintenance
+
+* **scripts:** auto-sync native ABI via prescripts (no more manual sync:node/electron) ([f308744](https://github.com/fucheng830/planrla/commit/f308744c7b6e74a9e8f6488d746bcc59744b16d4))
+
 ## [0.5.0](https://github.com/fucheng830/planrla/compare/v0.4.1...v0.5.0) (2026-07-05)
 
 ### New Features
