@@ -22,7 +22,7 @@
 | REQ-007 | 桌面更新渠道(stable/beta/internal) | M6 | P1 | feat | backlog | |
 | REQ-008 | Android 多主机扫描/管理恢复 | M4 | P0 | feat | backlog | 状态待核对(近期 Android 工作) |
 | REQ-009 | 项目级工作台(需求/方案/任务/验收/归档) | — | P1 | feat | backlog | **首切片:需求对象模型 + REQ-014 入口**;见 PROJECT_WORKBENCH_FUNCTIONAL_REQUIREMENTS.md |
-| REQ-011 | 桌面端自动更新(auto-update 全流程) | M6 | P1 | feat | backlog | electron-updater 下载/安装/重启 + 前端更新 UI + 更新源 + latest.yml + 代码签名 + 渠道;现状只检测不下载 |
+| REQ-011 | 桌面端自动更新(auto-update 全流程) | M6 | P1 | feat | doing | Tasks 1-8 merged to main(`57a3919`):updater 模块 + IPC bridge + `UpdateNotification` UI + `useAutoUpdater` hook + `publish-r2` 脚本 + 文档。**Task 9 待做**:R2 bucket `planrla-updates` + 绑 `updates.planrla.com` + 首次 `npm run publish:update` + 降版本 e2e 验证。代码已上 main,**更新源没建,用户暂检测不到** |
 | REQ-014 | 项目右键「新需求」入口 + 需求收集流程 | — | P1 | feat | backlog | **依赖 REQ-009**(项目内需求对象);合并到 REQ-009 首切片一起做 |
 | REQ-015 | 跨对话上下文共享(总) | — | P1 | feat | backlog | 分阶段 **L1**(同主机)→**L2**(协议转换)→**L3**(跨设备)× **C1**(@引用单条)→**C2**(整段历史)→**C3**(摘要)→**C4**(持久记忆);首切片 = REQ-016(L1×C1+C2) |
 | REQ-016 | 同主机 @引用 + 整段历史(L1 × C1+C2) | — | P1 | feat | backlog | Provider 无关(纯文本注入,Claude↔Codex 同样工作,不做协议转换);复用现有 session messages API + chat mentions 基建(`useFileMentions`);不做摘要/记忆/自动同步。设计草案见 [design-drafts/req016-context-share-draft.md](./design-drafts/req016-context-share-draft.md) |
