@@ -31,7 +31,11 @@
 ## ⑥ 上传(后台,大文件 5-10 分钟)
 - [ ] `gh release upload v0.x.x release/planrla-<ver>-x64.{exe,zip} --clobber`
 
-## ⑦ 记录
+## ⑦ R2 更新源(让打包版 electron-updater 能下载)
+- [ ] `npm run publish:update`(上传 `latest.yml` + exe + zip + blockmap 到 R2 `planrla-updates` bucket 的 `desktop/` 前缀)
+- [ ] 确认 `https://updates.planrla.com/desktop/latest.yml` HTTP 200 + `version:` 字段正确
+
+## ⑧ 记录
 - [ ] 写 `docs/process/releases/v0.x.x.md`(版本+主题+需求+验收摘要+产物链接+已知问题+回退方案+下版本预告)
 - [ ] BACKLOG:本主题条目 `accepted → released`,填版本号
 - [ ] (可选)push 触发 Cloudflare 重建 landing `latest.json`
