@@ -2,6 +2,7 @@ import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IS_PLATFORM } from '../../../../constants/config';
 import { useVersionCheck } from '../../../../hooks/useVersionCheck';
+import { useAutoUpdater } from '../../../../hooks/useAutoUpdater';
 import PremiumFeatureCard from '../PremiumFeatureCard';
 import { Cloud, Users } from 'lucide-react';
 
@@ -21,6 +22,10 @@ export default function AboutTab() {
   const { t } = useTranslation('settings');
   const { updateAvailable, latestVersion, currentVersion, releaseInfo } = useVersionCheck('fucheng830', 'planrla');
   const releasesUrl = releaseInfo?.htmlUrl || NOMAD_URL;
+  // Desktop auto-updater (REQ-011). Only packaged desktop mode has window.updater
+  // (injected by electron/preload.cjs); web/git mode falls back to useVersionCheck above.
+  const isDesktop = typeof window !== 'undefined' && !!window.updater;
+  const { state: desktopUpdate, check, download, quitInstall } = useAutoUpdater();
 
   return (
     <div className="space-y-6">
@@ -55,6 +60,65 @@ export default function AboutTab() {
           </p>
         </div>
       </div>
+
+      {/* Desktop auto-update controls (packaged mode only, REQ-011) */}
+      {isDesktop && (
+        <div className="rounded-xl border border-border/50 bg-muted/30 p-4 space-y-2">
+          <h4 className="text-sm font-medium text-foreground">Updates</h4>
+          {desktopUpdate.state === 'idle' && (
+            <button
+              onClick={() => check()}
+              className="rounded-md border border-border px-3 py-1 text-xs text-foreground transition-colors hover:bg-muted"
+            >
+              Check for updates
+            </button>
+          )}
+          {desktopUpdate.state === 'checking' && (
+            <div className="text-xs text-muted-foreground">Checking for updates…</div>
+          )}
+          {desktopUpdate.state === 'available' && (
+            <div className="space-y-1">
+              <div className="text-xs text-foreground">New version {desktopUpdate.version} available</div>
+              <button
+                onClick={() => download()}
+                className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Download
+              </button>
+            </div>
+          )}
+          {desktopUpdate.state === 'not-available' && (
+            <div className="text-xs text-muted-foreground">You're on the latest version.</div>
+          )}
+          {desktopUpdate.state === 'downloading' && (
+            <div className="space-y-1">
+              <div className="text-xs text-foreground">Downloading… {desktopUpdate.percent}%</div>
+              <div className="h-1.5 w-full overflow-hidden rounded bg-muted">
+                <div className="h-1.5 rounded bg-primary" style={{ width: `${desktopUpdate.percent}%` }} />
+              </div>
+            </div>
+          )}
+          {desktopUpdate.state === 'downloaded' && (
+            <button
+              onClick={() => quitInstall()}
+              className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Restart and install
+            </button>
+          )}
+          {desktopUpdate.state === 'error' && (
+            <div className="space-y-1">
+              <div className="text-xs text-red-500">Update failed: {desktopUpdate.message}</div>
+              <button
+                onClick={() => check()}
+                className="rounded-md border border-border px-3 py-1 text-xs text-foreground transition-colors hover:bg-muted"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Links */}
       <div className="flex flex-wrap gap-4 text-sm">

@@ -21,3 +21,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   platform: process.platform,
 });
+
+// Auto-updater bridge (REQ-011). Renderer useAutoUpdater hook reads state via
+// onState push; check/download/quitInstall are fire-and-forget invoke.
+contextBridge.exposeInMainWorld('updater', {
+  check: () => ipcRenderer.invoke('updater:check'),
+  download: () => ipcRenderer.invoke('updater:download'),
+  quitInstall: () => ipcRenderer.invoke('updater:quit-install'),
+  onState: (fn) => {
+    const handler = (_e, payload) => fn(payload);
+    ipcRenderer.on('updater:state', handler);
+    return () => ipcRenderer.removeListener('updater:state', handler);
+  },
+});

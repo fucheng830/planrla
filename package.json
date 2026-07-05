@@ -54,7 +54,8 @@
     "prepare": "husky",
     "update:platform": "./update-platform.sh",
     "sync:electron": "node scripts/sync-native-abi.js --target=electron",
-    "sync:node": "node scripts/sync-native-abi.js --target=node"
+    "sync:node": "node scripts/sync-native-abi.js --target=node",
+    "publish:update": "node scripts/publish-r2.js"
   },
   "build": {
     "appId": "cc.planrla.desktop",
