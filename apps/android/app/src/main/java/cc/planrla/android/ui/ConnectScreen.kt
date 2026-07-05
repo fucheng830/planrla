@@ -92,7 +92,7 @@ class ConnectViewModel : ViewModel() {
         // Account session (preferred): JWT from api.planrla.com account login.
         val jwt = App.tokenStore.accountJwtSync()
         if (jwt != null && s != null) {
-            runCatching {
+            val restored = runCatching {
                 val devs = App.api(s).account.devices("Bearer $jwt").devices
                 if (devs.isNotEmpty()) {
                     val existing = App.tokenStore.devicesSync().associateBy { it.id }
@@ -100,16 +100,42 @@ class ConnectViewModel : ViewModel() {
                         val ex = existing[d.id]
                         Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
                     })
-                    val cur = App.tokenStore.currentDevice()?.token ?: devs.first().token
-                    App.tokenHolder.relayToken = cur
+                    if (App.tokenStore.currentDeviceIdSync() == null) {
+                        App.tokenStore.setCurrentDevice(devs.first().id)
+                    }
+                    val current = App.tokenStore.currentDevice()
+                    if (current != null && !current.lan.isNullOrBlank()) {
+                        App.applyDeviceSelection(current)
+                        true
+                    } else {
+                        App.tokenStore.clear()
+                        App.tokenHolder.token = null
+                        App.tokenHolder.relayToken = null
+                        _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
+                        false
+                    }
+                } else {
+                    App.tokenStore.setDevices(emptyList())
+                    App.tokenStore.clear()
+                    App.tokenHolder.token = null
+                    App.tokenHolder.relayToken = null
+                    _err.value = App.appContext.getString(R.string.connect_error_no_devices)
+                    false
                 }
-            }
+            }.getOrDefault(false)
+            if (!restored) return false
             _state.value = State.LoggedIn(s); return true
         }
         // Legacy: direct planrla token or relay device token.
         val t = App.tokenStore.tokenSync()
         val r = App.tokenStore.relayTokenSync()
         if (s == null || (t == null && r == null)) return false
+        if (t == null && r != null) {
+            App.tokenStore.clear()
+            App.tokenHolder.relayToken = null
+            _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
+            return false
+        }
         t?.let { App.tokenHolder.token = it }
         r?.let { App.tokenHolder.relayToken = it }
         if (r != null && App.tokenStore.devicesSync().isEmpty() && App.tokenStore.currentDeviceIdSync() == null) {
@@ -117,6 +143,7 @@ class ConnectViewModel : ViewModel() {
             App.tokenStore.upsertDevice(Device(id = id, name = App.appContext.getString(R.string.connect_default_device_name), token = id))
             App.tokenStore.setCurrentDevice(id)
         }
+        App.applyCurrentDeviceSelection()
         _state.value = State.LoggedIn(s); return true
     }
 
@@ -135,11 +162,19 @@ class ConnectViewModel : ViewModel() {
                         Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token)
                     })
                     App.tokenStore.setCurrentDevice(devs.first().id)
-                    App.tokenHolder.relayToken = devs.first().token
+                    App.tokenStore.clear()
+                    App.tokenHolder.token = null
+                    App.tokenHolder.relayToken = null
+                    _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
+                    _state.value = State.Input
                 } else {
+                    App.tokenStore.setDevices(emptyList())
+                    App.tokenStore.clear()
+                    App.tokenHolder.token = null
+                    App.tokenHolder.relayToken = null
                     _err.value = App.appContext.getString(R.string.connect_error_no_devices)
+                    _state.value = State.Input
                 }
-                _state.value = State.LoggedIn(srv)
             } catch (e: Exception) {
                 _err.value = e.message ?: App.appContext.getString(R.string.connect_error_login_failed)
                 _state.value = State.Input
@@ -154,18 +189,18 @@ class ConnectViewModel : ViewModel() {
             try {
                 App.tokenStore.setServer(norm)
                 if (relay.isNotBlank()) {
-                    // Relay mode: the home agent authenticates to the local planrla; the App
-                    // only carries the relay device token, so no /login call is needed here.
-                    App.tokenHolder.relayToken = relay
                     App.tokenStore.setRelayToken(relay)
                     val id = relay.trim()
                     App.tokenStore.upsertDevice(Device(id = id, name = App.appContext.getString(R.string.connect_default_device_name), token = id))
                     App.tokenStore.setCurrentDevice(id)
-                    _state.value = State.LoggedIn(norm)
+                    App.tokenHolder.token = null
+                    App.tokenHolder.relayToken = null
+                    _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
+                    _state.value = State.Input
                     return@launch
                 }
                 val r = App.api(norm).auth.login(LoginRequest(user, pass))
-                val tok = r.token ?: throw IllegalStateException("no token in response")
+                val tok = r.token ?: throw IllegalStateException("响应中没有令牌")
                 App.tokenHolder.token = tok
                 App.tokenHolder.relayToken = null
                 App.tokenStore.setToken(tok)
@@ -182,6 +217,7 @@ class ConnectViewModel : ViewModel() {
                     )
                 )
                 App.tokenStore.setCurrentDevice(id)
+                App.applyCurrentDeviceSelection()
                 _state.value = State.LoggedIn(norm)
             } catch (e: Exception) {
                 _err.value = e.message ?: App.appContext.getString(R.string.connect_error_login_failed)
@@ -310,7 +346,7 @@ fun ConnectScreen(
                             label = stringResource(R.string.connect_email),
                             value = email,
                             onChange = { email = it },
-                            placeholder = "you@example.com",
+                            placeholder = stringResource(R.string.connect_email_placeholder),
                             ime = ImeAction.Next,
                             enabled = !loading,
                         )

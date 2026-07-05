@@ -16,7 +16,7 @@ interface CloudAuthResponse {
   user: CloudUser;
 }
 
-interface CloudDevice {
+export interface CloudDevice {
   id: string;
   token: string;
   name: string;

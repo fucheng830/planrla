@@ -7,7 +7,8 @@
     "showDiff": "显示差异高亮",
     "settings": "编辑器设置",
     "collapse": "折叠编辑器",
-    "expand": "展开编辑器到全宽"
+    "expand": "展开编辑器到全宽",
+    "resize": "拖动调整大小"
   },
   "loading": "正在加载 {{fileName}}...",
   "header": {
@@ -25,7 +26,7 @@
   "footer": {
     "lines": "行数：",
     "characters": "字符数：",
-    "shortcuts": "按 Ctrl+S 保存 • Esc 关闭"
+    "shortcuts": "按控制键+S 保存 • 退出键关闭"
   },
   "binaryFile": {
     "title": "二进制文件",

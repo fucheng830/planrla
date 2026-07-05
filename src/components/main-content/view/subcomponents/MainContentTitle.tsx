@@ -29,18 +29,18 @@ function getTabTitle(activeTab: AppTab, shouldShowTasksTab: boolean, t: (key: st
   }
 
   if (activeTab === 'browser') {
-    return 'Browser';
+    return t('tabs.browser');
   }
 
-  return 'Project';
+  return t('mainContent.project');
 }
 
-function getSessionTitle(session: ProjectSession): string {
+function getSessionTitle(session: ProjectSession, t: (key: string) => string): string {
   if (session.__provider === 'cursor') {
-    return (session.name as string) || 'Untitled Session';
+    return (session.name as string) || t('mainContent.untitledSession');
   }
 
-  return (session.summary as string) || 'New Session';
+  return (session.summary as string) || t('mainContent.newSession');
 }
 
 export default function MainContentTitle({
@@ -71,7 +71,7 @@ export default function MainContentTitle({
         {activeTab === 'chat' && selectedSession ? (
           <div className="min-w-0">
             <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-sm font-semibold leading-tight text-foreground">
-              {getSessionTitle(selectedSession)}
+              {getSessionTitle(selectedSession, t)}
             </h2>
             <div className="truncate text-[11px] leading-tight text-muted-foreground">{selectedProject.displayName}</div>
           </div>

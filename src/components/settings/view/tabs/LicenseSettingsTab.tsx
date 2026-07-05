@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Loader2, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 
 import { authenticatedFetch } from '../../../../utils/api';
@@ -17,14 +18,8 @@ type LicenseStatus = {
   error?: string;
 };
 
-const statusLabels: Record<LicenseStatus['status'], string> = {
-  active: 'Active',
-  expired: 'Expired',
-  invalid: 'Invalid',
-  unlicensed: 'Unlicensed',
-};
-
 export default function LicenseSettingsTab() {
+  const { t } = useTranslation('settings');
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [licenseKey, setLicenseKey] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +33,7 @@ export default function LicenseSettingsTab() {
       const data = await response.json();
       setLicense(data.license);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to load license status');
+      setMessage(error instanceof Error ? error.message : t('licenseSettings.errors.loadStatus'));
     } finally {
       setIsLoading(false);
     }
@@ -59,12 +54,12 @@ export default function LicenseSettingsTab() {
         body: JSON.stringify({ licenseKey: licenseKey.trim() }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Activation failed');
+      if (!response.ok) throw new Error(data.error || t('licenseSettings.errors.activationFailed'));
       setLicense(data.license);
       setLicenseKey('');
-      setMessage('License activated.');
+      setMessage(t('licenseSettings.messages.activated'));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Activation failed');
+      setMessage(error instanceof Error ? error.message : t('licenseSettings.errors.activationFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -76,11 +71,11 @@ export default function LicenseSettingsTab() {
     try {
       const response = await authenticatedFetch('/api/license/activate', { method: 'DELETE' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to remove license');
+      if (!response.ok) throw new Error(data.error || t('licenseSettings.errors.removeFailed'));
       setLicense(data.license);
-      setMessage('License removed.');
+      setMessage(t('licenseSettings.messages.removed'));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to remove license');
+      setMessage(error instanceof Error ? error.message : t('licenseSettings.errors.removeFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -97,8 +92,8 @@ export default function LicenseSettingsTab() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle>Commercial License</CardTitle>
-              <CardDescription>Activate and review this installation&apos;s commercial license.</CardDescription>
+              <CardTitle>{t('licenseSettings.title')}</CardTitle>
+              <CardDescription>{t('licenseSettings.description')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -106,26 +101,26 @@ export default function LicenseSettingsTab() {
           {isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading license status…
+              {t('licenseSettings.loading')}
             </div>
           ) : (
             <div className="rounded-lg border border-border p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   {isActive ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-amber-500" />}
-                  <span className="font-medium">{statusLabels[license?.status || 'unlicensed']}</span>
+                  <span className="font-medium">{t(`licenseSettings.status.${license?.status || 'unlicensed'}`)}</span>
                   <Badge variant={isActive ? 'default' : 'secondary'}>
-                    {license?.plan || 'No plan'}
+                    {license?.plan || t('licenseSettings.noPlan')}
                   </Badge>
                 </div>
-                {license?.source && <span className="text-xs text-muted-foreground">Source: {license.source}</span>}
+                {license?.source && <span className="text-xs text-muted-foreground">{t('licenseSettings.source', { source: license.source })}</span>}
               </div>
 
               <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-                <div>Customer: <span className="text-foreground">{license?.customer || '—'}</span></div>
-                <div>Seats: <span className="text-foreground">{license?.seats ?? '—'}</span></div>
-                <div>Issued: <span className="text-foreground">{license?.issuedAt || '—'}</span></div>
-                <div>Expires: <span className="text-foreground">{license?.expiresAt || 'Never'}</span></div>
+                <div>{t('licenseSettings.customer')}: <span className="text-foreground">{license?.customer || '—'}</span></div>
+                <div>{t('licenseSettings.seats')}: <span className="text-foreground">{license?.seats ?? '—'}</span></div>
+                <div>{t('licenseSettings.issued')}: <span className="text-foreground">{license?.issuedAt || '—'}</span></div>
+                <div>{t('licenseSettings.expires')}: <span className="text-foreground">{license?.expiresAt || t('licenseSettings.never')}</span></div>
               </div>
 
               {license?.features && license.features.length > 0 && (
@@ -139,14 +134,14 @@ export default function LicenseSettingsTab() {
               {license?.error && <p className="mt-4 text-sm text-destructive">{license.error}</p>}
               {license?.requireLicense && !isActive && (
                 <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
-                  License enforcement is enabled. Activate a valid license to use protected APIs.
+                  {t('licenseSettings.enforcementEnabled')}
                 </p>
               )}
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">License key</label>
+            <label className="text-sm font-medium">{t('licenseSettings.licenseKey')}</label>
             <textarea
               value={licenseKey}
               onChange={(event) => setLicenseKey(event.target.value)}
@@ -161,11 +156,11 @@ export default function LicenseSettingsTab() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={activateLicense} disabled={isSaving || !licenseKey.trim()}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Activate license
+              {t('licenseSettings.activate')}
             </Button>
             <Button variant="outline" onClick={removeLicense} disabled={isSaving || !license || license.status === 'unlicensed'}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Remove license
+              {t('licenseSettings.remove')}
             </Button>
           </div>
         </CardContent>

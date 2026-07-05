@@ -34,7 +34,21 @@
     "readFile": "读取文件",
     "updateTodo": "更新待办列表",
     "readTodo": "读取待办列表",
-    "searchResults": "结果"
+    "searchResults": "结果",
+    "rawParams": "原始参数"
+  },
+  "commandMenu": {
+    "noCommands": "没有可用命令",
+    "availableCommands": "可用命令"
+  },
+  "subagent": {
+    "agent": "智能体",
+    "runningTask": "正在执行任务",
+    "title": "子智能体 / {{type}}：{{description}}",
+    "currently": "当前：",
+    "completed": "已完成（{{count}} 个工具）",
+    "viewHistory": "查看工具历史（{{count}}）",
+    "error": "（错误）"
   },
   "search": {
     "found": "找到 {{count}} 个{{type}}",
@@ -55,6 +69,15 @@
   },
   "interactive": {
     "title": "交互式提示",
+    "needsInput": "Claude 需要你的输入",
+    "selectAll": "可多选",
+    "other": "其他...",
+    "answerPlaceholder": "输入你的回答...",
+    "skip": "跳过",
+    "skipAll": "全部跳过",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交",
     "waiting": "等待您在 CLI 中响应",
     "instruction": "请在 Claude 运行的终端中选择一个选项。",
     "selectedOption": "✓ Claude 选择了选项 {{number}}",
@@ -97,7 +120,11 @@
   },
   "plan": {
     "viewPlan": "📋 查看实施计划",
-    "title": "实施计划"
+    "title": "实施计划",
+    "toggle": "展开或收起计划",
+    "generating": "正在生成计划...",
+    "revise": "修改",
+    "build": "开始执行"
   },
   "usageLimit": {
     "resetAt": "Claude 使用限制已达到。您的限制将在 **{{time}} {{timezone}}** - {{date}} 重置"
@@ -126,14 +153,15 @@
     "disabled": "输入已禁用",
     "attachFiles": "附加文件",
     "attachImages": "附加图片",
+    "removeImage": "移除图片",
     "dropImagesHere": "将图片拖放到这里",
     "send": "发送",
     "stop": "停止",
     "hintText": {
-      "ctrlEnter": "Ctrl+Enter 发送 • Shift+Enter 换行 • Tab 切换模式 • / 斜杠命令",
-      "enter": "Enter 发送 • Shift+Enter 换行 • Tab 切换模式 • / 斜杠命令"
+      "ctrlEnter": "控制键+回车发送 • 上档键+回车换行 • 制表键切换模式 • / 斜杠命令",
+      "enter": "回车发送 • 上档键+回车换行 • 制表键切换模式 • / 斜杠命令"
     },
-    "clickToChangeMode": "点击更改权限模式（或在输入框中按 Tab）",
+    "clickToChangeMode": "点击更改权限模式（或在输入框中按制表键）",
     "showAllCommands": "显示所有命令",
     "clearInput": "清空输入",
     "scrollToBottom": "滚动到底部"
@@ -204,7 +232,7 @@
       "fileContents": "包含文件内容。",
       "quickTip": "快捷提示",
       "quickTipPrefix": "在输入框输入",
-      "quickTipSuffix": "打开命令面板，然后用方向键和 Enter 运行命令。",
+      "quickTipSuffix": "打开命令面板，然后用方向键和回车运行命令。",
       "fallbackCommands": {
         "models": "浏览当前服务的可用模型。",
         "cost": "查看当前会话的令牌用量。",
@@ -259,7 +287,7 @@
       "healthy": "正常"
     },
     "closeAria": "关闭命令结果弹窗",
-    "escCloses": "Esc 关闭弹窗。",
+    "escCloses": "按退出键关闭弹窗。",
     "close": "关闭"
   },
   "session": {
@@ -306,7 +334,16 @@
     "resumeSession": "恢复会话：{{displayName}}...",
     "runCommand": "在 {{projectName}} 中运行 {{command}}",
     "startCli": "在 {{projectName}} 中启动 Claude 命令行工具",
-    "defaultCommand": "命令"
+    "defaultCommand": "命令",
+    "authUrl": {
+      "description": "打开或复制登录链接：",
+      "hide": "隐藏",
+      "inputLabel": "登录链接",
+      "open": "打开链接",
+      "copy": "复制链接",
+      "copied": "已复制",
+      "show": "显示登录链接"
+    }
   },
   "claudeStatus": {
     "actions": {
@@ -329,7 +366,7 @@
     },
     "controls": {
       "stopGeneration": "停止生成",
-      "pressEscToStop": "可随时按 Esc 停止"
+      "pressEscToStop": "可随时按退出键停止"
     },
     "providers": {
       "assistant": "助手"

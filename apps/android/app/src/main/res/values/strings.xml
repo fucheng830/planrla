@@ -6,9 +6,10 @@
     <string name="connect_mode_remote_subtitle">via api.planrla.com</string>
     <string name="connect_mode_direct">Direct Connect</string>
     <string name="connect_mode_direct_subtitle">Desktop URL</string>
-    <string name="connect_remote_description">Sign in to api.planrla.com to reach your running Desktop from anywhere.</string>
+    <string name="connect_remote_description">Sign in to api.planrla.com to find registered Desktops; the full relay path still requires Desktop to connect to the relay service.</string>
     <string name="connect_direct_description">Enter a Desktop URL on your LAN or server.</string>
     <string name="connect_email">Email</string>
+    <string name="connect_email_placeholder">you@example.com</string>
     <string name="connect_password">Password</string>
     <string name="connect_password_placeholder">Enter your password</string>
     <string name="connect_account_no_account">No account?</string>
@@ -17,7 +18,7 @@
     <string name="connect_account_go_login">Sign in</string>
     <string name="connect_login_find_devices">Sign in &amp; find devices</string>
     <string name="connect_signup_find_devices">Create account &amp; find devices</string>
-    <string name="connect_remote_hint">Your Desktop must be online and signed in.</string>
+    <string name="connect_remote_hint">Your Desktop must be online and connected to the Remote Access relay service.</string>
     <string name="connect_scanning">Scanning…</string>
     <string name="connect_scan_lan">Scan LAN Desktop</string>
     <string name="connect_host_version">version %1$s</string>
@@ -30,6 +31,7 @@
     <string name="connect_direct_button">Connect Desktop</string>
     <string name="connect_cloud_disclaimer">Planrla does not run your agent in the cloud — it connects to your Desktop.</string>
     <string name="connect_error_no_devices">No devices are linked to this account. Turn on Remote Access in Desktop first, or add a host manually.</string>
+    <string name="connect_error_remote_not_ready">Registered Desktops were found, but the full relay path is not connected yet. Use Direct Connect for now.</string>
     <string name="connect_error_login_failed">Sign in failed</string>
     <string name="connect_error_scan_failed">Scan failed</string>
     <string name="connect_default_device_name">Device</string>
@@ -80,6 +82,7 @@
     <string name="settings_host_edit_title">Edit Desktop</string>
     <string name="settings_host_delete_label">Desktop \"%1$s\"</string>
     <string name="settings_unnamed_host">Unnamed Desktop</string>
+    <string name="settings_default_host_name">Desktop</string>
     <string name="settings_current">current</string>
     <string name="settings_relay_device">Remote Access device</string>
     <string name="settings_use">Use</string>
@@ -250,4 +253,8 @@
     <string name="extensions_plugins">Plugins</string>
     <string name="extensions_taskmaster">TaskMaster</string>
     <string name="shell_loading">Loading shell…</string>
+    <string name="shell_connecting">Connecting to shell…</string>
+    <string name="shell_bad_url">bad URL</string>
+    <string name="shell_disconnected">disconnected</string>
+    <string name="shell_ws_error">WebSocket error</string>
 </resources>

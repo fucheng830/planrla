@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronsUpDown, FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Card,
@@ -37,6 +38,7 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
   rawContent,
   toolName: _toolName,
 }) => {
+  const { t } = useTranslation('chat');
   const permissionCtx = usePermission();
 
   const pendingRequest = permissionCtx?.pendingPermissionRequests.find(
@@ -71,7 +73,7 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
           </div>
           <CollapsibleTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
             <ChevronsUpDown className="h-4 w-4" />
-            <span className="sr-only">Toggle plan</span>
+            <span className="sr-only">{t('plan.toggle')}</span>
           </CollapsibleTrigger>
         </CardHeader>
 
@@ -85,7 +87,7 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
               />
             ) : isStreaming ? (
               <div className="py-2">
-                <Shimmer>Generating plan...</Shimmer>
+                <Shimmer>{t('plan.generating')}</Shimmer>
               </div>
             ) : null}
 
@@ -100,7 +102,7 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  raw params
+                  {t('tools.rawParams')}
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <pre className="mt-1 overflow-hidden whitespace-pre-wrap break-words rounded border border-border/40 bg-muted p-2 font-mono text-[11px] text-muted-foreground">
@@ -121,10 +123,10 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
               onClick={handleRevise}
               className="text-muted-foreground"
             >
-              Revise
+              {t('plan.revise')}
             </Button>
             <Button size="sm" onClick={handleBuild}>
-              Build{' '}
+              {t('plan.build')}{' '}
               <kbd className="ml-1 rounded bg-primary-foreground/20 px-1 py-0.5 font-mono text-[10px]">
                 ⌘↩
               </kbd>

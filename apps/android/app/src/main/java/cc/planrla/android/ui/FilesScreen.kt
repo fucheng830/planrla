@@ -109,6 +109,19 @@ private fun isBinary(path: String): Boolean = extOf(path) in BinaryExts
 
 /** Upper bound for in-memory image decode; bigger files are rejected. */
 private const val MaxImageBytes = 5L * 1024 * 1024
+private const val FileMessagePrefix = "\u001Efile:"
+private const val FileMessageSeparator = "\u001F"
+
+private fun fileMessage(code: String, value: String = ""): String =
+    "$FileMessagePrefix$code$FileMessageSeparator$value"
+
+private fun fileMessageCode(message: String): String? =
+    message.takeIf { it.startsWith(FileMessagePrefix) }
+        ?.removePrefix(FileMessagePrefix)
+        ?.substringBefore(FileMessageSeparator)
+
+private fun fileMessageValue(message: String): String =
+    message.removePrefix(FileMessagePrefix).substringAfter(FileMessageSeparator, "")
 
 data class FileContent(
     val path: String,
@@ -166,7 +179,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             return
         }
         if (isBinary(path)) {
-            _content.value = FileContent(path, "(binary file — preview not available)", false)
+            _content.value = FileContent(path, fileMessage("binary"), false)
             return
         }
         viewModelScope.launch {
@@ -177,7 +190,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             }.onSuccess { raw ->
                 val capped = if (raw.length > 200_000) raw.take(200_000) + "\n…(truncated)" else raw
                 _content.value = FileContent(path, capped, false, truncated = raw.length > 200_000)
-            }.onFailure { _content.value = FileContent(path, "Error: ${it.message}", false) }
+            }.onFailure { _content.value = FileContent(path, fileMessage("error", it.message ?: ""), false) }
         }
     }
 
@@ -209,7 +222,7 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             }.onSuccess { bytes ->
                 _content.value = FileContent(path, null, false, bytes = bytes)
             }.onFailure { e ->
-                val msg = if (e is IllegalStateException) "Image too large (>${MaxImageBytes / 1024 / 1024}MB)" else "Error: ${e.message ?: "加载失败"}"
+                val msg = if (e is IllegalStateException) fileMessage("image_too_large") else fileMessage("error", e.message ?: "加载失败")
                 _content.value = FileContent(path, msg, false)
             }
         }
@@ -227,11 +240,11 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             val s = App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).project.saveFile(projectId, SaveFileRequest(path, content)) }
                 .onSuccess {
-                    _toast.value = "Saved: ${path.substringAfterLast('/')}"
+                    _toast.value = fileMessage("saved", path.substringAfterLast('/'))
                     // refresh viewed content so the viewer reflects saved state
                     _content.value = FileContent(path, content, false)
                 }
-                .onFailure { _toast.value = "Save failed: ${it.message ?: "error"}" }
+                .onFailure { _toast.value = fileMessage("save_failed", it.message ?: "error") }
         }
     }
 
@@ -240,10 +253,10 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             val s = App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).project.createFile(projectId, CreateFileRequest(path, type)) }
                 .onSuccess {
-                    _toast.value = "Created: ${path.substringAfterLast('/')}"
+                    _toast.value = fileMessage("created", path.substringAfterLast('/'))
                     load()
                 }
-                .onFailure { _toast.value = "Create failed: ${it.message ?: "error"}" }
+                .onFailure { _toast.value = fileMessage("create_failed", it.message ?: "error") }
         }
     }
 
@@ -252,12 +265,12 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             val s = App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).project.deleteFile(projectId, path) }
                 .onSuccess {
-                    _toast.value = "Deleted: ${path.substringAfterLast('/')}"
+                    _toast.value = fileMessage("deleted", path.substringAfterLast('/'))
                     // if the deleted file was open, close the viewer
                     if (_content.value?.path == path) _content.value = null
                     load()
                 }
-                .onFailure { _toast.value = "Delete failed: ${it.message ?: "error"}" }
+                .onFailure { _toast.value = fileMessage("delete_failed", it.message ?: "error") }
         }
     }
 
@@ -266,11 +279,11 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
             val s = App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).project.renameFile(projectId, RenameFileRequest(oldPath, newPath)) }
                 .onSuccess {
-                    _toast.value = "Renamed: ${newPath.substringAfterLast('/')}"
+                    _toast.value = fileMessage("renamed", newPath.substringAfterLast('/'))
                     if (_content.value?.path == oldPath) _content.value = null
                     load()
                 }
-                .onFailure { _toast.value = "Rename failed: ${it.message ?: "error"}" }
+                .onFailure { _toast.value = fileMessage("rename_failed", it.message ?: "error") }
         }
     }
 
@@ -301,9 +314,9 @@ class FilesViewModel(private val projectId: String) : ViewModel() {
                     App.api(s).project.uploadFiles(projectId, parts, relPaths)
                 }
             }.onSuccess {
-                _toast.value = "Uploaded ${files.size} file${if (files.size > 1) "s" else ""}"
+                _toast.value = fileMessage("uploaded", files.size.toString())
                 load()
-            }.onFailure { _toast.value = "Upload failed: ${it.message ?: "error"}" }
+            }.onFailure { _toast.value = fileMessage("upload_failed", it.message ?: "error") }
             _uploading.value = false
         }
     }
@@ -413,8 +426,7 @@ fun FilesPane(
         fun currentBytes(): ByteArray? = when {
             fc.isImage -> fc.bytes
             fc.text == null -> null
-            fc.text.startsWith("Error:") -> null
-            fc.text == "(binary file — preview not available)" -> null
+            fileMessageCode(fc.text) in setOf("error", "binary", "image_too_large") -> null
             else -> fc.text.toByteArray(Charsets.UTF_8)
         }
 
@@ -597,9 +609,9 @@ private fun shareFile(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.files_share_chooser_title, baseName(path))))
-    "Shared via Downloads: ${baseName(path)}"
+    fileMessage("shared_via_downloads", baseName(path))
 } catch (e: Exception) {
-    "Share failed: ${e.message ?: "error"}"
+    fileMessage("share_failed", e.message ?: "error")
 }
 
 /**
@@ -613,9 +625,9 @@ private fun downloadFile(
     bytes: ByteArray,
 ): String = try {
     writeToDownloads(context, path, bytes)
-    "Saved to Downloads: ${baseName(path)}"
+    fileMessage("saved_to_downloads", baseName(path))
 } catch (e: Exception) {
-    "Download failed: ${e.message ?: "error"}"
+    fileMessage("download_failed", e.message ?: "error")
 }
 
 @Composable
@@ -699,9 +711,8 @@ private fun FileViewer(
                 )
                 if (!content.loading && !content.isImage) {
                     val text = content.text
-                    val isError = text != null && text.startsWith("Error:")
-                    val isBinaryPlaceholder = text == "(binary file — preview not available)"
-                    val canEdit = text != null && !isError && !isBinaryPlaceholder
+                    val messageCode = text?.let { fileMessageCode(it) }
+                    val canEdit = text != null && messageCode !in setOf("error", "binary", "image_too_large")
                     if (editing) {
                         TextButton(onClick = {
                             onSave(draft)
@@ -850,41 +861,31 @@ private fun NewFileEntryDialog(
 
 @Composable
 private fun localizedFileRuntimeText(message: String): String {
+    val code = fileMessageCode(message)
+    if (code != null) {
+        val value = fileMessageValue(message)
+        return when (code) {
+            "binary" -> stringResource(R.string.files_binary_preview_unavailable)
+            "error" -> stringResource(R.string.files_error, value)
+            "saved" -> stringResource(R.string.files_saved, value)
+            "save_failed" -> stringResource(R.string.files_save_failed, value)
+            "created" -> stringResource(R.string.files_created, value)
+            "create_failed" -> stringResource(R.string.files_create_failed, value)
+            "deleted" -> stringResource(R.string.files_deleted, value)
+            "delete_failed" -> stringResource(R.string.files_delete_failed, value)
+            "renamed" -> stringResource(R.string.files_renamed, value)
+            "rename_failed" -> stringResource(R.string.files_rename_failed, value)
+            "uploaded" -> stringResource(R.string.files_uploaded_count, value)
+            "upload_failed" -> stringResource(R.string.files_upload_failed, value)
+            "image_too_large" -> stringResource(R.string.files_image_too_large)
+            "shared_via_downloads" -> stringResource(R.string.files_shared_via_downloads, value)
+            "share_failed" -> stringResource(R.string.files_share_failed, value)
+            "saved_to_downloads" -> stringResource(R.string.files_saved_to_downloads, value)
+            "download_failed" -> stringResource(R.string.files_download_failed, value)
+            else -> value
+        }
+    }
     return when {
-        message == "(binary file — preview not available)" ->
-            stringResource(R.string.files_binary_preview_unavailable)
-        message.startsWith("Error: ") ->
-            stringResource(R.string.files_error, message.removePrefix("Error: "))
-        message.startsWith("Saved: ") ->
-            stringResource(R.string.files_saved, message.removePrefix("Saved: "))
-        message.startsWith("Save failed: ") ->
-            stringResource(R.string.files_save_failed, message.removePrefix("Save failed: "))
-        message.startsWith("Created: ") ->
-            stringResource(R.string.files_created, message.removePrefix("Created: "))
-        message.startsWith("Create failed: ") ->
-            stringResource(R.string.files_create_failed, message.removePrefix("Create failed: "))
-        message.startsWith("Deleted: ") ->
-            stringResource(R.string.files_deleted, message.removePrefix("Deleted: "))
-        message.startsWith("Delete failed: ") ->
-            stringResource(R.string.files_delete_failed, message.removePrefix("Delete failed: "))
-        message.startsWith("Renamed: ") ->
-            stringResource(R.string.files_renamed, message.removePrefix("Renamed: "))
-        message.startsWith("Rename failed: ") ->
-            stringResource(R.string.files_rename_failed, message.removePrefix("Rename failed: "))
-        message.startsWith("Uploaded ") ->
-            stringResource(R.string.files_uploaded_count, message.removePrefix("Uploaded ").substringBefore(" "))
-        message.startsWith("Upload failed: ") ->
-            stringResource(R.string.files_upload_failed, message.removePrefix("Upload failed: "))
-        message.startsWith("Image too large") ->
-            stringResource(R.string.files_image_too_large)
-        message.startsWith("Shared via Downloads: ") ->
-            stringResource(R.string.files_shared_via_downloads, message.removePrefix("Shared via Downloads: "))
-        message.startsWith("Share failed: ") ->
-            stringResource(R.string.files_share_failed, message.removePrefix("Share failed: "))
-        message.startsWith("Saved to Downloads: ") ->
-            stringResource(R.string.files_saved_to_downloads, message.removePrefix("Saved to Downloads: "))
-        message.startsWith("Download failed: ") ->
-            stringResource(R.string.files_download_failed, message.removePrefix("Download failed: "))
         else -> message
     }
 }

@@ -99,6 +99,7 @@
     "shiftTab": "Shift+Tab",
     "arrowUp": "Arrow Up",
     "arrowDown": "Arrow Down",
+    "paste": "Paste",
     "scrollDown": "Scroll Down",
     "handle": {
       "closePanel": "Close shortcuts panel",
@@ -116,8 +117,125 @@
     "browser": "Browser",
     "notifications": "Notifications",
     "plugins": "Plugins",
+    "skills": "Skills",
     "about": "About",
     "license": "License"
+  },
+  "aboutInfo": {
+    "tagline": "AI coding assistant interface",
+    "docs": "Docs",
+    "hostedTitle": "Try Planrla Hosted",
+    "hostedDescription": "Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.",
+    "learnMore": "Learn more",
+    "proTitle": "Planrla Pro Features",
+    "syncTitle": "Sync Settings",
+    "syncDescription": "Keep your preferences, MCP configs, and theme in sync across all your environments.",
+    "teamTitle": "Team Management",
+    "teamDescription": "Multiple users, role-based access, and shared projects for your team."
+  },
+  "skillsPanel": {
+    "description": "Install global {{provider}} skills from `.md` files or complete skill folders.",
+    "refresh": "Refresh",
+    "uploadTitle": "Upload Skills",
+    "installPath": "Install Path",
+    "dropTitle": "Drop `.md` files or skill folders here",
+    "dropDescription": "Upload standalone definitions or choose a full folder to include its scripts, references, and assets.",
+    "chooseFiles": "Choose Files",
+    "chooseFolder": "Choose Folder",
+    "queuedFiles": "Queued Files",
+    "fileCount": "{{count}} file",
+    "fileCount_other": "{{count}} files",
+    "markdownFile": "Markdown file",
+    "remove": "Remove",
+    "install": "Install Skills",
+    "installCount": "Install {{count}} Skill",
+    "installCount_other": "Install {{count}} Skills",
+    "folderUploadHint": "Folder uploads keep the selected folder name; standalone files use the `name` in `SKILL.md`.",
+    "saved": "Skills saved successfully.",
+    "visibleTitle": "Visible Skills",
+    "visibleDescription": "The list below comes from the provider skill discovery API and includes global and project-aware locations.",
+    "searchPlaceholder": "Search skills...",
+    "searchAria": "Search visible skills",
+    "clearSearch": "Clear skill search",
+    "scanningProjects": "Scanning project skills…",
+    "loading": "Loading {{provider}} skills…",
+    "emptyTitle": "No skills discovered yet",
+    "emptyDescription": "Add a global skill above or create project-specific skill folders in your workspace.",
+    "noMatchTitle": "No matching skills",
+    "noMatchDescription": "Try a different command, name, scope, project, or source path.",
+    "skillCount": "{{count}} skill",
+    "skillCount_other": "{{count}} skills",
+    "noDescription": "No description provided in the skill front matter.",
+    "pluginBadge": "Plugin: {{name}}",
+    "projectBadge": "Project: {{name}}",
+    "source": "Source",
+    "scopes": {
+      "user": "User",
+      "plugin": "Plugin",
+      "repo": "Repo",
+      "project": "Project",
+      "admin": "Admin",
+      "system": "System"
+    },
+    "errors": {
+      "readFolder": "Failed to read skill folder",
+      "dropMarkdown": "Drop one or more markdown files or a folder containing SKILL.md.",
+      "addFilesFirst": "Add one or more markdown files first.",
+      "importFailed": "Failed to import skills",
+      "tooManyFiles": "A skill folder can contain up to {{count}} files.",
+      "tooLarge": "Selected skill folders must be smaller than 30 MB in total.",
+      "missingSkillFile": "The selected folder does not contain a SKILL.md file.",
+      "readSkillFile": "Could not read SKILL.md from {{name}}."
+    }
+  },
+  "licenseSettings": {
+    "title": "Commercial License",
+    "description": "Activate and review this installation's commercial license.",
+    "loading": "Loading license status…",
+    "noPlan": "No plan",
+    "source": "Source: {{source}}",
+    "customer": "Customer",
+    "seats": "Seats",
+    "issued": "Issued",
+    "expires": "Expires",
+    "never": "Never",
+    "enforcementEnabled": "License enforcement is enabled. Activate a valid license to use protected APIs.",
+    "licenseKey": "License key",
+    "activate": "Activate license",
+    "remove": "Remove license",
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "invalid": "Invalid",
+      "unlicensed": "Unlicensed"
+    },
+    "messages": {
+      "activated": "License activated.",
+      "removed": "License removed."
+    },
+    "errors": {
+      "loadStatus": "Failed to load license status",
+      "activationFailed": "Activation failed",
+      "removeFailed": "Failed to remove license"
+    }
+  },
+  "providerLogin": {
+    "close": "Close login modal",
+    "done": "Done",
+    "titles": {
+      "claude": "Claude CLI Login",
+      "cursor": "Cursor CLI Login",
+      "codex": "Codex CLI Login",
+      "opencode": "OpenCode CLI Login",
+      "gemini": "Gemini CLI Configuration"
+    },
+    "gemini": {
+      "title": "Setup Gemini API Access",
+      "description": "The Gemini CLI requires an API key to function. Configure it in your terminal first.",
+      "getApiKey": "Get your API key",
+      "runConfiguration": "Run configuration",
+      "runCommandHint": "Open your terminal and run:"
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -142,6 +260,81 @@
       "actionRequired": "Action required",
       "stop": "Run stopped",
       "error": "Run failed"
+    }
+  },
+  "browserUse": {
+    "title": "Browser",
+    "description": "Allow agents to create guarded Playwright browser sessions that you can monitor from the Browser tab.",
+    "enableLabel": "Enable Browser",
+    "enableDescription": "Registers Browser for supported agents. Agents can create browser sessions; you can watch, stop, and delete them.",
+    "settings": {
+      "open": "Open Browser settings",
+      "refresh": "Refresh browser sessions"
+    },
+    "runtime": {
+      "disabled": "Disabled",
+      "ready": "Ready",
+      "installing": "Installing",
+      "setupRequired": "Setup required",
+      "checking": "checking...",
+      "installed": "installed",
+      "missing": "missing",
+      "status": "Status",
+      "playwright": "Playwright",
+      "chromium": "Chromium",
+      "required": "Browser runtime required",
+      "installHint": "Install the browser runtime before agents can create Browser sessions.",
+      "install": "Install Runtime",
+      "installingButton": "Installing..."
+    },
+    "panel": {
+      "subtitle": "Monitor browser sessions opened by AI agents.",
+      "noSessions": "No browser sessions yet",
+      "disabledTitle": "Browser is disabled",
+      "emptyEnabledDescription": "Agent browser sessions appear here while an AI task is using Browser.",
+      "emptyDisabledDescription": "Enable Browser in settings to let agents open monitored browser sessions.",
+      "promptLabel": "Prompt",
+      "promptInspectCheckout": "Use Browser to inspect the checkout flow and report any broken UI states.",
+      "promptOpenUrl": "Open <url> with Browser, interact with the page, and summarize what changed after each step.",
+      "screenshotAlt": "Browser session screenshot",
+      "waitingScreenshot": "Waiting for screenshot",
+      "waitingScreenshotHint": "The next agent browser snapshot will render here.",
+      "activeCount": "{{count}} active",
+      "totalCount": "{{count}} total",
+      "updated": "Updated {{time}}",
+      "sessions": "Sessions",
+      "noAgentSessions": "No agent browser sessions.",
+      "selected": "Selected",
+      "selectedStatus": "Status",
+      "lastAction": "Last action",
+      "profile": "Profile",
+      "stop": "Stop",
+      "delete": "Delete",
+      "close": "Close",
+      "fullScreen": "Full screen",
+      "browserSession": "Browser session",
+      "emptyStatus": "empty",
+      "noPageLoaded": "No page loaded",
+      "temporaryProfile": "Temporary",
+      "none": "None",
+      "waitingAction": "Waiting"
+    },
+    "time": {
+      "never": "Never",
+      "unknown": "Unknown",
+      "justNow": "Just now",
+      "secondsAgo": "{{count}}s ago",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "errors": {
+      "loadPanel": "Failed to load Browser",
+      "actionFailed": "Browser action failed",
+      "loadSettings": "Failed to load Browser settings",
+      "loadStatus": "Failed to load Browser status",
+      "saveSettings": "Failed to save Browser settings",
+      "installRuntime": "Failed to install browser runtime"
     }
   },
   "appearanceSettings": {
@@ -194,9 +387,16 @@
     "scope": {
       "label": "Scope",
       "userGlobal": "User (Global)",
+      "userAllProviders": "User (All Providers)",
       "projectLocal": "Project (Local)",
+      "project": "Project",
+      "projectAllProviders": "Project (All Providers)",
+      "claudeLocal": "Claude Local",
       "userDescription": "User scope: Available across all projects on your machine",
+      "userAllProvidersDescription": "Writes to each provider user config and is available across projects on this machine",
       "projectDescription": "Local scope: Only available in the selected project",
+      "projectAllProvidersDescription": "Writes to the selected project workspace for every provider",
+      "claudeLocalDescription": "Stored in Claude user settings for the selected project",
       "cannotChange": "Scope cannot be changed when editing an existing server"
     },
     "fields": {
@@ -208,6 +408,9 @@
       "url": "URL",
       "envVars": "Environment Variables (KEY=value, one per line)",
       "headers": "Headers (KEY=value, one per line)",
+      "cwd": "Working Directory",
+      "envVarNames": "Environment Variable Names",
+      "bearerTokenEnvVar": "Bearer Token Environment Variable",
       "selectProject": "Select a project..."
     },
     "placeholders": {
@@ -218,6 +421,7 @@
       "stdioRequiresCommand": "stdio type requires a command field",
       "httpRequiresUrl": "{{type}} type requires a url field",
       "invalidJson": "Invalid JSON format",
+      "unsupportedGlobalTransport": "Add MCP Server supports only stdio and http across all providers, not {{transport}}.",
       "jsonHelp": "Paste your MCP server configuration in JSON format. Example formats:",
       "jsonExampleStdio": "• stdio: {\"type\":\"stdio\",\"command\":\"npx\",\"args\":[\"@upstash/context7-mcp\"]}",
       "jsonExampleHttp": "• http/sse: {\"type\":\"http\",\"url\":\"https://api.example.com/mcp\"}"
@@ -257,6 +461,30 @@
     },
     "status": {
       "success": "Saved successfully"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "git": "Git Configuration",
+      "agents": "Connect Agents",
+      "required": "Required"
+    },
+    "git": {
+      "title": "Git Configuration",
+      "description": "Configure your git identity to ensure proper attribution for commits.",
+      "namePlaceholder": "John Doe",
+      "emailPlaceholder": "john@example.com",
+      "nameHelp": "Saved as git config --global user.name.",
+      "emailHelp": "Saved as git config --global user.email."
+    },
+    "agents": {
+      "title": "Connect Your Agents",
+      "description": "Sign in to one or more AI coding assistants. All are optional.",
+      "configureLater": "You can configure these later in Settings.",
+      "checking": "Checking...",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "login": "Login"
     }
   },
   "apiKeys": {
@@ -302,14 +530,22 @@
     },
     "remoteAccess": {
       "title": "Remote Access",
-      "description": "Sign in to api.planrla.com so the phone app can reach this running Desktop through relay.",
+      "description": "Sign in to api.planrla.com to manage Desktop devices the phone app can discover.",
       "checking": "Checking remote access account…",
       "connectButton": "Set up Remote Access",
       "signOut": "Sign out",
+      "devicesTitle": "Desktop devices",
+      "devicesFound": "{{count}} Desktop devices registered on this account.",
+      "devicesEmpty": "No Desktop device is registered yet, so the phone app will not find anything to connect to.",
+      "registerDevice": "Register this Desktop",
+      "defaultDeviceName": "Planrla Desktop",
+      "unnamedDevice": "Unnamed Desktop",
+      "deviceTokenSuffix": "token …{{suffix}}",
+      "relayStatusHint": "This version supports account sign-in and device registration; the full relay path still requires Desktop to stay running and connect to the relay service.",
       "dialogTitle": "Remote Access",
       "signInTitle": "Sign in for Remote Access",
       "createTitle": "Create Remote Access account",
-      "dialogDescription": "Planrla does not run your agent in the cloud. api.planrla.com only relays the phone app to your running Desktop.",
+      "dialogDescription": "Planrla does not run your agent in the cloud. api.planrla.com currently handles sign-in and device registration; the full relay path still requires Desktop to connect to the relay service.",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
       "password": "Password",
@@ -319,7 +555,9 @@
       "switchToSignIn": "Already have an account? Sign in",
       "switchToSignUp": "Don't have an account? Sign up",
       "errors": {
-        "failed": "Remote access sign-in failed"
+        "failed": "Remote access sign-in failed",
+        "devicesFailed": "Failed to load Desktop devices",
+        "registerFailed": "Failed to register Desktop device"
       }
     },
     "apiDocsLink": "API Documentation",
@@ -474,6 +712,13 @@
       "codex": "Model Context Protocol servers provide additional tools and data sources to Codex",
       "opencode": "Model Context Protocol servers provide additional tools and data sources to OpenCode"
     },
+    "globalAddButton": "Add Global MCP Server",
+    "providerAddButton": "Add {{provider}} MCP Server",
+    "globalAddDescription": "Add Global MCP Server writes one common stdio or HTTP server to Claude, Cursor, Codex, and Gemini.",
+    "providerAddDescription": "Add {{provider}} MCP Server only changes {{provider}}.",
+    "globalModalDescription": "Adds this MCP server to every provider: Claude, Cursor, Codex, and Gemini. Only stdio and HTTP transports are supported because the same config must work across all providers.",
+    "refreshingProjectScopes": "Refreshing project scopes...",
+    "loadingServers": "Loading MCP servers...",
     "addButton": "Add MCP Server",
     "empty": "No MCP servers configured",
     "serverType": "Type",
@@ -485,7 +730,9 @@
       "command": "Command",
       "url": "URL",
       "args": "Args",
-      "environment": "Environment"
+      "environment": "Environment",
+      "cwd": "Cwd",
+      "envVars": "Env Vars"
     },
     "tools": {
       "title": "Tools",
@@ -499,6 +746,11 @@
     "managed": {
       "badge": "Managed",
       "hint": "Managed by Planrla."
+    },
+    "team": {
+      "title": "Team MCP Configs",
+      "description": "Share MCP server configurations across your team. Everyone stays in sync automatically.",
+      "available": "Available with Planrla Pro"
     },
     "help": {
       "title": "About Codex MCP",

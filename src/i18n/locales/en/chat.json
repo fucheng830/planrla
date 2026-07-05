@@ -34,7 +34,22 @@
     "readFile": "Read file",
     "updateTodo": "Update todo list",
     "readTodo": "Read todo list",
-    "searchResults": "results"
+    "searchResults": "results",
+    "rawParams": "raw params"
+  },
+  "commandMenu": {
+    "noCommands": "No commands available",
+    "availableCommands": "Available commands"
+  },
+  "subagent": {
+    "agent": "Agent",
+    "runningTask": "Running task",
+    "title": "Subagent / {{type}}: {{description}}",
+    "currently": "Currently:",
+    "completed": "Completed ({{count}} tool)",
+    "completed_other": "Completed ({{count}} tools)",
+    "viewHistory": "View tool history ({{count}})",
+    "error": "(error)"
   },
   "search": {
     "found": "Found {{count}} {{type}}",
@@ -55,6 +70,15 @@
   },
   "interactive": {
     "title": "Interactive Prompt",
+    "needsInput": "Claude needs your input",
+    "selectAll": "Select all that apply",
+    "other": "Other...",
+    "answerPlaceholder": "Type your answer...",
+    "skip": "Skip",
+    "skipAll": "Skip all",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
     "waiting": "Waiting for your response in the CLI",
     "instruction": "Please select an option in your terminal where Claude is running.",
     "selectedOption": "✓ Claude selected option {{number}}",
@@ -97,7 +121,11 @@
   },
   "plan": {
     "viewPlan": "📋 View implementation plan",
-    "title": "Implementation Plan"
+    "title": "Implementation Plan",
+    "toggle": "Toggle plan",
+    "generating": "Generating plan...",
+    "revise": "Revise",
+    "build": "Build"
   },
   "usageLimit": {
     "resetAt": "Claude usage limit reached. Your limit will reset at **{{time}} {{timezone}}** - {{date}}"
@@ -152,6 +180,7 @@
     "disabled": "Input disabled",
     "attachFiles": "Attach files",
     "attachImages": "Attach images",
+    "removeImage": "Remove image",
     "dropImagesHere": "Drop images here",
     "send": "Send",
     "stop": "Stop",
@@ -332,7 +361,16 @@
     "resumeSession": "Resume session: {{displayName}}...",
     "runCommand": "Run {{command}} in {{projectName}}",
     "startCli": "Starting Claude CLI in {{projectName}}",
-    "defaultCommand": "command"
+    "defaultCommand": "command",
+    "authUrl": {
+      "description": "Open or copy the login URL:",
+      "hide": "Hide",
+      "inputLabel": "Authentication URL",
+      "open": "Open URL",
+      "copy": "Copy URL",
+      "copied": "Copied",
+      "show": "Show login URL"
+    }
   },
   "claudeStatus": {
     "actions": {

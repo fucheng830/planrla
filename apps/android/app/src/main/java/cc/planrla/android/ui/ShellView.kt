@@ -28,6 +28,10 @@ fun ShellView(
     projectPath: String?,
     modifier: Modifier = Modifier,
 ) {
+    val connectingText = stringResource(R.string.shell_connecting)
+    val badUrlText = stringResource(R.string.shell_bad_url)
+    val disconnectedText = stringResource(R.string.shell_disconnected)
+    val wsErrorText = stringResource(R.string.shell_ws_error)
     AndroidView(
         factory = { ctx ->
             val xtermJs = ctx.assets.open("xterm.js").bufferedReader().use { it.readText() }
@@ -35,7 +39,14 @@ fun ShellView(
             val fitJs = ctx.assets.open("xterm-addon-fit.js").bufferedReader().use { it.readText() }
             val wsBase = serverUrl.replace(Regex("^http"), "ws").trimEnd('/')
             val path = projectPath.orEmpty()
-            val html = buildShellHtml(xtermJs, xtermCss, fitJs, "$wsBase/shell?token=${encodeURIComponent(token)}", path)
+            val html = buildShellHtml(
+                xtermJs,
+                xtermCss,
+                fitJs,
+                "$wsBase/shell?token=${encodeURIComponent(token)}",
+                path,
+                ShellLabels(connectingText, badUrlText, disconnectedText, wsErrorText),
+            )
             WebView(ctx).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -65,12 +76,30 @@ fun ShellView(
 private fun encodeURIComponent(value: String): String =
     java.net.URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
 
-private fun buildShellHtml(xtermJs: String, xtermCss: String, fitJs: String, wsUrl: String, projectPath: String): String {
+private data class ShellLabels(
+    val connecting: String,
+    val badUrl: String,
+    val disconnected: String,
+    val wsError: String,
+)
+
+private fun buildShellHtml(
+    xtermJs: String,
+    xtermCss: String,
+    fitJs: String,
+    wsUrl: String,
+    projectPath: String,
+    labels: ShellLabels,
+): String {
     // Escape </ so an inlined script can't terminate the wrapping <script> early.
     val js = xtermJs.replace("</", "<\\/")
     val fit = fitJs.replace("</", "<\\/")
     val wsUrlJson = JSONObject.quote(wsUrl)
     val projectPathJson = JSONObject.quote(projectPath)
+    val connectingJson = JSONObject.quote(labels.connecting)
+    val badUrlJson = JSONObject.quote(labels.badUrl)
+    val disconnectedJson = JSONObject.quote(labels.disconnected)
+    val wsErrorJson = JSONObject.quote(labels.wsError)
     return """<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>$xtermCss</style>
@@ -101,9 +130,10 @@ button:active{background:#2563EB;border-color:#2563EB;}
 <script>$js</script>
 <script>$fit</script>
 <script>
-var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson};
+var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson,labels:{connecting:$connectingJson,badUrl:$badUrlJson,disconnected:$disconnectedJson,wsError:$wsErrorJson}};
 (function(){
   var c=SHELL_CONFIG;
+  var labels=c.labels||{};
   var term=new Terminal({cursorBlink:true,fontFamily:'Menlo,Consolas,monospace',fontSize:13,lineHeight:1.25,theme:{background:'#0B1120',foreground:'#E2E8F0',cursor:'#94A3B8',selectionBackground:'#334155'},allowProposedApi:true});
   var fit=new FitAddon.FitAddon();term.loadAddon(fit);term.open(document.getElementById('t'));
   try{fit.fit();}catch(e){}
@@ -111,8 +141,8 @@ var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson};
   function refocus(){try{term.focus();}catch(e){}}
   terminalEl.addEventListener('click',refocus);
   terminalEl.addEventListener('touchend',refocus);
-  term.write('\x1b[36mConnecting to shell…\x1b[0m\r\n');
-  var ws;try{ws=new WebSocket(c.wsUrl);}catch(e){term.write('\x1b[31m[bad url]\x1b[0m\r\n');return;}
+  term.write('\x1b[36m'+(labels.connecting||'')+'\x1b[0m\r\n');
+  var ws;try{ws=new WebSocket(c.wsUrl);}catch(e){term.write('\x1b[31m['+(labels.badUrl||'')+']\x1b[0m\r\n');return;}
   var opened=false;
   function sendInput(data){if(opened&&ws&&ws.readyState===1)ws.send(JSON.stringify({type:'input',data:data}));}
   ws.onopen=function(){
@@ -123,8 +153,8 @@ var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson};
     refocus();
   };
   ws.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type==='output')term.write(m.data);else if(m.type==='error')term.write('\r\n\x1b[31m'+m.message+'\x1b[0m');}catch(_){}};
-  ws.onclose=function(){term.write('\r\n\x1b[33m[disconnected]\x1b[0m\r\n');opened=false;};
-  ws.onerror=function(){term.write('\r\n\x1b[31m[ws error]\x1b[0m\r\n');};
+  ws.onclose=function(){term.write('\r\n\x1b[33m['+(labels.disconnected||'')+']\x1b[0m\r\n');opened=false;};
+  ws.onerror=function(){term.write('\r\n\x1b[31m['+(labels.wsError||'')+']\x1b[0m\r\n');};
   term.onData(sendInput);
   document.querySelectorAll('#shortcuts button[data-input]').forEach(function(btn){
     btn.addEventListener('touchstart',function(ev){ev.preventDefault();sendInput(btn.getAttribute('data-input')||'');refocus();});

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCircle,
   Circle,
@@ -23,9 +24,11 @@ type NextTaskBannerProps = {
 };
 
 function PriorityIndicator({ priority }: { priority?: string }) {
+  const { t } = useTranslation('tasks');
+
   if (priority === 'high') {
     return (
-      <div className="flex h-4 w-4 items-center justify-center rounded bg-red-100 dark:bg-red-900/50" title="High Priority">
+      <div className="flex h-4 w-4 items-center justify-center rounded bg-red-100 dark:bg-red-900/50" title={t('banner.priorityHigh')}>
         <Zap className="h-2.5 w-2.5 text-red-600 dark:text-red-400" />
       </div>
     );
@@ -33,20 +36,21 @@ function PriorityIndicator({ priority }: { priority?: string }) {
 
   if (priority === 'medium') {
     return (
-      <div className="flex h-4 w-4 items-center justify-center rounded bg-amber-100 dark:bg-amber-900/50" title="Medium Priority">
+      <div className="flex h-4 w-4 items-center justify-center rounded bg-amber-100 dark:bg-amber-900/50" title={t('banner.priorityMedium')}>
         <Flag className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-4 w-4 items-center justify-center rounded bg-gray-100 dark:bg-gray-800" title="Low Priority">
+    <div className="flex h-4 w-4 items-center justify-center rounded bg-gray-100 dark:bg-gray-800" title={t('banner.priorityLow')}>
       <Circle className="h-2.5 w-2.5 text-gray-400 dark:text-gray-500" />
     </div>
   );
 }
 
 export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = null, className = '' }: NextTaskBannerProps) {
+  const { t } = useTranslation('tasks');
   const {
     nextTask,
     tasks,
@@ -82,7 +86,7 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <List className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <p className="text-sm font-medium text-gray-900 dark:text-white">TaskMaster AI is not configured</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('banner.notConfigured')}</p>
             </div>
 
             <button
@@ -90,7 +94,7 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
               className="flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700"
             >
               <Terminal className="h-3 w-3" />
-              Initialize
+              {t('banner.initialize')}
             </button>
           </div>
 
@@ -99,14 +103,14 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
             className="mt-2 flex items-center gap-1 text-xs text-blue-700 hover:underline dark:text-blue-300"
           >
             <Settings className="h-3 w-3" />
-            {showSetupDetails ? 'Hide details' : 'What is TaskMaster?'}
+            {showSetupDetails ? t('banner.hideDetails') : t('banner.whatIs')}
           </button>
 
           {showSetupDetails && (
             <div className="mt-3 space-y-1 text-xs text-blue-900 dark:text-blue-100">
-              <p>- AI-powered task management with dependencies and subtasks.</p>
-              <p>- PRD-driven task generation for faster project bootstrapping.</p>
-              <p>- Kanban and list views for day-to-day execution.</p>
+              <p>- {t('banner.featureAi')}</p>
+              <p>- {t('banner.featurePrd')}</p>
+              <p>- {t('banner.featureViews')}</p>
             </div>
           )}
         </div>
@@ -131,7 +135,7 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
                   <Target className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Task {nextTask.id}</span>
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('banner.taskLabel', { id: nextTask.id })}</span>
                 <PriorityIndicator priority={nextTask.priority} />
               </div>
               <p className="line-clamp-1 text-sm font-medium text-slate-900 dark:text-slate-100">{nextTask.title}</p>
@@ -143,13 +147,13 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
                 className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
               >
                 <Play className="h-3 w-3" />
-                Start Task
+                {t('banner.startTask')}
               </button>
 
               <button
                 onClick={() => setShowTaskDetail(true)}
                 className="rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-                title="View task details"
+                title={t('banner.viewTaskDetails')}
               >
                 <Eye className="h-3 w-3" />
               </button>
@@ -158,7 +162,7 @@ export default function NextTaskBanner({ onShowAllTasks = null, onStartTask = nu
                 <button
                   onClick={onShowAllTasks}
                   className="rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-                  title="View all tasks"
+                  title={t('banner.viewAllTasks')}
                 >
                   <List className="h-3 w-3" />
                 </button>

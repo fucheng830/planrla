@@ -426,7 +426,7 @@ class ChatViewModel(
     fun send(text: String) {
         val imgs = _images.value
         if (text.isBlank() && imgs.isEmpty()) return
-        _items.value = _items.value + ChatItem.User(text.ifBlank { "📷 image" }, System.currentTimeMillis())
+        _items.value = _items.value + ChatItem.User(text.ifBlank { "📷 图片" }, System.currentTimeMillis())
         _images.value = emptyList()
         _working.value = true
         val sid = currentSessionId
@@ -441,7 +441,7 @@ class ChatViewModel(
                     currentSessionId = created.sessionId
                     socket?.sendChat(created.sessionId, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
                 }.onFailure { e ->
-                    _items.value = _items.value + ChatItem.Sys("⚠ 创建会话失败: ${e.message ?: "unknown"}")
+                    _items.value = _items.value + ChatItem.Sys("⚠ 创建会话失败：${e.message ?: "未知错误"}")
                     _working.value = false
                 }
             }
@@ -591,9 +591,9 @@ class ChatViewModel(
                     else -> App.api(s).git.fetch(GitRemoteRequest(pid))
                 }
                 val msg = r.output?.takeIf { it.isNotBlank() }
-                    ?: if (r.success != false) "$op ok" else (r.error ?: "$op failed")
-                _items.value = _items.value + ChatItem.Sys("git $op: $msg")
-            }.onFailure { _items.value = _items.value + ChatItem.Sys("⚠ git $op failed: ${it.message ?: "unknown"}") }
+                    ?: if (r.success != false) "${gitOpLabel(op)}完成" else (r.error ?: "${gitOpLabel(op)}失败")
+                _items.value = _items.value + ChatItem.Sys("Git ${gitOpLabel(op)}：$msg")
+            }.onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git ${gitOpLabel(op)}失败：${it.message ?: "未知错误"}") }
             _gitBusy.value = false
         }
     }
@@ -605,10 +605,10 @@ class ChatViewModel(
             val s = serverUrl ?: App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).git.discard(DiscardRequest(pid, file)) }
                 .onSuccess {
-                    _items.value = _items.value + ChatItem.Sys("git discard: ${it.output?.takeIf { o -> o.isNotBlank() } ?: file}")
+                    _items.value = _items.value + ChatItem.Sys("Git 放弃更改：${it.output?.takeIf { o -> o.isNotBlank() } ?: file}")
                     loadGit(s)
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ git discard failed: ${it.message ?: "unknown"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git 放弃更改失败：${it.message ?: "未知错误"}") }
         }
     }
 
@@ -625,7 +625,7 @@ class ChatViewModel(
                         val behind = o["behind"]?.jsonPrimitive?.intOrNull
                         when {
                             ahead != null && behind != null && (ahead > 0 || behind > 0) -> "↑$ahead ↓$behind"
-                            ahead != null && behind != null -> "up to date"
+                            ahead != null && behind != null -> "已是最新"
                             else -> raw.take(40)
                         }
                     }.getOrNull() ?: raw.take(40)
@@ -659,7 +659,7 @@ class ChatViewModel(
                     }.getOrNull()
                     _commitsOpen.value = true
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ git log failed: ${it.message ?: "unknown"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git 历史加载失败：${it.message ?: "未知错误"}") }
         }
     }
 
@@ -672,13 +672,13 @@ class ChatViewModel(
             val s = App.resolveBaseUrl() ?: return@launch
             runCatching { App.api(s).git.deleteBranch(DeleteBranchRequest(pid, name)) }
                 .onSuccess {
-                    _items.value = _items.value + ChatItem.Sys("git delete-branch: ${it.output?.takeIf { o -> o.isNotBlank() } ?: name}")
+                    _items.value = _items.value + ChatItem.Sys("Git 删除分支：${it.output?.takeIf { o -> o.isNotBlank() } ?: name}")
                     runCatching {
                         val b = App.api(s).git.branches(pid)
                         _branches.value = b.localBranches.ifEmpty { b.remoteBranches }
                     }
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ delete-branch failed: ${it.message ?: "unknown"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ 删除分支失败：${it.message ?: "未知错误"}") }
             _branchPickerOpen.value = true
         }
     }
@@ -692,25 +692,11 @@ class ChatViewModel(
         App.tokenStore.setCurrentDevice(id)
         val dev = App.tokenStore.currentDevice() ?: return false
         return runCatching {
-            if (!dev.lan.isNullOrBlank()) {
-                val url = normalizeHostInput(dev.lan)
-                App.tokenStore.setServer(url)
-                if (!dev.ccUser.isNullOrBlank()) {
-                    val response = App.api(url).auth.login(LoginRequest(dev.ccUser, dev.ccPass ?: ""))
-                    val token = response.token ?: throw IllegalStateException("no token in response")
-                    App.tokenStore.setToken(token)
-                    App.tokenStore.clearRelayToken()
-                    App.tokenHolder.token = token
-                    App.tokenHolder.relayToken = null
-                }
-            } else if (dev.token.isNotBlank()) {
-                App.tokenStore.setRelayToken(dev.token)
-                App.tokenHolder.relayToken = dev.token
-            }
+            App.applyDeviceSelection(dev)
         }.onFailure { error ->
             val message = when {
                 error.message?.contains("401") == true -> "直接连接登录失败：账号或密码不正确"
-                else -> "切换桌面端失败：${error.message ?: "unknown"}"
+                else -> "切换桌面端失败：${error.message ?: "未知错误"}"
             }
             _items.value = _items.value + ChatItem.Sys("⚠ $message")
             android.util.Log.e("planrla", "applyDevice failed id=$id", error)
@@ -726,7 +712,7 @@ class ChatViewModel(
                     val existing = App.tokenStore.devicesSync().associateBy { it.id }
                     App.tokenStore.setDevices(list.map { d ->
                         val ex = existing[d.id]
-                        Device(d.id, d.name.ifBlank { "device" }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
+                        Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
                     })
                 }
         }
@@ -740,6 +726,13 @@ class ChatViewModel(
         fun factory(sessionId: String, cwd: String?, projectId: String?) = viewModelFactory {
             initializer { ChatViewModel(sessionId, cwd, projectId) }
         }
+    }
+
+    private fun gitOpLabel(op: String): String = when (op) {
+        "pull" -> "拉取"
+        "push" -> "推送"
+        "fetch" -> "获取"
+        else -> op
     }
 }
 
@@ -1149,6 +1142,7 @@ fun ChatScreen(
         )
     }
     if (showAddDevice) {
+        val defaultDeviceName = stringResource(R.string.connect_default_device_name)
         AddDeviceDialog(
             onConfirm = { name, deviceToken, lan, ccUser, ccPass ->
                 val normalizedLan = normalizeHostInput(lan)
@@ -1157,7 +1151,7 @@ fun ChatScreen(
                 scope.launch {
                     App.tokenStore.upsertDevice(Device(
                         id = id,
-                        name = name.trim().ifBlank { normalizedLan.ifBlank { "Device" } },
+                        name = name.trim().ifBlank { normalizedLan.ifBlank { defaultDeviceName } },
                         token = deviceRelayToken,
                         lan = normalizedLan.ifBlank { null },
                         ccUser = ccUser.trim().ifBlank { null },
@@ -2546,7 +2540,13 @@ private fun QuickSettingsPanel(onDismiss: () -> Unit, onLogout: () -> Unit, onOp
             ) { Text(stringResource(R.string.quick_settings_full_settings)) }
             SettingsSection(stringResource(R.string.quick_settings_section_account))
             Button(
-                onClick = { scope.launch { App.logout() }; onDismiss(); onLogout() },
+                onClick = {
+                    scope.launch {
+                        App.logout()
+                        onDismiss()
+                        onLogout()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
             ) { Text(stringResource(R.string.quick_settings_sign_out)) }

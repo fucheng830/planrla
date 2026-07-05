@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { MouseEvent, MutableRefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CodeEditorFile } from '../types/types';
 import CodeEditor from './CodeEditor';
 
@@ -35,6 +36,7 @@ export default function EditorSidebar({
   projectPath,
   fillSpace,
 }: EditorSidebarProps) {
+  const { t } = useTranslation('codeEditor');
   const [poppedOut, setPoppedOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [effectiveWidth, setEffectiveWidth] = useState(editorWidth);
@@ -108,7 +110,7 @@ export default function EditorSidebar({
           ref={resizeHandleRef}
           onMouseDown={onResizeStart}
           className="group relative w-1 flex-shrink-0 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 dark:bg-gray-700 dark:hover:bg-blue-600"
-          title="Drag to resize"
+          title={t('toolbar.resize')}
         >
           <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-blue-600" />
         </div>

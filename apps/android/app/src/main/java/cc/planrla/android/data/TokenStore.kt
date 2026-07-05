@@ -77,10 +77,20 @@ class TokenStore(private val context: Context) {
     }
     suspend fun setDevices(list: List<Device>) = context.dataStore.edit { prefs ->
         prefs[Keys.DEVICES] = json.encodeToString(ListSerializer(Device.serializer()), list)
+        val current = prefs[Keys.CURRENT]
+        if (list.isEmpty()) {
+            prefs.remove(Keys.CURRENT)
+            prefs.remove(Keys.RELAY)
+        } else if (current != null && list.none { it.id == current }) {
+            val next = list.first()
+            prefs[Keys.CURRENT] = next.id
+            if (next.token.isNotBlank()) prefs[Keys.RELAY] = next.token else prefs.remove(Keys.RELAY)
+        }
     }
     suspend fun setCurrentDevice(id: String) = context.dataStore.edit { prefs ->
         prefs[Keys.CURRENT] = id
-        readDevices(prefs).firstOrNull { it.id == id }?.token?.let { prefs[Keys.RELAY] = it }
+        val token = readDevices(prefs).firstOrNull { it.id == id }?.token
+        if (!token.isNullOrBlank()) prefs[Keys.RELAY] = token else prefs.remove(Keys.RELAY)
     }
     suspend fun upsertDevice(d: Device) = context.dataStore.edit { prefs ->
         val list = readDevices(prefs).filterNot { it.id == d.id } + d
@@ -92,14 +102,31 @@ class TokenStore(private val context: Context) {
         if (prefs[Keys.CURRENT] == id) {
             remaining.firstOrNull()?.let { next ->
                 prefs[Keys.CURRENT] = next.id
-                prefs[Keys.RELAY] = next.token
+                if (next.token.isNotBlank()) prefs[Keys.RELAY] = next.token else prefs.remove(Keys.RELAY)
+                if (!next.lan.isNullOrBlank()) {
+                    prefs[Keys.SERVER] = next.lan
+                } else if (next.token.isNotBlank()) {
+                    prefs[Keys.SERVER] = "https://api.planrla.com"
+                    prefs.remove(Keys.TOKEN)
+                }
             } ?: run {
                 prefs.remove(Keys.CURRENT)
                 prefs.remove(Keys.RELAY)
+                prefs.remove(Keys.TOKEN)
+                prefs.remove(Keys.SERVER)
             }
         }
     }
     suspend fun clear() = context.dataStore.edit { it.remove(Keys.TOKEN); it.remove(Keys.RELAY) }
+    suspend fun clearConnection() = context.dataStore.edit {
+        it.remove(Keys.SERVER)
+        it.remove(Keys.TOKEN)
+        it.remove(Keys.RELAY)
+        it.remove(Keys.DEVICES)
+        it.remove(Keys.CURRENT)
+        it.remove(Keys.ACCOUNT_JWT)
+        it.remove(Keys.ACCOUNT_EMAIL)
+    }
 
     /** Persisted UI settings (QuickSettingsPanel toggles). Defaults match SettingsHolder. */
     suspend fun loadSettings(): Map<String, Boolean> = context.dataStore.data.first().let { p ->

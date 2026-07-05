@@ -184,7 +184,13 @@ export default function Shell({
     [wsRef],
   );
 
-  const sessionDisplayName = useMemo(() => getSessionDisplayName(selectedSession), [selectedSession]);
+  const sessionDisplayName = useMemo(
+    () => getSessionDisplayName(selectedSession, {
+      newSession: t('common:mainContent.newSession'),
+      untitledSession: t('common:mainContent.untitledSession'),
+    }),
+    [selectedSession, t],
+  );
   const sessionDisplayNameShort = useMemo(
     () => (sessionDisplayName ? sessionDisplayName.slice(0, 30) : null),
     [sessionDisplayName],

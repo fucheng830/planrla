@@ -134,16 +134,57 @@ object App {
     fun api(serverUrl: String): ApiProvider = ApiProvider(serverUrl, client())
     fun chatSocket(): ChatSocket = ChatSocket(client())
 
-    /** Sign out of Remote Access: clear stored tokens/devices so the next launch shows ConnectScreen. */
+    /** 退出远程访问并清空连接态，下次启动回到连接页。 */
     suspend fun logout() {
-        tokenStore.clearAccount()
-        tokenStore.clear()
-        tokenStore.setDevices(emptyList())
+        tokenStore.clearConnection()
         tokenHolder.token = null
         tokenHolder.relayToken = null
-        // Invalidate the LAN/relay URL cache so the next login re-probes.
+        invalidateResolvedBaseUrl()
+    }
+
+    fun invalidateResolvedBaseUrl() {
         resolvedKey = null
         resolvedUrl = null
+    }
+
+    suspend fun applyDeviceSelection(device: cc.planrla.android.data.Device): String? {
+        invalidateResolvedBaseUrl()
+        if (!device.lan.isNullOrBlank()) {
+            val url = if (device.lan.startsWith("http")) device.lan.trimEnd('/') else "http://${device.lan}"
+            tokenStore.setServer(url)
+            tokenStore.clear()
+            tokenHolder.token = null
+            tokenHolder.relayToken = null
+            if (!device.ccUser.isNullOrBlank()) {
+                val response = api(url).auth.login(LoginRequest(device.ccUser, device.ccPass ?: ""))
+                val token = response.token ?: throw IllegalStateException("响应中没有令牌")
+                tokenStore.setToken(token)
+                tokenHolder.token = token
+            }
+            return url
+        }
+        if (device.token.isNotBlank()) {
+            tokenStore.setServer("https://api.planrla.com")
+            tokenStore.clear()
+            tokenStore.setRelayToken(device.token)
+            tokenHolder.token = null
+            tokenHolder.relayToken = device.token
+            return "https://api.planrla.com"
+        }
+        tokenStore.clear()
+        tokenHolder.token = null
+        tokenHolder.relayToken = null
+        return tokenStore.serverUrlSync()
+    }
+
+    suspend fun applyCurrentDeviceSelection(): String? {
+        val device = tokenStore.currentDevice() ?: run {
+            tokenHolder.token = null
+            tokenHolder.relayToken = null
+            invalidateResolvedBaseUrl()
+            return null
+        }
+        return applyDeviceSelection(device)
     }
 
     // Resolved base URL cached per device id so repeated data calls don't re-probe LAN.

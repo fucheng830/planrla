@@ -13,12 +13,20 @@ export function resolveAuthUrlForDisplay(command: string | null | undefined, aut
   return authUrl;
 }
 
-export function getSessionDisplayName(session: ProjectSession | null | undefined): string | null {
+type SessionDisplayNameFallbacks = {
+  newSession: string;
+  untitledSession: string;
+};
+
+export function getSessionDisplayName(
+  session: ProjectSession | null | undefined,
+  fallbacks: SessionDisplayNameFallbacks,
+): string | null {
   if (!session) {
     return null;
   }
 
   return session.__provider === 'cursor'
-    ? session.name || 'Untitled Session'
-    : session.summary || 'New Session';
+    ? session.name || fallbacks.untitledSession
+    : session.summary || fallbacks.newSession;
 }

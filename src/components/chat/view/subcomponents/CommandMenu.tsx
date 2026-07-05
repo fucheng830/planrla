@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CornerDownLeft,
   Folder,
@@ -129,6 +130,7 @@ export default function CommandMenu({
   isOpen = false,
   frequentCommands = [],
 }: CommandMenuProps) {
+  const { t } = useTranslation('chat');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const selectedItemRef = useRef<HTMLDivElement | null>(null);
   const menuPosition = getMenuPosition(position);
@@ -232,7 +234,7 @@ export default function CommandMenu({
           textAlign: 'center',
         }}
       >
-        No commands available
+        {t('commandMenu.noCommands')}
       </div>
     );
   }
@@ -241,7 +243,7 @@ export default function CommandMenu({
     <div
       ref={menuRef}
       role="listbox"
-      aria-label="Available commands"
+      aria-label={t('commandMenu.availableCommands')}
       className="command-menu border border-gray-200/90 bg-white/95 text-gray-900 dark:border-slate-700/80 dark:bg-slate-950/95 dark:text-slate-100"
       style={{ ...menuBaseStyle, ...menuPosition, opacity: 1, transform: 'translateY(0)' }}
     >

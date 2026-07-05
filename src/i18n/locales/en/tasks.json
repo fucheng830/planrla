@@ -119,12 +119,64 @@
     "createNewPRD": "Create New PRD",
     "prdsAvailable": "{{count}} PRD(s) available"
   },
+  "createTask": {
+    "title": "Create AI-Generated Task",
+    "proTipTitle": "Pro tip: ask Claude Code directly",
+    "proTipDescription": "Ask for a task in chat with context and requirements. TaskMaster can generate implementation-ready tasks.",
+    "exampleLabel": "Example:",
+    "exampleText": "Please add a task for profile image uploads and include best-practice research.",
+    "documentation": "View TaskMaster documentation",
+    "gotIt": "Got it"
+  },
   "prd": {
     "modified": "Modified: {{date}}"
+  },
+  "prdEditor": {
+    "loading": "Loading PRD...",
+    "header": {
+      "fileNamePlaceholder": "Enter PRD filename",
+      "focusFileName": "Focus filename input",
+      "newBadge": "New",
+      "description": "Product Requirements Document",
+      "switchToEdit": "Switch to edit mode",
+      "previewMarkdown": "Preview markdown",
+      "disableWordWrap": "Disable word wrap",
+      "enableWordWrap": "Enable word wrap",
+      "wordWrapBadge": "WRAP",
+      "toggleTheme": "Toggle theme",
+      "download": "Download PRD",
+      "generateTasksTitle": "Generate tasks from PRD content",
+      "generateTasks": "Generate Tasks",
+      "saved": "Saved!",
+      "saving": "Saving...",
+      "save": "Save PRD",
+      "exitFullscreen": "Exit fullscreen",
+      "fullscreen": "Fullscreen"
+    },
+    "footer": {
+      "lines": "Lines: {{count}}",
+      "characters": "Characters: {{count}}",
+      "words": "Words: {{count}}",
+      "format": "Format: Markdown",
+      "shortcuts": "Press Ctrl+S to save and Esc to close"
+    },
+    "generate": {
+      "title": "Generate Tasks from PRD",
+      "askDirectly": "Ask Claude Code directly",
+      "description": "Save this PRD, then ask Claude Code in chat to parse the file and create your initial tasks.",
+      "exampleLabel": "Example prompt",
+      "exampleText": "I have a PRD at .taskmaster/docs/{{fileName}}. Parse it and create the initial tasks."
+    },
+    "overwrite": {
+      "title": "File Already Exists",
+      "description": "A PRD named \"{{fileName}}\" already exists. Do you want to overwrite it?",
+      "confirm": "Overwrite"
+    }
   },
   "statuses": {
     "pending": "Pending",
     "in-progress": "In Progress",
+    "review": "Review",
     "done": "Done",
     "blocked": "Blocked",
     "deferred": "Deferred",
@@ -134,6 +186,51 @@
     "high": "High",
     "medium": "Medium",
     "low": "Low"
+  },
+  "card": {
+    "taskId": "Task ID: {{id}}",
+    "parentTask": "Task {{id}}",
+    "dependsOn": "Depends on: {{tasks}}",
+    "status": "Status: {{status}}",
+    "progress": "Progress:",
+    "subtasksCompleted": "{{completed}} of {{total}} subtasks completed",
+    "priorityHigh": "High priority",
+    "priorityMedium": "Medium priority",
+    "priorityLow": "Low priority",
+    "noPriority": "No priority set"
+  },
+  "banner": {
+    "notConfigured": "TaskMaster AI is not configured",
+    "initialize": "Initialize",
+    "hideDetails": "Hide details",
+    "whatIs": "What is TaskMaster?",
+    "featureAi": "AI-powered task management with dependencies and subtasks.",
+    "featurePrd": "PRD-driven task generation for faster project bootstrapping.",
+    "featureViews": "Kanban and list views for day-to-day execution.",
+    "taskLabel": "Task {{id}}",
+    "startTask": "Start Task",
+    "viewTaskDetails": "View task details",
+    "viewAllTasks": "View all tasks",
+    "priorityHigh": "High Priority",
+    "priorityMedium": "Medium Priority",
+    "priorityLow": "Low Priority"
+  },
+  "detail": {
+    "copyTaskId": "Copy task ID",
+    "taskLabel": "Task {{id}}",
+    "save": "Save",
+    "cancelEditing": "Cancel editing",
+    "editTask": "Edit task",
+    "close": "Close",
+    "status": "Status",
+    "priority": "Priority",
+    "dependencies": "Dependencies",
+    "noDependencies": "No dependencies",
+    "description": "Description",
+    "noDescription": "No description provided",
+    "implementationDetails": "Implementation Details",
+    "testStrategy": "Test Strategy",
+    "notSet": "Not set"
   },
   "noMatchingTasks": {
     "title": "No tasks match your filters",

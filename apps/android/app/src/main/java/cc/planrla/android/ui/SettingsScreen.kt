@@ -264,6 +264,7 @@ private fun HostEditDialog(initial: Device, title: String, onDismiss: () -> Unit
     var lan by remember(initial.id) { mutableStateOf(initial.lan ?: "") }
     var user by remember(initial.id) { mutableStateOf(initial.ccUser ?: "") }
     var pass by remember(initial.id) { mutableStateOf(initial.ccPass ?: "") }
+    val defaultHostName = stringResource(R.string.settings_default_host_name)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -286,7 +287,7 @@ private fun HostEditDialog(initial: Device, title: String, onDismiss: () -> Unit
                     onSave(
                         initial.copy(
                             id = id.ifBlank { java.util.UUID.randomUUID().toString() },
-                            name = name.ifBlank { normalizedLan.ifBlank { "Host" } },
+                            name = name.ifBlank { normalizedLan.ifBlank { defaultHostName } },
                             lan = normalizedLan.ifBlank { null },
                             ccUser = user.ifBlank { null },
                             ccPass = pass.ifBlank { null },
@@ -593,7 +594,14 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 App.tokenStore.upsertDevice(normalized)
-                if (App.tokenStore.currentDeviceIdSync() == null) App.tokenStore.setCurrentDevice(normalized.id)
+                val currentId = App.tokenStore.currentDeviceIdSync()
+                if (currentId == null) {
+                    App.tokenStore.setCurrentDevice(normalized.id)
+                    App.applyDeviceSelection(normalized)
+                } else if (currentId == normalized.id) {
+                    App.applyDeviceSelection(normalized)
+                }
+                Unit
             }.onSuccess {
                 hosts.value = hosts.value.copy(busy = false, message = "桌面端已保存。")
                 loadHosts()
@@ -606,7 +614,10 @@ class SettingsViewModel : ViewModel() {
     fun deleteHost(id: String) {
         hosts.value = hosts.value.copy(busy = true, message = null, error = null)
         viewModelScope.launch {
-            runCatching { App.tokenStore.removeDevice(id) }
+            runCatching {
+                App.tokenStore.removeDevice(id)
+                App.applyCurrentDeviceSelection()
+            }
                 .onSuccess {
                     hosts.value = hosts.value.copy(busy = false, message = "桌面端已删除。")
                     loadHosts()
@@ -620,21 +631,7 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 App.tokenStore.setCurrentDevice(device.id)
-                if (!device.lan.isNullOrBlank()) {
-                    val url = normalizeHostInput(device.lan)
-                    App.tokenStore.setServer(url)
-                    if (!device.ccUser.isNullOrBlank()) {
-                        val response = App.api(url).auth.login(LoginRequest(device.ccUser, device.ccPass ?: ""))
-                        val token = response.token ?: throw IllegalStateException("no token in response")
-                        App.tokenStore.setToken(token)
-                        App.tokenStore.clearRelayToken()
-                        App.tokenHolder.token = token
-                        App.tokenHolder.relayToken = null
-                    }
-                } else if (device.token.isNotBlank()) {
-                    App.tokenStore.setRelayToken(device.token)
-                    App.tokenHolder.relayToken = device.token
-                }
+                App.applyDeviceSelection(device)
             }.onSuccess {
                 hosts.value = hosts.value.copy(busy = false, currentId = device.id, message = "已切换到 ${device.name}。")
                 loadHosts()

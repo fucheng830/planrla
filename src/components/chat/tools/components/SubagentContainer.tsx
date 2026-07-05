@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SubagentChildTool } from '../../types/types';
 import { CollapsibleSection } from './CollapsibleSection';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../../../../shared/view/ui';
@@ -45,17 +46,18 @@ export const SubagentContainer: React.FC<SubagentContainerProps> = ({
   toolResult,
   subagentState,
 }) => {
+  const { t } = useTranslation('chat');
   const parsedInput = typeof toolInput === 'string' ? (() => {
     try { return JSON.parse(toolInput); } catch { return {}; }
   })() : (toolInput || {});
 
-  const subagentType = parsedInput?.subagent_type || 'Agent';
-  const description = parsedInput?.description || 'Running task';
+  const subagentType = parsedInput?.subagent_type || t('subagent.agent');
+  const description = parsedInput?.description || t('subagent.runningTask');
   const prompt = parsedInput?.prompt || '';
   const { childTools, currentToolIndex, isComplete } = subagentState;
   const currentTool = currentToolIndex >= 0 ? childTools[currentToolIndex] : null;
 
-  const title = `Subagent / ${subagentType}: ${description}`;
+  const title = t('subagent.title', { type: subagentType, description });
 
   return (
     <div className="my-1 border-l-2 border-l-purple-500 py-0.5 pl-3 dark:border-l-purple-400">
@@ -75,7 +77,7 @@ export const SubagentContainer: React.FC<SubagentContainerProps> = ({
         {currentTool && !isComplete && (
           <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 flex-shrink-0 animate-pulse rounded-full bg-purple-500 dark:bg-purple-400" />
-            <span className="text-muted-foreground/60">Currently:</span>
+            <span className="text-muted-foreground/60">{t('subagent.currently')}</span>
             <span className="font-medium text-foreground">{currentTool.toolName}</span>
             {getCompactToolDisplay(currentTool.toolName, currentTool.toolInput) && (
               <>
@@ -94,7 +96,7 @@ export const SubagentContainer: React.FC<SubagentContainerProps> = ({
             <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span>Completed ({childTools.length} {childTools.length === 1 ? 'tool' : 'tools'})</span>
+            <span>{t('subagent.completed', { count: childTools.length })}</span>
           </div>
         )}
 
@@ -110,7 +112,7 @@ export const SubagentContainer: React.FC<SubagentContainerProps> = ({
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              <span>View tool history ({childTools.length})</span>
+              <span>{t('subagent.viewHistory', { count: childTools.length })}</span>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="mt-1 space-y-0.5 border-l border-border pl-3">
@@ -124,7 +126,7 @@ export const SubagentContainer: React.FC<SubagentContainerProps> = ({
                       </span>
                     )}
                     {child.toolResult?.isError && (
-                      <span className="flex-shrink-0 text-red-500">(error)</span>
+                      <span className="flex-shrink-0 text-red-500">{t('subagent.error')}</span>
                     )}
                   </div>
                 ))}

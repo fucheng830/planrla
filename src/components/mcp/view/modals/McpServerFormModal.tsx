@@ -34,32 +34,32 @@ type McpServerFormModalProps = {
   onSubmit: (formData: McpFormState, editingServer: ProviderMcpServer | null) => Promise<void>;
 };
 
-const getScopeLabel = (scope: McpScope, mode: McpFormMode): string => {
+const getScopeLabel = (scope: McpScope, mode: McpFormMode, t: (key: string) => string): string => {
   if (scope === 'user') {
-    return mode === 'global' ? 'User (All Providers)' : 'User (Global)';
+    return mode === 'global' ? t('mcpForm.scope.userAllProviders') : t('mcpForm.scope.userGlobal');
   }
 
   if (scope === 'local') {
-    return 'Claude Local';
+    return t('mcpForm.scope.claudeLocal');
   }
 
-  return mode === 'global' ? 'Project (All Providers)' : 'Project';
+  return mode === 'global' ? t('mcpForm.scope.projectAllProviders') : t('mcpForm.scope.project');
 };
 
-const getScopeDescription = (scope: McpScope, mode: McpFormMode): string => {
+const getScopeDescription = (scope: McpScope, mode: McpFormMode, t: (key: string) => string): string => {
   if (scope === 'user') {
     return mode === 'global'
-      ? 'Writes to each provider user config and is available across projects on this machine'
-      : 'Available across all projects on your machine';
+      ? t('mcpForm.scope.userAllProvidersDescription')
+      : t('mcpForm.scope.userDescription');
   }
 
   if (scope === 'local') {
-    return 'Stored in Claude user settings for the selected project';
+    return t('mcpForm.scope.claudeLocalDescription');
   }
 
   return mode === 'global'
-    ? 'Writes to the selected project workspace for every provider'
-    : 'Stored in the selected project workspace';
+    ? t('mcpForm.scope.projectAllProvidersDescription')
+    : t('mcpForm.scope.projectDescription');
 };
 
 export default function McpServerFormModal({
@@ -102,7 +102,7 @@ export default function McpServerFormModal({
     supportedScopes: availableScopes,
     supportedTransports: availableTransports,
     unsupportedTransportMessage: isGlobalMode
-      ? (transport) => `Add MCP Server supports only stdio and http across all providers, not ${transport}.`
+      ? (transport) => t('mcpForm.validation.unsupportedGlobalTransport', { transport })
       : undefined,
     onSubmit,
   });
@@ -170,7 +170,7 @@ export default function McpServerFormModal({
               </label>
               <div className="flex items-center gap-2">
                 {formData.scope === 'user' ? <Globe className="h-4 w-4" /> : <FolderOpen className="h-4 w-4" />}
-                <span className="text-sm">{getScopeLabel(formData.scope, mode)}</span>
+                <span className="text-sm">{getScopeLabel(formData.scope, mode, t)}</span>
                 {formData.workspacePath && (
                   <span className="truncate text-xs text-muted-foreground">- {formData.workspacePath}</span>
                 )}
@@ -199,12 +199,12 @@ export default function McpServerFormModal({
                     >
                       <div className="flex items-center justify-center gap-2">
                         {scope === 'user' ? <Globe className="h-4 w-4" /> : <FolderOpen className="h-4 w-4" />}
-                        <span>{getScopeLabel(scope, mode)}</span>
+                        <span>{getScopeLabel(scope, mode, t)}</span>
                       </div>
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">{getScopeDescription(formData.scope, mode)}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{getScopeDescription(formData.scope, mode, t)}</p>
               </div>
 
               {showProjectSelector && (
@@ -326,7 +326,7 @@ export default function McpServerFormModal({
               {supportsWorkingDirectory && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground">
-                    Working Directory
+                    {t('mcpForm.fields.cwd')}
                   </label>
                   <Input
                     value={formData.cwd}
@@ -386,7 +386,7 @@ export default function McpServerFormModal({
           {showCodexOnlyFields && formData.importMode === 'form' && formData.transport === 'stdio' && (
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Environment Variable Names
+                {t('mcpForm.fields.envVarNames')}
               </label>
               <textarea
                 value={multilineText.envVars}
@@ -401,7 +401,7 @@ export default function McpServerFormModal({
           {showCodexOnlyFields && formData.importMode === 'form' && formData.transport === 'http' && (
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Bearer Token Environment Variable
+                {t('mcpForm.fields.bearerTokenEnvVar')}
               </label>
               <Input
                 value={formData.bearerTokenEnvVar}
