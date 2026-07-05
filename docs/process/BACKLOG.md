@@ -43,6 +43,6 @@
 | REQ-003 | 会话列表分页/缓存 | main(M2) | _(M2 sub-project D projects-perf 覆盖:batched SQL + grouping,N+1 消除)_ |
 | REQ-017 | Linux headless server Docker 镜像(server-only) | v0.5.0 | _(36bf31f,ad-hoc 未走 spec;见 releases/v0.5.0.md)_ |
 | REQ-018 | 桌面端 i18n 完整改造 + Android UI 修复 + 云设备管理 | v0.5.0 | _(7716098,ad-hoc 未走 spec;80 文件 +1944/-699;见 releases/v0.5.0.md)_ |
-| REQ-011 | 桌面端自动更新 MVP(Tasks 1-8) | v0.6.0 | _(merge `57a3919`;见 releases/v0.6.0.md。**Task 9 R2 bucket + 域名 + e2e 待做,feature 暂不 live**)_ |
+| REQ-011 | 桌面端自动更新(Tasks 1-9,含 e2e) | v0.6.0/v0.6.1 | _(merge `57a3919` + `3393d55`/`65dbfaa` publish-r2 fix;**e2e 通过**:v0.6.0→v0.6.1 升级链路实测成功;R2 更新源 live;见 releases/v0.6.0.md + v0.6.1.md)_ |
 
 > 注:v0.1.0 / v0.2.0 / v0.3.0 / v0.4.0 已含的其他完成项(桌面体验默认值 / 自绘标题栏 / 三态主题 UI / fr i18n / 项目性能优化 / 发版流程基建)未逐条回填 BACKLOG,见 CHANGELOG.md 与 `V1_PRODUCT_ROADMAP.md`「P0 完成记录」。后续如需精确追溯再补 REQ。
