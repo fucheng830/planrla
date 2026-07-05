@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 
@@ -10,6 +11,8 @@ import { WebSocketProvider } from './contexts/WebSocketContext';
 import { PluginsProvider } from './contexts/PluginsContext';
 import AppContent from './components/app/AppContent';
 import TitleBar from './components/chrome/TitleBar';
+import { useAutoUpdater } from './hooks/useAutoUpdater';
+import { UpdateNotification } from './components/UpdateNotification';
 import i18n from './i18n/config.js';
 
 const DEPLOYMENT_ASSET_DIRECTORIES = new Set(['assets', 'static', 'icons', 'images']);
@@ -104,11 +107,23 @@ function detectRouterBasename() {
 
 export default function App() {
   const routerBasename = detectRouterBasename();
+  // Desktop auto-updater (REQ-011). window.updater only exists in packaged
+  // desktop mode (injected by electron/preload.cjs); web/git mode no-ops.
+  const { state: updateState, download: downloadUpdate, quitInstall: quitAndInstall } = useAutoUpdater();
+  const [updateDismissed, setUpdateDismissed] = useState(false);
 
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProvider>
         <TitleBar />
+        {!updateDismissed && (
+          <UpdateNotification
+            state={updateState}
+            onDownload={downloadUpdate}
+            onQuitInstall={quitAndInstall}
+            onClose={() => setUpdateDismissed(true)}
+          />
+        )}
         <CloudAccountProvider>
         <AuthProvider>
           <WebSocketProvider>
