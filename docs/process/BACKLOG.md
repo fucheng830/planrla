@@ -24,6 +24,8 @@
 | REQ-009 | 项目级工作台(需求/方案/任务/验收/归档) | — | P1 | feat | backlog | **首切片:需求对象模型 + REQ-014 入口**;见 PROJECT_WORKBENCH_FUNCTIONAL_REQUIREMENTS.md |
 | REQ-011 | 桌面端自动更新(auto-update 全流程) | M6 | P1 | feat | backlog | electron-updater 下载/安装/重启 + 前端更新 UI + 更新源 + latest.yml + 代码签名 + 渠道;现状只检测不下载 |
 | REQ-014 | 项目右键「新需求」入口 + 需求收集流程 | — | P1 | feat | backlog | **依赖 REQ-009**(项目内需求对象);合并到 REQ-009 首切片一起做 |
+| REQ-015 | 跨对话上下文共享(总) | — | P1 | feat | backlog | 分阶段 **L1**(同主机)→**L2**(协议转换)→**L3**(跨设备)× **C1**(@引用单条)→**C2**(整段历史)→**C3**(摘要)→**C4**(持久记忆);首切片 = REQ-016(L1×C1+C2) |
+| REQ-016 | 同主机 @引用 + 整段历史(L1 × C1+C2) | — | P1 | feat | backlog | Provider 无关(纯文本注入,Claude↔Codex 同样工作,不做协议转换);复用现有 session messages API + chat mentions 基建(`useFileMentions`);不做摘要/记忆/自动同步。设计草案见 [design-drafts/req016-context-share-draft.md](./design-drafts/req016-context-share-draft.md) |
 
 ## Blocked(冻结/待想清楚)
 | ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
