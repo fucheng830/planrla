@@ -3,6 +3,17 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.6.1](https://github.com/fucheng830/planrla/compare/v0.6.0...v0.6.1) (2026-07-05)
+
+### Bug Fixes
+
+* **req011:** publish-r2 invokedDirectly detection + use npx wrangler ([3393d55](https://github.com/fucheng830/planrla/commit/3393d55acf7279fc6f790fc8eeccb7cad80bbda6))
+* **req011:** publish-r2 skip large files >300MiB with warning (wrangler limit) ([65dbfaa](https://github.com/fucheng830/planrla/commit/65dbfaa12efc5f942a9636fa7da6ef8b1bc1505d))
+
+### Documentation
+
+* **release:** v0.6.0 note + REQ-011 released ([4e4105c](https://github.com/fucheng830/planrla/commit/4e4105c8e3c2777e4e59ad8dcaaffd14ef1830cb))
+
 ## [0.6.0](https://github.com/fucheng830/planrla/compare/v0.5.0...v0.6.0) (2026-07-05)
 
 ### New Features
