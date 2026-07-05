@@ -51,9 +51,17 @@ function main() {
   for (const { local, remote } of objs) {
     const cmd = `npx wrangler r2 object put ${BUCKET}/${remote} --file="${local}" --remote=true`;
     console.log(`[publish-r2] $ ${cmd}`);
-    execSync(cmd, { stdio: 'inherit' });
+    try {
+      execSync(cmd, { stdio: 'inherit' });
+    } catch (e) {
+      // wrangler r2 object put caps at 300 MiB; large artifacts (e.g. the portable
+      // zip ~338 MiB) can't go up via wrangler. Skip with a warning — GitHub Release
+      // serves them, and electron-updater's NSIS feed only needs latest.yml + exe.
+      const sizeMiB = (fs.statSync(local).size / 1048576).toFixed(0);
+      console.warn(`[publish-r2] ⚠ skipped ${remote} (${sizeMiB} MiB): ${String(e.message || e).split('\n')[0]}`);
+    }
   }
-  console.log(`[publish-r2] ✓ Uploaded ${objs.length} objects to R2 bucket "${BUCKET}" (desktop/ prefix).`);
+  console.log(`[publish-r2] ✓ Processed ${objs.length} objects (failures warned above). Bucket "${BUCKET}", prefix desktop/.`);
 }
 
 // Run main() only when invoked directly (not when imported by tests).
