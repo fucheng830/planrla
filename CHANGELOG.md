@@ -3,6 +3,23 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.5.0](https://github.com/fucheng830/planrla/compare/v0.4.1...v0.5.0) (2026-07-05)
+
+### New Features
+
+* **docker:** linux headless server image ([36bf31f](https://github.com/fucheng830/planrla/commit/36bf31fd41f5e3be928686f02db32263b4d8d799))
+* i18n extraction pass + Android UI fixes + cloud device management ([7716098](https://github.com/fucheng830/planrla/commit/7716098a4817a11b4c67fc1cadec302aededbc8a))
+
+### Documentation
+
+* **backlog:** add REQ-014 new-req entry and REQ-009 first slice ([e329c00](https://github.com/fucheng830/planrla/commit/e329c0001c466b85ae069ef75bf4d6ceb9100b38))
+* **backlog:** add REQ-015/REQ-016 cross-session context share + L1 design draft ([f2f6a9d](https://github.com/fucheng830/planrla/commit/f2f6a9d08b1062fec15e1fd71460ba51625314de))
+* **backlog:** mark req-003/004 released m2 c/d covered ([9d5f25d](https://github.com/fucheng830/planrla/commit/9d5f25d120976607b97a2ed98e02c5c4b2f3dc88))
+
+### Maintenance
+
+* ignore android verification screenshots ([63c5dd6](https://github.com/fucheng830/planrla/commit/63c5dd6ae53ded78b72f1d37d13a915cb2eab96c))
+
 ## [0.4.0](https://github.com/fucheng830/planrla/compare/v0.3.0...v0.4.0) (2026-07-03)
 
 ### New Features
