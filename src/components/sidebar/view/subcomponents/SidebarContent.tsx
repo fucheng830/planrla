@@ -203,6 +203,7 @@ export default function SidebarContent({
   const showConversationSearch = searchMode === 'sessions' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
+  const activeSessions = projectListProps.activeSessions;
   const conversationListItems: ConversationListItem[] = projects
     .flatMap((project) =>
       getAllSessions(project).map((session) => ({
@@ -211,7 +212,19 @@ export default function SidebarContent({
         lastActivityTime: getSessionDate(session).getTime(),
       })),
     )
-    .sort((itemA, itemB) => itemB.lastActivityTime - itemA.lastActivityTime);
+    .sort((itemA, itemB) => {
+      const aRunning = activeSessions.has(itemA.session.id);
+      const bRunning = activeSessions.has(itemB.session.id);
+      if (aRunning && bRunning) {
+        // Both running: most-recently-started first (latest launch on top)
+        const aStarted = activeSessions.get(itemA.session.id)?.startedAt ?? 0;
+        const bStarted = activeSessions.get(itemB.session.id)?.startedAt ?? 0;
+        return bStarted - aStarted;
+      }
+      if (aRunning) return -1;
+      if (bRunning) return 1;
+      return itemB.lastActivityTime - itemA.lastActivityTime;
+    });
 
   return (
     <div
@@ -385,13 +398,21 @@ export default function SidebarContent({
                     className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
                       isSelected
                         ? 'border-primary/25 bg-primary/5'
-                        : isCompleted
-                          ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
-                          : 'border-transparent hover:border-border/60 hover:bg-accent/45'
+                        : isProcessing
+                          ? 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10'
+                          : isCompleted
+                            ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
+                            : 'border-transparent hover:border-border/60 hover:bg-accent/45'
                     }`}
                     onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
                   >
                     <div className="flex min-w-0 items-center gap-2">
+                      {isProcessing && (
+                        <span
+                          className="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-emerald-500"
+                          aria-label={t('tooltips.processingSessionIndicator', 'Processing session')}
+                        />
+                      )}
                       <SessionProviderLogo provider={session.__provider} className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
                         {sessionTitle}
