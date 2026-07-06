@@ -18,7 +18,7 @@ owner: Archie
 - 「对话」tab = 扁平列出**全部** session(`SidebarContent.tsx:339` 的 `searchMode === 'conversations'` 分支)。
 - 「Running」tab = 同一批 session 里**当前正在跑**的子集(`SidebarContent.tsx:425` 的 `searchMode === 'running'` 分支),数据来自 in-memory 的 `processingSessions` / `chatRunRegistry`,刻意不持久化。
 - 一个正在跑的 session 会**同时**出现在两个 tab 里 → 重复感的根源。
-- 次要根源:i18n 里 `Conversations`/「对话」与 `Sessions`/「会话」混用(11 种语言)。
+- 次要根源:i18n 里 `Conversations`/「对话」与 `Sessions`/「会话」混用(10 种语言)。
 
 所以这不是「合并两套数据模型」(数据层是干净的、刻意为之的),而是**收敛 UI 视图 + 统一术语**。数据层不动。
 
@@ -35,7 +35,7 @@ owner: Archie
 - `SidebarSearchMode` 类型:`'conversations'` → `'sessions'`,删 `'running'`。
 - `SidebarHeader`:删 Running 按钮(桌面 + 移动),四档 → 三档(Projects / 会话 / 归档)。
 - `SidebarContent`:删 `searchMode === 'running'` 分支;`sessions` 分支承担合并列表,加 running 置顶排序 + running 视觉标识。
-- i18n:统一术语,清理 dead key(11 种语言)。
+- i18n:统一术语,清理 dead key(10 种语言)。
 
 ### 不在范围内(YAGNI)
 
@@ -139,9 +139,9 @@ emerald 点 + 现有 statusView badge 已覆盖「置顶 + 徽标」承诺,行 t
 | `/api/providers/sessions/running` 5s 轮询 | 维持 `activeSessions` 实时性 | 无改动 |
 | `chatRunRegistry`(server) | 轮询的源头 | 无改动 |
 | `useSessionStore` / `sessions` 表 | session 消息 + 持久化 | 无改动 |
-| `useSidebarController`(`:193-194, 994`) | 计算 `runningSessionsCount` | 无改动(保留作「会话」按钮 emerald 徽标数据源) |
+| `useSidebarController`(`:193-194, 994`) | 计算 `runningSessionsCount` | count 计算无改动(保留作「会话」按钮 emerald 徽标数据源) |
 
-### 5. i18n(11 种语言)
+### 5. i18n(10 种语言)
 
 #### 5.1 术语统一
 
@@ -156,7 +156,7 @@ emerald 点 + 现有 statusView badge 已覆盖「置顶 + 徽标」承诺,行 t
 
 #### 5.3 执行方式
 
-11 语言批量改动用脚本/统一 key 映射,不逐个手改,避免翻译漂移。具体工具 sed 还是 node 脚本,plan 阶段定。
+10 语言批量改动用脚本/统一 key 映射,不逐个手改,避免翻译漂移。具体工具 sed 还是 node 脚本,plan 阶段定。
 
 ## 边界决策(已与 Archie 确认)
 
@@ -191,7 +191,7 @@ emerald 点 + 现有 statusView badge 已覆盖「置顶 + 徽标」承诺,行 t
 
 | 风险 | 缓解 |
 |---|---|
-| i18n 11 语言翻译漂移 | 统一 key 映射 + 脚本批量改;改完抽检 2-3 种语言 |
+| i18n 10 语言翻译漂移 | 统一 key 映射 + 脚本批量改;改完抽检 2-3 种语言 |
 | SidebarSearchMode 改名连锁漏改 | typecheck 兜底,漏改必失败 |
 | 「会话」按钮双徽标(completed + running)视觉拥挤 | plan 阶段出具体布局,验收点 3 确认不重叠 |
 | 搜索分支 running 处理是边缘情况,可能被忽略 | spec 已明确「搜索仅加徽标不置顶」,plan 覆盖测试 |
@@ -204,10 +204,12 @@ emerald 点 + 现有 statusView badge 已覆盖「置顶 + 徽标」承诺,行 t
 | 类型 | `src/components/sidebar/types/types.ts` | SidebarSearchMode 收敛 |
 | UI | `src/components/sidebar/view/subcomponents/SidebarHeader.tsx` | 删 Running 按钮 + 会话按钮双徽标 |
 | UI | `src/components/sidebar/view/subcomponents/SidebarContent.tsx` | 删 running 分支 + sessions 分支置顶排序/视觉 |
-| i18n | `src/i18n/locales/*/sidebar.json`(×11) | `modeConversations`→`modeSessions` + 排查 conversation 混用 |
+| UI | `src/components/sidebar/view/Sidebar.tsx` | `forceExpanded: searchMode === 'running'` → `false` |
+| hooks | `src/components/sidebar/hooks/useSidebarController.ts` | 删 `runningProjects` useMemo + 简化 `filteredProjects` + `'conversations'`→`'sessions'` 字面量 |
+| i18n | `src/i18n/locales/*/sidebar.json`(×10) | `modeConversations`→`modeSessions` + 排查 conversation 混用 |
 | i18n | `src/i18n/locales/*/chat.json`(按需) | conversation → session 文案 |
 
-后端、store、数据层、`useSidebarController`:**0 改动**(running count 计算保留作徽标源)。
+后端、store、数据层:**0 改动**。(`useSidebarController` 的 `runningSessionsCount` 计算保留作徽标源;`runningProjects` 死代码清理见上表。)
 
 ## 不做(YAGNI)
 
