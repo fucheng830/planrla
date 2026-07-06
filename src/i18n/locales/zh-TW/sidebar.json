@@ -116,7 +116,7 @@
   },
   "search": {
     "modeProjects": "專案",
-    "modeConversations": "對話",
+    "modeSessions": "會話",
     "conversationsPlaceholder": "搜尋對話內容...",
     "searching": "搜尋中...",
     "noResults": "找不到結果",

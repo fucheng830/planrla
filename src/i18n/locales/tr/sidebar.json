@@ -117,7 +117,7 @@
   },
   "search": {
     "modeProjects": "Projeler",
-    "modeConversations": "Konuşmalar",
+    "modeSessions": "Oturumlar",
     "conversationsPlaceholder": "Konuşmalarda ara...",
     "searching": "Aranıyor...",
     "noResults": "Sonuç bulunamadı",

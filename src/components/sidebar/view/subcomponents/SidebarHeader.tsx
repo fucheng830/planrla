@@ -51,7 +51,7 @@ export default function SidebarHeader({
   t,
 }: SidebarHeaderProps) {
   const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
-  const searchPlaceholder = searchMode === 'conversations'
+  const searchPlaceholder = searchMode === 'sessions'
     ? t('search.conversationsPlaceholder')
     : searchMode === 'archived'
       ? t('search.archivedPlaceholder', 'Search archived sessions...')
@@ -142,11 +142,11 @@ export default function SidebarHeader({
                 {t('search.modeProjects')}
               </button>
               <button
-                onClick={() => onSearchModeChange('conversations')}
-                aria-pressed={searchMode === 'conversations'}
+                onClick={() => onSearchModeChange('sessions')}
+                aria-pressed={searchMode === 'sessions'}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'conversations'
+                  searchMode === 'sessions'
                     ? "bg-background shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
@@ -159,7 +159,7 @@ export default function SidebarHeader({
                     </span>
                   )}
                 </span>
-                {t('search.modeConversations')}
+                {t('search.modeSessions')}
               </button>
               <Tooltip content={t('search.runningTooltip', 'Running sessions')} position="top">
                 <button
@@ -289,11 +289,11 @@ export default function SidebarHeader({
                 {t('search.modeProjects')}
               </button>
               <button
-                onClick={() => onSearchModeChange('conversations')}
-                aria-pressed={searchMode === 'conversations'}
+                onClick={() => onSearchModeChange('sessions')}
+                aria-pressed={searchMode === 'sessions'}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'conversations'
+                  searchMode === 'sessions'
                     ? "bg-background shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
@@ -306,7 +306,7 @@ export default function SidebarHeader({
                     </span>
                   )}
                 </span>
-                {t('search.modeConversations')}
+                {t('search.modeSessions')}
               </button>
               <Tooltip content={t('search.runningTooltip', 'Running sessions')} position="top">
                 <button

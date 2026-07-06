@@ -200,7 +200,7 @@ export default function SidebarContent({
   completedSessions,
   t,
 }: SidebarContentProps) {
-  const showConversationSearch = searchMode === 'conversations' && searchFilter.trim().length >= 2;
+  const showConversationSearch = searchMode === 'sessions' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
   const conversationListItems: ConversationListItem[] = projects
@@ -336,7 +336,7 @@ export default function SidebarContent({
               ))}
             </div>
           ) : null
-        ) : searchMode === 'conversations' ? (
+        ) : searchMode === 'sessions' ? (
           conversationListItems.length === 0 ? (
             <div className="px-4 py-12 text-center md:py-8">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">

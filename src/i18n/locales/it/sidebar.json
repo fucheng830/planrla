@@ -117,7 +117,7 @@
   },
   "search": {
     "modeProjects": "Progetti",
-    "modeConversations": "Conversazioni",
+    "modeSessions": "Sessioni",
     "conversationsPlaceholder": "Cerca nelle conversazioni...",
     "searching": "Ricerca in corso...",
     "noResults": "Nessun risultato trovato",
