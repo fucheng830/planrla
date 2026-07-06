@@ -7,7 +7,7 @@
 ## In Progress
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|
-| _(暂无)_ | | | | | | | | |
+| REQ-023 | 桌面端外链系统浏览器打开 | — | P1 | fix | accepted | [spec](../superpowers/specs/2026-07-06-external-link-handling-design.md) | [plan](../superpowers/plans/2026-07-06-req023-external-link-handling.md) | v0.6.2 |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
@@ -29,7 +29,6 @@
 | REQ-020 | A2A(Agent-to-Agent 通信/协作) | — | P2 | feat | backlog | **待澄清范围**(澄清前不进 brainstorming):(a) Google A2A 协议(agent2agent 标准化通信) / (b) planrla 内部多 Agent(Claude/Codex/Gemini session)互相对话/委派 / (c) 其他。⚠️ 编号修正:原 recap 误用 REQ-018,与已发版的 i18n+Android 撞号,改用 020 |
 | REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | — | P1 | feat | backlog | 独立 UX 专项,是 REQ-022(UX 子集),可先行。范围:打开网页预览 / 打开图片预览 / 动效 / 交互优化(对齐 Codex 视觉与交互)。⚠️ 编号修正:原 recap 误用 REQ-019,改用 021 |
 | REQ-022 | 对齐 Codex 全特性集(功能 + UX,母) | — | P2 | feat | backlog | **母需求**,含 REQ-021(UX 部分)。**需先列 Codex 特性清单 → Archie 标优先级**,再拆子 REQ;当前不直接 brainstorming。P 默认 P2(范围未定)。⚠️ 编号修正:原 recap 误用 REQ-020,改用 022 |
-| REQ-023 | 桌面端外链系统浏览器打开(治点击链接弹空白新窗) | — | P1 | fix | spec | **根因**:`electron/main.js` 无 `setWindowOpenHandler`,Electron 默认对 `target=_blank` 开裸 BrowserWindow 加载 URL,localhost/API 类显示空白。**方案**:主进程拦截 + `shell.openExternal` + `will-navigate` 兜底。spec:[2026-07-06-external-link-handling-design](../superpowers/specs/2026-07-06-external-link-handling-design.md) |
 
 ## Blocked(冻结/待想清楚)
 | ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
