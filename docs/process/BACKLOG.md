@@ -8,7 +8,7 @@
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|
 | REQ-023 | 桌面端外链系统浏览器打开 | — | P1 | fix | accepted | [spec](../superpowers/specs/2026-07-06-external-link-handling-design.md) | [plan](../superpowers/plans/2026-07-06-req023-external-link-handling.md) | v0.6.2 |
-| REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | spec | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | _(待 writing-plans)_ | _(未发版)_ |
+| REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | plan | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | [plan](../superpowers/plans/2026-07-07-req024-merge-chat-running-sessions.md) | _(未发版)_ |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
