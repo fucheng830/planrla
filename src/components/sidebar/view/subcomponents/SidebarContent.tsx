@@ -365,16 +365,16 @@ export default function SidebarContent({
                 {t('sessions.noSessions')}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {t('search.conversationsEmptyDescription', 'Completed conversations will appear here in newest-first order.')}
+                {t('search.sessionsEmptyDescription', 'Completed sessions will appear here in newest-first order.')}
               </p>
             </div>
           ) : (
             <div className="space-y-1 px-2">
               <div className="flex items-center justify-between px-1 pb-1">
                 <p className="text-xs text-muted-foreground">
-                  {t('search.conversationsListCount', {
+                  {t('search.sessionsListCount', {
                     count: conversationListItems.length,
-                    defaultValue: '{{count}} conversations',
+                    defaultValue: '{{count}} sessions',
                   })}
                 </p>
                 {completedSessionsCount > 0 && (

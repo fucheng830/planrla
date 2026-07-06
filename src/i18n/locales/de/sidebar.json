@@ -118,7 +118,7 @@
   "search": {
     "modeProjects": "Projekte",
     "modeSessions": "Sitzungen",
-    "conversationsPlaceholder": "In Unterhaltungen suchen...",
+    "sessionsPlaceholder": "Sitzungen durchsuchen...",
     "searching": "Sucht...",
     "noResults": "Keine Ergebnisse gefunden",
     "tryDifferentQuery": "Versuch eine andere Suchanfrage",

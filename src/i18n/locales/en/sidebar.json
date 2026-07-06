@@ -118,7 +118,7 @@
   "search": {
     "modeProjects": "Projects",
     "modeSessions": "Sessions",
-    "conversationsPlaceholder": "Search in conversations...",
+    "sessionsPlaceholder": "Search sessions...",
     "searching": "Searching...",
     "noResults": "No results found",
     "tryDifferentQuery": "Try a different search query",

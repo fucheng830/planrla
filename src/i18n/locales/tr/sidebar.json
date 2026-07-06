@@ -118,7 +118,7 @@
   "search": {
     "modeProjects": "Projeler",
     "modeSessions": "Oturumlar",
-    "conversationsPlaceholder": "Konuşmalarda ara...",
+    "sessionsPlaceholder": "Oturumları ara...",
     "searching": "Aranıyor...",
     "noResults": "Sonuç bulunamadı",
     "tryDifferentQuery": "Farklı bir arama sorgusu dene",
