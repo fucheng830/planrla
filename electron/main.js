@@ -5,7 +5,7 @@
 // electron 拦截返回 API)。ESM named import 拿不到 API —— 用 createRequire 走 CJS require。
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { app, BrowserWindow, Menu, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell } = require('electron');
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,6 +14,7 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { readThemeCache, writeThemeCache } from './themeCache.cjs';
 import { initAutoUpdater } from './updater.js';
+import { isAllowedUrl, isSelfOrigin } from './links.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Planrla';
@@ -159,6 +160,18 @@ function createWindow() {
   } else {
     mainWindow.loadURL(`http://127.0.0.1:${serverPort}/`);
   }
+  // 永不让 Electron 自己开新窗口:外链一律转系统浏览器(REQ-023)。
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedUrl(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  // 防主窗口被普通 <a href="外链"> 劫持跳走:自家 origin 外的导航阻止 + 转浏览器。
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isSelfOrigin(url, serverPort, process.env.ELECTRON_DEV_URL)) {
+      event.preventDefault();
+      if (isAllowedUrl(url)) shell.openExternal(url);
+    }
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
