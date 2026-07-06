@@ -3,6 +3,28 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.6.2](https://github.com/fucheng830/planrla/compare/v0.6.1...v0.6.2) (2026-07-06)
+
+### New Features
+
+* **req023:** add isAllowedUrl protocol whitelist + tests ([fa2bbd1](https://github.com/fucheng830/planrla/commit/fa2bbd15f33013c3fdc1cde67976815b6fdd9957))
+* **req023:** add selfOrigins/isSelfOrigin + tests ([5ce7b43](https://github.com/fucheng830/planrla/commit/5ce7b438062c3f04c1adc5c4ab4ebf3776c14cce))
+* **req023:** intercept external links in main window (system browser) ([59db3ad](https://github.com/fucheng830/planrla/commit/59db3adf21bc6c1152c8c3da862a67f87fef17af))
+
+### Bug Fixes
+
+* **chat:** 权限决策后恢复 sidebar Running 徽章 ([912a48b](https://github.com/fucheng830/planrla/commit/912a48bc1de55e4860ab6b521b941e227cf982f0))
+* **chat:** permission_cancelled 后恢复 sidebar Running 徽章 ([a27c71c](https://github.com/fucheng830/planrla/commit/a27c71c16d455366868f5b6af3e533fe27fa0487))
+
+### Documentation
+
+* **backlog:** 标记 REQ-023 验收通过 accepted(待 v0.6.2) ([b9b5162](https://github.com/fucheng830/planrla/commit/b9b51629b2b5304a61879cf4361879dfeef39a93))
+* **backlog:** 录入 REQ-019~022(Kanban/A2A/Codex UX/Codex 全特性母) ([bb2cfe5](https://github.com/fucheng830/planrla/commit/bb2cfe5781898e0cf94120df2aac82005eead2e4))
+* **backlog:** 录入 REQ-023(桌面端外链系统浏览器打开)+ spec ([f84d705](https://github.com/fucheng830/planrla/commit/f84d7059435f2d585fa05fe3e3cc9dd7b0abc72a))
+* **backlog:** mark REQ-011 done (auto-update e2e passed v0.6.0->v0.6.1) ([83743f5](https://github.com/fucheng830/planrla/commit/83743f54f93ed6a2dbe0767385596e7c5fff1113))
+* **plan:** 录入 REQ-023 实施计划(外链系统浏览器打开) ([46d0763](https://github.com/fucheng830/planrla/commit/46d0763cf8b03a3c02d43d3feeddae538284e47a))
+* **release:** v0.6.1 note (publish-r2 fixes + auto-update test carrier) ([d8d494b](https://github.com/fucheng830/planrla/commit/d8d494b96dcbec1ee66fdd53ee9271791554251f))
+
 ## [0.6.1](https://github.com/fucheng830/planrla/compare/v0.6.0...v0.6.1) (2026-07-05)
 
 ### Bug Fixes
