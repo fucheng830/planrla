@@ -225,6 +225,7 @@ function ChatInterface({
     scrollToBottom,
     addMessage,
     setIsUserScrolledUp,
+    pendingPermissionRequests,
     setPendingPermissionRequests,
   });
 

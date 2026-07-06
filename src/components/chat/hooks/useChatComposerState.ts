@@ -59,6 +59,7 @@ interface UseChatComposerStateArgs {
   scrollToBottom: () => void;
   addMessage: (msg: ChatMessage) => void;
   setIsUserScrolledUp: (isScrolledUp: boolean) => void;
+  pendingPermissionRequests: PendingPermissionRequest[];
   setPendingPermissionRequests: Dispatch<SetStateAction<PendingPermissionRequest[]>>;
 }
 
@@ -186,6 +187,7 @@ export function useChatComposerState({
   scrollToBottom,
   addMessage,
   setIsUserScrolledUp,
+  pendingPermissionRequests,
   setPendingPermissionRequests,
 }: UseChatComposerStateArgs) {
   const [input, setInput] = useState(() => {
@@ -978,11 +980,38 @@ export function useChatComposerState({
         });
       });
 
-      setPendingPermissionRequests((previous) =>
-        previous.filter((request) => !validIds.includes(request.requestId)),
+      // Compute residual prompts from the current snapshot. Resolving the
+      // last pending permission / AskUserQuestion prompt means the run has
+      // resumed active processing — flip the sidebar badge out of "Needs
+      // input" back to "Running". Without this the indicator stays stuck on
+      // "Needs input" until the next provider `status`/`complete` event,
+      // which some providers never emit before the turn ends. If other
+      // prompts remain, leave the status untouched so the badge keeps
+      // signalling pending input.
+      const remaining = pendingPermissionRequests.filter(
+        (request) => !validIds.includes(request.requestId),
       );
+      setPendingPermissionRequests(remaining);
+
+      if (remaining.length === 0) {
+        const targetSessionId = selectedSession?.id || currentSessionId || null;
+        if (targetSessionId) {
+          onSessionProcessing?.(targetSessionId, {
+            taskStatus: 'running',
+            statusText: null,
+            canInterrupt: true,
+          });
+        }
+      }
     },
-    [sendMessage, setPendingPermissionRequests],
+    [
+      sendMessage,
+      pendingPermissionRequests,
+      selectedSession?.id,
+      currentSessionId,
+      onSessionProcessing,
+      setPendingPermissionRequests,
+    ],
   );
 
   const [isInputFocused, setIsInputFocused] = useState(false);
