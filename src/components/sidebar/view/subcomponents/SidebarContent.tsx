@@ -320,6 +320,12 @@ export default function SidebarContent({
                       )}
                     >
                       <div className="mb-1 flex items-center gap-1.5">
+                        {projectListProps.activeSessions.has(session.sessionId) && (
+                          <span
+                            className="h-1.5 w-1.5 flex-shrink-0 animate-pulse rounded-full bg-emerald-500"
+                            aria-label={t('tooltips.processingSessionIndicator', 'Processing session')}
+                          />
+                        )}
                         <MessageSquare className="h-3 w-3 flex-shrink-0 text-primary" />
                         <span className="truncate text-xs font-medium text-foreground">
                           {session.sessionSummary}
