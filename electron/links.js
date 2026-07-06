@@ -11,3 +11,23 @@ export function isAllowedUrl(rawUrl) {
     return false;
   }
 }
+
+// 主窗口允许导航的自家 origin 集合:内嵌 server(prod)+ dev server(dev 模式)。
+export function selfOrigins(serverPort, devUrl) {
+  const candidates = [`http://127.0.0.1:${serverPort}`];
+  if (devUrl) candidates.push(devUrl);
+  const origins = new Set();
+  for (const c of candidates) {
+    try { origins.add(new URL(c).origin); } catch { /* 无效候选跳过 */ }
+  }
+  return origins;
+}
+
+// url 是否属于主窗口自家 origin。非法 url 返回 false(不抛)。
+export function isSelfOrigin(url, serverPort, devUrl) {
+  try {
+    return selfOrigins(serverPort, devUrl).has(new URL(url).origin);
+  } catch {
+    return false;
+  }
+}
