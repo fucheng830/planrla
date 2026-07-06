@@ -369,6 +369,20 @@ export function useChatRealtimeHandlers({
 
             pendingPermissionRequestsRef.current = nextPendingPermissionRequests;
             setPendingPermissionRequests(nextPendingPermissionRequests);
+
+            // Server cancelled the prompt (timeout / abort / superseded).
+            // When no prompts remain the run resumes — usually via auto-deny
+            // on timeout — so flip the badge out of "Needs input" back to
+            // "Running". Without this it stays stuck until the next provider
+            // `status`/`complete` event, which the timeout-deny path may not
+            // emit before the turn ends.
+            if (sid && nextPendingPermissionRequests.length === 0) {
+              onSessionProcessing?.(sid, {
+                taskStatus: 'running',
+                statusText: null,
+                canInterrupt: true,
+              });
+            }
           }
           break;
         }
