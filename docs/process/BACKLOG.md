@@ -8,7 +8,8 @@
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|
 | REQ-023 | 桌面端外链系统浏览器打开 | — | P1 | fix | accepted | [spec](../superpowers/specs/2026-07-06-external-link-handling-design.md) | [plan](../superpowers/plans/2026-07-06-req023-external-link-handling.md) | v0.6.2 |
-| REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | review | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | [plan](../superpowers/plans/2026-07-07-req024-merge-chat-running-sessions.md) | _(未发版)_ |
+| REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | released | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | [plan](../superpowers/plans/2026-07-07-req024-merge-chat-running-sessions.md) | v0.7.0 |
+| REQ-025 | 侧边栏状态 UI 统一(Projects / Sessions / 搜索) | — | P1 | fix | released | [spec](../superpowers/specs/2026-07-07-req025-sidebar-status-ui-unify-design.md) | [plan](../superpowers/plans/2026-07-07-req025-sidebar-status-ui-unify.md) | v0.7.0 |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
@@ -30,7 +31,6 @@
 | REQ-020 | A2A(Agent-to-Agent 通信/协作) | — | P2 | feat | backlog | **待澄清范围**(澄清前不进 brainstorming):(a) Google A2A 协议(agent2agent 标准化通信) / (b) planrla 内部多 Agent(Claude/Codex/Gemini session)互相对话/委派 / (c) 其他。⚠️ 编号修正:原 recap 误用 REQ-018,与已发版的 i18n+Android 撞号,改用 020 |
 | REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | — | P1 | feat | backlog | 独立 UX 专项,是 REQ-022(UX 子集),可先行。范围:打开网页预览 / 打开图片预览 / 动效 / 交互优化(对齐 Codex 视觉与交互)。⚠️ 编号修正:原 recap 误用 REQ-019,改用 021 |
 | REQ-022 | 对齐 Codex 全特性集(功能 + UX,母) | — | P2 | feat | backlog | **母需求**,含 REQ-021(UX 部分)。**需先列 Codex 特性清单 → Archie 标优先级**,再拆子 REQ;当前不直接 brainstorming。P 默认 P2(范围未定)。⚠️ 编号修正:原 recap 误用 REQ-020,改用 022 |
-| REQ-025 | 侧边栏状态 UI 统一(Projects / Sessions / 搜索 的 running·done 一致) | — | P1 | fix | backlog | **门2 验收 REQ-024 时 Archie 抓到**:同一 session 的 running/done 在 sidebar 有 3+ 套不一致视觉——①顶层 Sessions 列表(`SidebarContent.tsx` L389-449):emerald 行底 + emerald 脉冲点 = running、primary 行底 = completed;②Projects 内 session 列表(`SidebarSessionItem.tsx`):`bg-muted/20` 灰底 + Loader2 = isProcessing、`green` 描边 + green 脉冲点 = isActive、`SessionTaskStatusBadge`(blue/emerald/amber tone)= taskStatus;③搜索结果(`SidebarContent.tsx` L323):又是 `bg-emerald-500` 点。**目标**:全 sidebar 统一一套 running / active / completed / error 视觉语言。**待 Archie 决策**:统一方向(emerald 派 / tone-badge 派 / 混合)+ 是否阻塞 v0.7.0 发版。影响文件:`SidebarContent.tsx`、`SidebarSessionItem.tsx`、`TaskIndicator.tsx`、`shared/taskStatus.ts`。进 brainstorming 前需先定方向 |
 
 ## Blocked(冻结/待想清楚)
 | ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
