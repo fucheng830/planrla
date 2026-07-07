@@ -3,6 +3,42 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.7.0](https://github.com/fucheng830/planrla/compare/v0.6.2...v0.7.0) (2026-07-07)
+
+### New Features
+
+* **sidebar:** REQ-024 会话按钮迁移 running emerald 计数徽标 ([89ce020](https://github.com/fucheng830/planrla/commit/89ce0204a29d040cea8097c02da7615e2e43cf0b))
+* **sidebar:** REQ-024 会话列表 running 置顶 + emerald 标识 ([71b9b9d](https://github.com/fucheng830/planrla/commit/71b9b9d35371133425148a0ff74355c13f455c2f))
+* **sidebar:** REQ-024 搜索结果 running 命中加 emerald 点(不置顶) ([4d9e1aa](https://github.com/fucheng830/planrla/commit/4d9e1aaaadc005228ba1127f4af4785fd9588f15))
+
+### Bug Fixes
+
+* **i18n:** track zh-CN/tasks.json (was gitignored, broke fresh-clone build) ([8fb26c2](https://github.com/fucheng830/planrla/commit/8fb26c26d9863bd03e1829d8689c1e365497cb39))
+
+### Refactoring
+
+* **i18n:** REQ-024 全量统一 conversation→session(spec §5.1) ([5e11690](https://github.com/fucheng830/planrla/commit/5e116904e2f152c263351784ae35a6885ccc6667))
+* **shared:** 抽出 SessionTaskStatusBadge 到 shared (REQ-025) ([68e6165](https://github.com/fucheng830/planrla/commit/68e61659e7ba83a85992d0d5cc3055ea1b231467))
+* **sidebar:** 顶层 Sessions 列表状态走共享 badge (REQ-025) ([f742107](https://github.com/fucheng830/planrla/commit/f742107eeffd8f96a40c35b250a969486340d077))
+* **sidebar:** 搜索结果状态走共享 badge (REQ-025) ([14540c0](https://github.com/fucheng830/planrla/commit/14540c07b17c3301c4c3ce94537dc712eaf7c4a1))
+* **sidebar:** 统一 session 行状态视觉,删冗余信号 (REQ-025) ([b33cca5](https://github.com/fucheng830/planrla/commit/b33cca5b5e5b973194118696f29a2ad245c013d5))
+* **sidebar:** REQ-024 删除 Running tab(类型+UI+分支+死代码) ([871ef0f](https://github.com/fucheng830/planrla/commit/871ef0fa6264dd1b6e7892dc23a83d739d3ec508))
+* **sidebar:** REQ-024 统一 conversations → sessions(类型+i18n+code) ([d8cab49](https://github.com/fucheng830/planrla/commit/d8cab49b7867d1cc370b4567c9f905ad1e708b38))
+
+### Documentation
+
+* **backlog:** 入池 REQ-025(侧边栏状态 UI 统一) ([2925177](https://github.com/fucheng830/planrla/commit/2925177436bca9460bb27c14849947293f2777b2))
+* **plan:** 写 REQ-025 sidebar 状态 UI 统一实施 plan ([77e5db9](https://github.com/fucheng830/planrla/commit/77e5db963f99aba5fc3bcbbda0b584183a80fd37))
+* **plan:** REQ-024 合并对话/Running sessions 实施计划 ([7f054de](https://github.com/fucheng830/planrla/commit/7f054dedd3bccf67c936ad968f9fea26abc00553))
+* **release:** v0.6.2 note (REQ-023 external links + chat badge fix) ([33560e6](https://github.com/fucheng830/planrla/commit/33560e6502e38e4e1080e1253e0ccf03b4910d5a))
+* **spec:** 统一 sidebar session 状态 UI (REQ-025) ([8815cab](https://github.com/fucheng830/planrla/commit/8815cabe4255a74a84ccd9c5622a5b5d526c262b))
+* **spec:** REQ-024 合并「对话」与 Running sessions 侧边栏视图设计 ([28bdf1d](https://github.com/fucheng830/planrla/commit/28bdf1d6eaf0629519ba312ae0233576219c318f))
+* **spec:** REQ-024 修正语言数(11→10实测)+ 补 useSidebarController/Sidebar.tsx 改动 ([5db739a](https://github.com/fucheng830/planrla/commit/5db739a0e56dc09463a44b014da9cf43f88d4e10))
+
+### Maintenance
+
+* **backlog:** REQ-024 plan→review(实施完成+final review 通过) ([f8c8f76](https://github.com/fucheng830/planrla/commit/f8c8f76986ec3873bf8cc06bce6bfc8a791a39cd))
+
 ## [0.6.2](https://github.com/fucheng830/planrla/compare/v0.6.1...v0.6.2) (2026-07-06)
 
 ### New Features
