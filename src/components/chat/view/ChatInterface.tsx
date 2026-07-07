@@ -200,6 +200,15 @@ function ChatInterface({
     commandModalPayload,
     closeCommandModal,
     showCostModal,
+    references,
+    referenceTokens,
+    isReferencePickerOpen,
+    openReferencePicker,
+    closeReferencePicker,
+    handleConfirmReference,
+    removeReference,
+    updateReferenceMessages,
+    trimToFirstN,
   } = useChatComposerState({
     selectedProject,
     selectedSession,
@@ -334,6 +343,24 @@ function ChatInterface({
   const handleAckCancel = useCallback(() => {
     setShowPermissionAck(false);
   }, []);
+
+  // Build picker candidate sessions from the current project's sessions.
+  // NOTE: ChatInterface only receives `selectedProject` (not the full project
+  // list), so `pickerAllSessions` (cross-project) is left undefined for now —
+  // the picker will fall back to filtering `defaultSessions`. Wiring the full
+  // list requires a new prop chain through MainContent; deferred to a later task.
+  const pickerDefaultSessions = useMemo(() => {
+    const sessions = selectedProject?.sessions ?? [];
+    return sessions.map((s) => {
+      const lastActivityRaw = s.lastActivity || s.updatedAt || s.createdAt;
+      return {
+        sessionId: s.id,
+        title: (s.summary || s.title || s.name || s.id) as string,
+        provider: (s.__provider || s.provider || provider || 'claude') as string,
+        lastActivity: typeof lastActivityRaw === 'string' ? lastActivityRaw : undefined,
+      };
+    });
+  }, [selectedProject?.sessions, provider]);
 
   if (!selectedProject) {
     const selectedProviderLabel =
@@ -481,6 +508,16 @@ function ChatInterface({
           })}
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}
+          references={references}
+          referenceTokens={referenceTokens}
+          onOpenReferencePicker={openReferencePicker}
+          onRemoveReference={removeReference}
+          onUpdateReferenceMessages={updateReferenceMessages}
+          onTrimToFirstN={trimToFirstN}
+          isReferencePickerOpen={isReferencePickerOpen}
+          onCloseReferencePicker={closeReferencePicker}
+          onConfirmReference={handleConfirmReference}
+          pickerDefaultSessions={pickerDefaultSessions}
         />
       </div>
 
