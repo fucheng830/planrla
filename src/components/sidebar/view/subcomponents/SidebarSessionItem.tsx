@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { AlertCircle, Check, Edit2, Loader2, Trash2, X } from 'lucide-react';
+import { Check, Edit2, Loader2, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Badge, Button, Tooltip } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
-import type { SessionTaskStatus, SessionTaskStatusTone } from '../../../../shared/taskStatus';
-import { getSessionTaskStatusView } from '../../../../shared/taskStatus';
+import type { SessionTaskStatus } from '../../../../shared/taskStatus';
+import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
 import type { SessionWithProvider } from '../../types/types';
 import { createSessionViewModel } from '../../utils/utils';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
@@ -62,40 +62,6 @@ const formatCompactSessionAge = (dateString: string, currentTime: Date): string 
   const diffInDays = Math.floor(diffInHours / 24);
   return `${diffInDays}d`;
 };
-
-const taskStatusBadgeClassNames: Record<SessionTaskStatusTone, string> = {
-  muted: 'bg-muted text-muted-foreground',
-  info: 'bg-blue-500/10 text-blue-600 dark:text-blue-300',
-  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  danger: 'bg-red-500/10 text-red-700 dark:text-red-300',
-};
-
-function SessionTaskStatusBadge({ status }: { status: SessionTaskStatus }) {
-  const statusView = getSessionTaskStatusView(status);
-  if (statusView.status === 'idle') {
-    return null;
-  }
-
-  const Icon = statusView.status === 'running'
-    ? Loader2
-    : statusView.status === 'completed'
-      ? Check
-      : AlertCircle;
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none',
-        taskStatusBadgeClassNames[statusView.tone],
-      )}
-      title={statusView.label}
-    >
-      <Icon className={cn('h-2.5 w-2.5', statusView.status === 'running' && 'animate-spin')} />
-      {statusView.label}
-    </span>
-  );
-}
 
 export default function SidebarSessionItem({
   project,
