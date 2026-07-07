@@ -117,8 +117,8 @@
   },
   "search": {
     "modeProjects": "Проекты",
-    "modeConversations": "Разговоры",
-    "conversationsPlaceholder": "Поиск в разговорах...",
+    "modeSessions": "Сеансы",
+    "sessionsPlaceholder": "Поиск сеансов...",
     "searching": "Поиск...",
     "noResults": "Результаты не найдены",
     "tryDifferentQuery": "Попробуйте другой поисковый запрос",

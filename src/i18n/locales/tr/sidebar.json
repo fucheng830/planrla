@@ -117,8 +117,8 @@
   },
   "search": {
     "modeProjects": "Projeler",
-    "modeConversations": "Konuşmalar",
-    "conversationsPlaceholder": "Konuşmalarda ara...",
+    "modeSessions": "Oturumlar",
+    "sessionsPlaceholder": "Oturumları ara...",
     "searching": "Aranıyor...",
     "noResults": "Sonuç bulunamadı",
     "tryDifferentQuery": "Farklı bir arama sorgusu dene",

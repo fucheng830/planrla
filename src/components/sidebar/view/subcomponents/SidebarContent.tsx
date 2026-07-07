@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Activity, Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ScrollArea } from '../../../../shared/view/ui';
@@ -200,9 +200,10 @@ export default function SidebarContent({
   completedSessions,
   t,
 }: SidebarContentProps) {
-  const showConversationSearch = searchMode === 'conversations' && searchFilter.trim().length >= 2;
+  const showConversationSearch = searchMode === 'sessions' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
+  const activeSessions = projectListProps.activeSessions;
   const conversationListItems: ConversationListItem[] = projects
     .flatMap((project) =>
       getAllSessions(project).map((session) => ({
@@ -211,7 +212,19 @@ export default function SidebarContent({
         lastActivityTime: getSessionDate(session).getTime(),
       })),
     )
-    .sort((itemA, itemB) => itemB.lastActivityTime - itemA.lastActivityTime);
+    .sort((itemA, itemB) => {
+      const aRunning = activeSessions.has(itemA.session.id);
+      const bRunning = activeSessions.has(itemB.session.id);
+      if (aRunning && bRunning) {
+        // Both running: most-recently-started first (latest launch on top)
+        const aStarted = activeSessions.get(itemA.session.id)?.startedAt ?? 0;
+        const bStarted = activeSessions.get(itemB.session.id)?.startedAt ?? 0;
+        return bStarted - aStarted;
+      }
+      if (aRunning) return -1;
+      if (bRunning) return 1;
+      return itemB.lastActivityTime - itemA.lastActivityTime;
+    });
 
   return (
     <div
@@ -307,6 +320,12 @@ export default function SidebarContent({
                       )}
                     >
                       <div className="mb-1 flex items-center gap-1.5">
+                        {projectListProps.activeSessions.has(session.sessionId) && (
+                          <span
+                            className="h-1.5 w-1.5 flex-shrink-0 animate-pulse rounded-full bg-emerald-500"
+                            aria-label={t('tooltips.processingSessionIndicator', 'Processing session')}
+                          />
+                        )}
                         <MessageSquare className="h-3 w-3 flex-shrink-0 text-primary" />
                         <span className="truncate text-xs font-medium text-foreground">
                           {session.sessionSummary}
@@ -336,7 +355,7 @@ export default function SidebarContent({
               ))}
             </div>
           ) : null
-        ) : searchMode === 'conversations' ? (
+        ) : searchMode === 'sessions' ? (
           conversationListItems.length === 0 ? (
             <div className="px-4 py-12 text-center md:py-8">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">
@@ -346,16 +365,16 @@ export default function SidebarContent({
                 {t('sessions.noSessions')}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {t('search.conversationsEmptyDescription', 'Completed conversations will appear here in newest-first order.')}
+                {t('search.sessionsEmptyDescription', 'Completed sessions will appear here in newest-first order.')}
               </p>
             </div>
           ) : (
             <div className="space-y-1 px-2">
               <div className="flex items-center justify-between px-1 pb-1">
                 <p className="text-xs text-muted-foreground">
-                  {t('search.conversationsListCount', {
+                  {t('search.sessionsListCount', {
                     count: conversationListItems.length,
-                    defaultValue: '{{count}} conversations',
+                    defaultValue: '{{count}} sessions',
                   })}
                 </p>
                 {completedSessionsCount > 0 && (
@@ -385,13 +404,21 @@ export default function SidebarContent({
                     className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
                       isSelected
                         ? 'border-primary/25 bg-primary/5'
-                        : isCompleted
-                          ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
-                          : 'border-transparent hover:border-border/60 hover:bg-accent/45'
+                        : isProcessing
+                          ? 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10'
+                          : isCompleted
+                            ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
+                            : 'border-transparent hover:border-border/60 hover:bg-accent/45'
                     }`}
                     onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
                   >
                     <div className="flex min-w-0 items-center gap-2">
+                      {isProcessing && (
+                        <span
+                          className="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-emerald-500"
+                          aria-label={t('tooltips.processingSessionIndicator', 'Processing session')}
+                        />
+                      )}
                       <SessionProviderLogo provider={session.__provider} className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
                         {sessionTitle}
@@ -420,39 +447,6 @@ export default function SidebarContent({
                   </button>
                 );
               })}
-            </div>
-          )
-        ) : searchMode === 'running' ? (
-          projectListProps.filteredProjects.length === 0 ? (
-            <div className="px-4 py-12 text-center md:py-8">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border/70 bg-muted/50 md:mb-3">
-                <Activity className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="mb-2 text-base font-medium text-foreground md:mb-1">
-                {t('running.emptyTitle', 'No sessions running')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {runningSessionsCount > 0
-                  ? t('running.noMatchingSessions', 'No running sessions match this search.')
-                  : t('running.emptyDescription', 'Active work will appear here while a provider is processing.')}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="mx-2 flex items-center justify-between rounded-lg border border-border/60 bg-card/50 px-3 py-2 shadow-sm">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    <Activity className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {t('running.title', 'Running now')}
-                  </span>
-                </div>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                  {runningSessionsCount}
-                </span>
-              </div>
-              <SidebarProjectList {...projectListProps} />
             </div>
           )
         ) : searchMode === 'archived' ? (
