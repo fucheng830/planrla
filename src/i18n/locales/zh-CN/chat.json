@@ -386,5 +386,20 @@
       "ackConfirm": "我已了解，设为默认",
       "ackCancel": "取消"
     }
+  },
+  "references": {
+    "openPicker": "引用会话 (Ctrl+L)",
+    "pickerTitle": "引用会话",
+    "searchPlaceholder": "搜索(空=当前 project,输入切全部)",
+    "noSessions": "无匹配会话",
+    "modeFull": "整段历史",
+    "modeSingle": "单条消息",
+    "fullCount": "{{count}} 条消息",
+    "chipFrom": "引自「{{title}}」",
+    "trimFirstN": "前 N 条:",
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "引用"
   }
 }
