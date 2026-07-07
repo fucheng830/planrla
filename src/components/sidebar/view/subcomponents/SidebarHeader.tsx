@@ -57,7 +57,6 @@ export default function SidebarHeader({
       ? t('search.archivedPlaceholder', 'Search archived sessions...')
       : t('projects.searchPlaceholder');
   const completedBadgeText = completedSessionsCount > 99 ? '99+' : String(completedSessionsCount);
-  const runningBadgeText = runningSessionsCount > 99 ? '99+' : String(runningSessionsCount);
 
   const LogoBlock = () => (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -154,11 +153,6 @@ export default function SidebarHeader({
                   {completedSessionsCount > 0 && (
                     <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
                       {completedBadgeText}
-                    </span>
-                  )}
-                  {runningSessionsCount > 0 && (
-                    <span className="absolute -right-2.5 -bottom-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-emerald-500 px-0.5 text-[8px] font-semibold leading-none text-white shadow-sm ring-1 ring-background">
-                      {runningBadgeText}
                     </span>
                   )}
                 </span>
@@ -283,11 +277,6 @@ export default function SidebarHeader({
                   {completedSessionsCount > 0 && (
                     <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
                       {completedBadgeText}
-                    </span>
-                  )}
-                  {runningSessionsCount > 0 && (
-                    <span className="absolute -right-2.5 -bottom-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-emerald-500 px-0.5 text-[8px] font-semibold leading-none text-white shadow-sm ring-1 ring-background">
-                      {runningBadgeText}
                     </span>
                   )}
                 </span>
