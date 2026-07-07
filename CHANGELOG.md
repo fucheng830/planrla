@@ -3,6 +3,17 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.7.1](https://github.com/fucheng830/planrla/compare/v0.7.0...v0.7.1) (2026-07-07)
+
+### Bug Fixes
+
+* **sidebar:** 去掉 Sessions 按钮 running 徽标,只留 completed 计数 (REQ-026) ([e34ee44](https://github.com/fucheng830/planrla/commit/e34ee444043e16337a35691341aae6da81dfc140))
+
+### Documentation
+
+* **backlog:** 入池 REQ-026(Sessions 按钮去双徽标) ([555de73](https://github.com/fucheng830/planrla/commit/555de73561568f28e2a14b25b22df3e795b0de6d))
+* **release:** v0.7.0 note (REQ-024 合并对话/Running + REQ-025 状态 UI 统一) ([ae6c887](https://github.com/fucheng830/planrla/commit/ae6c88714c90665f607e3ef3444020d72e315919))
+
 ## [0.7.0](https://github.com/fucheng830/planrla/compare/v0.6.2...v0.7.0) (2026-07-07)
 
 ### New Features
