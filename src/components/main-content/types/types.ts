@@ -8,6 +8,7 @@ import type {
   SessionActivityMap,
 } from '../../../hooks/useSessionProtection';
 import type { SessionEstablishedContext, SessionNavigationOptions } from '../../chat/types/types';
+import type { PickerCandidateSession } from '../../chat/view/subcomponents/SessionReferencePicker';
 import type { SettingsMainTab } from '../../settings/types/types';
 
 export type TaskMasterTask = {
@@ -59,6 +60,10 @@ export type MainContentProps = {
   onShowSettings: (tab?: SettingsMainTab) => void;
   externalMessageUpdate: number;
   newSessionTrigger: number;
+  /** Cross-project session candidates for the SessionReferencePicker's
+   *  "search all" mode. Undefined degrades the picker to current-project
+   *  filtering only. Built by AppContent from the full projects array. */
+  allPickerSessions?: PickerCandidateSession[];
 };
 
 export type MainContentHeaderProps = {
