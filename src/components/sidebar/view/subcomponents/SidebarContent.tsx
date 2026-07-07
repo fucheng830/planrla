@@ -4,7 +4,8 @@ import type { TFunction } from 'i18next';
 
 import { ScrollArea } from '../../../../shared/view/ui';
 import type { CompletedSessionNotificationMap } from '../../../../hooks/useSessionProtection';
-import { getSessionTaskStatusView } from '../../../../shared/taskStatus';
+import type { SessionTaskStatus } from '../../../../shared/taskStatus';
+import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
 import type { Project } from '../../../../types/app';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 import type { ConversationSearchResults, SearchProgress } from '../../hooks/useSidebarController';
@@ -388,12 +389,9 @@ export default function SidebarContent({
               </div>
               {conversationListItems.map(({ project, session }) => {
                 const completion = completedSessions.get(session.id);
-                const isCompleted = Boolean(completion);
                 const isSelected = projectListProps.selectedSession?.id === session.id;
-                const isProcessing = projectListProps.activeSessions.has(session.id);
-                const statusView = getSessionTaskStatusView(
-                  projectListProps.activeSessions.get(session.id)?.taskStatus ?? completion?.status ?? 'idle',
-                );
+                const status: SessionTaskStatus =
+                  projectListProps.activeSessions.get(session.id)?.taskStatus ?? completion?.status ?? 'idle';
                 const sessionTitle = getSessionName(session, t);
                 const sessionDate = getSessionDate(session);
                 const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
@@ -404,30 +402,16 @@ export default function SidebarContent({
                     className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
                       isSelected
                         ? 'border-primary/25 bg-primary/5'
-                        : isProcessing
-                          ? 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10'
-                          : isCompleted
-                            ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
-                            : 'border-transparent hover:border-border/60 hover:bg-accent/45'
+                        : 'border-transparent hover:border-border/60 hover:bg-accent/45'
                     }`}
                     onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      {isProcessing && (
-                        <span
-                          className="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-emerald-500"
-                          aria-label={t('tooltips.processingSessionIndicator', 'Processing session')}
-                        />
-                      )}
                       <SessionProviderLogo provider={session.__provider} className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
                         {sessionTitle}
                       </span>
-                      {statusView.status !== 'idle' && !isProcessing && (
-                        <span className="flex-shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
-                          {t(`taskStatus.${statusView.status}`, statusView.label)}
-                        </span>
-                      )}
+                      <SessionTaskStatusBadge status={status} className="flex-shrink-0" />
                       {age && (
                         <span className="flex-shrink-0 text-[11px] text-muted-foreground">
                           {age}
