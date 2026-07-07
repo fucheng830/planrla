@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Check, Edit2, Loader2, Trash2, X } from 'lucide-react';
+import { Check, Edit2, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { Badge, Button, Tooltip } from '../../../../shared/view/ui';
+import { Badge, Button } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
 import type { SessionTaskStatus } from '../../../../shared/taskStatus';
@@ -86,7 +86,6 @@ export default function SidebarSessionItem({
   const isEditing = editingSession === session.id;
   const compactSessionAge = formatCompactSessionAge(sessionView.sessionTime, currentTime);
   const editingContainerRef = useRef<HTMLDivElement>(null);
-  const showRecentIndicator = !isProcessing && sessionView.isActive;
 
   // The rename panel sits inside a group-hover opacity wrapper, so leaving the row
   // would visually hide it. While editing, dismiss only when the user clicks outside
@@ -124,28 +123,11 @@ export default function SidebarSessionItem({
 
   return (
     <div className="group relative">
-      {showRecentIndicator && (
-        <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 transform">
-          <Tooltip content={t('tooltips.activeSessionIndicator')} position="right">
-            <div
-              role="status"
-              aria-label={t('tooltips.activeSessionIndicator')}
-              className="h-2 w-2 animate-pulse rounded-full bg-green-500"
-            />
-          </Tooltip>
-        </div>
-      )}
-
       <div className="md:hidden">
         <div
           className={cn(
             'p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative',
-            isSelected ? 'bg-primary/5 border-primary/20' : '',
-            !isSelected && isProcessing
-              ? 'border-border/60 bg-muted/20'
-              : !isSelected && sessionView.isActive
-              ? 'border-green-500/30 bg-green-50/5 dark:bg-green-900/5'
-              : 'border-border/30',
+            isSelected ? 'bg-primary/5 border-primary/20' : 'border-border/30',
           )}
           onClick={selectMobileSession}
         >
@@ -162,15 +144,7 @@ export default function SidebarSessionItem({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
-                {isProcessing ? (
-                  <span className="ml-auto flex-shrink-0">
-                    <Tooltip content={t('tooltips.processingSessionIndicator', 'Processing session')} position="top">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      </span>
-                    </Tooltip>
-                  </span>
-                ) : compactSessionAge && (
+                {compactSessionAge && (
                   <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground">{compactSessionAge}</span>
                 )}
               </div>
@@ -180,7 +154,7 @@ export default function SidebarSessionItem({
                     {sessionView.messageCount}
                   </Badge>
                 )}
-                <SessionTaskStatusBadge status={taskStatus} />
+                <SessionTaskStatusBadge status={isProcessing ? 'running' : taskStatus} />
               </div>
             </div>
 
@@ -204,12 +178,7 @@ export default function SidebarSessionItem({
           variant="ghost"
           className={cn(
             'h-auto w-full justify-start rounded-md border bg-card p-2 text-left font-normal transition-all duration-150',
-            isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30',
-            !isSelected && isProcessing
-              ? 'border-border/60 bg-muted/20 hover:bg-muted/25'
-              : !isSelected && sessionView.isActive
-                ? 'border-green-500/30 bg-green-50/5 hover:bg-green-50/10 dark:bg-green-900/5 dark:hover:bg-green-900/10'
-                : 'hover:bg-accent/50',
+            isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30 hover:bg-accent/50',
           )}
           onClick={() => onSessionSelect(session, project.projectId)}
         >
@@ -225,20 +194,7 @@ export default function SidebarSessionItem({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
-                {isProcessing ? (
-                  <span
-                    className={cn(
-                      'ml-auto flex-shrink-0 transition-opacity duration-200',
-                      isEditing ? 'opacity-0' : 'group-hover:opacity-0',
-                    )}
-                  >
-                    <Tooltip content={t('tooltips.processingSessionIndicator', 'Processing session')} position="top">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      </span>
-                    </Tooltip>
-                  </span>
-                ) : compactSessionAge && (
+                {compactSessionAge && (
                   <span
                     className={cn(
                       'ml-auto flex-shrink-0 text-[11px] text-muted-foreground transition-opacity duration-200',
@@ -251,7 +207,7 @@ export default function SidebarSessionItem({
               </div>
               <div className="mt-0.5 flex items-center gap-1.5">
                 {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
-                <SessionTaskStatusBadge status={taskStatus} />
+                <SessionTaskStatusBadge status={isProcessing ? 'running' : taskStatus} />
               </div>
             </div>
           </div>
