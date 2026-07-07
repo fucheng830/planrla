@@ -29,11 +29,21 @@ export default function SessionReferenceChip({
     setEditing(true);
   };
   const saveEdit = () => {
-    // 解析回 messages(按 `[role] content` 行拆)
-    const msgs: ReferencedMessage[] = editText.split('\n').filter((l) => l.trim()).map((line) => {
+    // 解析回 messages:按 `[role] content` 行扫描,marker 行开新消息,后续非 marker 行并入当前消息 content(保留多行)
+    const msgs: ReferencedMessage[] = [];
+    let cur: ReferencedMessage | null = null;
+    for (const line of editText.split('\n')) {
       const m = line.match(/^\[([^\]]+)\]\s*(.*)$/);
-      return m ? { role: m[1], content: m[2] } : { role: 'user', content: line };
-    });
+      if (m) {
+        if (cur) msgs.push(cur);
+        cur = { role: m[1], content: m[2] };
+      } else if (cur) {
+        cur.content = cur.content ? `${cur.content}\n${line}` : line;
+      } else if (line.trim()) {
+        cur = { role: 'user', content: line };
+      }
+    }
+    if (cur) msgs.push(cur);
     onUpdateMessages(reference.id, msgs);
     setEditing(false);
   };
