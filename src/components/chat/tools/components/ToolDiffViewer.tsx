@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { MessageSquare } from 'lucide-react';
@@ -33,6 +34,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
   badge = 'Diff',
   badgeColor = 'gray'
 }) => {
+  const { t } = useTranslation('chat');
   const badgeClasses = badgeColor === 'green'
     ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
     : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
@@ -130,7 +132,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
               </span>
               <button
                 type="button"
-                title="评论此行"
+                title={t('diffComments.commentTitle')}
                 onClick={() => {
                   setOpenCommentLine(openCommentLine === i ? null : i);
                   setCommentDraft(comments[i] ?? '');
@@ -146,7 +148,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                 <textarea
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
-                  placeholder="对此行的评论…"
+                  placeholder={t('diffComments.placeholder')}
                   className="flex-1 resize-none rounded border border-gray-300 bg-white px-2 py-1 text-[11px] dark:border-gray-600 dark:bg-gray-800"
                   rows={2}
                 />
@@ -159,7 +161,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                     }}
                     className="rounded bg-blue-600 px-2 py-0.5 text-[10px] text-white hover:bg-blue-700"
                   >
-                    保存
+                    {t('diffComments.save')}
                   </button>
                   <button
                     type="button"
@@ -169,7 +171,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                     }}
                     className="rounded px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
                   >
-                    删除
+                    {t('diffComments.delete')}
                   </button>
                 </div>
               </div>

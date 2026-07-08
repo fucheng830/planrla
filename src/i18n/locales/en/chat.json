@@ -125,7 +125,17 @@
     "toggle": "Toggle plan",
     "generating": "Generating plan...",
     "revise": "Revise",
-    "build": "Build"
+    "build": "Build",
+    "steps": "Steps"
+  },
+  "diffComments": {
+    "copyAsMessage": "Copy comments as message",
+    "copied": "Copied to composer",
+    "hint": "Hover a line to comment",
+    "commentTitle": "Comment this line",
+    "placeholder": "Comment on this line…",
+    "save": "Save",
+    "delete": "Delete"
   },
   "usageLimit": {
     "resetAt": "Claude usage limit reached. Your limit will reset at **{{time}} {{timezone}}** - {{date}}"
