@@ -35,6 +35,7 @@
 | ID | 标题 | P | 里程碑 | 类型 | 状态 | 备注 |
 |----|------|----|--------|------|------|------|
 | REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | P1 | — | feat | backlog | 独立 UX 专项,可先行;是 REQ-022(UX 子集),母项 parked |
+| REQ-027 | UX 对齐 Codex · 渲染层交互优化(① diff 高亮 + ② plan 展示 + ④ diff 评论) | P1 | — | feat | spec | REQ-021 首切片;[spec](../superpowers/specs/2026-07-08-req027-ux-align-codex-design.md) |
 | REQ-005 | Provider 诊断面板 | P1 | M3 | feat | backlog | |
 
 ## Parked(暂搁,不进近期队列)
