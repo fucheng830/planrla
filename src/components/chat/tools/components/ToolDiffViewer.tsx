@@ -1,4 +1,7 @@
 import React, { useMemo } from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { getLanguageFromPath } from '../utils/languageDetect';
 
 type DiffLine = {
   type: string;
@@ -42,6 +45,10 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
     [createDiff, oldContent, newContent]
   );
 
+  const language = useMemo(() => getLanguageFromPath(filePath), [filePath]);
+  const DIFF_HIGHLIGHT_THRESHOLD = 200;
+  const shouldHighlight = language !== 'text' && diffLines.length <= DIFF_HIGHLIGHT_THRESHOLD;
+
   return (
     <div className="overflow-hidden rounded border border-gray-200/60 dark:border-gray-700/50">
       {/* Header */}
@@ -83,7 +90,27 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                   : 'bg-green-50/50 text-green-800 dark:bg-green-950/20 dark:text-green-200'
               }`}
             >
-              {diffLine.content}
+              {shouldHighlight ? (
+                <SyntaxHighlighter
+                  language={language}
+                  style={oneDark}
+                  PreTag="span"
+                  CodeTag="span"
+                  customStyle={{
+                    margin: 0,
+                    padding: 0,
+                    background: 'transparent',
+                    fontSize: '11px',
+                    lineHeight: '18px',
+                    display: 'inline',
+                  }}
+                  codeTagProps={{ style: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' } }}
+                >
+                  {diffLine.content}
+                </SyntaxHighlighter>
+              ) : (
+                diffLine.content
+              )}
             </span>
           </div>
         ))}
