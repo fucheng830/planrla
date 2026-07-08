@@ -420,13 +420,7 @@
     "pickerTitle": "Reference session",
     "searchPlaceholder": "Search (empty = current project, type = all)",
     "noSessions": "No matching sessions",
-    "modeFull": "Full history",
-    "modeSingle": "Single message",
-    "fullCount": "{{count}} messages",
-    "chipFrom": "From \"{{title}}\"",
-    "trimFirstN": "First N:",
-    "edit": "Edit",
-    "save": "Save",
+    "queryableFrom": "Queryable: \"{{title}}\"",
     "cancel": "Cancel",
     "confirm": "Reference"
   }

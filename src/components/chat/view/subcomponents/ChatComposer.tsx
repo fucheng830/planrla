@@ -35,7 +35,7 @@ import PermissionRequestsBanner from './PermissionRequestsBanner';
 import TokenUsageSummary from './TokenUsageSummary';
 import SessionReferencePicker, { type PickerCandidateSession } from './SessionReferencePicker';
 import SessionReferenceChip from './SessionReferenceChip';
-import type { SessionReference, ReferencedMessage } from '../../utils/sessionReferenceFormat';
+import type { SessionReference } from '../../utils/sessionReferenceFormat';
 
 interface MentionableFile {
   name: string;
@@ -108,19 +108,14 @@ interface ChatComposerProps {
   isTextareaExpanded: boolean;
   sendByCtrlEnter?: boolean;
   references: SessionReference[];
-  referenceTokens: number;
   onOpenReferencePicker: () => void;
   onRemoveReference: (id: string) => void;
-  onUpdateReferenceMessages: (id: string, messages: ReferencedMessage[]) => void;
-  onTrimToFirstN: (id: string, n: number) => void;
   isReferencePickerOpen: boolean;
   onCloseReferencePicker: () => void;
   onConfirmReference: (
     sessionId: string,
     title: string,
     provider: string,
-    mode: 'single' | 'full',
-    messages: { role: string; content: string }[],
   ) => void;
   pickerDefaultSessions: PickerCandidateSession[];
   pickerAllSessions?: PickerCandidateSession[];
@@ -179,11 +174,8 @@ export default function ChatComposer({
   isTextareaExpanded,
   sendByCtrlEnter,
   references,
-  referenceTokens,
   onOpenReferencePicker,
   onRemoveReference,
-  onUpdateReferenceMessages,
-  onTrimToFirstN,
   isReferencePickerOpen,
   onCloseReferencePicker,
   onConfirmReference,
@@ -352,8 +344,6 @@ export default function ChatComposer({
                       key={r.id}
                       reference={r}
                       onRemove={onRemoveReference}
-                      onUpdateMessages={onUpdateReferenceMessages}
-                      onTrimToFirstN={onTrimToFirstN}
                     />
                   ))}
                 </div>
@@ -394,7 +384,7 @@ export default function ChatComposer({
               className="relative"
             >
               <Link2Icon />
-              {referenceTokens > 0 && (
+              {references.length > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                   {references.length}
                 </span>

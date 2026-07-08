@@ -207,12 +207,9 @@ export function useChatComposerState({
 
   const {
     references,
-    totalTokens: referenceTokens,
-    formattedSection,
+    formattedHints,
     addReference,
     removeReference,
-    updateReferenceMessages,
-    trimToFirstN,
     clearReferences,
   } = useSessionReferences();
   const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
@@ -223,16 +220,12 @@ export function useChatComposerState({
       sessionId: string,
       title: string,
       provider: string,
-      mode: 'single' | 'full',
-      messages: { role: string; content: string }[],
     ) => {
       addReference({
         sessionId,
         title,
         provider,
         date: new Date().toISOString().slice(0, 10),
-        mode: mode as 'single' | 'full',
-        messages,
       });
       setIsReferencePickerOpen(false);
     },
@@ -609,9 +602,9 @@ export function useChatComposerState({
         }
       }
 
-      const referenceSection = formattedSection;
-      const messageContent = referenceSection
-        ? `${referenceSection}\n\n---\n\n${currentInput}`
+      const referenceHints = formattedHints;
+      const messageContent = referenceHints
+        ? `${referenceHints}\n\n---\n\n${currentInput}`
         : currentInput;
 
       let uploadedImages: unknown[] = [];
@@ -697,7 +690,7 @@ export function useChatComposerState({
 
       const userMessage: ChatMessage = {
         type: 'user',
-        content: messageContent,
+        content: currentInput,
         images: uploadedImages as any,
         timestamp: new Date(),
       };
@@ -796,7 +789,7 @@ export function useChatComposerState({
       currentSessionId,
       cursorModel,
       executeCommand,
-      formattedSection,
+      formattedHints,
       geminiModel,
       opencodeModel,
       isLoading,
@@ -1118,13 +1111,11 @@ export function useChatComposerState({
     closeCommandModal,
     showCostModal,
     references,
-    referenceTokens,
+    formattedHints,
     isReferencePickerOpen,
     openReferencePicker,
     closeReferencePicker,
     handleConfirmReference,
     removeReference,
-    updateReferenceMessages,
-    trimToFirstN,
   };
 }

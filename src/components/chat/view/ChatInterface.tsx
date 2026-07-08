@@ -203,14 +203,12 @@ function ChatInterface({
     closeCommandModal,
     showCostModal,
     references,
-    referenceTokens,
+    formattedHints,
     isReferencePickerOpen,
     openReferencePicker,
     closeReferencePicker,
     handleConfirmReference,
     removeReference,
-    updateReferenceMessages,
-    trimToFirstN,
   } = useChatComposerState({
     selectedProject,
     selectedSession,
@@ -502,11 +500,8 @@ function ChatInterface({
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}
           references={references}
-          referenceTokens={referenceTokens}
           onOpenReferencePicker={openReferencePicker}
           onRemoveReference={removeReference}
-          onUpdateReferenceMessages={updateReferenceMessages}
-          onTrimToFirstN={trimToFirstN}
           isReferencePickerOpen={isReferencePickerOpen}
           onCloseReferencePicker={closeReferencePicker}
           onConfirmReference={handleConfirmReference}

@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import type {
@@ -10,7 +9,6 @@ import type {
   Provider,
 } from '../../types/types';
 import { formatUsageLimitText } from '../../utils/chatFormatting';
-import { parseQuotedReference } from '../../utils/sessionReferenceFormat';
 import type { Project } from '../../../../types/app';
 import { ToolRenderer, shouldHideToolResult } from '../../tools';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '../../../../shared/view/ui';
@@ -117,7 +115,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, a
         /* User message bubble on the right */
         <div className="flex w-full items-end space-x-0 sm:w-auto sm:max-w-[85%] sm:space-x-3 md:max-w-md lg:max-w-lg xl:max-w-xl">
           <div className="group flex-1 rounded-2xl rounded-br-md bg-blue-600 px-3 py-2 text-white shadow-sm sm:flex-initial sm:px-4">
-            <UserMessageBody content={String(message.content || '')} />
+            <div dir="auto" className="whitespace-pre-wrap break-words text-sm">{String(message.content || '')}</div>
             {message.images && message.images.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {message.images.map((img, idx) => (
@@ -428,28 +426,6 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, a
     </div>
   );
 });
-
-function UserMessageBody({ content }: { content: string }) {
-  const [collapsed, setCollapsed] = useState(true);
-  const { quote, text } = parseQuotedReference(content);
-  if (!quote) {
-    return <div dir="auto" className="whitespace-pre-wrap break-words text-sm">{text}</div>;
-  }
-  return (
-    <div className="text-sm">
-      <div className="mb-1 rounded-md bg-blue-500/20 px-2 py-1 text-[11px]">
-        <button type="button" onClick={() => setCollapsed((v) => !v)} className="flex items-center gap-1">
-          {collapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
-          <span>引自「{quote.title}」({quote.provider}, {quote.date})</span>
-        </button>
-        {!collapsed && (
-          <div className="mt-1 whitespace-pre-wrap break-words opacity-90">{quote.body}</div>
-        )}
-      </div>
-      <div dir="auto" className="whitespace-pre-wrap break-words">{text}</div>
-    </div>
-  );
-}
 
 export default MessageComponent;
 
