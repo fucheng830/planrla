@@ -10,7 +10,7 @@ import type {
   RefObject,
   TouchEvent,
 } from 'react';
-import { ImageIcon, MessageSquareIcon, XIcon, ArrowDownIcon, Loader2 } from 'lucide-react';
+import { ImageIcon, MessageSquareIcon, XIcon, ArrowDownIcon, Loader2, Link2 as Link2Icon } from 'lucide-react';
 
 import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { useVoiceAvailable } from '../../hooks/useVoiceAvailable';
@@ -33,6 +33,9 @@ import ImageAttachment from './ImageAttachment';
 import VoiceInputButton from './VoiceInputButton';
 import PermissionRequestsBanner from './PermissionRequestsBanner';
 import TokenUsageSummary from './TokenUsageSummary';
+import SessionReferencePicker, { type PickerCandidateSession } from './SessionReferencePicker';
+import SessionReferenceChip from './SessionReferenceChip';
+import type { SessionReference } from '../../utils/sessionReferenceFormat';
 
 interface MentionableFile {
   name: string;
@@ -104,6 +107,18 @@ interface ChatComposerProps {
   placeholder: string;
   isTextareaExpanded: boolean;
   sendByCtrlEnter?: boolean;
+  references: SessionReference[];
+  onOpenReferencePicker: () => void;
+  onRemoveReference: (id: string) => void;
+  isReferencePickerOpen: boolean;
+  onCloseReferencePicker: () => void;
+  onConfirmReference: (
+    sessionId: string,
+    title: string,
+    provider: string,
+  ) => void;
+  pickerDefaultSessions: PickerCandidateSession[];
+  pickerAllSessions?: PickerCandidateSession[];
 }
 
 export default function ChatComposer({
@@ -158,6 +173,14 @@ export default function ChatComposer({
   placeholder,
   isTextareaExpanded,
   sendByCtrlEnter,
+  references,
+  onOpenReferencePicker,
+  onRemoveReference,
+  isReferencePickerOpen,
+  onCloseReferencePicker,
+  onConfirmReference,
+  pickerDefaultSessions,
+  pickerAllSessions,
 }: ChatComposerProps) {
   const { t } = useTranslation('chat');
 
@@ -199,6 +222,15 @@ export default function ChatComposer({
 
   return (
     <div className="flex-shrink-0 p-2 pb-2 sm:p-4 sm:pb-4 md:p-4 md:pb-6">
+      {isReferencePickerOpen && (
+        <SessionReferencePicker
+          defaultSessions={pickerDefaultSessions}
+          allSessions={pickerAllSessions}
+          onCancel={onCloseReferencePicker}
+          onConfirm={onConfirmReference}
+        />
+      )}
+
       {!hasPendingPermissions && (
         <ActivityIndicator activity={activity} onAbort={onAbortSession} />
       )}
@@ -303,6 +335,22 @@ export default function ChatComposer({
             </PromptInputHeader>
           )}
 
+          {references.length > 0 && (
+            <PromptInputHeader>
+              <div className="rounded-xl bg-muted/40 p-2">
+                <div className="flex flex-col gap-1.5">
+                  {references.map((r) => (
+                    <SessionReferenceChip
+                      key={r.id}
+                      reference={r}
+                      onRemove={onRemoveReference}
+                    />
+                  ))}
+                </div>
+              </div>
+            </PromptInputHeader>
+          )}
+
           <input {...getInputProps()} />
 
           <PromptInputBody>
@@ -330,6 +378,19 @@ export default function ChatComposer({
 
         <PromptInputFooter>
           <PromptInputTools>
+            <PromptInputButton
+              tooltip={{ content: t('references.openPicker', { defaultValue: '引用会话 (Ctrl+L)' }) }}
+              onClick={onOpenReferencePicker}
+              className="relative"
+            >
+              <Link2Icon />
+              {references.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  {references.length}
+                </span>
+              )}
+            </PromptInputButton>
+
             <PromptInputButton
               tooltip={{ content: t('input.attachImages') }}
               onClick={openImagePicker}

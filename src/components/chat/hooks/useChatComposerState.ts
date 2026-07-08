@@ -25,6 +25,7 @@ import type { Project, ProjectSession, LLMProvider, ProviderModelsCacheInfo } fr
 import { escapeRegExp } from '../utils/chatFormatting';
 
 import { useFileMentions } from './useFileMentions';
+import { useSessionReferences } from './useSessionReferences';
 import { type SlashCommand, useSlashCommands } from './useSlashCommands';
 
 interface UseChatComposerStateArgs {
@@ -203,6 +204,33 @@ export function useChatComposerState({
   const [imageErrors, setImageErrors] = useState<Map<string, string>>(new Map());
   const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
   const [commandModalPayload, setCommandModalPayload] = useState<CommandModalPayload | null>(null);
+
+  const {
+    references,
+    formattedHints,
+    addReference,
+    removeReference,
+    clearReferences,
+  } = useSessionReferences();
+  const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
+  const openReferencePicker = useCallback(() => setIsReferencePickerOpen(true), []);
+  const closeReferencePicker = useCallback(() => setIsReferencePickerOpen(false), []);
+  const handleConfirmReference = useCallback(
+    (
+      sessionId: string,
+      title: string,
+      provider: string,
+    ) => {
+      addReference({
+        sessionId,
+        title,
+        provider,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      setIsReferencePickerOpen(false);
+    },
+    [addReference],
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHighlightRef = useRef<HTMLDivElement>(null);
@@ -574,7 +602,10 @@ export function useChatComposerState({
         }
       }
 
-      const messageContent = currentInput;
+      const referenceHints = formattedHints;
+      const messageContent = referenceHints
+        ? `${referenceHints}\n\n---\n\n${currentInput}`
+        : currentInput;
 
       let uploadedImages: unknown[] = [];
       if (attachedImages.length > 0) {
@@ -736,6 +767,7 @@ export function useChatComposerState({
 
       setInput('');
       inputValueRef.current = '';
+      clearReferences();
       resetCommandMenuState();
       setAttachedImages([]);
       setUploadingImages(new Map());
@@ -752,10 +784,12 @@ export function useChatComposerState({
       selectedSession,
       attachedImages,
       claudeModel,
+      clearReferences,
       codexModel,
       currentSessionId,
       cursorModel,
       executeCommand,
+      formattedHints,
       geminiModel,
       opencodeModel,
       isLoading,
@@ -866,6 +900,12 @@ export function useChatComposerState({
         return;
       }
 
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
+        event.preventDefault();
+        openReferencePicker();
+        return;
+      }
+
       if (event.key === 'Tab' && !showFileDropdown && !showCommandMenu) {
         event.preventDefault();
         cyclePermissionMode();
@@ -891,6 +931,7 @@ export function useChatComposerState({
       handleCommandMenuKeyDown,
       handleFileMentionsKeyDown,
       handleSubmit,
+      openReferencePicker,
       sendByCtrlEnter,
       showCommandMenu,
       showFileDropdown,
@@ -1069,5 +1110,12 @@ export function useChatComposerState({
     commandModalPayload,
     closeCommandModal,
     showCostModal,
+    references,
+    formattedHints,
+    isReferencePickerOpen,
+    openReferencePicker,
+    closeReferencePicker,
+    handleConfirmReference,
+    removeReference,
   };
 }

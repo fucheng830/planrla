@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,9 @@ import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/Palett
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
 import { useSessionProtection } from '../../hooks/useSessionProtection';
 import { useProjectsState } from '../../hooks/useProjectsState';
+import { getAllSessions } from '../sidebar/utils/utils';
+import type { PickerCandidateSession } from '../chat/view/subcomponents/SessionReferencePicker';
+import { toCandidateSession } from '../chat/utils/candidateSession';
 import { api } from '../../utils/api';
 
 type RunningSessionApiItem = {
@@ -64,6 +67,7 @@ function AppContentInner() {
   } = useSessionProtection();
 
   const {
+    projects,
     selectedProject,
     selectedSession,
     activeTab,
@@ -88,6 +92,17 @@ function AppContentInner() {
     completedSessions,
     onCompletedSessionSeen: clearSessionCompleted,
   });
+
+  // Flatten every project's sessions into a single picker candidate list so the
+  // SessionReferencePicker's "search all" mode can surface cross-project results.
+  // `getAllSessions` reuses the sidebar's exact flattening + sort + provider
+  // normalization, keeping this consistent with the rest of the app.
+  const allPickerSessions = useMemo<PickerCandidateSession[]>(
+    () => (projects ?? []).flatMap((project) =>
+      getAllSessions(project).map((session) => toCandidateSession(session)),
+    ),
+    [projects],
+  );
 
   const refreshRunningSessions = useCallback(async () => {
     try {
@@ -255,6 +270,7 @@ function AppContentInner() {
           onShowSettings={openSettings}
           externalMessageUpdate={externalMessageUpdate}
           newSessionTrigger={newSessionTrigger}
+          allPickerSessions={allPickerSessions}
         />
       </div>
 

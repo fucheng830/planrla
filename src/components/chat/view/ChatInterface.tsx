@@ -25,6 +25,7 @@ import {
 import ChatMessagesPane from './subcomponents/ChatMessagesPane';
 import ChatComposer from './subcomponents/ChatComposer';
 import CommandResultModal from './subcomponents/CommandResultModal';
+import { toCandidateSession } from '../utils/candidateSession';
 
 
 function ChatInterface({
@@ -49,6 +50,7 @@ function ChatInterface({
   externalMessageUpdate,
   newSessionTrigger,
   onShowAllTasks,
+  allPickerSessions,
 }: ChatInterfaceProps) {
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
   const { subscribe } = useWebSocket();
@@ -200,6 +202,13 @@ function ChatInterface({
     commandModalPayload,
     closeCommandModal,
     showCostModal,
+    references,
+    formattedHints,
+    isReferencePickerOpen,
+    openReferencePicker,
+    closeReferencePicker,
+    handleConfirmReference,
+    removeReference,
   } = useChatComposerState({
     selectedProject,
     selectedSession,
@@ -334,6 +343,15 @@ function ChatInterface({
   const handleAckCancel = useCallback(() => {
     setShowPermissionAck(false);
   }, []);
+
+  // Build picker candidate sessions from the current project's sessions.
+  // `pickerAllSessions` (cross-project) comes from AppContent, which has the
+  // full projects array; both lists share `toCandidateSession` so the same
+  // session renders identically in either pool.
+  const pickerDefaultSessions = useMemo(() => {
+    const sessions = selectedProject?.sessions ?? [];
+    return sessions.map((s) => toCandidateSession(s, provider));
+  }, [selectedProject?.sessions, provider]);
 
   if (!selectedProject) {
     const selectedProviderLabel =
@@ -481,6 +499,14 @@ function ChatInterface({
           })}
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}
+          references={references}
+          onOpenReferencePicker={openReferencePicker}
+          onRemoveReference={removeReference}
+          isReferencePickerOpen={isReferencePickerOpen}
+          onCloseReferencePicker={closeReferencePicker}
+          onConfirmReference={handleConfirmReference}
+          pickerDefaultSessions={pickerDefaultSessions}
+          pickerAllSessions={allPickerSessions}
         />
       </div>
 

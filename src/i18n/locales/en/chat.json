@@ -414,5 +414,14 @@
       "ackConfirm": "I understand, enable by default",
       "ackCancel": "Cancel"
     }
+  },
+  "references": {
+    "openPicker": "Reference session (Ctrl+L)",
+    "pickerTitle": "Reference session",
+    "searchPlaceholder": "Search (empty = current project, type = all)",
+    "noSessions": "No matching sessions",
+    "queryableFrom": "Queryable: \"{{title}}\"",
+    "cancel": "Cancel",
+    "confirm": "Reference"
   }
 }
