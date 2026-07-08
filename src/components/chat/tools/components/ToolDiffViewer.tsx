@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { MessageSquare } from 'lucide-react';
+
 import { getLanguageFromPath } from '../utils/languageDetect';
+
 import { DiffLineComments } from './DiffLineComments';
 
 type DiffLine = {
@@ -140,7 +142,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                 className="flex-shrink-0 self-center px-1 text-muted-foreground/40 opacity-0 transition-opacity hover:text-muted-foreground group-hover:opacity-100"
               >
                 <MessageSquare className="h-3 w-3" />
-                {comments[i] && <span className="ml-0.5 text-[10px] align-middle">●</span>}
+                {comments[i] && <span className="ml-0.5 align-middle text-[10px]">●</span>}
               </button>
             </div>
             {openCommentLine === i && (

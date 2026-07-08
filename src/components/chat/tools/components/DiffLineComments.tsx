@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquare, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
 import { useComposer } from '../../../../contexts/ComposerContext';
 
 interface DiffLineCommentsProps {

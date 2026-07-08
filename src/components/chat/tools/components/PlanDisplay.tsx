@@ -15,9 +15,9 @@ import {
   Shimmer,
 } from '../../../../shared/view/ui';
 import { usePermission } from '../../../../contexts/PermissionContext';
+import { parsePlanSteps, type PlanStep } from '../utils/planSteps';
 
 import { MarkdownContent } from './ContentRenderers';
-import { parsePlanSteps, type PlanStep } from '../utils/planSteps';
 
 interface PlanDisplayProps {
   title: string;
