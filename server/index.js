@@ -14,7 +14,9 @@ import Database from 'better-sqlite3';
 
 import { AppError, WORKSPACES_ROOT, getOpenCodeDatabasePath, validateWorkspacePath } from '@/shared/utils.js';
 import { closeSessionsWatcher, initializeSessionsWatcher } from '@/modules/providers/index.js';
+import { providerMcpService } from '@/modules/providers/services/mcp.service.js';
 import { createWebSocketServer } from '@/modules/websocket/index.js';
+import { internalMcpToken } from './modules/auth/internal-mcp-token.js';
 
 import { getConnectableHost } from '../shared/networkHosts.js';
 
@@ -1772,6 +1774,46 @@ function ensureDefaultUser() {
     }
 }
 
+// Register the session-query stdio MCP server to every provider so agents can
+// look up messages in other chat sessions on this host (cross-session context,
+// REQ-016 L2). Idempotent (upsert); providers that reject stdio upsert are
+// warned and skipped — they do not block startup.
+const SESSION_QUERY_MCP_NAME = 'planrla-session-query';
+async function registerSessionQueryMcp(port) {
+    try {
+        // Dev runs the .ts via tsx; production runs the compiled .js from dist-server.
+        // Match how planrla launches its other TS MCP scripts (see browser-use.service).
+        const serverDir = getModuleDir(import.meta.url);
+        const isProd = fs.existsSync(path.join(APP_ROOT, 'dist-server'));
+        const scriptPath = path.join(
+            serverDir,
+            isProd ? 'session-query-mcp.js' : 'session-query-mcp.ts',
+        );
+        const args = isProd ? [scriptPath] : ['--import', 'tsx', scriptPath];
+
+        const results = await providerMcpService.addMcpServerToAllProviders({
+            name: SESSION_QUERY_MCP_NAME,
+            scope: 'user',
+            transport: 'stdio',
+            command: 'node',
+            args,
+            env: {
+                PLANRLA_API_URL: `http://127.0.0.1:${port}`,
+                SESSION_QUERY_MCP_TOKEN: internalMcpToken.getOrCreate(),
+            },
+        });
+
+        const ok = results.filter((r) => r.created).map((r) => r.provider);
+        const failed = results.filter((r) => !r.created);
+        console.log(`${c.info('[INFO]')} [session-query-mcp] registered to: ${ok.join(', ') || '(none)'}`);
+        for (const r of failed) {
+            console.warn(`[session-query-mcp] skipped for ${r.provider}: ${r.error}`);
+        }
+    } catch (err) {
+        console.error('[session-query-mcp] registration failed:', err?.message || err);
+    }
+}
+
 // Initialize database and start server
 async function startServer() {
     try {
@@ -1829,6 +1871,14 @@ async function startServer() {
             // Start server-side plugin processes for enabled plugins
             startEnabledPluginServers().catch(err => {
                 console.error('[Plugins] Error during startup:', err.message);
+            });
+
+            // Register the session-query MCP server (stdio) to all providers.
+            // Enables agents to look up messages in other chat sessions on this
+            // host (cross-session context, REQ-016). Idempotent via upsert; any
+            // provider that does not support stdio MCP upsert is warned, not fatal.
+            registerSessionQueryMcp(SERVER_PORT).catch(err => {
+                console.error('[session-query-mcp] registration failed:', err?.message || err);
             });
         });
 
