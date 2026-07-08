@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { userDb, appConfigDb } from '../modules/database/index.js';
 import { IS_PLATFORM } from '../constants/config.js';
-import { internalMcpToken } from '../modules/auth/internal-mcp-token.js';
 
 // Use env var if set, otherwise auto-generate a unique secret per installation
 const JWT_SECRET = process.env.JWT_SECRET || appConfigDb.getOrCreateJwtSecret();
@@ -44,19 +43,6 @@ const authenticateToken = async (req, res, next) => {
   // Also check query param for SSE endpoints (EventSource can't set headers)
   if (!token && req.query.token) {
     token = req.query.token;
-  }
-
-  // Internal service token: planrla's own stdio MCP servers (e.g. session-query)
-  // call back into this API as long-lived child processes and cannot refresh
-  // user JWTs. Accept the persistent internal MCP token here so those servers
-  // can read session data without a user-bound JWT. See internal-mcp-token.ts.
-  if (token && internalMcpToken.matches(token)) {
-    try {
-      req.user = userDb.getFirstUser();
-    } catch {
-      // Non-fatal: routes that don't read req.user still work.
-    }
-    return next();
   }
 
   if (!token) {

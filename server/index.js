@@ -16,7 +16,8 @@ import { AppError, WORKSPACES_ROOT, getOpenCodeDatabasePath, validateWorkspacePa
 import { closeSessionsWatcher, initializeSessionsWatcher } from '@/modules/providers/index.js';
 import { providerMcpService } from '@/modules/providers/services/mcp.service.js';
 import { createWebSocketServer } from '@/modules/websocket/index.js';
-import { internalMcpToken } from './modules/auth/internal-mcp-token.js';
+
+import sessionQueryMcpRoute from './modules/mcp/session-query-mcp.route.js';
 
 import { getConnectableHost } from '../shared/networkHosts.js';
 
@@ -225,6 +226,12 @@ app.get('/api/version/latest', async (req, res) => {
         res.status(502).json({ error: 'Failed to fetch update metadata' });
     }
 });
+
+// In-process HTTP MCP for cross-session context lookup (REQ-016 L2).
+// Mounted BEFORE validateApiKey / authenticateToken so provider CLIs (Claude /
+// Codex / Cursor / Gemini / OpenCode) can reach it without a user JWT. Local
+// only, single user, read-only session data — see session-query-mcp.route.ts.
+app.use('/api/mcp/internal', sessionQueryMcpRoute);
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
@@ -1774,33 +1781,20 @@ function ensureDefaultUser() {
     }
 }
 
-// Register the session-query stdio MCP server to every provider so agents can
+// Register the session-query HTTP MCP server to every provider so agents can
 // look up messages in other chat sessions on this host (cross-session context,
-// REQ-016 L2). Idempotent (upsert); providers that reject stdio upsert are
-// warned and skipped — they do not block startup.
+// REQ-016 L2). Hosted in-process at /api/mcp/internal — no external spawn, so
+// it works inside the packaged app's asar archive where a stdio script would
+// be unreadable to the provider's external `node`. Idempotent (upsert);
+// providers that reject http upsert are warned and skipped.
 const SESSION_QUERY_MCP_NAME = 'planrla-session-query';
 async function registerSessionQueryMcp(port) {
     try {
-        // Dev runs the .ts via tsx; production runs the compiled .js from dist-server.
-        // Match how planrla launches its other TS MCP scripts (see browser-use.service).
-        const serverDir = getModuleDir(import.meta.url);
-        const isProd = fs.existsSync(path.join(APP_ROOT, 'dist-server'));
-        const scriptPath = path.join(
-            serverDir,
-            isProd ? 'session-query-mcp.js' : 'session-query-mcp.ts',
-        );
-        const args = isProd ? [scriptPath] : ['--import', 'tsx', scriptPath];
-
         const results = await providerMcpService.addMcpServerToAllProviders({
             name: SESSION_QUERY_MCP_NAME,
             scope: 'user',
-            transport: 'stdio',
-            command: 'node',
-            args,
-            env: {
-                PLANRLA_API_URL: `http://127.0.0.1:${port}`,
-                SESSION_QUERY_MCP_TOKEN: internalMcpToken.getOrCreate(),
-            },
+            transport: 'http',
+            url: `http://127.0.0.1:${port}/api/mcp/internal`,
         });
 
         const ok = results.filter((r) => r.created).map((r) => r.provider);
