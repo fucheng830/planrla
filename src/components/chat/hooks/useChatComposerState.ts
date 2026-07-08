@@ -27,6 +27,11 @@ import { escapeRegExp } from '../utils/chatFormatting';
 import { useFileMentions } from './useFileMentions';
 import { useSessionReferences } from './useSessionReferences';
 import { type SlashCommand, useSlashCommands } from './useSlashCommands';
+import {
+  parseSearchCommand,
+  runSearchCommand,
+  formatSearchCommandHints,
+} from './useSearchCommand';
 
 interface UseChatComposerStateArgs {
   selectedProject: Project | null;
@@ -567,45 +572,78 @@ export function useChatComposerState({
         return;
       }
 
-      // Intercept slash commands only when "/" is the first input character.
-      // Also accept exact "help" as a convenience alias for users who expect CLI-style help.
-      const commandInput = currentInput.trimEnd();
-      const isHelpAlias = commandInput.trim().toLowerCase() === 'help';
-      if (commandInput.startsWith('/') || isHelpAlias) {
-        const firstSpace = commandInput.indexOf(' ');
-        const commandName = isHelpAlias
-          ? '/help'
-          : firstSpace > 0 ? commandInput.slice(0, firstSpace) : commandInput;
-        const matchedCommand =
-          slashCommands.find((cmd: SlashCommand) => cmd.name === commandName) ||
-          (commandName === '/help'
-            ? ({
-                name: '/help',
-                description: 'Show help documentation for Claude Code',
-                namespace: 'builtin',
-                metadata: { type: 'builtin' },
-              } as SlashCommand)
-            : undefined);
-        if (matchedCommand && matchedCommand.type !== 'skill') {
-          executeCommand(matchedCommand, isHelpAlias ? '/help' : commandInput);
+      // /search <query> — client-side FTS5 session search (REQ-016 L3-B).
+      // Handled BEFORE the generic slash interception so it never hits
+      // /api/commands/execute (the /search command is NOT registered
+      // server-side). Runs the search, then injects a session-level results
+      // block into the outgoing message (mirrors the @reference hint prepend),
+      // and treats <query> as both the FTS5 query and the user's question.
+      let searchHints = '';
+      let effectiveInput = currentInput;
+      const trimmedCommandInput = currentInput.trim();
+      if (/^\/search(?:\s|$)/i.test(trimmedCommandInput)) {
+        const { query } = parseSearchCommand(trimmedCommandInput);
+        if (!query) {
+          // "/search" with no query — surface a hint instead of sending.
+          addMessage({
+            type: 'assistant',
+            content: 'Usage: /search <query> — searches across all past sessions and injects the top matches into your message.',
+            timestamp: Date.now(),
+          });
           setInput('');
           inputValueRef.current = '';
-          setAttachedImages([]);
-          setUploadingImages(new Map());
-          setImageErrors(new Map());
           resetCommandMenuState();
-          setIsTextareaExpanded(false);
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-          }
+          if (textareaRef.current) textareaRef.current.style.height = 'auto';
           return;
+        }
+        const projectPath = selectedProject.fullPath || selectedProject.path || '';
+        const result = await runSearchCommand(query, { provider, projectPath });
+        searchHints = formatSearchCommandHints(result);
+        // The displayed + sent user text is the query itself (the /search
+        // token is a directive, not part of the question).
+        effectiveInput = query;
+      } else {
+        // Intercept slash commands only when "/" is the first input character.
+        // Also accept exact "help" as a convenience alias for users who expect CLI-style help.
+        const commandInput = currentInput.trimEnd();
+        const isHelpAlias = commandInput.trim().toLowerCase() === 'help';
+        if (commandInput.startsWith('/') || isHelpAlias) {
+          const firstSpace = commandInput.indexOf(' ');
+          const commandName = isHelpAlias
+            ? '/help'
+            : firstSpace > 0 ? commandInput.slice(0, firstSpace) : commandInput;
+          const matchedCommand =
+            slashCommands.find((cmd: SlashCommand) => cmd.name === commandName) ||
+            (commandName === '/help'
+              ? ({
+                  name: '/help',
+                  description: 'Show help documentation for Claude Code',
+                  namespace: 'builtin',
+                  metadata: { type: 'builtin' },
+                } as SlashCommand)
+              : undefined);
+          if (matchedCommand && matchedCommand.type !== 'skill') {
+            executeCommand(matchedCommand, isHelpAlias ? '/help' : commandInput);
+            setInput('');
+            inputValueRef.current = '';
+            setAttachedImages([]);
+            setUploadingImages(new Map());
+            setImageErrors(new Map());
+            resetCommandMenuState();
+            setIsTextareaExpanded(false);
+            if (textareaRef.current) {
+              textareaRef.current.style.height = 'auto';
+            }
+            return;
+          }
         }
       }
 
       const referenceHints = formattedHints;
-      const messageContent = referenceHints
-        ? `${referenceHints}\n\n---\n\n${currentInput}`
-        : currentInput;
+      const hints = [searchHints, referenceHints].filter(Boolean).join('\n\n---\n\n');
+      const messageContent = hints
+        ? `${hints}\n\n---\n\n${effectiveInput}`
+        : effectiveInput;
 
       let uploadedImages: unknown[] = [];
       if (attachedImages.length > 0) {
@@ -640,7 +678,7 @@ export function useChatComposerState({
       }
 
       const resolvedProjectPath = selectedProject.fullPath || selectedProject.path || '';
-      const sessionSummary = getNotificationSessionSummary(selectedSession, currentInput);
+      const sessionSummary = getNotificationSessionSummary(selectedSession, effectiveInput);
 
       // The conversation always has a stable backend-allocated session id
       // BEFORE the first websocket send: brand-new chats allocate one here
@@ -690,7 +728,9 @@ export function useChatComposerState({
 
       const userMessage: ChatMessage = {
         type: 'user',
-        content: currentInput,
+        // For /search the displayed message is the query itself (the
+        // /search token is a directive, stripped into effectiveInput).
+        content: effectiveInput,
         images: uploadedImages as any,
         timestamp: new Date(),
       };

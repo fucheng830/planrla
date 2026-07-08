@@ -1,6 +1,6 @@
 /**
  * Centralized tool configuration registry
- * Defines display behavior for all tool types 
+ * Defines display behavior for all tool types
  */
 
 export interface ToolDisplayConfig {
@@ -24,7 +24,7 @@ export interface ToolDisplayConfig {
     // Collapsible config
     title?: string | ((input: any) => string);
     defaultOpen?: boolean;
-    contentType?: 'diff' | 'markdown' | 'file-list' | 'todo-list' | 'text' | 'task' | 'question-answer';
+    contentType?: 'diff' | 'markdown' | 'file-list' | 'todo-list' | 'text' | 'task' | 'question-answer' | 'search-results';
     getContentProps?: (input: any, helpers?: any) => any;
     actionButton?: 'file-button' | 'none';
   };
@@ -35,10 +35,38 @@ export interface ToolDisplayConfig {
     title?: string | ((result: any) => string);
     defaultOpen?: boolean;
     // Special result handlers
-    contentType?: 'markdown' | 'file-list' | 'todo-list' | 'text' | 'success-message' | 'task' | 'question-answer';
+    contentType?: 'markdown' | 'file-list' | 'todo-list' | 'text' | 'success-message' | 'task' | 'question-answer' | 'search-results';
     getMessage?: (result: any) => string;
     getContentProps?: (result: any) => any;
   };
+}
+
+/**
+ * Parses the `search_conversations` tool result into a matches array for
+ * SearchResultCards. The MCP tool returns JSON `{matches, total, truncated,
+ * note}` as a text content block; we tolerate both the wrapped shape and a
+ * bare array, and gracefully degrade to [] on any parse failure.
+ */
+function parseSearchMatches(result: any): any[] {
+  if (!result) return [];
+  let raw: any = result;
+  // toolResult is typically { content: '...json...' } — unwrap the JSON string.
+  if (typeof result === 'object' && typeof result.content === 'string') {
+    try {
+      raw = JSON.parse(result.content);
+    } catch {
+      return [];
+    }
+  } else if (typeof result === 'string') {
+    try {
+      raw = JSON.parse(result);
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(raw?.matches)) return raw.matches;
+  if (Array.isArray(raw)) return raw;
+  return [];
 }
 
 export const TOOL_CONFIGS: Record<string, ToolDisplayConfig> = {
@@ -489,8 +517,39 @@ export const TOOL_CONFIGS: Record<string, ToolDisplayConfig> = {
   },
 
   // ============================================================================
-  // PLAN TOOLS
+  // SESSION SEARCH TOOL (REQ-016 L3-A: search_conversations MCP tool)
   // ============================================================================
+
+  search_conversations: {
+    input: {
+      type: 'one-line',
+      label: 'Search',
+      getValue: (input) => input.query || '',
+      action: 'none',
+      colorScheme: {
+        primary: 'text-gray-700 dark:text-gray-300',
+        secondary: 'text-gray-500 dark:text-gray-400',
+        background: '',
+        border: 'border-amber-400 dark:border-amber-500',
+        icon: 'text-amber-500 dark:text-amber-400',
+      },
+    },
+    result: {
+      type: 'collapsible',
+      defaultOpen: true,
+      title: (result) => {
+        const matches = parseSearchMatches(result);
+        const count = matches.length;
+        return count === 0 ? 'No session matches' : `${count} session ${count === 1 ? 'match' : 'matches'}`;
+      },
+      contentType: 'search-results',
+      getContentProps: (result) => ({
+        matches: parseSearchMatches(result),
+      }),
+    },
+  },
+
+
 
   exit_plan_mode: {
     input: {

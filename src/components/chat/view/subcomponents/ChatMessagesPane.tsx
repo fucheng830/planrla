@@ -60,6 +60,7 @@ interface ChatMessagesPaneProps {
   showLoadAllOverlay: boolean;
   createDiff: any;
   onFileOpen?: (filePath: string, diffInfo?: unknown) => void;
+  onOpenSession?: (sessionId: string) => void;
   onShowSettings?: () => void;
   onGrantToolPermission: (suggestion: { entry: string; toolName: string }) => { success: boolean };
   autoExpandTools?: boolean;
@@ -110,6 +111,7 @@ export default function ChatMessagesPane({
   showLoadAllOverlay,
   createDiff,
   onFileOpen,
+  onOpenSession,
   onShowSettings,
   onGrantToolPermission,
   autoExpandTools,
@@ -285,6 +287,7 @@ export default function ChatMessagesPane({
                     prevMessage={prevMessage}
                     createDiff={createDiff}
                     onFileOpen={onFileOpen}
+                    onOpenSession={onOpenSession}
                     onShowSettings={onShowSettings}
                     onGrantToolPermission={onGrantToolPermission}
                     autoExpandTools={autoExpandTools}
