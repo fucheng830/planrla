@@ -124,13 +124,11 @@
     "toggle": "展开或收起计划",
     "generating": "正在生成计划...",
     "revise": "修改",
-    "build": "开始执行",
-    "steps": "步骤"
+    "build": "开始执行"
   },
   "diffComments": {
     "copyAsMessage": "复制评论为消息",
     "copied": "已复制到输入框",
-    "hint": "悬停行可评论",
     "commentTitle": "评论此行",
     "placeholder": "对此行的评论…",
     "save": "保存",

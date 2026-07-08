@@ -59,11 +59,11 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null);
   const [commentDraft, setCommentDraft] = useState('');
 
-  const setComment = (lineIndex: number, text: string) => {
+  const setComment = (lineNum: number, text: string) => {
     setComments((prev) => {
       const next = { ...prev };
-      if (text.trim()) next[lineIndex] = text;
-      else delete next[lineIndex];
+      if (text.trim()) next[lineNum] = text;
+      else delete next[lineNum];
       return next;
     });
   };
@@ -136,16 +136,17 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                 type="button"
                 title={t('diffComments.commentTitle')}
                 onClick={() => {
-                  setOpenCommentLine(openCommentLine === i ? null : i);
-                  setCommentDraft(comments[i] ?? '');
+                  const ln = diffLine.lineNum;
+                  setOpenCommentLine(openCommentLine === ln ? null : ln);
+                  setCommentDraft(comments[ln] ?? '');
                 }}
                 className="flex-shrink-0 self-center px-1 text-muted-foreground/40 opacity-0 transition-opacity hover:text-muted-foreground group-hover:opacity-100"
               >
                 <MessageSquare className="h-3 w-3" />
-                {comments[i] && <span className="ml-0.5 align-middle text-[10px]">●</span>}
+                {comments[diffLine.lineNum] && <span className="ml-0.5 align-middle text-[10px]">●</span>}
               </button>
             </div>
-            {openCommentLine === i && (
+            {openCommentLine === diffLine.lineNum && (
               <div className="flex gap-2 border-l-2 border-blue-300 bg-blue-50/50 px-2 py-1.5 dark:border-blue-700 dark:bg-blue-950/20">
                 <textarea
                   value={commentDraft}
@@ -158,7 +159,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setComment(i, commentDraft);
+                      setComment(diffLine.lineNum, commentDraft);
                       setOpenCommentLine(null);
                     }}
                     className="rounded bg-blue-600 px-2 py-0.5 text-[10px] text-white hover:bg-blue-700"
@@ -168,7 +169,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setComment(i, '');
+                      setComment(diffLine.lineNum, '');
                       setOpenCommentLine(null);
                     }}
                     className="rounded px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"

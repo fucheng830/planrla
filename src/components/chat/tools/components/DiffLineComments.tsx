@@ -18,8 +18,10 @@ export const DiffLineComments: React.FC<DiffLineCommentsProps> = ({ filePath, co
   const commentCount = entries.length;
 
   const handleCopyAsMessage = () => {
+    // commentsByLine 的 key 是 DiffLine.lineNum(真实文件 1-based 行号,见
+    // messageTransforms.ts calculateDiff),直接用作 :L# 标签。
     const text = entries
-      .map(([idx, text]) => `${filePath}:L${Number(idx) + 1}\n> ${text.trim()}`)
+      .map(([lineNum, text]) => `${filePath}:L${lineNum}\n> ${text.trim()}`)
       .join('\n');
     composer?.insertText(text);
     setCopied(true);

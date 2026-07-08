@@ -125,13 +125,11 @@
     "toggle": "Toggle plan",
     "generating": "Generating plan...",
     "revise": "Revise",
-    "build": "Build",
-    "steps": "Steps"
+    "build": "Build"
   },
   "diffComments": {
     "copyAsMessage": "Copy comments as message",
     "copied": "Copied to composer",
-    "hint": "Hover a line to comment",
     "commentTitle": "Comment this line",
     "placeholder": "Comment on this line…",
     "save": "Save",
