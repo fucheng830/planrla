@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
-import { connectedClients } from '@/modules/websocket/services/websocket-state.service.js';
+import { connectedClients } from '@/modules/websocket/index.js';
 import {
   MAX_SESSION_TITLE_LENGTH,
   setSessionTitle,

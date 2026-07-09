@@ -1,9 +1,10 @@
 import express, { type Request, type Response } from 'express';
 
-import { setSessionTitle } from './session-rename.service.js';
 import { sessionsService } from '@/modules/providers/index.js';
 import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
+
+import { setSessionTitle } from './session-rename.service.js';
 
 /**
  * In-process HTTP MCP server for cross-session context lookup (REQ-016 L2).
