@@ -608,6 +608,32 @@ export function useProjectsState({
         return;
       }
 
+      if (event.kind === 'session_renamed') {
+        const renamed = event as { sessionId: string; summary: string };
+        if (!renamed.sessionId) {
+          return;
+        }
+        setProjects((previousProjects) =>
+          previousProjects.map((project) => {
+            const sessions = project.sessions ?? [];
+            const idx = sessions.findIndex((s) => String(s.id) === renamed.sessionId);
+            if (idx < 0) {
+              return project;
+            }
+            const nextSessions = [...sessions];
+            nextSessions[idx] = { ...nextSessions[idx], summary: renamed.summary };
+            return { ...project, sessions: nextSessions };
+          }),
+        );
+        // Keep the currently selected session header in sync too.
+        setSelectedSession((prev) =>
+          prev && String(prev.id) === renamed.sessionId
+            ? { ...prev, summary: renamed.summary }
+            : prev,
+        );
+        return;
+      }
+
       if (event.kind !== 'session_upserted') {
         return;
       }

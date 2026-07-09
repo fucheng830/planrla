@@ -4,6 +4,8 @@ import { sessionsService } from '@/modules/providers/index.js';
 import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
 
+import { setSessionTitle } from './session-rename.service.js';
+
 /**
  * In-process HTTP MCP server for cross-session context lookup (REQ-016 L2).
  *
@@ -14,8 +16,11 @@ import type { NormalizedMessage } from '@/shared/types.js';
  * planrla server itself keeps everything in-process — no external spawn, no
  * asar path to resolve, no token to mint. The route is mounted BEFORE the
  * `validateApiKey` / `authenticateToken` middleware because it is local-only
- * and single-user, and it only exposes read access to persisted session
- * transcripts (no auth secrets, no writes).
+ * and single-user. Its tools are read-only session transcript lookups, plus
+ * one write tool (`set_session_title`) whose trust boundary is identical to
+ * the existing manual rename REST endpoint (PUT /sessions/:sessionId): it
+ * only re-titles the local user's own session row — no auth secrets, no
+ * cross-user surface.
  *
  * Transport: MCP "streamable HTTP" — a single POST per JSON-RPC request returns
  * a single JSON-RPC response. This is the shape Claude Code's `http` MCP
@@ -91,6 +96,23 @@ const SEARCH_CONVERSATIONS_TOOL: ToolDefinition = {
   },
 };
 
+const SET_SESSION_TITLE_TOOL: ToolDefinition = {
+  name: 'set_session_title',
+  description:
+    'Set a custom title for a conversation session on this host. Call this AFTER you have generated a short (5-15 char) descriptive title from the conversation content, or when the user explicitly asks to rename/retitle the current or a specific session. The title is persisted and the sidebar updates in real time.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      sessionId: { type: 'string', description: 'The session id to retitle.' },
+      title: {
+        type: 'string',
+        description: 'The new title. 1-50 chars after trim. Empty/overlong titles are rejected.',
+      },
+    },
+    required: ['sessionId', 'title'],
+  },
+};
+
 const textResponse = (text: string) => ({
   content: [{ type: 'text', text }],
 });
@@ -161,6 +183,9 @@ async function fetchSessionMessages(sessionId: string): Promise<{
 async function callTool(name: string, args: Record<string, unknown>) {
   if (name === SEARCH_CONVERSATIONS_TOOL.name) {
     return searchConversations(args);
+  }
+  if (name === SET_SESSION_TITLE_TOOL.name) {
+    return setSessionTitleTool(args);
   }
   if (name !== QUERY_SESSION_TOOL.name) {
     throw new Error(`Unknown tool: ${name}`);
@@ -233,6 +258,13 @@ async function searchConversations(args: Record<string, unknown>) {
   });
 }
 
+function setSessionTitleTool(args: Record<string, unknown>) {
+  const sessionId = readString(args.sessionId, 'sessionId');
+  const title = readString(args.title, 'title');
+  const result = setSessionTitle(sessionId, title);
+  return jsonResponse(result);
+}
+
 type JsonRpcRequest = {
   jsonrpc: '2.0';
   id?: string | number | null;
@@ -250,7 +282,7 @@ async function handleMessage(message: JsonRpcRequest) {
   }
 
   if (message.method === 'tools/list') {
-    return { tools: [QUERY_SESSION_TOOL, SEARCH_CONVERSATIONS_TOOL] };
+    return { tools: [QUERY_SESSION_TOOL, SEARCH_CONVERSATIONS_TOOL, SET_SESSION_TITLE_TOOL] };
   }
 
   if (message.method === 'tools/call') {
