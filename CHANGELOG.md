@@ -3,6 +3,68 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.8.0](https://github.com/fucheng830/planrla/compare/v0.7.1...v0.8.0) (2026-07-09)
+
+### New Features
+
+* **chat:** /search 命令 + 搜索结果卡片 (REQ-016 L3 B+C) ([76f3be3](https://github.com/fucheng830/planrla/commit/76f3be3eca1f319d2a3a80a837191a2a43f19435))
+* **chat:** 加 session reference 格式化纯逻辑 + 测试 (REQ-016) ([3047c33](https://github.com/fucheng830/planrla/commit/3047c33c9352ef96dca5220bbd360cc51c6cae9f))
+* **chat:** 加 SessionReferenceChip 组件 (REQ-016) ([4443dd7](https://github.com/fucheng830/planrla/commit/4443dd74477afad58f6e0fb1cd00b766777c1c08))
+* **chat:** 加 SessionReferencePicker 组件 (REQ-016) ([d87fa50](https://github.com/fucheng830/planrla/commit/d87fa50949e17c3fa8a1525ca6130e7506dec48e))
+* **chat:** 加 useSessionReferences hook (REQ-016) ([843613c](https://github.com/fucheng830/planrla/commit/843613c9ba3c8b42e3a51e8643bcfeaeed6e4fa1))
+* **chat:** add /rename command parser and hint formatter ([6ec6bac](https://github.com/fucheng830/planrla/commit/6ec6bac125df81cad9f1d81e7466608c39b0e620))
+* **chat:** intercept /rename and inject sessionId hint ([7ae8eee](https://github.com/fucheng830/planrla/commit/7ae8eee89dc17f5be118a7c29ed7fe99eb34b371))
+* **chat:** listen for session_renamed to refresh sidebar ([864759f](https://github.com/fucheng830/planrla/commit/864759f359e55e82dd0561f6a1aefc368329616a))
+* **chat:** REQ-016 接 pickerAllSessions 跨 project 搜索 ([b66409e](https://github.com/fucheng830/planrla/commit/b66409e2c1809f90250954d4d69abbfec3e00c8d))
+* **chat:** REQ-016 用户消息渲染折叠引用块 ([8f8c760](https://github.com/fucheng830/planrla/commit/8f8c7600350e26aaad15bf77bcf6eb6e05fa58c6))
+* **chat:** REQ-016 ChatComposer 引用按钮 + chip + Picker 接线 ([f1ffe96](https://github.com/fucheng830/planrla/commit/f1ffe96f866fc1fc6d92f03486beef129628de48))
+* **chat:** REQ-016 composer 注入引用 + Ctrl/Cmd+L ([356861d](https://github.com/fucheng830/planrla/commit/356861d43d029aedf008ad4e712dbcf404a52e86))
+* **chat:** REQ-027 ① getLanguageFromPath util + 单测 ([4196f70](https://github.com/fucheng830/planrla/commit/4196f70ff2cc134fca5712f5b8250e962f90b55b))
+* **chat:** REQ-027 ① ToolDiffViewer 语法高亮(+大diff fallback) ([01e1add](https://github.com/fucheng830/planrla/commit/01e1add1241bbb082afdde605273d55379988131))
+* **chat:** REQ-027 ② parsePlanSteps util + 单测 ([3f06a85](https://github.com/fucheng830/planrla/commit/3f06a851944d68610e5f0ff8269d440b3cda3746))
+* **chat:** REQ-027 ② PlanDisplay 步骤结构化渲染(checkbox/编号) ([05a9d0a](https://github.com/fucheng830/planrla/commit/05a9d0ad4581c1f48eebbd066b7b08a2252e7e26))
+* **chat:** REQ-027 ④ ComposerContext(insertText 注入路径) ([99e556c](https://github.com/fucheng830/planrla/commit/99e556ca724ff7ee16314d07f1ac96252be2e8fd))
+* **chat:** REQ-027 ④ diff 行级评论 + 复制为消息(本地 state) ([86f4443](https://github.com/fucheng830/planrla/commit/86f4443474b0c3a98ba1ad1c8c35bea560da154f))
+* **i18n:** REQ-016 references 段(en + zh-CN) ([1f79b49](https://github.com/fucheng830/planrla/commit/1f79b491ee8d6cb162d5680f391c2e14a553b5aa))
+* **i18n:** REQ-027 ④/② diffComments + plan.steps(en + zh-CN) ([ee6c8bf](https://github.com/fucheng830/planrla/commit/ee6c8bf31afddb7c78a90d7946e2d34986786bd7))
+* **mcp:** expose set_session_title tool to agent ([d3c9fbe](https://github.com/fucheng830/planrla/commit/d3c9fbe03e8de192aa96c3c2be8bc80c047062d1))
+* **mcp:** session rename service (validate/persist/broadcast) ([648d6db](https://github.com/fucheng830/planrla/commit/648d6dbfc547eda885fa7fdbd284e37da9c4e412))
+* **server:** 加 search_conversations 全局搜索 MCP 工具 (REQ-016 L3 A) ([06a6818](https://github.com/fucheng830/planrla/commit/06a68185955bb0e82897a2efbf7d4013015f35cf))
+* **server:** 加 session-query MCP server (REQ-016 L2) ([12f2ca3](https://github.com/fucheng830/planrla/commit/12f2ca317ecbc36dcbd4bbf9a163430f6cebb906))
+* **server:** 启动注册 session-query MCP 给各 provider (REQ-016 L2) ([8a1bf9f](https://github.com/fucheng830/planrla/commit/8a1bf9f3f1b4c65807760611a99bb01c42b682ec))
+
+### Bug Fixes
+
+* **chat:** REQ-016 chip saveEdit 保留多行 content(按 [role] 标记扫描) ([9c824c6](https://github.com/fucheng830/planrla/commit/9c824c6a635ccf9091814312551228ca868f19dc))
+* **chat:** REQ-027 final review 修(④ 行号真实化/去L# + 删 dead i18n key) ([a4a6ed3](https://github.com/fucheng830/planrla/commit/a4a6ed3367e4d7f7e88db3c28e25f6ba66f4e6ae))
+* **mcp:** session-rename lint (barrel import + import order) ([bb91406](https://github.com/fucheng830/planrla/commit/bb914068f3c86c7577aa23cd59fe745f081fe937))
+* **server:** 跨会话 MCP 改 HTTP 进程内(修 asar spawn 失败) ([20d1aad](https://github.com/fucheng830/planrla/commit/20d1aad04facefb2534d7a389908ab3bff16b6ac))
+
+### Refactoring
+
+* **chat:** 简化 Picker(一步选)+ Chip(标签) (REQ-016 L2) ([8fba0ad](https://github.com/fucheng830/planrla/commit/8fba0adee980bc33352bfaaa148a64694b884cdc))
+* **chat:** 简化 sessionReferenceFormat + hook (REQ-016 L2) ([18b79aa](https://github.com/fucheng830/planrla/commit/18b79aa6d03913dd3655c20c3f0fd87024d52c5f))
+* **chat:** L2 composer/message/props/i18n 收尾 (REQ-016 L2) ([810b111](https://github.com/fucheng830/planrla/commit/810b111b7e754a2a4468134130e5abab343171b9))
+
+### Documentation
+
+* **backlog:** 清理 backlog(合并主题+REQ-008 核对已实现+Parked 暂搁) ([12062cb](https://github.com/fucheng830/planrla/commit/12062cbf3fa5db7ed28911b82b4ee5c475dd7892))
+* **plan:** 写 REQ-016 跨会话引用实施 plan ([867313e](https://github.com/fucheng830/planrla/commit/867313e4b7dfdde9e9f5b22d2cc2bfd8d504fc23))
+* **plan:** 写 REQ-016 L2 MCP 查询实施 plan ([7756274](https://github.com/fucheng830/planrla/commit/7756274f6b0e8aec4d912c5d0356e1cc7334c460))
+* **plan:** 写 REQ-027 UX 对齐 Codex 渲染层交互实施 plan ([7cd3217](https://github.com/fucheng830/planrla/commit/7cd3217b52e3432455d898f4034ce7ad74f63084))
+* **plan:** req013 会话重命名 chat mcp 实施计划 ([29a2f0c](https://github.com/fucheng830/planrla/commit/29a2f0ca2abc81d3430f136587884ef841cfd510))
+* **release:** v0.7.1 note (REQ-026 Sessions 按钮去双徽标) ([8b36269](https://github.com/fucheng830/planrla/commit/8b362692ac512d08c5758718e46a636e9dbc358a))
+* **spec:** 会话重命名(chat 触发 mcp) ([be394fe](https://github.com/fucheng830/planrla/commit/be394fe1d8c3f6e676602e28066e510ea271aa0f))
+* **spec:** 跨会话 @引用+整段历史 L1 设计 (REQ-016) ([d5389c2](https://github.com/fucheng830/planrla/commit/d5389c2aa0c3d38f97f1e1ab3b87b739f5bd64ac))
+* **spec:** 写 REQ-016 L2 MCP 定点查询设计(取代 v1 preload) ([dbbbd83](https://github.com/fucheng830/planrla/commit/dbbbd8310689f3209236b76610346af5daf761c9))
+* **spec:** 写 REQ-027 UX 对齐 Codex 渲染层交互优化设计 ([7f47cec](https://github.com/fucheng830/planrla/commit/7f47cecc0038620dd57424c533858e9b4133d1b4))
+
+### Maintenance
+
+* **backlog:** 会话重命名(chat mcp)进入实施 ([4b31551](https://github.com/fucheng830/planrla/commit/4b3155146a09240e42a3cf49b9f5536582edee89))
+* **backlog:** REQ-027 → review(实施完成+lint fix) ([e1185c2](https://github.com/fucheng830/planrla/commit/e1185c2f3d1f480dd676546014f630854bea9d44))
+* **backlog:** req013 验收通过 accepted ([de51ab8](https://github.com/fucheng830/planrla/commit/de51ab8fe1237f26b34a609c2ae35bcd8b932319))
+
 ## [0.7.1](https://github.com/fucheng830/planrla/compare/v0.7.0...v0.7.1) (2026-07-07)
 
 ### Bug Fixes
