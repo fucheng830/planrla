@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronsUpDown, FileText } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { CheckCircle2, ChevronsUpDown, Circle, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -15,6 +15,7 @@ import {
   Shimmer,
 } from '../../../../shared/view/ui';
 import { usePermission } from '../../../../contexts/PermissionContext';
+import { parsePlanSteps, type PlanStep } from '../utils/planSteps';
 
 import { MarkdownContent } from './ContentRenderers';
 
@@ -60,6 +61,8 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
     }
   };
 
+  const steps = useMemo(() => parsePlanSteps(content), [content]);
+
   return (
     <Collapsible defaultOpen={defaultOpen}>
       <Card className="my-1 flex flex-col shadow-none">
@@ -81,10 +84,34 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({
         <CollapsibleContent>
           <CardContent className="px-4 pb-4 pt-3">
             {content ? (
-              <MarkdownContent
-                content={content}
-                className="prose prose-sm max-w-none dark:prose-invert"
-              />
+              steps ? (
+                <ol className="space-y-2">
+                  {steps.map((step: PlanStep, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      {step.checked === true ? (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                      ) : step.checked === false ? (
+                        <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
+                          {i + 1}
+                        </span>
+                      )}
+                      <span className="flex-1 text-foreground">
+                        <MarkdownContent
+                          content={step.text}
+                          className="prose prose-sm max-w-none dark:prose-invert [&>:last-child]:mb-0"
+                        />
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <MarkdownContent
+                  content={content}
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                />
+              )
             ) : isStreaming ? (
               <div className="py-2">
                 <Shimmer>{t('plan.generating')}</Shimmer>

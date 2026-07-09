@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTasksSettings } from '../../../contexts/TasksSettingsContext';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import PermissionContext from '../../../contexts/PermissionContext';
+import { ComposerProvider } from '../../../contexts/ComposerContext';
 import { QuickSettingsPanel } from '../../quick-settings-panel';
 import type { ChatInterfaceProps, Provider  } from '../types/types';
 import { useChatProviderState } from '../hooks/useChatProviderState';
@@ -238,6 +239,14 @@ function ChatInterface({
     setPendingPermissionRequests,
   });
 
+  // REQ-027 ④: composer 注入路径 —— 供 diff 行级评论「复制为消息」等使用
+  const insertTextToComposer = useCallback(
+    (text: string) => {
+      setInput((prev: string) => (prev && prev.trim() ? `${prev}\n${text}` : text));
+    },
+    [setInput],
+  );
+
   // On WebSocket reconnect, re-fetch the current session's messages from the
   // server so missed streaming events are shown, then re-subscribe — the
   // `chat_subscribed` ack restores or clears the activity indicator, replays
@@ -380,8 +389,9 @@ function ChatInterface({
   }
 
   return (
-    <PermissionContext.Provider value={permissionContextValue}>
-      <div className="flex h-full flex-col">
+    <ComposerProvider value={{ insertText: insertTextToComposer }}>
+      <PermissionContext.Provider value={permissionContextValue}>
+        <div className="flex h-full flex-col">
         <ChatMessagesPane
           scrollContainerRef={scrollContainerRef}
           onWheel={handleScroll}
@@ -550,6 +560,7 @@ function ChatInterface({
         </DialogContent>
       </Dialog>
     </PermissionContext.Provider>
+    </ComposerProvider>
   );
 }
 
