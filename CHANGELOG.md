@@ -3,6 +3,18 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.8.1](https://github.com/fucheng830/planrla/compare/v0.8.0...v0.8.1) (2026-07-09)
+
+### Bug Fixes
+
+* **server:** taskmaster 安装检测 Windows 兼容 ([7372682](https://github.com/fucheng830/planrla/commit/73726828c6bf5648acb13309c489908004a6e2bf))
+
+### Documentation
+
+* **backlog:** 回填 REQ-016 released v0.8.0(L2+L3 MCP 查询+全局搜索) ([6f01709](https://github.com/fucheng830/planrla/commit/6f0170922276bc17cc7d217cc4fe96219742fb6e))
+* **release:** v0.8.0 产物回填(exe 238MB zip 338MB r2 live) ([f64ac61](https://github.com/fucheng830/planrla/commit/f64ac619b1a84a9ee43536865867109d55ad31e9))
+* **release:** v0.8.0 note(req013 会话重命名 chat mcp) ([b10facf](https://github.com/fucheng830/planrla/commit/b10facfbb9b612788cfc10ae9fa41882374e4c4c))
+
 ## [0.8.0](https://github.com/fucheng830/planrla/compare/v0.7.1...v0.8.0) (2026-07-09)
 
 ### New Features
