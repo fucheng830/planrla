@@ -25,7 +25,7 @@
 ### 🎯 下一个(已 prep,可开工)
 | ID | 标题 | P | 类型 | 状态 | 备注 |
 |----|------|----|------|------|------|
-| REQ-016 | 跨会话 @引用 + 整段历史(L1 × C1+C2) | P1 | feat | backlog | **REQ-015 跨对话上下文共享的首切片**(L2/L3 跨设备、C3 摘要、C4 持久记忆 = 后续阶段,暂 parked 在 REQ-015 母条目);已有 [design-draft](./design-drafts/req016-context-share-draft.md);Provider 无关(纯文本注入,Claude↔Codex 同样工作);复用 session messages API + `useFileMentions`。**下一步:进 brainstorming 出 spec** |
+| REQ-016 | 跨会话上下文:MCP 定点查询 + 全局搜索(L2+L3,已发版) | P1 | feat | released | **v0.8.0 已发**。演进:v1 preload(否,慢/卡)→ L2 HTTP MCP(`query_session` 工具,agent 按需查单 session;spec [L2](../superpowers/specs/2026-07-08-req016-mcp-query-design.md))→ L3 A+B+C(`search_conversations` 全局 FTS5 工具 + `/search` 命令 + 结果卡片)。复用 sidebar 的 `session-search.service`。@reference UI(picker/chip)保留共存。REQ-015 母(L3 跨设备/C3 摘要/C4 记忆)仍 parked |
 
 ### 🏗 战略主题(下个大周期)
 | ID | 标题 | P | 类型 | 状态 | 备注 |
