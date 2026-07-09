@@ -4,7 +4,7 @@ import type { Project } from '../../../types/app';
 import type { SubagentChildTool } from '../types/types';
 
 import { getToolConfig } from './configs/toolConfigs';
-import { OneLineDisplay, CollapsibleDisplay, ToolDiffViewer, MarkdownContent, FileListContent, TodoListContent, TaskListContent, TextContent, QuestionAnswerContent, SubagentContainer } from './components';
+import { OneLineDisplay, CollapsibleDisplay, ToolDiffViewer, MarkdownContent, FileListContent, TodoListContent, TaskListContent, TextContent, QuestionAnswerContent, SearchResultCards, SubagentContainer } from './components';
 import { PlanDisplay } from './components/PlanDisplay';
 import { ToolStatusBadge } from './components/ToolStatusBadge';
 import type { ToolStatus } from './components/ToolStatusBadge';
@@ -22,6 +22,7 @@ interface ToolRendererProps {
   toolId?: string;
   mode: 'input' | 'result';
   onFileOpen?: (filePath: string, diffInfo?: any) => void;
+  onOpenSession?: (sessionId: string) => void;
   createDiff?: (oldStr: string, newStr: string) => DiffLine[];
   selectedProject?: Project | null;
   autoExpandTools?: boolean;
@@ -78,6 +79,7 @@ export const ToolRenderer: React.FC<ToolRendererProps> = memo(({
   toolId,
   mode,
   onFileOpen,
+  onOpenSession,
   createDiff,
   selectedProject,
   autoExpandTools = false,
@@ -240,6 +242,15 @@ export const ToolRenderer: React.FC<ToolRendererProps> = memo(({
           <QuestionAnswerContent
             questions={contentProps.questions || []}
             answers={contentProps.answers || {}}
+          />
+        );
+        break;
+
+      case 'search-results':
+        contentComponent = (
+          <SearchResultCards
+            matches={contentProps.matches || []}
+            onOpenSession={onOpenSession}
           />
         );
         break;

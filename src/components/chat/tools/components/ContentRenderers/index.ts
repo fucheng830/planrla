@@ -4,3 +4,5 @@ export { TodoListContent } from './TodoListContent';
 export { TaskListContent } from './TaskListContent';
 export { TextContent } from './TextContent';
 export { QuestionAnswerContent } from './QuestionAnswerContent';
+export { SearchResultCards } from './SearchResultCards';
+export type { SearchMatchCard } from './SearchResultCards';

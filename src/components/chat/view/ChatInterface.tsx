@@ -434,6 +434,7 @@ function ChatInterface({
           showLoadAllOverlay={showLoadAllOverlay}
           createDiff={createDiff}
           onFileOpen={onFileOpen}
+          onOpenSession={onNavigateToSession ? (sessionId: string) => onNavigateToSession(sessionId) : undefined}
           onShowSettings={onShowSettings}
           onGrantToolPermission={handleGrantToolPermission}
           autoExpandTools={autoExpandTools}

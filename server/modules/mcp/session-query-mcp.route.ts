@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from 'express';
 
 import { sessionsService } from '@/modules/providers/index.js';
+import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
 
 /**
@@ -28,6 +29,7 @@ const SERVER_INFO = {
 } as const;
 
 const MAX_RETURN_MESSAGES = 20;
+const DEFAULT_SEARCH_LIMIT = 20;
 
 type SessionMessage = {
   role: string;
@@ -65,6 +67,27 @@ const QUERY_SESSION_TOOL: ToolDefinition = {
       },
     },
     required: ['sessionId'],
+  },
+};
+
+const SEARCH_CONVERSATIONS_TOOL: ToolDefinition = {
+  name: 'search_conversations',
+  description:
+    "Search across ALL past chat sessions' content on this host (full-text, via FTS5). Use to find what was previously discussed/decided about a topic across all projects/sessions. Returns matching message snippets with session context.",
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description:
+          'The search query (full-text, matches message content across all sessions).',
+      },
+      limit: {
+        type: 'number',
+        description: 'Optional max results (default 20).',
+      },
+    },
+    required: ['query'],
   },
 };
 
@@ -136,6 +159,9 @@ async function fetchSessionMessages(sessionId: string): Promise<{
 }
 
 async function callTool(name: string, args: Record<string, unknown>) {
+  if (name === SEARCH_CONVERSATIONS_TOOL.name) {
+    return searchConversations(args);
+  }
   if (name !== QUERY_SESSION_TOOL.name) {
     throw new Error(`Unknown tool: ${name}`);
   }
@@ -162,6 +188,51 @@ async function callTool(name: string, args: Record<string, unknown>) {
   return jsonResponse({ messages: result, total, truncated });
 }
 
+/**
+ * Maps an FTS5 session-level search row into the agent-facing shape.
+ *
+ * `searchSessions` is session-level (one row per session with that session's
+ * best-matching snippet), NOT message-level — so we surface the session
+ * context (id/title/provider/projectPath/timestamp) plus the matching snippet
+ * (highlight, with `<mark>` tags) and relevance score. The agent gets enough
+ * to cite the session and for the user to locate it; to read the surrounding
+ * messages it can call `query_session` with this sessionId.
+ */
+type ConversationMatch = {
+  sessionId: string;
+  sessionTitle: string | null;
+  provider: string;
+  projectPath: string | null;
+  snippet: string;
+  score: number;
+  timestamp: string | null;
+};
+
+function toConversationMatch(row: SessionSearchResult): ConversationMatch {
+  return {
+    sessionId: row.session_id,
+    sessionTitle: row.custom_name,
+    provider: row.provider,
+    projectPath: row.project_path,
+    snippet: row.highlight,
+    score: row.score,
+    timestamp: row.updated_at,
+  };
+}
+
+async function searchConversations(args: Record<string, unknown>) {
+  const query = readString(args.query, 'query');
+  const limit = readNumber(args.limit);
+  const rows = searchSessions(query, { limit: limit ?? DEFAULT_SEARCH_LIMIT });
+  const matches = rows.map(toConversationMatch);
+  return jsonResponse({
+    matches,
+    total: matches.length,
+    truncated: matches.length >= (limit ?? DEFAULT_SEARCH_LIMIT),
+    note: 'Session-level matches (one best snippet per session). Call query_session with a sessionId to read surrounding messages.',
+  });
+}
+
 type JsonRpcRequest = {
   jsonrpc: '2.0';
   id?: string | number | null;
@@ -179,7 +250,7 @@ async function handleMessage(message: JsonRpcRequest) {
   }
 
   if (message.method === 'tools/list') {
-    return { tools: [QUERY_SESSION_TOOL] };
+    return { tools: [QUERY_SESSION_TOOL, SEARCH_CONVERSATIONS_TOOL] };
   }
 
   if (message.method === 'tools/call') {
