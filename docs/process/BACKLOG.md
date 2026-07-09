@@ -13,6 +13,7 @@
 | REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | released | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | [plan](../superpowers/plans/2026-07-07-req024-merge-chat-running-sessions.md) | v0.7.0 |
 | REQ-025 | 侧边栏状态 UI 统一(Projects / Sessions / 搜索) | — | P1 | fix | released | [spec](../superpowers/specs/2026-07-07-req025-sidebar-status-ui-unify-design.md) | [plan](../superpowers/plans/2026-07-07-req025-sidebar-status-ui-unify.md) | v0.7.0 |
 | REQ-026 | Sessions 切换按钮去双徽标(只留 completed 计数) | — | P1 | fix | released | _(ad-hoc)_ | | v0.7.1 |
+| REQ-013 | 会话重命名(chat 触发 MCP 工具) | — | P2 | feat | doing | [spec](../superpowers/specs/2026-07-09-req013-session-rename-chat-mcp-design.md) | [plan](../superpowers/plans/2026-07-09-req013-session-rename-chat-mcp.md) | — |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
@@ -50,7 +51,7 @@
 ## Blocked(冻结/待想清楚)
 | ID | 标题 | P | 类型 | 状态 | 冻结原因 | 设计结论(brainstorm) |
 |----|------|---|------|------|----------|----------------------|
-| REQ-013 | 会话自动重命名(LLM 生成标题) | P2 | feat | blocked | LLM 接入未定:server 端调 Haiku 需 ANTHROPIC_API_KEY,但 Claude Code 走 OAuth 时 server 拿不到 API key。待想清楚接入方式(API key / 复用 Claude Code 凭据 / 本地 Ollama / claude-agent-sdk) + 触发时机/成本后再做 | **痛点**:现有标题=第一条消息全文(4462 中 4400 是消息片段,长/重复/无区分;codex 62 Untitled)。**方案**:Claude Haiku 读会话内容(extractSessionText 取前 N 条)生成 5-15 字主题 + 全量4462 重生成 + 增量(synchronizer hook 同搜索 Task 7 点) + 去重后缀(同 project 冲突加 #2)。**3 个 LLM 请求点**:批量(retile-all)/增量(新 session)/手动单个(:id/retile)。**成本估**:批量 ~$1.2(Haiku),增量/手动极低 |
+| _(暂无)_ | | | | | | |
 
 ## Released(已发版)
 | ID | 标题 | 版本 | spec |
