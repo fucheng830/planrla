@@ -32,6 +32,7 @@ import {
   runSearchCommand,
   formatSearchCommandHints,
 } from './useSearchCommand';
+import { formatRenameCommandHint, parseRenameCommand } from './useRenameCommand';
 
 interface UseChatComposerStateArgs {
   selectedProject: Project | null;
@@ -579,6 +580,7 @@ export function useChatComposerState({
       // block into the outgoing message (mirrors the @reference hint prepend),
       // and treats <query> as both the FTS5 query and the user's question.
       let searchHints = '';
+      let renameHints = '';
       let effectiveInput = currentInput;
       const trimmedCommandInput = currentInput.trim();
       if (/^\/search(?:\s|$)/i.test(trimmedCommandInput)) {
@@ -602,6 +604,28 @@ export function useChatComposerState({
         // The displayed + sent user text is the query itself (the /search
         // token is a directive, not part of the question).
         effectiveInput = query;
+      } else if (/^\/rename(?:\s|$)/i.test(trimmedCommandInput)) {
+        // /rename — ask the in-chat agent to title this session via the
+        // set_session_title MCP tool. Bare "/rename" lets the agent generate
+        // a title; "/rename <title>" pins it. Same prepend pattern as /search
+        // so the instruction + sessionId ride on the outgoing message.
+        if (!currentSessionId) {
+          addMessage({
+            type: 'assistant',
+            content: '请先选择一个会话再使用 /rename。',
+            timestamp: Date.now(),
+          });
+          setInput('');
+          inputValueRef.current = '';
+          resetCommandMenuState();
+          if (textareaRef.current) textareaRef.current.style.height = 'auto';
+          return;
+        }
+        const { explicitTitle } = parseRenameCommand(trimmedCommandInput);
+        renameHints = formatRenameCommandHint(currentSessionId, explicitTitle);
+        effectiveInput = explicitTitle
+          ? `将当前会话重命名为"${explicitTitle}"`
+          : '请为当前会话生成一个简短的标题。';
       } else {
         // Intercept slash commands only when "/" is the first input character.
         // Also accept exact "help" as a convenience alias for users who expect CLI-style help.
@@ -640,7 +664,7 @@ export function useChatComposerState({
       }
 
       const referenceHints = formattedHints;
-      const hints = [searchHints, referenceHints].filter(Boolean).join('\n\n---\n\n');
+      const hints = [searchHints, renameHints, referenceHints].filter(Boolean).join('\n\n---\n\n');
       const messageContent = hints
         ? `${hints}\n\n---\n\n${effectiveInput}`
         : effectiveInput;
