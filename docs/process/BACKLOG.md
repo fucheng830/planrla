@@ -13,7 +13,7 @@
 | REQ-024 | 合并「对话」与 Running sessions 侧边栏视图 | — | P1 | feat | released | [spec](../superpowers/specs/2026-07-06-merge-chat-running-sessions-design.md) | [plan](../superpowers/plans/2026-07-07-req024-merge-chat-running-sessions.md) | v0.7.0 |
 | REQ-025 | 侧边栏状态 UI 统一(Projects / Sessions / 搜索) | — | P1 | fix | released | [spec](../superpowers/specs/2026-07-07-req025-sidebar-status-ui-unify-design.md) | [plan](../superpowers/plans/2026-07-07-req025-sidebar-status-ui-unify.md) | v0.7.0 |
 | REQ-026 | Sessions 切换按钮去双徽标(只留 completed 计数) | — | P1 | fix | released | _(ad-hoc)_ | | v0.7.1 |
-| REQ-013 | 会话重命名(chat 触发 MCP 工具) | — | P2 | feat | doing | [spec](../superpowers/specs/2026-07-09-req013-session-rename-chat-mcp-design.md) | [plan](../superpowers/plans/2026-07-09-req013-session-rename-chat-mcp.md) | — |
+| REQ-013 | 会话重命名(chat 触发 MCP 工具) | — | P2 | feat | accepted | [spec](../superpowers/specs/2026-07-09-req013-session-rename-chat-mcp-design.md) | [plan](../superpowers/plans/2026-07-09-req013-session-rename-chat-mcp.md) | — |
 
 ## Ready(四要素补齐,待规格化)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 |
