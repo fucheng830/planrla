@@ -40,70 +40,50 @@ const router = express.Router();
  */
 async function checkTaskMasterInstallation() {
     return new Promise((resolve) => {
-        // Check if task-master command is available
-        const child = spawn('which', ['task-master'], { 
+        // Probe by running `task-master --version` directly. Using the shell
+        // lets Windows cmd.exe resolve `task-master.cmd` via PATHEXT and Unix
+        // /bin/sh find `task-master` — replacing the prior `which` lookup,
+        // which does not exist on Windows cmd.exe and always failed there.
+        const child = spawn('task-master', ['--version'], {
             stdio: ['ignore', 'pipe', 'pipe'],
-            shell: true 
+            shell: true,
         });
-        
-        let output = '';
+
+        let versionOutput = '';
         let errorOutput = '';
-        
+
         child.stdout.on('data', (data) => {
-            output += data.toString();
+            versionOutput += data.toString();
         });
-        
+
         child.stderr.on('data', (data) => {
             errorOutput += data.toString();
         });
-        
+
         child.on('close', (code) => {
-            if (code === 0 && output.trim()) {
-                // TaskMaster is installed, get version
-                const versionChild = spawn('task-master', ['--version'], { 
-                    stdio: ['ignore', 'pipe', 'pipe'],
-                    shell: true 
-                });
-                
-                let versionOutput = '';
-                
-                versionChild.stdout.on('data', (data) => {
-                    versionOutput += data.toString();
-                });
-                
-                versionChild.on('close', (versionCode) => {
-                    resolve({
-                        isInstalled: true,
-                        installPath: output.trim(),
-                        version: versionCode === 0 ? versionOutput.trim() : 'unknown',
-                        reason: null
-                    });
-                });
-                
-                versionChild.on('error', () => {
-                    resolve({
-                        isInstalled: true,
-                        installPath: output.trim(),
-                        version: 'unknown',
-                        reason: null
-                    });
+            if (code === 0 && versionOutput.trim()) {
+                resolve({
+                    isInstalled: true,
+                    installPath: null,
+                    version: versionOutput.trim(),
+                    reason: null,
                 });
             } else {
                 resolve({
                     isInstalled: false,
                     installPath: null,
                     version: null,
-                    reason: 'TaskMaster CLI not found in PATH'
+                    reason: errorOutput.trim() || `task-master --version exited with code ${code}`,
                 });
             }
         });
-        
+
         child.on('error', (error) => {
             resolve({
                 isInstalled: false,
                 installPath: null,
                 version: null,
-                reason: `Error checking installation: ${error.message}`
+                reason: `Error checking installation: ${error.message}`,
             });
         });
     });
