@@ -38,6 +38,7 @@
 | REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | P1 | — | feat | backlog | 独立 UX 专项,可先行;是 REQ-022(UX 子集),母项 parked |
 | REQ-027 | UX 对齐 Codex · 渲染层交互优化(① diff 高亮 + ② plan 展示 + ④ diff 评论) | P1 | — | feat | review | REQ-021 首切片;[spec](../superpowers/specs/2026-07-08-req027-ux-align-codex-design.md) · [plan](../superpowers/plans/2026-07-08-req027-ux-align-codex.md) |
 | REQ-005 | Provider 诊断面板 | P1 | M3 | feat | backlog | |
+| REQ-030 | AI 自动重命名(10 轮触发) | P2 | — | feat | spec | [spec](../superpowers/specs/2026-07-11-req030-ai-auto-rename-design.md) · [plan](../superpowers/plans/2026-07-11-req030-ai-auto-rename.md):REQ-013 §9 排除项补回;前端 silent 调用无标题 rename hint → agent 生成标题调 set_session_title;固定 10 轮触发/只一次/不覆盖;复用 REQ-013 全套;跨 provider |
 
 ## Parked(暂搁,不进近期队列)
 | ID | 标题 | 搁置原因 |
