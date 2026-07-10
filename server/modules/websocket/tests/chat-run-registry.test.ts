@@ -321,6 +321,60 @@ test('silent runs are invisible to the UI-facing lookup helpers', async () => {
   });
 });
 
+test('silent run tags every streamed event with silent:true', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-silent-emit', 'claude', '/workspace/demo');
+    const silentConnection = new FakeConnection();
+    const silentRun = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-emit',
+      provider: 'claude',
+      providerSessionId: null,
+      connection: silentConnection,
+      userId: null,
+      silent: true,
+    });
+    assert.ok(silentRun);
+
+    // Drive the same emit path the real provider spawn uses: the run's writer
+    // (writer.send → decorateOutboundEvent → forward). Every outbound frame a
+    // silent run produces must carry silent:true so the frontend (REQ-030
+    // Task 3) can detect and drop them without rendering.
+    silentRun.writer.send({ kind: 'stream_delta', provider: 'claude', sessionId: 'native', content: 'part' });
+    silentRun.writer.send({ kind: 'tool_use', provider: 'claude', sessionId: 'native', toolName: 'set_session_title', toolInput: { title: 'x' } });
+    chatRunRegistry.completeRun('app-silent-emit', { exitCode: 0, silent: true });
+
+    assert.ok(silentConnection.frames.length > 0, 'silent run still streams its events');
+    for (const frame of silentConnection.frames) {
+      assert.equal(frame.silent, true, `frame kind=${frame.kind} must carry silent:true`);
+    }
+  });
+});
+
+test('normal run does not tag streamed events with silent:true', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-normal-emit', 'claude', '/workspace/demo');
+    const connection = new FakeConnection();
+    const run = chatRunRegistry.startRun({
+      appSessionId: 'app-normal-emit',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+    });
+    assert.ok(run);
+
+    run.writer.send({ kind: 'stream_delta', provider: 'claude', sessionId: 'native', content: 'part' });
+    chatRunRegistry.completeRun('app-normal-emit', { exitCode: 0 });
+
+    assert.ok(connection.frames.length > 0);
+    for (const frame of connection.frames) {
+      // `silent` must be absent (or falsy) so the existing UI path renders
+      // normally — the tag is reserved for silent runs only.
+      assert.notEqual(frame.silent, true, 'normal-run frames must not be flagged silent');
+    }
+  });
+});
+
 test('completeRun with silent:true targets the silent slot safety net', async () => {
   await withIsolatedDatabase(() => {
     sessionsDb.createAppSession('app-silent-3', 'claude', '/workspace/demo');

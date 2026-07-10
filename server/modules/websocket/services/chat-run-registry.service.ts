@@ -166,6 +166,16 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     seq: run.lastSeq,
   };
 
+  // Silent runs (REQ-030 auto-rename) tag every outbound event with
+  // `silent: true` so the frontend can detect and drop the stream without
+  // rendering it. Injected here — the single chokepoint every event kind
+  // (stream_delta / stream_end / tool_use / complete / ...) flows through
+  // before the writer forwards it to the websocket — so one tag covers the
+  // entire silent run lifecycle. Normal runs never set the flag.
+  if (run.silent) {
+    outbound.silent = true;
+  }
+
   if (message.kind === 'complete') {
     // The provider may report its own id here; the frontend only ever knows
     // the app id, so the "actual" id is by definition the app id as well.
