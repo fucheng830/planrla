@@ -370,14 +370,49 @@ export function useChatSessionState({
     }
   }, [isNearBottom, loadOlderMessages]);
 
+  // Restore scroll position after loadEarlier expands the visible window.
+  // react-virtual's measureElement measures newly-rendered items asynchronously,
+  // so scrollHeight keeps growing for several frames after the window expands.
+  // The old single-shot offset was computed before all new heights settled →
+  // under-compensated → the viewport jumped down (worst on long tool diffs /
+  // markdown blocks). Re-apply every frame until scrollHeight stabilizes — same
+  // shape as the initial-scroll-to-bottom RAF loop below (L403-434).
   useLayoutEffect(() => {
     if (!pendingScrollRestoreRef.current || !scrollContainerRef.current) return;
-    const { height, top } = pendingScrollRestoreRef.current;
+    const { height: anchorHeight, top: anchorTop } = pendingScrollRestoreRef.current;
     const container = scrollContainerRef.current;
-    const newScrollHeight = container.scrollHeight;
-    container.scrollTop = top + Math.max(newScrollHeight - height, 0);
-    pendingScrollRestoreRef.current = null;
-  }, [chatMessages.length]);
+
+    const applyOffset = () => {
+      container.scrollTop = anchorTop + Math.max(container.scrollHeight - anchorHeight, 0);
+    };
+    applyOffset(); // first frame synchronous (useLayoutEffect, pre-paint) — avoids initial flash
+
+    let frame = 0;
+    let lastHeight = container.scrollHeight;
+    let stableCount = 0;
+    let rafId = 0;
+    const tick = () => {
+      if (!scrollContainerRef.current) return;
+      applyOffset();
+      const currentHeight = container.scrollHeight;
+      if (currentHeight === lastHeight) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+        lastHeight = currentHeight;
+      }
+      frame++;
+      if (stableCount < 3 && frame < 60) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        pendingScrollRestoreRef.current = null;
+      }
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [chatMessages.length, visibleMessageCount]);
 
   // Reset scroll/pagination state on session change
   useEffect(() => {
@@ -795,6 +830,13 @@ export function useChatSessionState({
   }, [selectedSession, selectedProject, isLoadingAllMessages, currentSessionId, sessionStore]);
 
   const loadEarlierMessages = useCallback(() => {
+    // Legacy manual "load earlier" path (non-paginated view). Same measureElement
+    // async-height drift applies, so capture an anchor for the shared RAF restore
+    // (the restore effect above keys on visibleMessageCount too).
+    const container = scrollContainerRef.current;
+    if (container) {
+      pendingScrollRestoreRef.current = { height: container.scrollHeight, top: container.scrollTop };
+    }
     setVisibleMessageCount((prev) => prev + 100);
   }, []);
 
