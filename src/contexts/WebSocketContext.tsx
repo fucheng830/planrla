@@ -14,6 +14,8 @@ export type ServerEvent = {
   type?: string;
   sessionId?: string;
   seq?: number;
+  /** Set by silent runs (REQ-030); realtime handler drops these frames. */
+  silent?: boolean;
   [key: string]: unknown;
 };
 

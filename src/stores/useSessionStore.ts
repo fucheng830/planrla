@@ -84,6 +84,8 @@ export interface NormalizedMessage {
   // Cursor-specific ordering
   sequence?: number;
   rowid?: number;
+  /** Set by silent runs (REQ-030); realtime handler drops these frames. */
+  silent?: boolean;
 }
 
 // ─── Per-session slot ────────────────────────────────────────────────────────
