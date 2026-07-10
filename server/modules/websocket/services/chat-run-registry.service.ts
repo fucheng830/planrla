@@ -25,6 +25,12 @@ type ChatRunStatus = 'running' | 'completed';
  * - `lastSeq` / `events`: the per-run event log. Every live event gets a
  *   monotonically increasing `seq` and is buffered so a reconnecting client
  *   can replay exactly the events it missed via `chat.subscribe`.
+ * - `silent`: true for background agent runs (e.g. REQ-030 auto-rename) that
+ *   must NOT collide with the user's normal run for the same session and
+ *   must stay invisible to the UI-facing lookup helpers (`getRun`,
+ *   `isProcessing`, `attachConnection`, `replayEvents`, `listRunningRuns`).
+ *   Silent runs live under a separate registry key so the per-session
+ *   single-run mutex only applies within each dimension.
  */
 type ChatRun = {
   appSessionId: string;
@@ -36,6 +42,7 @@ type ChatRun = {
   writer: ChatSessionWriter;
   startedAt: number;
   completedAt: number | null;
+  silent: boolean;
 };
 
 /**
@@ -59,8 +66,23 @@ const MAX_BUFFERED_EVENTS_PER_RUN = 5000;
  * This map is the single in-memory source of truth for "is something running
  * for this session" — the chat websocket handler, abort path, and subscribe
  * path all consult it instead of asking each provider runtime individually.
+ *
+ * Silent runs (REQ-030 auto-rename) live under `${appSessionId}:silent` so
+ * they can run alongside a normal run for the same session without tripping
+ * the per-session single-run mutex. The UI-facing lookup helpers
+ * (`getRun`, `isProcessing`, `attachConnection`, `replayEvents`) always query
+ * the plain key, which makes silent runs invisible to the frontend by
+ * construction — exactly what auto-rename needs.
  */
 const runs = new Map<string, ChatRun>();
+
+/**
+ * Registry key for a run. Silent runs use a dedicated suffix so they occupy a
+ * separate slot from the user's normal run for the same app session.
+ */
+function runKey(appSessionId: string, silent: boolean): string {
+  return silent ? `${appSessionId}:silent` : appSessionId;
+}
 
 async function broadcastCanonicalSessionUpsert(appSessionId: string): Promise<void> {
   const row = sessionsDb.getSessionById(appSessionId);
@@ -104,11 +126,12 @@ async function broadcastCanonicalSessionUpsert(appSessionId: string): Promise<vo
   });
 }
 
-function evictRunLater(appSessionId: string): void {
+function evictRunLater(run: ChatRun): void {
+  const key = runKey(run.appSessionId, run.silent);
   const timer = setTimeout(() => {
-    const run = runs.get(appSessionId);
-    if (run && run.status === 'completed') {
-      runs.delete(appSessionId);
+    const existing = runs.get(key);
+    if (existing && existing.status === 'completed') {
+      runs.delete(key);
     }
   }, COMPLETED_RUN_RETENTION_MS);
 
@@ -149,7 +172,7 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     outbound.actualSessionId = run.appSessionId;
     run.status = 'completed';
     run.completedAt = Date.now();
-    evictRunLater(run.appSessionId);
+    evictRunLater(run);
   }
 
   run.events.push(outbound);
@@ -207,7 +230,14 @@ function recordProviderSessionId(run: ChatRun, providerSessionId: string): void 
 export const chatRunRegistry = {
   /**
    * Starts tracking a run and returns it, or `null` when a run is already in
-   * progress for the session (callers must reject the duplicate send).
+   * progress for the session+dimension (callers must reject the duplicate
+   * send).
+   *
+   * `silent: true` runs live under a separate registry key (`${sessionId}:silent`)
+   * so a background agent call (e.g. REQ-030 auto-rename) does NOT collide
+   * with the user's normal run for the same session. The mutex is still
+   * enforced within each dimension (a second silent run while one is in
+   * flight is rejected).
    */
   startRun(input: {
     appSessionId: string;
@@ -215,8 +245,11 @@ export const chatRunRegistry = {
     providerSessionId: string | null;
     connection: RealtimeClientConnection;
     userId: string | number | null;
+    silent?: boolean;
   }): ChatRun | null {
-    const existing = runs.get(input.appSessionId);
+    const silent = Boolean(input.silent);
+    const key = runKey(input.appSessionId, silent);
+    const existing = runs.get(key);
     if (existing && existing.status === 'running') {
       return null;
     }
@@ -231,6 +264,7 @@ export const chatRunRegistry = {
       writer: null as unknown as ChatSessionWriter,
       startedAt: Date.now(),
       completedAt: null,
+      silent,
     };
 
     run.writer = new ChatSessionWriter({
@@ -244,7 +278,7 @@ export const chatRunRegistry = {
       decorateOutboundEvent: (message) => decorateAndRecordEvent(run, message),
     });
 
-    runs.set(input.appSessionId, run);
+    runs.set(key, run);
     return run;
   },
 
@@ -263,7 +297,7 @@ export const chatRunRegistry = {
     lastSeq: number;
   }> {
     return Array.from(runs.values())
-      .filter((run) => run.status === 'running')
+      .filter((run) => run.status === 'running' && !run.silent)
       .map((run) => ({
         sessionId: run.appSessionId,
         provider: run.provider,
@@ -308,9 +342,13 @@ export const chatRunRegistry = {
    * Emits a synthetic terminal `complete` if (and only if) the run is still
    * marked running. Used when a provider runtime throws or resolves without
    * having produced its own terminal event, and by the abort path.
+   *
+   * `silent: true` targets the silent slot for the session — required by the
+   * `handleChatSend` finally safety net so a crashed silent run is still
+   * completed (and doesn't leak its slot until retention eviction).
    */
-  completeRun(appSessionId: string, opts: { exitCode: number; aborted?: boolean }): void {
-    const run = runs.get(appSessionId);
+  completeRun(appSessionId: string, opts: { exitCode: number; aborted?: boolean; silent?: boolean }): void {
+    const run = runs.get(runKey(appSessionId, Boolean(opts.silent)));
     if (!run || run.status !== 'running') {
       return;
     }

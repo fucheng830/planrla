@@ -134,12 +134,20 @@ async function handleChatSend(
     return;
   }
 
+  // Silent runs (REQ-030 auto-rename) must NOT be rejected when a normal run
+  // is already in progress for this session, and vice versa. The registry
+  // isolates them under a separate key (`${sessionId}:silent`), so threading
+  // the flag here is all that's needed to bypass the per-session mutex.
+  const clientOptions = (data.options ?? {}) as AnyRecord;
+  const silent = Boolean(clientOptions.silent);
+
   const run = chatRunRegistry.startRun({
     appSessionId: sessionId,
     provider,
     providerSessionId: session.provider_session_id,
     connection: ws,
     userId,
+    silent,
   });
 
   if (!run) {
@@ -152,7 +160,6 @@ async function handleChatSend(
     return;
   }
 
-  const clientOptions = (data.options ?? {}) as AnyRecord;
   const command = typeof data.content === 'string' ? data.content : '';
 
   // The provider runtimes receive the provider-native session id (that is the
@@ -176,7 +183,7 @@ async function handleChatSend(
     // Safety net: a runtime that crashed (or resolved) without emitting its
     // terminal `complete` would otherwise leave the session stuck in
     // "processing" forever on every connected client.
-    chatRunRegistry.completeRun(sessionId, { exitCode: 1 });
+    chatRunRegistry.completeRun(sessionId, { exitCode: 1, silent });
   }
 }
 

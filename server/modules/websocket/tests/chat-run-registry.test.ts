@@ -242,3 +242,106 @@ test('startRun rejects a second concurrent run for the same session', async () =
     assert.ok(third);
   });
 });
+
+test('silent startRun bypasses the per-session single-run mutex', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-silent-1', 'claude', '/workspace/demo');
+    const connection = new FakeConnection();
+
+    // A normal run occupies the plain slot — this would normally block a
+    // second run for the same session (see previous test).
+    const normalRun = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-1',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      silent: false,
+    });
+    assert.ok(normalRun);
+
+    // The silent run must NOT be rejected: it lives in a separate slot so a
+    // background auto-rename agent call can run while the user's normal run
+    // is still finishing/aborted.
+    const silentRun = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-1',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      silent: true,
+    });
+    assert.ok(silentRun, 'silent run must not be blocked by an in-progress normal run');
+
+    // The reverse must also hold: a normal run is blocked once a silent run
+    // is already in flight for the same session under the silent slot only
+    // when the normal slot is taken. Here we verify the silent slot is
+    // independent by starting another silent run while the normal one still
+    // runs — the second silent run must be rejected (silent slot occupied).
+    const secondSilent = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-1',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      silent: true,
+    });
+    assert.equal(secondSilent, null, 'a second silent run is still mutually exclusive within its own slot');
+  });
+});
+
+test('silent runs are invisible to the UI-facing lookup helpers', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-silent-2', 'claude', '/workspace/demo');
+    const connection = new FakeConnection();
+
+    const silentRun = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-2',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      silent: true,
+    });
+    assert.ok(silentRun);
+
+    // The plain-key lookups used by chat.subscribe / chat.abort must NOT see
+    // the silent run — otherwise a background rename would make the UI show
+    // "processing" or replay silent agent output to a reconnecting client.
+    assert.equal(chatRunRegistry.isProcessing('app-silent-2'), false);
+    assert.equal(chatRunRegistry.getRun('app-silent-2'), undefined);
+    assert.deepEqual(chatRunRegistry.replayEvents('app-silent-2', 0), []);
+
+    const running = chatRunRegistry.listRunningRuns();
+    assert.deepEqual(
+      running.filter((entry) => entry.sessionId === 'app-silent-2'),
+      [],
+      'silent runs must not appear in listRunningRuns (UI running-sessions indicator)',
+    );
+  });
+});
+
+test('completeRun with silent:true targets the silent slot safety net', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createAppSession('app-silent-3', 'claude', '/workspace/demo');
+    const connection = new FakeConnection();
+
+    const silentRun = chatRunRegistry.startRun({
+      appSessionId: 'app-silent-3',
+      provider: 'claude',
+      providerSessionId: null,
+      connection,
+      userId: null,
+      silent: true,
+    });
+    assert.ok(silentRun);
+
+    // The handleChatSend `finally` safety net must address the silent slot;
+    // a plain completeRun(appSessionId) would miss it and leave the silent
+    // run stuck "running".
+    chatRunRegistry.completeRun('app-silent-3', { exitCode: 1, silent: true });
+
+    const completes = connection.frames.filter((frame) => frame.kind === 'complete');
+    assert.equal(completes.length, 1, 'silent completeRun should emit the terminal complete frame');
+  });
+});
