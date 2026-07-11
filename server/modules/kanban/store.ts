@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import type { Database as DB } from 'better-sqlite3';
-import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus } from '@/modules/kanban/types.js';
+import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
+import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
 
 export interface TaskStoreDeps {
   dbPath: string;
@@ -36,6 +37,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
         ...t,
         createWorktree: t.createWorktree ? 1 : 0,
         schedulerAdmitted: t.schedulerAdmitted ? 1 : 0,
+        taskTemplateName: t.taskTemplateName ?? null,
         worktreeBranchMode: t.worktreeBranchMode ?? null,
         worktreeBranch: t.worktreeBranch ?? null,
         worktreePath: t.worktreePath ?? null,
@@ -87,7 +89,50 @@ export function createTaskStore(deps: TaskStoreDeps) {
     return rowToTask(row);
   }
 
-  return { createTask, getTask, insertStageRun, insertTaskEvent, close: () => db.close() };
+  function listQueuedTasks(rootId: string): Task[] {
+    const rows = db.prepare('SELECT * FROM tasks WHERE root_id = ? AND status = ? ORDER BY created_at ASC')
+      .all(rootId, 'queued') as TaskRow[];
+    return rows.map(rowToTask);
+  }
+
+  function listTasks(rootId: string): Task[] {
+    const rows = db.prepare('SELECT * FROM tasks WHERE root_id = ? ORDER BY updated_at DESC, created_at DESC')
+      .all(rootId) as TaskRow[];
+    return rows.map(rowToTask);
+  }
+
+  function updateTaskStatus(id: string, status: TaskStatus): void {
+    const now = new Date().toISOString();
+    const terminal = isTerminalTaskStatus(status);
+    if (terminal) {
+      db.prepare(`UPDATE tasks SET status = ?, scheduler_admitted = 0, completed_at = ?, updated_at = ? WHERE id = ?`)
+        .run(status, now, now, id);
+    } else {
+      db.prepare(`UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?`)
+        .run(status, now, id);
+    }
+  }
+
+  function latestStageRun(taskId: string, stageIndex: number): StageRun | null {
+    const row = db.prepare('SELECT * FROM stage_runs WHERE task_id = ? AND stage_index = ? ORDER BY created_at DESC LIMIT 1')
+      .get(taskId, stageIndex) as StageRunRow | undefined;
+    return row ? rowToStageRun(row) : null;
+  }
+
+  function updateTaskAuxFlags(taskId: string, flags: Partial<TaskAuxFlags>): void {
+    const sets: string[] = [];
+    const params: Record<string, unknown> = { taskId, updatedAt: new Date().toISOString() };
+    if (flags.askUserWaiting !== undefined) { sets.push('aux_ask_user_waiting = @askUserWaiting'); params.askUserWaiting = flags.askUserWaiting ? 1 : 0; }
+    if (flags.hasPlan !== undefined) { sets.push('aux_has_plan = @hasPlan'); params.hasPlan = flags.hasPlan ? 1 : 0; }
+    if (flags.hasTodos !== undefined) { sets.push('aux_has_todos = @hasTodos'); params.hasTodos = flags.hasTodos ? 1 : 0; }
+    if (flags.hasTask !== undefined) { sets.push('aux_has_task = @hasTask'); params.hasTask = flags.hasTask ? 1 : 0; }
+    if (flags.sessionError !== undefined) { sets.push('aux_session_error = @sessionError'); params.sessionError = flags.sessionError; }
+    if (sets.length === 0) return;
+    sets.push('updated_at = @updatedAt');
+    db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
+  }
+
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, close: () => db.close() };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
@@ -129,6 +174,28 @@ function rowToTask(row: TaskRow): Task {
     },
     createdAt: row.created_at, updatedAt: row.updated_at,
     completedAt: row.completed_at ?? undefined,
+  };
+}
+
+interface StageRunRow {
+  id: string; task_id: string;
+  stage_index: number; stage_name: string; role: string; status: string;
+  session_key: string | null; input: string | null; rendered_prompt: string | null;
+  started_at: string | null; finished_at: string | null;
+  created_at: string; updated_at: string;
+}
+
+function rowToStageRun(row: StageRunRow): StageRun {
+  return {
+    id: row.id, taskId: row.task_id, stageIndex: row.stage_index,
+    stageName: row.stage_name, role: row.role as 'user' | 'agent',
+    status: row.status as StageStatus,
+    sessionKey: row.session_key ?? undefined,
+    input: row.input ?? undefined,
+    renderedPrompt: row.rendered_prompt ?? undefined,
+    startedAt: row.started_at ?? undefined,
+    finishedAt: row.finished_at ?? undefined,
+    createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
