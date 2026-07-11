@@ -34,3 +34,25 @@ contextBridge.exposeInMainWorld('updater', {
     return () => ipcRenderer.removeListener('updater:state', handler);
   },
 });
+
+// In-app browser pane bridge (REQ-033). Renderer drives a WebContentsView
+// attached to mainWindow via these invoke/send calls; url/title push up via on*.
+contextBridge.exposeInMainWorld('browserPane', {
+  open: (url) => ipcRenderer.invoke('browserPane:open', url),
+  close: () => ipcRenderer.invoke('browserPane:close'),
+  navigate: (url) => ipcRenderer.invoke('browserPane:navigate', url),
+  goBack: () => ipcRenderer.invoke('browserPane:goBack'),
+  goForward: () => ipcRenderer.invoke('browserPane:goForward'),
+  reload: () => ipcRenderer.invoke('browserPane:reload'),
+  updateBounds: (bounds) => ipcRenderer.send('browserPane:updateBounds', bounds),
+  onUrlChange: (fn) => {
+    const handler = (_e, payload) => fn(payload);
+    ipcRenderer.on('browserPane:url-change', handler);
+    return () => ipcRenderer.removeListener('browserPane:url-change', handler);
+  },
+  onTitleChange: (fn) => {
+    const handler = (_e, payload) => fn(payload);
+    ipcRenderer.on('browserPane:title-change', handler);
+    return () => ipcRenderer.removeListener('browserPane:title-change', handler);
+  },
+});
