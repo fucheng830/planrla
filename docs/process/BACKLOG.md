@@ -38,6 +38,7 @@
 | REQ-021 | UX 对齐 Codex(动效 + 网页/图片预览 + 交互优化) | P1 | — | feat | backlog | 独立 UX 专项,可先行;是 REQ-022(UX 子集),母项 parked |
 | REQ-027 | UX 对齐 Codex · 渲染层交互优化(① diff 高亮 + ② plan 展示 + ④ diff 评论) | P1 | — | feat | review | REQ-021 首切片;[spec](../superpowers/specs/2026-07-08-req027-ux-align-codex-design.md) · [plan](../superpowers/plans/2026-07-08-req027-ux-align-codex.md) |
 | REQ-005 | Provider 诊断面板 | P1 | M3 | feat | backlog | |
+| REQ-033 | 应用内浏览器面板(真实内嵌 + Claude 驱动 · 改造 browser-use) | P1 | — | feat | spec | [spec](../superpowers/specs/2026-07-11-req033-in-app-browser-design.md):对标 Claude Code 桌面端推文;**改造现有 browser-use**(headless Playwright 截图 → Electron WebContentsView+CDP 真实内嵌),保留 `browser_*` 契约(agent 零改动);对等融合/侧边分屏/独立 partition/全权档+eval;分阶段(阶段1纯浏览可单发·阶段2驱动·阶段3可选headless);来源 self |
 
 ## Parked(暂搁,不进近期队列)
 | ID | 标题 | 搁置原因 |
