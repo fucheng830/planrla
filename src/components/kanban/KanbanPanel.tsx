@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useKanban } from './KanbanContext';
 import { Button } from '@/shared/view/ui';
+import { Board } from './Board';
 
 export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   const { rootId, loading, error, refresh } = useKanban();
@@ -32,8 +33,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
             {showTemplates && <span className="text-xs text-muted-foreground">templates: on</span>}
           </div>
           <div className="flex-1 overflow-hidden">
-            {/* Board (T4), CreateTaskDialog (T6), TaskTemplateEditor (T6) are wired in later tasks */}
-            <EmptyState text="Kanban board (coming next)" />
+            <Board />
           </div>
         </div>
       )}
