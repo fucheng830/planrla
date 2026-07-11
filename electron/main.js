@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { readThemeCache, writeThemeCache } from './themeCache.cjs';
 import { initAutoUpdater } from './updater.js';
 import { isAllowedUrl, isSelfOrigin } from './links.js';
+import { BrowserPaneController } from './browserPaneController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Planrla';
@@ -23,6 +24,7 @@ const APP_ID = 'cc.planrla.desktop';
 let mainWindow = null;
 let serverProc = null;
 let serverPort = 0;
+let browserPaneController = null;
 
 app.setName(APP_NAME);
 if (process.platform === 'win32') {
@@ -172,10 +174,21 @@ function createWindow() {
       if (isAllowedUrl(url)) shell.openExternal(url);
     }
   });
-  mainWindow.on('closed', () => { mainWindow = null; });
+  browserPaneController = new BrowserPaneController(mainWindow);
+  mainWindow.on('closed', () => {
+    browserPaneController = null;
+    mainWindow = null;
+  });
 }
 
 app.whenReady().then(async () => {
+  ipcMain.handle('browserPane:open', (_e, url) => { browserPaneController?.open(url); });
+  ipcMain.handle('browserPane:close', () => { browserPaneController?.close(); });
+  ipcMain.handle('browserPane:navigate', (_e, url) => browserPaneController?.navigate(url) ?? false);
+  ipcMain.handle('browserPane:goBack', () => { browserPaneController?.goBack(); });
+  ipcMain.handle('browserPane:goForward', () => { browserPaneController?.goForward(); });
+  ipcMain.handle('browserPane:reload', () => { browserPaneController?.reload(); });
+  ipcMain.on('browserPane:updateBounds', (_e, bounds) => { browserPaneController?.updateBounds(bounds); });
   try {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
     createWindow();
