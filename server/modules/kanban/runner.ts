@@ -88,7 +88,11 @@ export function createRunner(deps: RunnerDeps) {
     }
 
     // W4: rendered prompt (variable substitution + MCP self-drive preamble).
+    // `{{input}}` resolves from the current stage run's input; when an agent
+    // stage is reached via autoAdvance from a user stage, the agent run has no
+    // input of its own, so fall back to the task's original (stage 0) input.
     const run = taskStore.latestStageRun(taskId, stageIndex);
+    const input = run?.input ?? (stageIndex > 0 ? (taskStore.latestStageRun(taskId, 0)?.input ?? '') : '');
     const prompt = renderStagePrompt({
       stage,
       ctx: {
@@ -97,7 +101,7 @@ export function createRunner(deps: RunnerDeps) {
         stageName: stage.name,
         stageIndex,
         rootPath,
-        input: run?.input ?? '',
+        input,
       },
     });
     const spawnFn = spawnFns[stage.agent];
