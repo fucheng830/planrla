@@ -1,10 +1,9 @@
-import Database from 'better-sqlite3';
 import type { Database as DB } from 'better-sqlite3';
 import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
 import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
 
 export interface TaskStoreDeps {
-  dbPath: string;
+  db: DB;
 }
 
 export interface CreateTaskInput {
@@ -14,8 +13,7 @@ export interface CreateTaskInput {
 }
 
 export function createTaskStore(deps: TaskStoreDeps) {
-  const db: DB = new Database(deps.dbPath);
-  db.pragma('journal_mode = WAL');
+  const { db } = deps;
   db.exec(SCHEMA_SQL);
 
   const createTask = db.transaction((input: CreateTaskInput): Task => {
@@ -115,8 +113,14 @@ export function createTaskStore(deps: TaskStoreDeps) {
 
   function updateTaskStage(taskId: string, stageIndex: number, status: TaskStatus): void {
     const now = new Date().toISOString();
-    db.prepare(`UPDATE tasks SET current_stage_index = ?, status = ?, updated_at = ? WHERE id = ?`)
+    db.prepare(`UPDATE tasks SET current_stage_index = ?, status = ?, scheduler_admitted = 0, updated_at = ? WHERE id = ?`)
       .run(stageIndex, status, now, taskId);
+  }
+
+  function nextTaskNumber(rootId: string): number {
+    const row = db.prepare('SELECT COALESCE(MAX(task_number), 0) + 1 AS next FROM tasks WHERE root_id = ?')
+      .get(rootId) as { next: number };
+    return row.next;
   }
 
   function latestStageRun(taskId: string, stageIndex: number): StageRun | null {
@@ -138,7 +142,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
     db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, close: () => db.close() };
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, nextTaskNumber };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
@@ -156,6 +160,16 @@ interface TaskRow {
   created_at: string; updated_at: string; completed_at: string | null;
 }
 
+function parseLabels(labelsJson: string | null | undefined): string[] {
+  let labels: string[] = [];
+  try {
+    labels = JSON.parse(labelsJson ?? '[]');
+  } catch {
+    labels = [];
+  }
+  return labels;
+}
+
 function rowToTask(row: TaskRow): Task {
   return {
     id: row.id, taskNumber: row.task_number, rootId: row.root_id,
@@ -170,7 +184,7 @@ function rowToTask(row: TaskRow): Task {
     schedulerAdmitted: Boolean(row.scheduler_admitted),
     mainSessionKey: row.main_session_key ?? undefined,
     worktreeRootId: row.worktree_root_id ?? undefined,
-    labels: JSON.parse(row.labels_json ?? '[]'),
+    labels: parseLabels(row.labels_json),
     auxFlags: {
       askUserWaiting: Boolean(row.aux_ask_user_waiting),
       hasPlan: Boolean(row.aux_has_plan),

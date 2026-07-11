@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
-import type { Task, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
+import type { Task, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
 import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
 import { AppError } from '@/shared/utils.js';
 
@@ -21,7 +21,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
 
     const now = new Date().toISOString();
     const taskId = randomUUID();
-    const taskNumber = nextTaskNumber(input.rootId);
+    const taskNumber = taskStore.nextTaskNumber(input.rootId);
     const autoAdvance = firstStage.autoAdvance;
     const firstStatus: TaskStatus = autoAdvance ? 'queued' : 'waiting_user';
     const firstRunStatus: StageStatus = autoAdvance ? 'approved' : 'pending';
@@ -47,7 +47,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   }
 
   function next(rootId: string, taskId: string): Task {
-    const task = requireNonTerminalTask(taskId);
+    const task = requireNonTerminalTask(taskId, rootId);
     const tpl = requireTemplate(task.taskTemplateId);
     const now = new Date().toISOString();
 
@@ -58,7 +58,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
 
     const nextIndex = task.currentStageIndex + 1;
     if (nextIndex >= tpl.stages.length) {
-      return complete(rootId, taskId);
+      return completeInternal(task, tpl);
     }
     const nextStage = tpl.stages[nextIndex].snapshot;
     taskStore.insertStageRun({
@@ -70,29 +70,33 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return taskStore.getTask(taskId)!;
   }
 
+  function completeInternal(task: Task, tpl: TaskTemplate): Task {
+    const now = new Date().toISOString();
+    const currentRun = taskStore.latestStageRun(task.id, task.currentStageIndex);
+    if (currentRun) {
+      taskStore.insertStageRun({ ...currentRun, id: randomUUID(), status: 'approved', finishedAt: now, updatedAt: now });
+    }
+    taskStore.updateTaskStatus(task.id, 'success');
+    return taskStore.getTask(task.id)!;
+  }
+
   function complete(rootId: string, taskId: string): Task {
-    const task = requireNonTerminalTask(taskId);
+    const task = requireNonTerminalTask(taskId, rootId);
     const tpl = requireTemplate(task.taskTemplateId);
     if (task.currentStageIndex < tpl.stages.length - 1) {
       throw new AppError('can only complete on last stage', { code: 'INVALID_STAGE', statusCode: 400 });
     }
-    const now = new Date().toISOString();
-    const currentRun = taskStore.latestStageRun(taskId, task.currentStageIndex);
-    if (currentRun) {
-      taskStore.insertStageRun({ ...currentRun, id: randomUUID(), status: 'approved', finishedAt: now, updatedAt: now });
-    }
-    taskStore.updateTaskStatus(taskId, 'success');
-    return taskStore.getTask(taskId)!;
+    return completeInternal(task, tpl);
   }
 
   function cancel(rootId: string, taskId: string): Task {
-    requireTask(taskId);
+    requireTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'cancelled');
     return taskStore.getTask(taskId)!;
   }
 
   function prev(rootId: string, taskId: string): Task {
-    const task = requireNonTerminalTask(taskId);
+    const task = requireNonTerminalTask(taskId, rootId);
     if (task.currentStageIndex <= 0) {
       throw new AppError('cannot prev on first stage', { code: 'INVALID_STAGE', statusCode: 400 });
     }
@@ -110,7 +114,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   }
 
   function jump(rootId: string, taskId: string, targetIndex: number): Task {
-    const task = requireNonTerminalTask(taskId);
+    const task = requireNonTerminalTask(taskId, rootId);
     const tpl = requireTemplate(task.taskTemplateId);
     if (targetIndex < 0 || targetIndex >= tpl.stages.length) {
       throw new AppError('目标阶段超出范围', { code: 'INVALID_STAGE', statusCode: 400 });
@@ -127,13 +131,13 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   }
 
   function pause(rootId: string, taskId: string): Task {
-    requireNonTerminalTask(taskId);
+    requireNonTerminalTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'paused');
     return taskStore.getTask(taskId)!;
   }
 
   function resume(rootId: string, taskId: string): Task {
-    const task = requireTask(taskId);
+    const task = requireTask(taskId, rootId);
     if (task.status !== 'paused') {
       throw new AppError('只能 resume 处于 paused 状态的任务', { code: 'INVALID_STATUS', statusCode: 400 });
     }
@@ -142,19 +146,22 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   }
 
   function fail(rootId: string, taskId: string): Task {
-    requireTask(taskId);
+    requireNonTerminalTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'fail');
     return taskStore.getTask(taskId)!;
   }
 
-  function requireTask(taskId: string): Task {
+  function requireTask(taskId: string, rootId: string): Task {
     const task = taskStore.getTask(taskId);
-    if (!task) throw new AppError(`task ${taskId} not found`, { code: 'TASK_NOT_FOUND', statusCode: 404 });
+    if (!task) throw new AppError('task not found', { code: 'TASK_NOT_FOUND', statusCode: 404 });
+    if (task.rootId !== rootId) {
+      throw new AppError('task 不属于该 root', { code: 'TASK_ROOT_MISMATCH', statusCode: 403 });
+    }
     return task;
   }
 
-  function requireNonTerminalTask(taskId: string): Task {
-    const task = requireTask(taskId);
+  function requireNonTerminalTask(taskId: string, rootId: string): Task {
+    const task = requireTask(taskId, rootId);
     if (isTerminalTaskStatus(task.status)) {
       throw new AppError(`task ${taskId} is in terminal status ${task.status}`, { code: 'TASK_TERMINAL', statusCode: 400 });
     }
@@ -165,11 +172,6 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     const tpl = templateStore.getTaskTemplate(id);
     if (!tpl) throw new AppError(`template ${id} not found`, { code: 'TASK_TEMPLATE_NOT_FOUND', statusCode: 404 });
     return tpl;
-  }
-
-  function nextTaskNumber(rootId: string): number {
-    const tasks = taskStore.listTasks(rootId);
-    return tasks.reduce((max, t) => Math.max(max, t.taskNumber), 0) + 1;
   }
 
   return { createTask, next, prev, jump, pause, resume, complete, cancel, fail };

@@ -83,8 +83,6 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
-  currentStageName?: string;
-  currentStageStatus?: StageStatus;
 }
 
 export interface StageRun {
