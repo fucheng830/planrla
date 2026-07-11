@@ -142,7 +142,12 @@ export function createTaskStore(deps: TaskStoreDeps) {
     db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, nextTaskNumber };
+  function setSchedulerAdmitted(taskId: string, value: boolean): void {
+    db.prepare('UPDATE tasks SET scheduler_admitted = ?, updated_at = ? WHERE id = ?')
+      .run(value ? 1 : 0, new Date().toISOString(), taskId);
+  }
+
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
