@@ -5,7 +5,7 @@ import FileTree from '../../file-tree/view/FileTree';
 import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
 import GitPanel from '../../git-panel/view/GitPanel';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
-import { BrowserUsePanel } from '../../browser-use';
+import { BrowserUsePanel, BrowserPane } from '../../browser-use';
 import type { MainContentProps } from '../types/types';
 import { useTaskMaster } from '../../../contexts/TaskMasterContext';
 import { usePaletteOpsRegister } from '../../../contexts/PaletteOpsContext';
@@ -54,8 +54,8 @@ function MainContent({
   newSessionTrigger,
   allPickerSessions,
 }: MainContentProps) {
-  const { preferences } = useUiPreferences();
-  const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
+  const { preferences, setPreference } = useUiPreferences();
+  const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, browserPaneVisible } = preferences;
 
   const { currentProject, setCurrentProject } = useTaskMaster() as TaskMasterContextValue;
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings() as TasksSettingsContextValue;
@@ -146,6 +146,17 @@ function MainContent({
         onMenuClick={onMenuClick}
       />
 
+      <div className="flex justify-end px-2">
+        <button
+          type="button"
+          onClick={() => setPreference('browserPaneVisible', !browserPaneVisible)}
+          className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+          title={browserPaneVisible ? 'Hide browser pane' : 'Open browser pane'}
+        >
+          {browserPaneVisible ? 'Hide browser' : 'Browse'}
+        </button>
+      </div>
+
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
           <div className={`h-full ${activeTab === 'chat' ? 'block' : 'hidden'}`}>
@@ -219,19 +230,26 @@ function MainContent({
           )}
         </div>
 
-        <EditorSidebar
-          editingFile={editingFile}
-          isMobile={isMobile}
-          editorExpanded={editorExpanded}
-          editorWidth={editorWidth}
-          hasManualWidth={hasManualWidth}
-          resizeHandleRef={resizeHandleRef}
-          onResizeStart={handleResizeStart}
-          onCloseEditor={handleCloseEditor}
-          onToggleEditorExpand={handleToggleEditorExpand}
-          projectPath={selectedProject.path}
-          fillSpace={activeTab === 'files'}
-        />
+        {editingFile ? (
+          <EditorSidebar
+            editingFile={editingFile}
+            isMobile={isMobile}
+            editorExpanded={editorExpanded}
+            editorWidth={editorWidth}
+            hasManualWidth={hasManualWidth}
+            resizeHandleRef={resizeHandleRef}
+            onResizeStart={handleResizeStart}
+            onCloseEditor={handleCloseEditor}
+            onToggleEditorExpand={handleToggleEditorExpand}
+            projectPath={selectedProject.path}
+            fillSpace={activeTab === 'files'}
+          />
+        ) : browserPaneVisible ? (
+          <BrowserPane
+            isMobile={isMobile}
+            onClose={() => setPreference('browserPaneVisible', false)}
+          />
+        ) : null}
       </div>
     </div>
   );
