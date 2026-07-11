@@ -736,6 +736,11 @@ export function useChatSessionState({
   });
 
   useEffect(() => {
+    // REQ-032 F1b: 初始锚定窗口(pendingInitialScrollRef=true)由 F1a 的
+    // useLayoutEffect + RAF 独占定位;此 effect 跳过,避免初始加载时冗余的
+    // 50ms scrollToBottom 二次拽底、再造冲底。pending 置 false(RAF 收尾)后,
+    // 此 effect 恢复本职:管"初始稳定后新追加消息"的自动贴底(流式/工具结果)。
+    if (pendingInitialScrollRef.current) return;
     if (!scrollContainerRef.current || chatMessages.length === 0) return;
     if (isLoadingMoreRef.current || isLoadingMoreMessages || pendingScrollRestoreRef.current) return;
     if (searchScrollActiveRef.current) return;
