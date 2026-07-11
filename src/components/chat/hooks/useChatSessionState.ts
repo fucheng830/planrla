@@ -425,24 +425,22 @@ export function useChatSessionState({
     setIsUserScrolledUp(false);
   }, [selectedProject?.projectId, selectedSession?.id]);
 
-  // Initial scroll to bottom — robust to lazy content reflow.
-  // The previous implementation fired one scrollToBottom() at +200ms and
-  // cleared the pending flag. When markdown blocks, code highlighting, or
-  // images finished rendering after that window, scrollHeight grew but
-  // nothing re-anchored the viewport, leaving the chat tab visually
-  // "scrolled way up" with the latest assistant message off-screen.
-  //
-  // This version re-scrolls every animation frame while scrollHeight is
-  // still growing, capped at ~1s (60 frames) or 3 consecutive stable
-  // frames. Cancels cleanly on session change via the pending flag.
-  useEffect(() => {
+  // REQ-032 F1a: useLayoutEffect(非 useEffect)+ 首帧绘制前同步锚定 scrollTop,
+  // 使首帧即位于底部,消除"顶部→底部"可见冲底。RAF 循环保留,职责退化为
+  // 回流校正(markdown/代码/图片落位),因用户已在底部,读作"贴住"而非"下冲"。
+  // 同文件 ~L380 的"加载更多滚位恢复"已用同款 useLayoutEffect+RAF 模式,此处对齐。
+  useLayoutEffect(() => {
     if (!pendingInitialScrollRef.current || !scrollContainerRef.current || isLoadingSessionMessages) return;
     if (chatMessages.length === 0) { pendingInitialScrollRef.current = false; return; }
     if (searchScrollActiveRef.current) { pendingInitialScrollRef.current = false; return; }
 
     const container = scrollContainerRef.current;
+
+    // 首帧绘制前同步钉到底 —— 关键:这是用户"看不到滚动"的直接来源。
+    container.scrollTop = container.scrollHeight;
+
     let frame = 0;
-    let lastHeight = 0;
+    let lastHeight = container.scrollHeight;
     let stableCount = 0;
     let rafId = 0;
 
