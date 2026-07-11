@@ -113,6 +113,12 @@ export function createTaskStore(deps: TaskStoreDeps) {
     }
   }
 
+  function updateTaskStage(taskId: string, stageIndex: number, status: TaskStatus): void {
+    const now = new Date().toISOString();
+    db.prepare(`UPDATE tasks SET current_stage_index = ?, status = ?, updated_at = ? WHERE id = ?`)
+      .run(stageIndex, status, now, taskId);
+  }
+
   function latestStageRun(taskId: string, stageIndex: number): StageRun | null {
     const row = db.prepare('SELECT * FROM stage_runs WHERE task_id = ? AND stage_index = ? ORDER BY created_at DESC LIMIT 1')
       .get(taskId, stageIndex) as StageRunRow | undefined;
@@ -132,7 +138,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
     db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, close: () => db.close() };
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, insertStageRun, insertTaskEvent, close: () => db.close() };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
