@@ -28,6 +28,8 @@ import type { AuxBridge } from '@/modules/kanban/aux-bridge.js';
 import { RunnerWriter } from '@/modules/kanban/runner-writer.js';
 import { spawnFns as defaultSpawnFns } from '@/modules/providers/spawn-fns.js';
 import type { SpawnFn } from '@/modules/providers/spawn-fns.js';
+import { renderStagePrompt } from '@/modules/kanban/prompt.js';
+import type { WorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 
 export interface RunnerDeps {
   taskStore: TaskStore;
@@ -38,6 +40,8 @@ export interface RunnerDeps {
   resolveRootPath: (rootId: string) => string | null;
   /** Provider spawn map keyed by StageTemplate.agent. Defaults to the real spawnFns. */
   spawnFns?: Record<string, SpawnFn>;
+  /** W4: kanban-level worktree orchestrator (lazy, idempotent). Optional for back-compat. */
+  worktreeSetup?: WorktreeSetup;
   log?: (msg: string) => void;
 }
 
@@ -49,6 +53,7 @@ export function createRunner(deps: RunnerDeps) {
     auxBridge,
     resolveRootPath,
     spawnFns = defaultSpawnFns,
+    worktreeSetup,
     log = () => {},
   } = deps;
 
@@ -69,11 +74,32 @@ export function createRunner(deps: RunnerDeps) {
     const sessionKey = task.mainSessionKey ?? taskId;
     const providerSessionId = sessionMap.get(sessionKey);
     const rootPath = resolveRootPath(rootId);
-    // Prefer the task's worktree when one has been allocated; fall back to the
-    // root project path; undefined lets the provider pick its own cwd.
-    const cwd = task.worktreePath ?? rootPath ?? undefined;
     const permissionMode: 'plan' | 'default' = stage.planMode ? 'plan' : 'default';
-    const prompt = stage.promptTemplate ?? '';
+
+    // W4: ensure worktree (lazy, idempotent) before resolving cwd. If the
+    // orchestrator is absent (legacy callers/tests), fall back to the task's
+    // persisted worktreePath or the root project path.
+    let cwd: string | undefined;
+    if (worktreeSetup) {
+      const wt = await worktreeSetup.ensureWorktree(task, rootPath);
+      cwd = wt ?? rootPath ?? undefined;
+    } else {
+      cwd = task.worktreePath ?? rootPath ?? undefined;
+    }
+
+    // W4: rendered prompt (variable substitution + MCP self-drive preamble).
+    const run = taskStore.latestStageRun(taskId, stageIndex);
+    const prompt = renderStagePrompt({
+      stage,
+      ctx: {
+        taskId: task.id,
+        taskNumber: task.taskNumber,
+        stageName: stage.name,
+        stageIndex,
+        rootPath,
+        input: run?.input ?? '',
+      },
+    });
     const spawnFn = spawnFns[stage.agent];
     if (!spawnFn) throw new Error(`unknown provider: ${stage.agent}`);
 

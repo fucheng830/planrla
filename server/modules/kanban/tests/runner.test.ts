@@ -32,6 +32,7 @@ const NOW = '2026-01-01T00:00:00.000Z';
 interface SetupOpts {
   mockSpawn: any;
   spawnFns?: Record<string, any>;
+  worktreeSetup?: any;
 }
 
 function setup(opts: SetupOpts) {
@@ -49,6 +50,7 @@ function setup(opts: SetupOpts) {
     auxBridge,
     resolveRootPath,
     spawnFns: opts.spawnFns ?? { claude: opts.mockSpawn },
+    worktreeSetup: opts.worktreeSetup,
     log: () => {},
   });
   return { db, taskStore, templateStore, service, runner };
@@ -107,7 +109,8 @@ test('runAgentStage calls spawnFn with prompt + cwd + permissionMode', async () 
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
   service.next('r1', task.id); // advance to stage 1 (agent)
   await runner.runAgentStage('r1', task.id, 1);
-  assert.equal(called.cmd, 'do the work');
+  // W4: prompt is now rendered (base template + MCP self-drive preamble).
+  assert.match(called.cmd, /^do the work/);
   assert.equal(called.opts.permissionMode, 'default');
   assert.equal(called.opts.cwd, '/fake/path/r1');
   assert.ok(called.hasWriter);
@@ -239,5 +242,49 @@ test('runAgentStage throws on unknown provider', async () => {
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
   service.next('r1', task.id);
   await assert.rejects(() => runner.runAgentStage('r1', task.id, 1), /unknown provider|spawnFn/i);
+  db.close();
+});
+
+test('runAgentStage passes worktreePath as cwd when worktreeSetup returns one', async () => {
+  const seen: { cwd?: string }[] = [];
+  const mockSpawn = async (_cmd: string, opts: any, writer: any) => {
+    seen.push({ cwd: opts?.cwd });
+    writer.send(JSON.stringify({ kind: 'complete' }));
+  };
+  const { db, templateStore, service, runner } = setup({
+    mockSpawn,
+    worktreeSetup: {
+      ensureWorktree: async () => '/repo/.worktree/kanban/1-aaaa',
+      removeWorktree: async () => {},
+    },
+  });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id); // → stage 1 (agent)
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(seen[0]?.cwd, '/repo/.worktree/kanban/1-aaaa');
+  db.close();
+});
+
+test('runAgentStage renders prompt with MCP preamble containing taskId', async () => {
+  const seen: { cmd?: string }[] = [];
+  const mockSpawn = async (cmd: string, _opts: any, writer: any) => {
+    seen.push({ cmd });
+    writer.send(JSON.stringify({ kind: 'complete' }));
+  };
+  const { db, templateStore, service, runner } = setup({
+    mockSpawn,
+    worktreeSetup: {
+      ensureWorktree: async () => null,
+      removeWorktree: async () => {},
+    },
+  });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id); // → stage 1 (agent)
+  await runner.runAgentStage('r1', task.id, 1);
+  // The MCP self-drive preamble instructs the agent to call task_next with the taskId.
+  assert.match(seen[0]?.cmd ?? '', /task_next/);
+  assert.match(seen[0]?.cmd ?? '', new RegExp(task.id));
   db.close();
 });
