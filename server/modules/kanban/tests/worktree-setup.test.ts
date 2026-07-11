@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Database from 'better-sqlite3';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createTaskStore } from '@/modules/kanban/store.js';
@@ -46,7 +46,7 @@ function setup(): {
     mcpBaseUrl: 'http://127.0.0.1:3001/api/mcp/kanban',
     git: {
       createLinkedWorktree: async (_root: string, branch: string) => {
-        const p = `/fake/${branch}`;
+        const p = mkdtempSync(join(tmpdir(), 'kanban-wt-mock-'));
         createdPaths.push(p);
         return { path: p, branch };
       },
@@ -66,10 +66,14 @@ test('ensureWorktree creates worktree, persists path+branch, writes .mcp.json', 
   const task = makeTask();
   const ws = worktreeSetup(created);
   const wtPath = await ws.ensureWorktree(task, '/repo');
-  assert.equal(wtPath, '/fake/kanban/1-' + task.id.replace(/-/g, '').slice(0, 8));
+  assert.ok(wtPath, 'ensureWorktree should return a path');
+  assert.equal(wtPath, created[0]);
   const after = service.getTask(task.rootId, task.id);
   assert.equal(after?.worktreePath, wtPath);
   assert.equal(after?.worktreeBranch?.startsWith('kanban/1-'), true);
+  const mcp = JSON.parse(readFileSync(join(wtPath!, '.mcp.json'), 'utf8'));
+  assert.equal(mcp.mcpServers['planrla-kanban'].type, 'http');
+  assert.equal(mcp.mcpServers['planrla-kanban'].url, 'http://127.0.0.1:3001/api/mcp/kanban');
 });
 
 test('ensureWorktree is idempotent: reuses existing worktree, does not create again', async () => {

@@ -67,7 +67,11 @@ export function createWorktreeSetup(deps: WorktreeSetupDeps): WorktreeSetup {
       log(`[kanban-worktree] create failed task=${task.id}: ${e?.message ?? e}`);
       return null;
     }
-    store.updateTaskWorktree(task.id, { worktreePath: created.path, worktreeBranch: created.branch });
+    try {
+      store.updateTaskWorktree(task.id, { worktreePath: created.path, worktreeBranch: created.branch });
+    } catch (e: any) {
+      log(`[kanban-worktree] persist worktree path failed task=${task.id}: ${e?.message ?? e}`);
+    }
     try {
       writeWorktreeMcpConfig(created.path);
     } catch (e: any) {
