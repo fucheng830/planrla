@@ -124,6 +124,14 @@ export default function ChatMessagesPane({
   const allocatedKeysRef = useRef<Set<string>>(new Set());
   const generatedMessageKeyCounterRef = useRef(0);
 
+  // REQ-032 F3: 已测消息高度的滚动平均 → estimateSize。
+  // ① 让虚拟器预测量 spacer(getTotalSize)接近真实内容高度,缩短初始滚底 RAF 尾巴;
+  // ② 顺带缓解 REQ-031 的 estimateSize 虚高根因(不覆盖其 measureElement 重测工作)。
+  // 种子 104 = 原 estimateSize 常量。WeakSet 防同一元素多次计入。
+  const measuredHeightSumRef = useRef(0);
+  const measuredCountRef = useRef(0);
+  const measuredElsRef = useRef<WeakSet<HTMLElement>>(new WeakSet());
+
   // Keep keys stable across prepends so existing MessageComponent instances retain local state.
   const getMessageKey = useCallback((message: ChatMessage) => {
     const existingKey = messageKeyMapRef.current.get(message);
@@ -151,9 +159,28 @@ export default function ChatMessagesPane({
   const virtualizer = useVirtualizer({
     count: visibleMessages.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 104,
+    estimateSize: () =>
+      measuredCountRef.current > 0
+        ? measuredHeightSumRef.current / measuredCountRef.current
+        : 104,
     overscan: VIRTUALIZATION_OVERSCAN,
   });
+
+  // REQ-032 F3: 包一层 measureElement —— 在虚拟器测量之前,先把挂载元素实测高度
+  // 计入滚动平均。ref 回调只在元素挂载/卸载时触发;WeakSet 防同一元素重复计入。
+  // 注意:virtualizer 实例在 useVirtualizer 内部稳定,故 [virtualizer] 依赖稳定,
+  // measureAndTrack 引用稳定,ref 回调不会每渲染触发。
+  const measureAndTrack = useCallback((el: HTMLElement | null) => {
+    if (el && !measuredElsRef.current.has(el)) {
+      measuredElsRef.current.add(el);
+      const height = el.getBoundingClientRect().height;
+      if (height > 0) {
+        measuredHeightSumRef.current += height;
+        measuredCountRef.current += 1;
+      }
+    }
+    virtualizer.measureElement(el);
+  }, [virtualizer]);
 
   return (
     <div
@@ -272,7 +299,7 @@ export default function ChatMessagesPane({
                 <div
                   key={getMessageKey(message)}
                   data-index={vItem.index}
-                  ref={virtualizer.measureElement}
+                  ref={measureAndTrack}
                   style={{
                     position: 'absolute',
                     top: 0,
