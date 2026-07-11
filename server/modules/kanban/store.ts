@@ -142,12 +142,33 @@ export function createTaskStore(deps: TaskStoreDeps) {
     db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
   }
 
+  function updateTaskWorktree(
+    taskId: string,
+    fields: { worktreePath?: string | null; worktreeBranch?: string | null },
+  ): void {
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    if (fields.worktreePath !== undefined) {
+      sets.push('worktree_path = ?');
+      params.push(fields.worktreePath);
+    }
+    if (fields.worktreeBranch !== undefined) {
+      sets.push('worktree_branch = ?');
+      params.push(fields.worktreeBranch);
+    }
+    if (sets.length === 0) return;
+    sets.push('updated_at = ?');
+    params.push(new Date().toISOString());
+    params.push(taskId);
+    db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+  }
+
   function setSchedulerAdmitted(taskId: string, value: boolean): void {
     db.prepare('UPDATE tasks SET scheduler_admitted = ?, updated_at = ? WHERE id = ?')
       .run(value ? 1 : 0, new Date().toISOString(), taskId);
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber };
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;

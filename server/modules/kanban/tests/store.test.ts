@@ -178,3 +178,31 @@ test('labels survive corrupt JSON via fallback to []', () => {
   assert.ok(got);
   assert.deepEqual(got!.labels, []);
 });
+
+test('updateTaskWorktree persists worktreePath and worktreeBranch', () => {
+  const store = newTestStore();
+  const now = '2026-01-01T00:00:00.000Z';
+  store.createTask({
+    task: { id: 't', taskNumber: 1, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'rt', taskId: 't', stageIndex: 0, stageName: 'S', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'et', taskId: 't', type: 'task_created', createdAt: now },
+  });
+  store.updateTaskWorktree('t', { worktreePath: '/repo/.worktree/x', worktreeBranch: 'kanban/1-aaaa' });
+  const after = store.getTask('t');
+  assert.equal(after?.worktreePath, '/repo/.worktree/x');
+  assert.equal(after?.worktreeBranch, 'kanban/1-aaaa');
+});
+
+test('updateTaskWorktree no-op when no fields given', () => {
+  const store = newTestStore();
+  const now = '2026-01-01T00:00:00.000Z';
+  store.createTask({
+    task: { id: 't', taskNumber: 1, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'rt', taskId: 't', stageIndex: 0, stageName: 'S', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'et', taskId: 't', type: 'task_created', createdAt: now },
+  });
+  const before = store.getTask('t');
+  store.updateTaskWorktree('t', {});
+  const after = store.getTask('t');
+  assert.deepEqual(after?.worktreePath, before?.worktreePath);
+});
