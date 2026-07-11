@@ -151,6 +151,14 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return taskStore.getTask(taskId)!;
   }
 
+  function listTasks(rootId: string): Task[] {
+    return taskStore.listTasks(rootId);
+  }
+
+  function getTask(rootId: string, taskId: string): Task | null {
+    return requireTask(taskId, rootId);
+  }
+
   function requireTask(taskId: string, rootId: string): Task {
     const task = taskStore.getTask(taskId);
     if (!task) throw new AppError('task not found', { code: 'TASK_NOT_FOUND', statusCode: 404 });
@@ -174,7 +182,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tpl;
   }
 
-  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, listTasks, getTask };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;
