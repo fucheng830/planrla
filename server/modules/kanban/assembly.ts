@@ -1,11 +1,13 @@
 import path from 'node:path';
 import os from 'node:os';
-import { getConnection } from '@/modules/database/index.js';
+import { getConnection, projectsDb } from '@/modules/database/index.js';
 import { createTaskStore } from '@/modules/kanban/store.js';
 import { createTemplateStore } from '@/modules/kanban/template-store.js';
 import { createKanbanService } from '@/modules/kanban/service.js';
 import { createScheduler } from '@/modules/kanban/scheduler.js';
 import { createKanbanRouter } from '@/modules/kanban/kanban.routes.js';
+import { createAuxBridge } from '@/modules/kanban/aux-bridge.js';
+import { createRunner } from '@/modules/kanban/runner.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -23,14 +25,27 @@ function buildKanban() {
   const templateDir = path.join(os.homedir(), '.planrla');
   const templateStore = createTemplateStore({ dir: templateDir });
   const service = createKanbanService({ taskStore, templateStore });
+  const auxBridge = createAuxBridge({ updateAuxFlags: taskStore.updateTaskAuxFlags });
+  const resolveRootPath = (rootId: string): string | null => projectsDb.getProjectPathById(rootId);
+  const runner = createRunner({ taskStore, templateStore, service, auxBridge, resolveRootPath });
   const scheduler = createScheduler({
     taskStore,
     templateStore,
     onAdmit: (taskId: string) => {
-      // W3 接 runner;W2 留桩
-      console.log('[kanban] task admitted (runner pending W3):', taskId);
+      const task = taskStore.getTask(taskId);
+      if (!task) return;
+      const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+      const stage = tpl?.stages[task.currentStageIndex]?.snapshot;
+      if (!stage) return;
+      if (stage.role === 'agent' && stage.agent) {
+        void runner.runAgentStage(task.rootId, taskId, task.currentStageIndex)
+          .catch((e: any) => console.error('[kanban-runner]', e));
+      } else if (stage.role === 'user' && stage.autoAdvance) {
+        try { service.next(task.rootId, taskId); }
+        catch (e) { console.error('[kanban auto-advance]', e); }
+      }
     },
   });
   const router = createKanbanRouter({ service });
-  return { db, taskStore, templateStore, service, scheduler, router };
+  return { db, taskStore, templateStore, service, scheduler, runner, router };
 }
