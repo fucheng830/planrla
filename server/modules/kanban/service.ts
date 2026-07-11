@@ -8,10 +8,12 @@ import { AppError } from '@/shared/utils.js';
 export interface KanbanServiceDeps {
   taskStore: TaskStore;
   templateStore: TemplateStore;
+  /** Invoked when a task reaches a terminal status (success/fail/cancelled). Used by assembly to clean up the worktree. */
+  onTerminal?: (task: Task) => void;
 }
 
 export function createKanbanService(deps: KanbanServiceDeps) {
-  const { taskStore, templateStore } = deps;
+  const { taskStore, templateStore, onTerminal } = deps;
 
   function createTask(input: { rootId: string; taskTemplateId: string; input: string }): Task {
     const tpl = requireTemplate(input.taskTemplateId);
@@ -77,7 +79,9 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       taskStore.insertStageRun({ ...currentRun, id: randomUUID(), status: 'approved', finishedAt: now, updatedAt: now });
     }
     taskStore.updateTaskStatus(task.id, 'success');
-    return taskStore.getTask(task.id)!;
+    const updated = taskStore.getTask(task.id)!;
+    onTerminal?.(updated);
+    return updated;
   }
 
   function complete(rootId: string, taskId: string): Task {
@@ -92,7 +96,9 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   function cancel(rootId: string, taskId: string): Task {
     requireTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'cancelled');
-    return taskStore.getTask(taskId)!;
+    const updated = taskStore.getTask(taskId)!;
+    onTerminal?.(updated);
+    return updated;
   }
 
   function prev(rootId: string, taskId: string): Task {
@@ -148,7 +154,9 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   function fail(rootId: string, taskId: string): Task {
     requireNonTerminalTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'fail');
-    return taskStore.getTask(taskId)!;
+    const updated = taskStore.getTask(taskId)!;
+    onTerminal?.(updated);
+    return updated;
   }
 
   function listTasks(rootId: string): Task[] {
