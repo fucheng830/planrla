@@ -32,13 +32,13 @@ export function resolveWorktreePath(rootPath: string, branch: string): string {
 
 function defaultSpawn(cmd: string, args: string[], opts: { cwd: string }): Promise<SpawnAsyncResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: opts.cwd, windowsHide: true });
+    const child = spawn(cmd, args, { cwd: opts.cwd, shell: false, windowsHide: true });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d) => { stdout += d.toString(); });
     child.stderr.on('data', (d) => { stderr += d.toString(); });
     child.on('error', reject);
-    child.on('close', (code) => resolve({ stdout, stderr, code: code ?? 0 }));
+    child.on('close', (code) => resolve({ stdout, stderr, code: code === null ? -1 : code }));
   });
 }
 
