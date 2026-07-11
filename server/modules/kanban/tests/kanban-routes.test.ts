@@ -42,8 +42,8 @@ test('POST /api/tasks creates a task', async () => {
   saveTpl(templateStore, 't1');
   const res = await request(app).post('/api/tasks').send({ rootId: 'r1', taskTemplateId: 't1', input: 'do thing' });
   assert.equal(res.status, 200);
-  assert.equal(res.body.status, 'waiting_user');
-  assert.equal(res.body.rootId, 'r1');
+  assert.equal(res.body.task.status, 'waiting_user');
+  assert.equal(res.body.task.rootId, 'r1');
   db.close();
 });
 
@@ -60,7 +60,7 @@ test('POST /api/tasks/:taskId/next advances stage', async () => {
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x' });
   const res = await request(app).post(`/api/tasks/${task.id}/next`).send({ rootId: 'r1' });
   assert.equal(res.status, 200);
-  assert.equal(res.body.currentStageIndex, 1);
+  assert.equal(res.body.task.currentStageIndex, 1);
   db.close();
 });
 

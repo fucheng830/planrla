@@ -55,7 +55,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     try {
       const task = service.createTask({ rootId, taskTemplateId, input: input ?? '' });
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
-      res.json(task);
+      res.json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
     }
@@ -76,7 +76,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
         ? (service as any)[action](rootId, taskId, targetIndex)
         : (service as any)[action](rootId, taskId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
-      res.json(task);
+      res.json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
     }

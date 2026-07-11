@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { kanbanApi } from './api';
 import type { Task, TaskTemplate } from './types';
@@ -34,9 +34,10 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Rebuild the lookup map on every templates change. Small arrays; fine to
-  // recompute rather than memoize (avoids an extra useMemo dep bookkeeping).
-  const templatesById = new Map(templates.map((t) => [t.id, t]));
+  // Rebuild the lookup map only when templates change. Memoized so the Map
+  // identity is stable across renders — prevents infinite loops if a consumer
+  // adds it to a useMemo/useEffect dependency array.
+  const templatesById = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
 
   const refresh = useCallback(async () => {
     if (!rootId) {
