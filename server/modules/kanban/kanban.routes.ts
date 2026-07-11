@@ -28,7 +28,11 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
       const tpl = templateStore.saveTaskTemplate(req.body);
       res.json({ template: tpl });
     } catch (e: any) {
-      res.status(400).json({ message: e?.message ?? 'invalid template', code: 'TEMPLATE_INVALID' });
+      const statusCode = e?.statusCode ?? 500;
+      res.status(statusCode).json({
+        message: e?.message ?? 'failed to save template',
+        code: e?.code ?? 'TEMPLATE_SAVE_FAILED',
+      });
     }
   });
 
