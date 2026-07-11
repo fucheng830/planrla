@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ChatInterface from '../../chat/view/ChatInterface';
 import FileTree from '../../file-tree/view/FileTree';
@@ -56,6 +57,7 @@ function MainContent({
 }: MainContentProps) {
   const { preferences, setPreference } = useUiPreferences();
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, browserPaneVisible } = preferences;
+  const { t } = useTranslation('settings');
 
   const { currentProject, setCurrentProject } = useTaskMaster() as TaskMasterContextValue;
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings() as TasksSettingsContextValue;
@@ -151,9 +153,10 @@ function MainContent({
           type="button"
           onClick={() => setPreference('browserPaneVisible', !browserPaneVisible)}
           className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-          title={browserPaneVisible ? 'Hide browser pane' : 'Open browser pane'}
+          title={browserPaneVisible ? t('browserPane.toggleHideTitle') : t('browserPane.toggleOpenTitle')}
+          aria-label={browserPaneVisible ? t('browserPane.toggleHideTitle') : t('browserPane.toggleOpenTitle')}
         >
-          {browserPaneVisible ? 'Hide browser' : 'Browse'}
+          {browserPaneVisible ? t('browserPane.toggleHide') : t('browserPane.toggleOpen')}
         </button>
       </div>
 

@@ -316,6 +316,18 @@
       "installRuntime": "安装浏览器运行时失败"
     }
   },
+  "browserPane": {
+    "back": "后退",
+    "forward": "前进",
+    "reload": "刷新",
+    "close": "关闭面板",
+    "addressPlaceholder": "输入网址或搜索",
+    "resize": "拖动调整宽度",
+    "toggleOpen": "浏览",
+    "toggleHide": "隐藏浏览器",
+    "toggleOpenTitle": "打开浏览器面板",
+    "toggleHideTitle": "隐藏浏览器面板"
+  },
   "appearanceSettings": {
     "themeMode": {
       "label": "主题",
