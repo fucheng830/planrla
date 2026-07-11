@@ -151,6 +151,36 @@ test('filterSilentRenameTurns: silent turn at end of array (no trailing user mes
   assert.deepEqual(filterSilentRenameTurns(input), [u1]);
 });
 
+test('filterSilentRenameTurns: back-to-back silent turns (two hints adjacent, no real user turn between) are both fully dropped', () => {
+  // Defensive gap: today the realtime rename guards prevent two silent rename
+  // runs from being persisted without a real user turn between them, so this
+  // sequence is unreachable in practice. If it ever happens anyway, the filter
+  // must NOT exit drop mode on the second hint and leak it as a visible user
+  // message — both silent runs (hint + assistant + tool_use + tool_result)
+  // must be fully swept up, and the boundary only fires on the next genuine
+  // user turn.
+  const before = userText('第一个问题');
+  const beforeAns = assistantText('第一个答案');
+  const after = userText('第二个问题');
+
+  const input: NormalizedMessage[] = [
+    before,
+    beforeAns,
+    silentHint('s1'),
+    assistantText('生成标题一'),
+    toolUse('set_session_title'),
+    toolResult(),
+    // Second silent turn fires immediately — no real user turn in between.
+    silentHint('s2'),
+    assistantText('生成标题二'),
+    toolUse('set_session_title'),
+    toolResult(),
+    after,
+  ];
+
+  assert.deepEqual(filterSilentRenameTurns(input), [before, beforeAns, after]);
+});
+
 test('filterSilentRenameTurns: user message that merely contains the prefix mid-string is NOT dropped', () => {
   // Only opens-with matches; a user pasting the hint as part of a longer
   // question without leading with it stays visible.

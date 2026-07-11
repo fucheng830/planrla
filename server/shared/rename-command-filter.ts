@@ -17,11 +17,13 @@ import { isSilentRenameHintContent } from '../../shared/renameCommand.js';
  *
  * Turn boundary: starting from a detected hint user message, every subsequent
  * row is dropped until the next message that carries `role === 'user'` (a real
- * user-authored text row) or the end of the array. This is safe because
- * provider adapters only assign `role: 'user'` to genuine user text —
- * tool_result rows, tool_use rows, and thinking rows never carry `role: 'user'`
- * (see claude-sessions.provider.ts normalizeMessage), so the trailing
- * tool_result of the silent turn is always swept up before the boundary fires.
+ * user-authored text row) or the end of the array. This is safe because every
+ * provider adapter assigns `role: 'user'` only to genuine user text — tool_use,
+ * tool_result, and thinking rows are role-less. This is a cross-provider
+ * contract: claude / codex / gemini / cursor / opencode all uphold it today
+ * (see claude-sessions.provider.ts normalizeMessage for the reference impl), and
+ * any future adapter added to providers/ MUST uphold the same rule, otherwise
+ * the trailing tool_result of a silent turn could leak past the boundary.
  */
 export function filterSilentRenameTurns(messages: NormalizedMessage[]): NormalizedMessage[] {
   if (messages.length === 0) {
@@ -49,11 +51,17 @@ export function filterSilentRenameTurns(messages: NormalizedMessage[]): Normaliz
     // rows never have role === 'user', so they are all dropped here, and the
     // boundary only fires on the next genuine user turn (or end of array).
     if (message.role === 'user') {
+      if (isSilentRenameHintContent(message.content)) {
+        // Back-to-back silent turns (unreachable today: realtime guards prevent
+        // adjacent silent rename runs from being persisted without a real user
+        // turn between them). If it ever happens anyway, stay in drop mode so
+        // the second hint is fully swept up rather than leaked as a visible
+        // user message — the next iteration keeps dropping until the run's
+        // tool_result lands, then the boundary fires on the following real row.
+        continue;
+      }
       skipping = false;
-      // The boundary message itself is a real user turn — keep it. (A hint
-      // back-to-back with another silent rename is impossible because the
-      // prefix is only ever produced by the rename flow, not user input; if
-      // it ever happened, the next iteration would re-enter skipping.)
+      // The boundary message itself is a real user turn — keep it.
       out.push(message);
     }
   }
