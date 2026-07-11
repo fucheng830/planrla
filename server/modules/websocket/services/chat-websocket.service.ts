@@ -78,6 +78,20 @@ function sendJson(ws: WebSocket, payload: unknown): void {
  * Protocol errors deliberately use their own `kind` (instead of the provider
  * `error` message kind) so the frontend can distinguish "your request was
  * invalid" from "the model run produced an error" without inspecting text.
+ *
+ * REQ-030 silent-tagging gap (intentional): pre-`startRun` errors emitted
+ * here (SESSION_ID_REQUIRED / SESSION_NOT_FOUND / UNSUPPORTED_PROVIDER /
+ * RUN_IN_PROGRESS) bypass `decorateAndRecordEvent`, so they are never tagged
+ * `silent:true` even when the triggering `chat.send` carried `options.silent`.
+ * This is unreachable from `useAutoRename`: it pre-validates every trigger
+ * condition before sending (session exists in the local store, provider has
+ * a spawn fn, sessionId is always set in `buildSilentRenameFrame`), and the
+ * backend's own `handleChatSend` reads `silent` only AFTER these branches
+ * return — so a silent send that reaches this fn would have to come from a
+ * caller that already violated those preconditions. Threading `silent` here
+ * would require hoisting the `data.options.silent` read above `sessionId`
+ * validation and passing it through every rejection branch, adding coupling
+ * for a path that is dead in practice. Document and move on.
  */
 function sendProtocolError(
   ws: WebSocket,

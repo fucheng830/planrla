@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { applyChatEvent } from './useChatRealtimeHandlers';
+import { applyChatEvent } from './applyChatEvent';
 import type { ServerEvent } from '../../../contexts/WebSocketContext';
 import type { LLMProvider } from '../../../types/app';
 import type { SessionStore } from '../../../stores/useSessionStore';
