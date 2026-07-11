@@ -31,16 +31,29 @@ export function createScheduler(deps: SchedulerDeps) {
   }
 
   function run(rootId: string): void {
-    const queued = taskStore.listQueuedTasks(rootId);
-    for (const task of queued) {
-      if (task.schedulerAdmitted) continue;
-      if (isTerminalStatus(task.status)) continue;
-      const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
-      if (!tpl) continue;
-      const all = taskStore.listTasks(rootId);
-      if (!hasSlot(task, tpl.maxConcurrency, all)) continue;
-      admit(task);
-      onAdmit(task.id);
+    // Loop until a full pass admits nothing new. An onAdmit hook may advance a
+    // user/autoAdvance stage (service.next resets schedulerAdmitted and moves
+    // the task to the next stage at status='queued'), which makes that task
+    // eligible for admission again on the very next pass. Re-querying each pass
+    // is what lets the scheduler admit the resulting agent stage in the same
+    // schedule() call without a re-trigger from the caller. The loop is bounded
+    // by the number of stages across all queued tasks (each pass either admits
+    // at least one task or terminates).
+    let admittedSomething = true;
+    while (admittedSomething) {
+      admittedSomething = false;
+      const queued = taskStore.listQueuedTasks(rootId);
+      for (const task of queued) {
+        if (task.schedulerAdmitted) continue;
+        if (isTerminalStatus(task.status)) continue;
+        const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+        if (!tpl) continue;
+        const all = taskStore.listTasks(rootId);
+        if (!hasSlot(task, tpl.maxConcurrency, all)) continue;
+        admit(task);
+        admittedSomething = true;
+        onAdmit(task.id);
+      }
     }
   }
 
