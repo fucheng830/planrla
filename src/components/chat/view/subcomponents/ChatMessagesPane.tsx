@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -124,13 +124,14 @@ export default function ChatMessagesPane({
   const allocatedKeysRef = useRef<Set<string>>(new Set());
   const generatedMessageKeyCounterRef = useRef(0);
 
-  // REQ-032 F3: 已测消息高度的滚动平均 → estimateSize。
-  // ① 让虚拟器预测量 spacer(getTotalSize)接近真实内容高度,缩短初始滚底 RAF 尾巴;
-  // ② 顺带缓解 REQ-031 的 estimateSize 虚高根因(不覆盖其 measureElement 重测工作)。
-  // 种子 104 = 原 estimateSize 常量。WeakSet 防同一元素多次计入。
+  // REQ-032 F3: 已测消息高度的滚动平均 → estimateSize(种子 104,首条测量前用之)。
+  // 让虚拟器预测量 spacer 更接近真实内容高度,缩短初始滚底 RAF 尾巴;顺带缓解
+  // REQ-031 的 estimateSize 虚高根因(不覆盖其 measureElement 重测工作)。
+  // 按 data-index 去重(同一逻辑消息滚回不重复计入);切会话时重置(见下方 effect)。
+  // 注:这是质心估计启发式(F3b 逐条缓存才是精确方案),双峰分布下会偏短,但仍远优于固定 104。
   const measuredHeightSumRef = useRef(0);
   const measuredCountRef = useRef(0);
-  const measuredElsRef = useRef<WeakSet<HTMLElement>>(new WeakSet());
+  const measuredKeysRef = useRef<Set<string>>(new Set());
 
   // Keep keys stable across prepends so existing MessageComponent instances retain local state.
   const getMessageKey = useCallback((message: ChatMessage) => {
@@ -166,14 +167,15 @@ export default function ChatMessagesPane({
     overscan: VIRTUALIZATION_OVERSCAN,
   });
 
-  // REQ-032 F3: 包一层 measureElement —— 在虚拟器测量之前,先把挂载元素实测高度
-  // 计入滚动平均。ref 回调只在元素挂载/卸载时触发;WeakSet 防同一元素重复计入。
-  // 注意:virtualizer 实例在 useVirtualizer 内部稳定,故 [virtualizer] 依赖稳定,
-  // measureAndTrack 引用稳定,ref 回调不会每渲染触发。
+  // REQ-032 F3: 包一层 measureElement —— 在虚拟器测量之前,按 data-index 把挂载元素
+  // 实测高度计入滚动平均。data-index 在同一 visibleMessages 内对每条消息稳定,故消息
+  // 滚出再滚回(新 DOM 节点)不会重复计入;virtualizer 实例稳定,故 [virtualizer] 依赖
+  // 稳定,measureAndTrack 引用稳定,ref 回调不会每渲染触发。
   const measureAndTrack = useCallback((el: HTMLElement | null) => {
-    if (el && !measuredElsRef.current.has(el)) {
-      measuredElsRef.current.add(el);
-      const height = el.getBoundingClientRect().height;
+    const idxAttr = el?.getAttribute('data-index') ?? null;
+    if (el && idxAttr !== null && !measuredKeysRef.current.has(idxAttr)) {
+      measuredKeysRef.current.add(idxAttr);
+      const height = el.offsetHeight;
       if (height > 0) {
         measuredHeightSumRef.current += height;
         measuredCountRef.current += 1;
@@ -181,6 +183,13 @@ export default function ChatMessagesPane({
     }
     virtualizer.measureElement(el);
   }, [virtualizer]);
+
+  // REQ-032 F3: 切换会话时重置测高统计,避免上一会话的平均高度污染下一会话的初始锚定。
+  useEffect(() => {
+    measuredHeightSumRef.current = 0;
+    measuredCountRef.current = 0;
+    measuredKeysRef.current = new Set();
+  }, [currentSessionId]);
 
   return (
     <div
