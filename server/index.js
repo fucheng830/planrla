@@ -66,6 +66,7 @@ import geminiRoutes from './routes/gemini.js';
 import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
+import { getKanban } from './modules/kanban/assembly.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -247,6 +248,9 @@ app.use('/api', enforceCommercialLicense);
 
 // Projects API Routes (protected)
 app.use('/api/projects', authenticateToken, projectModuleRoutes);
+
+// Kanban API Routes (protected) — assembled module sharing the central auth.db
+app.use('/api/tasks', authenticateToken, getKanban().router);
 
 // Git API Routes (protected)
 app.use('/api/git', authenticateToken, gitRoutes);
