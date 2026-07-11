@@ -23,7 +23,8 @@
     "files": "Dosyalar",
     "git": "Kaynak Kontrolü",
     "tasks": "Görevler",
-    "browser": "Browser"
+    "browser": "Browser",
+    "kanban": "Kanban"
   },
   "status": {
     "loading": "Yükleniyor...",
