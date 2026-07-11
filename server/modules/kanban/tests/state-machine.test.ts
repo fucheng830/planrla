@@ -115,3 +115,132 @@ test('next on terminal task throws', () => {
   service.cancel('r1', task.id);
   assert.throws(() => service.next('r1', task.id), /terminal/i);
 });
+
+test('jump moves to target stage', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [
+    { role: 'user', autoAdvance: false },
+    { role: 'user', autoAdvance: false },
+    { role: 'user', autoAdvance: false },
+  ]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  const after = service.jump('r1', task.id, 2);
+  assert.equal(after.currentStageIndex, 2);
+  assert.equal(after.status, 'waiting_user');
+});
+
+test('jump out of range throws', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user' }, { role: 'user' }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.throws(() => service.jump('r1', task.id, 5));
+  assert.throws(() => service.jump('r1', task.id, -1));
+});
+
+test('pause sets status to paused, resume returns to queued', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  const paused = service.pause('r1', task.id);
+  assert.equal(paused.status, 'paused');
+  const resumed = service.resume('r1', task.id);
+  assert.equal(resumed.status, 'queued');
+});
+
+test('resume on non-paused task throws', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.throws(() => service.resume('r1', task.id));
+});
+
+test('fail transitions to fail terminal status', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  const failed = service.fail('r1', task.id);
+  assert.equal(failed.status, 'fail');
+  assert.equal(failed.schedulerAdmitted, false);
+  assert.ok(failed.completedAt);
+});
+
+test('prev decreases currentStageIndex', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [
+    { role: 'user', autoAdvance: false },
+    { role: 'user', autoAdvance: false },
+  ]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  service.next('r1', task.id); // -> stage 1
+  const back = service.prev('r1', task.id); // -> stage 0
+  assert.equal(back.currentStageIndex, 0);
+  assert.equal(back.status, 'waiting_user');
+});
+
+test('prev at first stage throws', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: false }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.throws(() => service.prev('r1', task.id));
+});
+
+test('pause on terminal task throws', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: false }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  service.cancel('r1', task.id);
+  assert.throws(() => service.pause('r1', task.id));
+});
+
+test('full lifecycle: create -> next -> next -> complete', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [
+    { role: 'user', autoAdvance: false },
+    { role: 'user', autoAdvance: false },
+    { role: 'user', autoAdvance: false },
+  ]));
+  const t = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'start' });
+  assert.equal(t.currentStageIndex, 0);
+  const s1 = service.next('r1', t.id);
+  assert.equal(s1.currentStageIndex, 1);
+  const s2 = service.next('r1', t.id);
+  assert.equal(s2.currentStageIndex, 2);
+  const done = service.next('r1', t.id); // last stage next -> complete
+  assert.equal(done.status, 'success');
+});
+
+// === 翻译自 MindFS service_test.go ===
+
+test('auto_advance first stage marks stage run approved and queues task', () => {
+  // TestCreateTaskAutoAdvanceControlsQueueAdmission (auto branch)
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('auto', [{ role: 'user', autoAdvance: true }]));
+  const detail = service.createTask({ rootId: 'r1', taskTemplateId: 'auto', input: 'ship it' });
+  assert.equal(detail.status, 'queued');
+});
+
+test('manual next then auto_advance next drives status through queued/waiting_user', () => {
+  // TestCreateTaskAutoAdvanceControlsQueueAdmission (manual -> agent -> queued)
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('manual', [
+    { role: 'user', autoAdvance: false },
+    { role: 'agent', autoAdvance: false },
+  ]));
+  const detail = service.createTask({ rootId: 'r1', taskTemplateId: 'manual', input: 'broken button' });
+  assert.equal(detail.status, 'waiting_user');
+  const after = service.next('r1', detail.id);
+  assert.equal(after.status, 'queued');
+  assert.equal(after.currentStageIndex, 1);
+});
+
+test('complete on single waiting_user stage produces success terminal', () => {
+  // TestCompleteFinalWaitingTask
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('final', [{ role: 'user', autoAdvance: false }]));
+  const detail = service.createTask({ rootId: 'r1', taskTemplateId: 'final', input: 'done' });
+  assert.equal(detail.status, 'waiting_user');
+  const completed = service.complete('r1', detail.id);
+  assert.equal(completed.status, 'success');
+  assert.equal(completed.schedulerAdmitted, false);
+  assert.ok(completed.completedAt);
+});

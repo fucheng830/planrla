@@ -91,6 +91,62 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return taskStore.getTask(taskId)!;
   }
 
+  function prev(rootId: string, taskId: string): Task {
+    const task = requireNonTerminalTask(taskId);
+    if (task.currentStageIndex <= 0) {
+      throw new AppError('cannot prev on first stage', { code: 'INVALID_STAGE', statusCode: 400 });
+    }
+    const prevIndex = task.currentStageIndex - 1;
+    const tpl = requireTemplate(task.taskTemplateId);
+    const prevStage = tpl.stages[prevIndex].snapshot;
+    const now = new Date().toISOString();
+    taskStore.insertStageRun({
+      id: randomUUID(), taskId, stageIndex: prevIndex, stageName: prevStage.name,
+      role: prevStage.role, status: 'pending', createdAt: now, updatedAt: now,
+    });
+    const nextStatus: TaskStatus = prevStage.role === 'user' ? 'waiting_user' : 'queued';
+    taskStore.updateTaskStage(taskId, prevIndex, nextStatus);
+    return taskStore.getTask(taskId)!;
+  }
+
+  function jump(rootId: string, taskId: string, targetIndex: number): Task {
+    const task = requireNonTerminalTask(taskId);
+    const tpl = requireTemplate(task.taskTemplateId);
+    if (targetIndex < 0 || targetIndex >= tpl.stages.length) {
+      throw new AppError('目标阶段超出范围', { code: 'INVALID_STAGE', statusCode: 400 });
+    }
+    const now = new Date().toISOString();
+    const targetStage = tpl.stages[targetIndex].snapshot;
+    taskStore.insertStageRun({
+      id: randomUUID(), taskId, stageIndex: targetIndex, stageName: targetStage.name,
+      role: targetStage.role, status: 'pending', createdAt: now, updatedAt: now,
+    });
+    const nextStatus: TaskStatus = targetStage.role === 'user' ? 'waiting_user' : 'queued';
+    taskStore.updateTaskStage(taskId, targetIndex, nextStatus);
+    return taskStore.getTask(taskId)!;
+  }
+
+  function pause(rootId: string, taskId: string): Task {
+    requireNonTerminalTask(taskId);
+    taskStore.updateTaskStatus(taskId, 'paused');
+    return taskStore.getTask(taskId)!;
+  }
+
+  function resume(rootId: string, taskId: string): Task {
+    const task = requireTask(taskId);
+    if (task.status !== 'paused') {
+      throw new AppError('只能 resume 处于 paused 状态的任务', { code: 'INVALID_STATUS', statusCode: 400 });
+    }
+    taskStore.updateTaskStatus(taskId, 'queued');
+    return taskStore.getTask(taskId)!;
+  }
+
+  function fail(rootId: string, taskId: string): Task {
+    requireTask(taskId);
+    taskStore.updateTaskStatus(taskId, 'fail');
+    return taskStore.getTask(taskId)!;
+  }
+
   function requireTask(taskId: string): Task {
     const task = taskStore.getTask(taskId);
     if (!task) throw new AppError(`task ${taskId} not found`, { code: 'TASK_NOT_FOUND', statusCode: 404 });
@@ -116,7 +172,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tasks.reduce((max, t) => Math.max(max, t.taskNumber), 0) + 1;
   }
 
-  return { createTask, next, complete, cancel };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;
