@@ -1,14 +1,41 @@
 import { Router } from 'express';
 import type { KanbanService } from '@/modules/kanban/service.js';
+import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 
 export interface KanbanRouterDeps {
   service: KanbanService;
+  templateStore: TemplateStore;
 }
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service } = deps;
+  const { service, templateStore } = deps;
+
+  // --- templates (W4) ---
+  router.get('/templates', (_req, res) => {
+    res.json({ templates: templateStore.listTaskTemplates() });
+  });
+
+  router.get('/templates/:id', (req, res) => {
+    const tpl = templateStore.getTaskTemplate(req.params.id);
+    if (!tpl) return res.status(404).json({ message: 'template not found', code: 'TEMPLATE_NOT_FOUND' });
+    res.json({ template: tpl });
+  });
+
+  router.post('/templates', (req, res) => {
+    try {
+      const tpl = templateStore.saveTaskTemplate(req.body);
+      res.json({ template: tpl });
+    } catch (e: any) {
+      res.status(400).json({ message: e?.message ?? 'invalid template', code: 'TEMPLATE_INVALID' });
+    }
+  });
+
+  router.delete('/templates/:id', (req, res) => {
+    templateStore.deleteTaskTemplate(req.params.id);
+    res.json({ ok: true });
+  });
 
   router.get('/', (req, res) => {
     const rootId = String(req.query.rootId ?? '');

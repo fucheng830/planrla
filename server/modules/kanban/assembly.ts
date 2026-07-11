@@ -46,6 +46,6 @@ function buildKanban() {
       }
     },
   });
-  const router = createKanbanRouter({ service });
+  const router = createKanbanRouter({ service, templateStore });
   return { db, taskStore, templateStore, service, scheduler, runner, router };
 }

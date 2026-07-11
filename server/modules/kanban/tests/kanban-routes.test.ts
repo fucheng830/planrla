@@ -19,7 +19,7 @@ function setupApp() {
   const taskStore = createTaskStore({ db });
   const templateStore = createTemplateStore({ dir: join(tmpdir(), `route-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`) });
   const service = createKanbanService({ taskStore, templateStore });
-  const router = createKanbanRouter({ service });
+  const router = createKanbanRouter({ service, templateStore });
   const app = express();
   app.use(express.json());
   app.locals.wss = null;
