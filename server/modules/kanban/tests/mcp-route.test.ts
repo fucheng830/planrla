@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createKanbanMcpRouter } from '@/modules/kanban/mcp.route.js';
 import type { Task } from '@/modules/kanban/types.js';
 
-function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[] } = {}) {
+function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[]; throwOnNext?: boolean } = {}) {
   const task: Task = overrides.task ?? {
     id: 't1', taskNumber: 1, rootId: 'r1', taskTemplateId: 'tpl', createWorktree: true,
     currentStageIndex: 0, status: 'running', schedulerAdmitted: true, labels: [],
@@ -16,7 +16,10 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
   const prevCalls = overrides.prevCalls ?? [];
   const taskStore = { getTask: (id: string) => (id === task.id ? { ...task } : null) };
   const service = {
-    next: (_rootId: string, id: string) => { nextCalls.push(id); return { ...task, currentStageIndex: task.currentStageIndex + 1 }; },
+    next: (_rootId: string, id: string) => {
+      if (overrides.throwOnNext) throw new Error('cannot advance: terminal guard');
+      nextCalls.push(id); return { ...task, currentStageIndex: task.currentStageIndex + 1 };
+    },
     prev: (_rootId: string, id: string) => { prevCalls.push(id); return { ...task }; },
   };
   return {
@@ -115,4 +118,19 @@ test('unknown tool name returns JSON-RPC error -32601', async () => {
     params: { name: 'bogus', arguments: { taskId: 't1' } },
   });
   assert.equal(res.body.error.code, -32601);
+});
+
+test('tools/call returns -32603 internal error when service throws', async () => {
+  // Simulates service.next throwing (e.g. terminal-task guard / cannot-prev on
+  // first stage). The route's top-level try/catch must map any throw to the
+  // JSON-RPC -32603 internal-error code, surfacing the message, HTTP 200.
+  const app = appFor(fakeKanban({ throwOnNext: true }));
+  const res = await request(app).post('/api/mcp/kanban').send({
+    jsonrpc: '2.0', id: 9, method: 'tools/call',
+    params: { name: 'task_next', arguments: { taskId: 't1' } },
+  });
+  assert.equal(res.status, 200);
+  assert.ok(res.body.error, 'expected a JSON-RPC error');
+  assert.equal(res.body.error.code, -32603);
+  assert.match(res.body.error.message, /terminal guard/);
 });
