@@ -1,7 +1,18 @@
 import { Router } from 'express';
+import { appendFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
+
+// Debug log: append every MCP tool call so we can verify (via the log file) that
+// the agent actually invoked task_next. Written to ~/.planrla/kanban-mcp-debug.log.
+const MCP_DEBUG_LOG = join(homedir(), '.planrla', 'kanban-mcp-debug.log');
+function logMcpCall(name: string, taskId: string): void {
+  try { appendFileSync(MCP_DEBUG_LOG, `${new Date().toISOString()} tools/call name=${name} taskId=${taskId}\n`); }
+  catch { /* best-effort */ }
+}
 
 /**
  * In-process HTTP MCP server for the kanban self-drive agent (W4-T4).
@@ -81,6 +92,7 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
       if (msg.method === 'tools/call') {
         const name = msg.params?.name;
         const taskId = String(msg.params?.arguments?.taskId ?? '');
+        logMcpCall(name, taskId);
 
         if (!taskId) {
           return res.json(jsonRpcError(id, -32602, 'taskId required'));
