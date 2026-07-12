@@ -15,7 +15,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import crypto from 'crypto';
 import { promises as fs } from 'fs';
-import { appendFileSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { CLAUDE_FALLBACK_MODELS } from './modules/providers/list/claude/claude-models.provider.js';
@@ -550,9 +549,6 @@ async function queryClaudeSDK(command, options = {}, ws) {
     if (Object.keys(mcpServers).length > 0) {
       sdkOptions.mcpServers = mcpServers;
     }
-    // Debug: record what MCP servers the SDK actually receives + the cwd.
-    try { appendFileSync(path.join(os.homedir(), '.planrla', 'kanban-claude-sdk-debug.log'),
-      `${new Date().toISOString()} cwd=${options.cwd} mcpServers=${JSON.stringify(mcpServers)}\n`); } catch {}
 
     // Handle images - save to temp files and modify prompt
     const imageResult = await handleImages(command, options.images, options.cwd);
