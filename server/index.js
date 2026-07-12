@@ -66,6 +66,8 @@ import geminiRoutes from './routes/gemini.js';
 import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
+import { getKanban } from './modules/kanban/assembly.js';
+import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -233,6 +235,12 @@ app.get('/api/version/latest', async (req, res) => {
 // only, single user, read-only session data — see session-query-mcp.route.ts.
 app.use('/api/mcp/internal', sessionQueryMcpRoute);
 
+// Kanban MCP self-drive endpoint (W4-T4). Mounted BEFORE auth, same as
+// /api/mcp/internal above — the kanban agent runs in a git worktree and calls
+// task_next/task_prev/task_status over JSON-RPC with only a taskId arg. The
+// global express.json() at line ~164 parses the JSON-RPC body.
+app.use('/api/mcp/kanban', createKanbanMcpRouter({ getKanban: () => getKanban() }));
+
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
 
@@ -247,6 +255,9 @@ app.use('/api', enforceCommercialLicense);
 
 // Projects API Routes (protected)
 app.use('/api/projects', authenticateToken, projectModuleRoutes);
+
+// Kanban API Routes (protected) — assembled module sharing the central auth.db
+app.use('/api/tasks', authenticateToken, getKanban().router);
 
 // Git API Routes (protected)
 app.use('/api/git', authenticateToken, gitRoutes);

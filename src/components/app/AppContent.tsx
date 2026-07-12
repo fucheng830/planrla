@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from '../sidebar/view/Sidebar';
 import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
+import { KanbanProvider } from '../kanban';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/PaletteOpsContext';
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
@@ -246,32 +247,34 @@ function AppContentInner() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <MainContent
-          selectedProject={selectedProject}
-          selectedSession={selectedSession}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          ws={ws}
-          sendMessage={sendMessage}
-          isMobile={isMobile}
-          onMenuClick={() => setSidebarOpen(true)}
-          isLoading={isLoadingProjects}
-          onInputFocusChange={setIsInputFocused}
-          onSessionProcessing={markSessionProcessing}
-          onSessionIdle={markSessionIdle}
-          onSessionCompleted={markSessionCompleted}
-          processingSessions={processingSessions}
-          onNavigateToSession={(targetSessionId: string, options) =>
-            navigate(`/session/${targetSessionId}`, { replace: Boolean(options?.replace) })
-          }
-          onSessionEstablished={(targetSessionId, context) =>
-            registerOptimisticSession({ sessionId: targetSessionId, ...context })
-          }
-          onShowSettings={openSettings}
-          externalMessageUpdate={externalMessageUpdate}
-          newSessionTrigger={newSessionTrigger}
-          allPickerSessions={allPickerSessions}
-        />
+        <KanbanProvider rootId={selectedProject?.projectId ?? null}>
+          <MainContent
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            ws={ws}
+            sendMessage={sendMessage}
+            isMobile={isMobile}
+            onMenuClick={() => setSidebarOpen(true)}
+            isLoading={isLoadingProjects}
+            onInputFocusChange={setIsInputFocused}
+            onSessionProcessing={markSessionProcessing}
+            onSessionIdle={markSessionIdle}
+            onSessionCompleted={markSessionCompleted}
+            processingSessions={processingSessions}
+            onNavigateToSession={(targetSessionId: string, options) =>
+              navigate(`/session/${targetSessionId}`, { replace: Boolean(options?.replace) })
+            }
+            onSessionEstablished={(targetSessionId, context) =>
+              registerOptimisticSession({ sessionId: targetSessionId, ...context })
+            }
+            onShowSettings={openSettings}
+            externalMessageUpdate={externalMessageUpdate}
+            newSessionTrigger={newSessionTrigger}
+            allPickerSessions={allPickerSessions}
+          />
+        </KanbanProvider>
       </div>
 
       <CommandPalette
