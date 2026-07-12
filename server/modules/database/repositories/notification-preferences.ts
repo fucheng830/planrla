@@ -6,11 +6,17 @@
 
 import { getConnection } from '@/modules/database/connection.js';
 
+type WebhookChannel = {
+  enabled: boolean;
+  url: string;
+};
+
 type NotificationPreferences = {
   channels: {
     inApp: boolean;
     webPush: boolean;
     sound: boolean;
+    webhook: WebhookChannel;
   };
   events: {
     actionRequired: boolean;
@@ -24,6 +30,7 @@ const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     inApp: false,
     webPush: false,
     sound: true,
+    webhook: { enabled: false, url: '' },
   },
   events: {
     actionRequired: true,
@@ -31,6 +38,17 @@ const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     error: true,
   },
 };
+
+function normalizeWebhookChannel(value: unknown): WebhookChannel {
+  const source = value && typeof value === 'object' ? (value as Record<string, any>) : {};
+  const rawUrl = typeof source.url === 'string' ? source.url.trim() : '';
+  // Only accept http(s) URLs to avoid SSRF into file:// or other schemes.
+  const safeUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : '';
+  return {
+    enabled: source.enabled === true && safeUrl.length > 0,
+    url: safeUrl,
+  };
+}
 
 function normalizeNotificationPreferences(value: unknown): NotificationPreferences {
   const source = value && typeof value === 'object' ? (value as Record<string, any>) : {};
@@ -40,6 +58,7 @@ function normalizeNotificationPreferences(value: unknown): NotificationPreferenc
       inApp: source.channels?.inApp === true,
       webPush: source.channels?.webPush === true,
       sound: source.channels?.sound !== false,
+      webhook: normalizeWebhookChannel(source.channels?.webhook),
     },
     events: {
       actionRequired: source.events?.actionRequired !== false,

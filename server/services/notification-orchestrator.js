@@ -28,12 +28,18 @@ const cleanupOldEventKeys = () => {
   }
 };
 
-function shouldSendPush(preferences, event) {
-  const webPushEnabled = Boolean(preferences?.channels?.webPush);
+function isEventEnabled(preferences, event) {
   const prefEventKey = KIND_TO_PREF_KEY[event.kind];
-  const eventEnabled = prefEventKey ? Boolean(preferences?.events?.[prefEventKey]) : true;
+  return prefEventKey ? Boolean(preferences?.events?.[prefEventKey]) : true;
+}
 
-  return webPushEnabled && eventEnabled;
+function getWebhookConfig(preferences) {
+  const webhook = preferences?.channels?.webhook;
+  if (!webhook) return null;
+  // The normalizer already guarantees enabled implies a safe http(s) url, but
+  // defend in depth: require both fields here too.
+  if (!webhook.enabled || !webhook.url) return null;
+  return webhook;
 }
 
 function isDuplicate(event) {
@@ -209,6 +215,25 @@ async function sendWebPush(userId, event) {
   });
 }
 
+// Best-effort webhook delivery. Never throws — webhook failures are logged, not
+// propagated, so a misconfigured endpoint can never break the notification pipeline.
+async function sendWebhook(url, event) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event, timestamp: new Date().toISOString() })
+    });
+    if (!response.ok) {
+      console.error(
+        `[notification] webhook returned non-2xx ${response.status} for ${url}`
+      );
+    }
+  } catch (e) {
+    console.error('[notification] webhook send failed:', e?.message || e);
+  }
+}
+
 function notifyUserIfEnabled({ userId, event }) {
   if (!userId || !event) {
     return;
@@ -216,16 +241,30 @@ function notifyUserIfEnabled({ userId, event }) {
 
   const normalizedEvent = normalizeNotificationSession(event);
   const preferences = notificationPreferencesDb.getPreferences(userId);
-  if (!shouldSendPush(preferences, normalizedEvent)) {
-    return;
-  }
+
+  // Dedupe is shared across channels: a duplicate event is dropped entirely
+  // regardless of which channel would have carried it.
   if (isDuplicate(normalizedEvent)) {
     return;
   }
 
-  sendWebPush(userId, normalizedEvent).catch((err) => {
-    console.error('Web push send error:', err);
-  });
+  const eventEnabled = isEventEnabled(preferences, normalizedEvent);
+
+  // webPush channel
+  if (eventEnabled && Boolean(preferences?.channels?.webPush)) {
+    sendWebPush(userId, normalizedEvent).catch((err) => {
+      console.error('Web push send error:', err);
+    });
+  }
+
+  // webhook channel — independent of webPush. Best-effort: sendWebhook
+  // swallows its own errors, so fire-and-forget is safe.
+  if (eventEnabled) {
+    const webhook = getWebhookConfig(preferences);
+    if (webhook) {
+      sendWebhook(webhook.url, normalizedEvent);
+    }
+  }
 }
 
 function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'completed', sessionName = null }) {
@@ -264,5 +303,6 @@ export {
   createNotificationEvent,
   notifyUserIfEnabled,
   notifyRunStopped,
-  notifyRunFailed
+  notifyRunFailed,
+  sendWebhook
 };
