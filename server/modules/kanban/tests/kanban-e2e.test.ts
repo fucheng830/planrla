@@ -84,7 +84,7 @@ test('e2e: agent task admitted → mock spawn runs → aux extracted', async () 
   const got = taskStore.getTask(task.id);
   assert.ok(spawnCalled, 'mock spawn should be called for agent stage');
   assert.equal(got!.auxFlags.hasTodos, true, 'TodoWrite should set hasTodos');
-  assert.equal(got!.status, 'running', 'agent stage (non-autoAdvance) stays running after complete');
+  assert.equal(got!.status, 'success', 'self-drive agent stage (agentCanControlStage !== false) advances to success on completion');
   db.close();
 });
 

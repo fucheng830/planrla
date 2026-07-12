@@ -117,11 +117,21 @@ export function createRunner(deps: RunnerDeps) {
       },
       onComplete: () => {
         log(`[kanban-runner] complete task=${taskId}`);
-        if (stage.autoAdvance) {
+        // If the agent already self-advanced via the task_next MCP tool (stageIndex moved
+        // on) or the task reached a terminal state, do nothing — avoids double-advance.
+        const cur = taskStore.getTask(taskId);
+        const alreadyAdvanced = !cur || cur.currentStageIndex !== stageIndex;
+        const terminal = cur && (cur.status === 'success' || cur.status === 'fail' || cur.status === 'cancelled');
+        if (alreadyAdvanced || terminal) return;
+        // Completion fallback: advance so the loop always progresses even when the MCP
+        // self-drive tool wasn't discovered/used. Applies to autoAdvance stages and to
+        // self-drive agent stages (agentCanControlStage !== false). Human-review agent
+        // stages (agentCanControlStage === false) stay put for manual advance.
+        if (stage.autoAdvance || stage.agentCanControlStage !== false) {
           try {
             service.next(rootId, taskId);
           } catch (e) {
-            log(`[kanban-runner] auto-advance next failed: ${e}`);
+            log(`[kanban-runner] complete-advance next failed: ${e}`);
           }
         }
       },
