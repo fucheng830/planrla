@@ -3,6 +3,8 @@ import os from 'node:os';
 import { getConnection, projectsDb } from '@/modules/database/index.js';
 import { createTaskStore } from '@/modules/kanban/store.js';
 import { createTemplateStore } from '@/modules/kanban/template-store.js';
+import { createScheduleStore } from '@/modules/kanban/schedule-store.js';
+import { createKanbanCron } from '@/modules/kanban/cron-driver.js';
 import { createKanbanService } from '@/modules/kanban/service.js';
 import { createScheduler } from '@/modules/kanban/scheduler.js';
 import { createKanbanRouter } from '@/modules/kanban/kanban.routes.js';
@@ -65,6 +67,16 @@ function buildKanban() {
       }
     },
   });
-  const router = createKanbanRouter({ service, templateStore, scheduler });
-  return { db, taskStore, templateStore, service, scheduler, runner, router };
+  // W4-extras: cron-driven schedules. scheduleStore persists schedules; cronDriver
+  // registers them with node-cron. NOTE: cronDriver.start() is intentionally NOT
+  // called here yet — Task 5 wires startup + lifecycle. For now we only instantiate
+  // so the router receives valid deps and schedule CRUD can trigger reload().
+  const scheduleStore = createScheduleStore({ db });
+  const cronDriver = createKanbanCron({
+    scheduleStore,
+    service,
+    log: (m) => console.log(m),
+  });
+  const router = createKanbanRouter({ service, templateStore, scheduler, scheduleStore, cronDriver });
+  return { db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router };
 }

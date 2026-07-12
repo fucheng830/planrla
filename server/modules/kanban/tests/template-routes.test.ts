@@ -17,7 +17,12 @@ function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'kanban-tpl-route-'));
   const templateStore = createTemplateStore({ dir });
   const service = createKanbanService({ taskStore, templateStore });
-  const router = createKanbanRouter({ service, templateStore, scheduler: { schedule: () => {} } });
+  const router = createKanbanRouter({
+    service, templateStore,
+    scheduler: { schedule: () => {} },
+    scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
+    cronDriver: { reload: () => {} } as any,
+  });
   const app = express();
   app.use(express.json());
   app.locals.wss = null;

@@ -1,18 +1,25 @@
 import { Router } from 'express';
+import cron from 'node-cron';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
+import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
+import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notification-orchestrator.js';
 
 export interface KanbanRouterDeps {
   service: KanbanService;
   templateStore: TemplateStore;
   /** Triggered after any task mutation so the scheduler can admit newly-runnable agent stages. */
   scheduler: { schedule: (rootId: string) => void };
+  /** Persistence for cron-driven task schedules (W4-extras). */
+  scheduleStore: ScheduleStore;
+  /** Reload cron registrations after schedule CRUD. */
+  cronDriver: { reload: () => void };
 }
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service, templateStore, scheduler } = deps;
+  const { service, templateStore, scheduler, scheduleStore, cronDriver } = deps;
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {
@@ -43,6 +50,34 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     res.json({ ok: true });
   });
 
+  // --- schedules (W4-extras: cron-driven task creation) ---
+  // NOTE: must come BEFORE /:taskId routes to avoid path collision.
+  router.get('/schedules', (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    res.json({ schedules: scheduleStore.listSchedules(rootId) });
+  });
+
+  router.post('/schedules', (req, res) => {
+    const body = req.body ?? {};
+    if (!cron.validate(String(body.cronExpression ?? ''))) {
+      return res.status(400).json({ message: 'invalid cronExpression', code: 'SCHEDULE_INVALID_CRON' });
+    }
+    try {
+      const sch = scheduleStore.saveSchedule(body);
+      cronDriver.reload();
+      res.json({ schedule: sch });
+    } catch (e: any) {
+      res.status(400).json({ message: e?.message ?? 'invalid schedule', code: 'SCHEDULE_INVALID' });
+    }
+  });
+
+  router.delete('/schedules/:id', (req, res) => {
+    scheduleStore.deleteSchedule(req.params.id);
+    cronDriver.reload();
+    res.json({ ok: true });
+  });
+
   router.get('/', (req, res) => {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });
@@ -58,6 +93,22 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
       const task = service.createTask({ rootId, taskTemplateId, input: input ?? '' });
       scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
+      try {
+        const userId = (req as any)?.user?.userId ?? null;
+        notifyUserIfEnabled({
+          userId,
+          event: createNotificationEvent({
+            provider: 'kanban',
+            sessionId: task.id as any,
+            kind: 'task_created',
+            code: 'kanban.task.created',
+            meta: { taskNumber: task.taskNumber, rootId },
+            severity: 'info',
+          }),
+        });
+      } catch {
+        /* best-effort notification — never break the route */
+      }
       res.json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
@@ -80,6 +131,38 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
         : (service as any)[action](rootId, taskId);
       scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
+
+      // Notify on terminal / transitional task events (best-effort).
+      const notifyActions = ['complete', 'cancel', 'fail', 'next'];
+      if (notifyActions.includes(action)) {
+        const kind =
+          action === 'complete' ? 'task_completed' :
+          action === 'cancel' ? 'task_cancelled' :
+          action === 'fail' ? 'task_failed' :
+          'task_advanced';
+        try {
+          const userId = (req as any)?.user?.userId ?? null;
+          notifyUserIfEnabled({
+            userId,
+            event: createNotificationEvent({
+              provider: 'kanban',
+              sessionId: task.id as any,
+              kind,
+              code: `kanban.task.${kind}`,
+              meta: {
+                taskNumber: task.taskNumber,
+                rootId,
+                status: task.status,
+                stageIndex: task.currentStageIndex,
+              },
+              severity: action === 'fail' ? 'error' : 'info',
+            }),
+          });
+        } catch {
+          /* best-effort notification — never break the route */
+        }
+      }
+
       res.json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
