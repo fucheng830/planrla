@@ -540,9 +540,13 @@ async function queryClaudeSDK(command, options = {}, ws) {
       model: resolvedModel || options.model,
     });
 
-    // Load MCP configuration
-    const mcpServers = await loadMcpConfig(options.cwd);
-    if (mcpServers) {
+    // Load MCP configuration (~/.claude.json) + merge any caller-provided servers.
+    // The kanban runner injects the planrla-kanban MCP here so the agent can
+    // self-drive via the task_next/task_status tools, without relying on a
+    // worktree .mcp.json being auto-discovered.
+    const fileMcp = await loadMcpConfig(options.cwd);
+    const mcpServers = { ...(fileMcp || {}), ...(options.mcpServers || {}) };
+    if (Object.keys(mcpServers).length > 0) {
       sdkOptions.mcpServers = mcpServers;
     }
 

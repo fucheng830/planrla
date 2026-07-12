@@ -46,7 +46,7 @@ function buildKanban() {
     },
   });
   const auxBridge = createAuxBridge({ updateAuxFlags: taskStore.updateTaskAuxFlags });
-  const runner = createRunner({ taskStore, templateStore, service, auxBridge, resolveRootPath, worktreeSetup });
+  const runner = createRunner({ taskStore, templateStore, service, auxBridge, resolveRootPath, worktreeSetup, mcpBaseUrl });
   const scheduler = createScheduler({
     taskStore,
     templateStore,

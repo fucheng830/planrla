@@ -42,6 +42,9 @@ export interface RunnerDeps {
   spawnFns?: Record<string, SpawnFn>;
   /** W4: kanban-level worktree orchestrator (lazy, idempotent). Optional for back-compat. */
   worktreeSetup?: WorktreeSetup;
+  /** W4: kanban MCP base URL, injected as an mcpServer so the agent can self-drive
+   *  via task_next/task_status. If unset, no kanban MCP is injected. */
+  mcpBaseUrl?: string;
   log?: (msg: string) => void;
 }
 
@@ -54,6 +57,7 @@ export function createRunner(deps: RunnerDeps) {
     resolveRootPath,
     spawnFns = defaultSpawnFns,
     worktreeSetup,
+    mcpBaseUrl,
     log = () => {},
   } = deps;
 
@@ -147,6 +151,7 @@ export function createRunner(deps: RunnerDeps) {
         projectPath: cwd,
         model: stage.model,
         permissionMode,
+        mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
       } as any, writer);
     } catch (e: any) {
       taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
