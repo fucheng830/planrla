@@ -111,7 +111,7 @@ test('runAgentStage calls spawnFn with prompt + cwd + permissionMode', async () 
   await runner.runAgentStage('r1', task.id, 1);
   // W4: prompt is now rendered (base template + MCP self-drive preamble).
   assert.match(called.cmd, /^do the work/);
-  assert.equal(called.opts.permissionMode, 'default');
+  assert.equal(called.opts.permissionMode, 'bypassPermissions');
   assert.equal(called.opts.cwd, '/fake/path/r1');
   assert.ok(called.hasWriter);
   db.close();

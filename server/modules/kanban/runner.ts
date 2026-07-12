@@ -74,7 +74,7 @@ export function createRunner(deps: RunnerDeps) {
     const sessionKey = task.mainSessionKey ?? taskId;
     const providerSessionId = sessionMap.get(sessionKey);
     const rootPath = resolveRootPath(rootId);
-    const permissionMode: 'plan' | 'default' = stage.planMode ? 'plan' : 'default';
+    const permissionMode: 'plan' | 'bypassPermissions' = stage.planMode ? 'plan' : 'bypassPermissions';
 
     // W4: ensure worktree (lazy, idempotent) before resolving cwd. If the
     // orchestrator is absent (legacy callers/tests), fall back to the task's
@@ -134,6 +134,7 @@ export function createRunner(deps: RunnerDeps) {
       await spawnFn(prompt, {
         sessionId: providerSessionId,
         cwd,
+        projectPath: cwd,
         model: stage.model,
         permissionMode,
       } as any, writer);
