@@ -1,12 +1,13 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { kanbanApi } from './api';
-import type { Task, TaskTemplate } from './types';
+import type { Task, TaskTemplate, KanbanSchedule } from './types';
 
 interface KanbanContextValue {
   tasks: Task[];
   templates: TaskTemplate[];
   templatesById: Map<string, TaskTemplate>;
+  schedules: KanbanSchedule[];
   loading: boolean;
   error: string | null;
   rootId: string | null;
@@ -17,6 +18,9 @@ interface KanbanContextValue {
   reloadTemplates: () => Promise<void>;
   saveTemplate: (tpl: TaskTemplate) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
+  reloadSchedules: () => Promise<void>;
+  saveSchedule: (sch: KanbanSchedule) => Promise<void>;
+  deleteSchedule: (id: string) => Promise<void>;
 }
 
 const KanbanContext = createContext<KanbanContextValue | null>(null);
@@ -31,6 +35,7 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
   const { subscribe } = useWebSocket();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [schedules, setSchedules] = useState<KanbanSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +52,14 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     setLoading(true);
     setError(null);
     try {
-      const [t, tpl] = await Promise.all([kanbanApi.listTasks(rootId), kanbanApi.listTemplates()]);
+      const [t, tpl, sch] = await Promise.all([
+        kanbanApi.listTasks(rootId),
+        kanbanApi.listTemplates(),
+        kanbanApi.listSchedules(rootId),
+      ]);
       setTasks(t);
       setTemplates(tpl);
+      setSchedules(sch);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'failed to load kanban');
     } finally {
@@ -159,10 +169,46 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     }
   }, []);
 
+  const reloadSchedules = useCallback(async () => {
+    if (!rootId) return;
+    try {
+      setSchedules(await kanbanApi.listSchedules(rootId));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'schedules load failed');
+    }
+  }, [rootId]);
+
+  const saveSchedule = useCallback(
+    async (sch: KanbanSchedule) => {
+      if (!rootId) return;
+      try {
+        // Force the current project root so a stale payload can't cross-pollute.
+        const saved = await kanbanApi.saveSchedule({ ...sch, rootId });
+        setSchedules((prev) => {
+          const i = prev.findIndex((s) => s.id === saved.id);
+          return i === -1 ? [...prev, saved] : prev.map((s) => (s.id === saved.id ? saved : s));
+        });
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'saveSchedule failed');
+      }
+    },
+    [rootId],
+  );
+
+  const deleteSchedule = useCallback(async (id: string) => {
+    try {
+      await kanbanApi.deleteSchedule(id);
+      setSchedules((prev) => prev.filter((s) => s.id !== id));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'deleteSchedule failed');
+    }
+  }, []);
+
   const value: KanbanContextValue = {
     tasks,
     templates,
     templatesById,
+    schedules,
     loading,
     error,
     rootId,
@@ -173,6 +219,9 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     reloadTemplates,
     saveTemplate,
     deleteTemplate,
+    reloadSchedules,
+    saveSchedule,
+    deleteSchedule,
   };
 
   return <KanbanContext.Provider value={value}>{children}</KanbanContext.Provider>;

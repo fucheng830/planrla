@@ -24,6 +24,7 @@
     "emptyProject": "Select a project to view its kanban board.",
     "newTask": "New Task",
     "templates": "Templates",
+    "schedules": "Schedules",
     "refresh": "Refresh",
     "loading": "Loading…"
   },
@@ -75,5 +76,24 @@
     "noTemplates": "No templates yet.",
     "promptPlaceholder": "Prompt template. Use {{input}}, {{task_id}}, {{task_number}}, {{stage_name}}…",
     "maxConcurrency": "Max concurrency"
+  },
+  "schedules": {
+    "title": "Schedules",
+    "newSchedule": "New Schedule",
+    "noSchedules": "No schedules yet.",
+    "edit": "Edit",
+    "disabled": "disabled",
+    "templateMissing": "(template missing)",
+    "listHint": "{{template}} · input: {{input}}",
+    "cron": "Cron expression",
+    "cronPlaceholder": "0 9 * * * (daily 9am) or */5 * * * *",
+    "cronHint": "Standard 5-field: minute hour day month weekday",
+    "template": "Template",
+    "noTemplates": "No templates. Create one in the Templates editor first.",
+    "input": "Input",
+    "inputPlaceholder": "e.g. daily report",
+    "enabled": "Enabled",
+    "save": "Save",
+    "cancel": "Cancel"
   }
 }

@@ -5,6 +5,7 @@ import { Button } from '@/shared/view/ui';
 import { Board } from './Board';
 import { CreateTaskDialog } from './CreateTaskDialog';
 import { TaskTemplateEditor } from './TaskTemplateEditor';
+import { SchedulesDialog } from './SchedulesDialog';
 
 export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   const { t } = useTranslation('kanban');
@@ -14,6 +15,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   // owns focus. The buttons just toggle the flags on.
   const [showCreate, setShowCreate] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showSchedules, setShowSchedules] = useState(false);
 
   return (
     <div className={`${isVisible ? 'block' : 'hidden'} h-full`}>
@@ -27,6 +29,9 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
             </Button>
             <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)}>
               {t('panel.templates')}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowSchedules(true)}>
+              {t('panel.schedules')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => void refresh()}>
               {t('panel.refresh')}
@@ -47,6 +52,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
       {showTemplates && (
         <TaskTemplateEditor onClose={() => setShowTemplates(false)} />
       )}
+      {showSchedules && <SchedulesDialog onClose={() => setShowSchedules(false)} />}
     </div>
   );
 }
