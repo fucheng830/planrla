@@ -134,3 +134,16 @@ test('tools/call returns -32603 internal error when service throws', async () =>
   assert.equal(res.body.error.code, -32603);
   assert.match(res.body.error.message, /terminal guard/);
 });
+
+test('kanban MCP rejects non-loopback requests (403, loopback guard)', async () => {
+  const app = express();
+  app.use(express.json());
+  app.set('trust proxy', true); // make req.ip honor X-Forwarded-For
+  app.locals.wss = null;
+  app.use('/api/mcp/kanban', createKanbanMcpRouter(fakeKanban()));
+  const res = await request(app).post('/api/mcp/kanban')
+    .set('X-Forwarded-For', '192.168.1.50')
+    .send({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+  assert.equal(res.status, 403);
+  assert.match(JSON.stringify(res.body), /loopback-only/);
+});

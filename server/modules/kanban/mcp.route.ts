@@ -61,6 +61,18 @@ const KNOWN_TOOLS = new Set(['task_next', 'task_prev', 'task_status']);
 export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
   const router = Router();
 
+  // Loopback guard: this route is mounted before auth (the agent has no JWT), so
+  // restrict it to localhost — the kanban agent always calls from 127.0.0.1. Blocks
+  // LAN hosts from advancing/cancelling tasks when the server binds 0.0.0.0.
+  router.use((req, res, next) => {
+    const ip = req.ip ?? '';
+    const loopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+    if (!loopback) {
+      return res.status(403).json(jsonRpcError(null, -32001, `kanban MCP is loopback-only (got ${ip || 'unknown'})`));
+    }
+    next();
+  });
+
   router.post('/', async (req, res) => {
     const msg = req.body ?? {};
     const id = (msg && typeof msg === 'object' && 'id' in msg) ? msg.id : null;
