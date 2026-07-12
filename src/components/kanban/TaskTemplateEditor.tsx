@@ -5,10 +5,19 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useKanban } from './KanbanContext';
 import type { TaskTemplate, StageTemplate } from './types';
 
+function uuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // fallback for non-secure contexts (http on non-localhost) where crypto.randomUUID is unavailable
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 function newStage(role: 'user' | 'agent'): StageTemplate {
   return {
-    id: crypto.randomUUID(),
-    name: role === 'user' ? 'New user stage' : 'New agent stage',
+    id: uuid(),
+    name: role === 'user' ? '新用户阶段' : '新 Agent 阶段',
     role,
     autoAdvance: role === 'user',
     agent: role === 'agent' ? 'claude' : undefined,
@@ -21,8 +30,8 @@ function newStage(role: 'user' | 'agent'): StageTemplate {
 function emptyTemplate(): TaskTemplate {
   const s = newStage('user');
   return {
-    id: crypto.randomUUID(),
-    name: 'New template',
+    id: uuid(),
+    name: '新模板',
     maxConcurrency: 1,
     stages: [{ id: s.id, position: 0, snapshot: s }],
     createdAt: '',
