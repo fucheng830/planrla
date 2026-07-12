@@ -2,6 +2,7 @@ import { api } from '@/utils/api';
 import type {
   Task, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
+  KanbanSchedule,
 } from './types';
 
 // The generic api methods (api.get/post/delete) prepend `/api` themselves and
@@ -53,5 +54,21 @@ export const kanbanApi = {
   deleteTemplate: async (id: string): Promise<void> => {
     const res = await api.delete(`/tasks/templates/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error(`deleteTemplate failed: ${res.status}`);
+  },
+  listSchedules: async (rootId: string): Promise<KanbanSchedule[]> => {
+    const res = await api.get(`/tasks/schedules?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) throw new Error(`listSchedules failed: ${res.status}`);
+    const data = await res.json();
+    return data.schedules;
+  },
+  saveSchedule: async (sch: KanbanSchedule): Promise<KanbanSchedule> => {
+    const res = await api.post('/tasks/schedules', sch);
+    if (!res.ok) throw new Error(`saveSchedule failed: ${res.status}`);
+    const data = await res.json();
+    return data.schedule;
+  },
+  deleteSchedule: async (id: string): Promise<void> => {
+    const res = await api.delete(`/tasks/schedules/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`deleteSchedule failed: ${res.status}`);
   },
 };

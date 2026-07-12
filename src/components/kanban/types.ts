@@ -89,3 +89,15 @@ export interface TaskListResponse { tasks: Task[] }
 export interface TaskResponse { task: Task }
 export interface TemplateListResponse { templates: TaskTemplate[] }
 export interface TemplateResponse { template: TaskTemplate }
+
+export interface KanbanSchedule {
+  id: string;
+  rootId: string;
+  taskTemplateId: string;
+  cronExpression: string;
+  enabled: boolean;
+  input: string;
+  lastRunAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

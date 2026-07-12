@@ -68,15 +68,18 @@ function buildKanban() {
     },
   });
   // W4-extras: cron-driven schedules. scheduleStore persists schedules; cronDriver
-  // registers them with node-cron. NOTE: cronDriver.start() is intentionally NOT
-  // called here yet — Task 5 wires startup + lifecycle. For now we only instantiate
-  // so the router receives valid deps and schedule CRUD can trigger reload().
+  // registers them with node-cron.
   const scheduleStore = createScheduleStore({ db });
   const cronDriver = createKanbanCron({
     scheduleStore,
     service,
     log: (m) => console.log(m),
   });
+  // Register all enabled cron schedules on startup so they fire without waiting
+  // for a schedule CRUD (which triggers reload()). getKanban() is lazy (first
+  // /api/tasks request), so this runs on first kanban access — acceptable.
+  try { cronDriver.start(); }
+  catch (e: any) { console.error('[kanban-cron] start failed:', e?.message ?? e); }
   const router = createKanbanRouter({ service, templateStore, scheduler, scheduleStore, cronDriver });
   return { db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router };
 }
