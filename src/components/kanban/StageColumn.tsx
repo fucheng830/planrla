@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { StageTemplate } from './types';
 
 export function StageColumn({
@@ -10,19 +11,25 @@ export function StageColumn({
   index: number;
   children: ReactNode;
 }) {
+  const { t } = useTranslation('kanban');
   return (
     <div className="flex w-72 shrink-0 flex-col border-r border-border">
-      <div className="flex items-center justify-between px-3 py-2">
+      <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-background px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">#{index}</span>
+          <span className="font-mono text-xs text-muted-foreground">#{index}</span>
           <span className="text-sm font-medium">{stage.name}</span>
         </div>
         <span
-          className={`text-[10px] uppercase ${
+          className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide ${
             stage.role === 'agent' ? 'text-blue-500' : 'text-muted-foreground'
           }`}
         >
-          {stage.role}
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              stage.role === 'agent' ? 'bg-blue-500' : 'bg-muted-foreground/50'
+            }`}
+          />
+          {t(`role.${stage.role}`)}
           {stage.agent ? ` · ${stage.agent}` : ''}
         </span>
       </div>

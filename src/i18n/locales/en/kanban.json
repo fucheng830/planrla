@@ -1,0 +1,79 @@
+{
+  "status": {
+    "running": "Running",
+    "queued": "Queued",
+    "waiting": "Waiting",
+    "paused": "Paused",
+    "success": "Done",
+    "fail": "Failed",
+    "cancelled": "Cancelled",
+    "pending": "Pending"
+  },
+  "role": {
+    "user": "user",
+    "agent": "agent"
+  },
+  "aux": {
+    "ask": "Awaiting your answer",
+    "plan": "Has plan",
+    "todo": "Has TODOs",
+    "task": "Has subtasks",
+    "asking": "Awaiting"
+  },
+  "panel": {
+    "emptyProject": "Select a project to view its kanban board.",
+    "newTask": "New Task",
+    "templates": "Templates",
+    "refresh": "Refresh",
+    "loading": "Loading…"
+  },
+  "board": {
+    "emptyTasks": "No tasks yet. Create one from a template.",
+    "templateNotFound": "Template not found."
+  },
+  "detail": {
+    "task": "Task",
+    "stageLabel": "Stage {{i}} · {{name}} ({{role}}/{{agent}})",
+    "stageLabelNoAgent": "Stage {{i}} · {{name}} ({{role}})",
+    "flags": "Flags",
+    "worktree": "Worktree",
+    "input": "Input",
+    "prev": "Prev",
+    "next": "Next",
+    "pause": "Pause",
+    "resume": "Resume",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "jumpToStage": "Jump to stage",
+    "askedAgo": "agent asked · {{n}} min ago"
+  },
+  "create": {
+    "title": "New Task",
+    "template": "Template",
+    "noTemplates": "No templates. Create one in the Templates editor first.",
+    "input": "Input (passed to the task as {{input}})",
+    "inputPlaceholder": "e.g. implement feature X",
+    "inputHint": "Injected into the prompt as {{input}}",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "editor": {
+    "title": "Task Templates",
+    "newTemplate": "New Template",
+    "backToBoard": "← Back to board",
+    "stagesN": "{{count}} stages · concurrency {{n}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editing": "Editing: {{name}}",
+    "planMode": "plan mode",
+    "autoAdvance": "auto-advance",
+    "selfDrive": "self-drive (MCP)",
+    "addUserStage": "+ User stage",
+    "addAgentStage": "+ Agent stage",
+    "save": "Save",
+    "cancel": "Cancel",
+    "noTemplates": "No templates yet.",
+    "promptPlaceholder": "Prompt template. Use {{input}}, {{task_id}}, {{task_number}}, {{stage_name}}…",
+    "maxConcurrency": "Max concurrency"
+  }
+}

@@ -1,14 +1,16 @@
+import { useTranslation } from 'react-i18next';
 import { useKanban } from './KanbanContext';
 import { StageColumn } from './StageColumn';
 import { TaskCard } from './TaskCard';
 
 export function Board() {
+  const { t } = useTranslation('kanban');
   const { tasks, templatesById } = useKanban();
 
   if (tasks.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        No tasks yet. Create one from a template.
+        {t('board.emptyTasks')}
       </div>
     );
   }
@@ -18,7 +20,11 @@ export function Board() {
   const tplId = tasks[0].taskTemplateId;
   const tpl = templatesById.get(tplId);
   if (!tpl) {
-    return <div className="p-4 text-sm text-muted-foreground">Template not found.</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t('board.templateNotFound')}
+      </div>
+    );
   }
 
   const stages = tpl.stages;

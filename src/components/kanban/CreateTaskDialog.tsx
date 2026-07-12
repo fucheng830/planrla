@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle, Button, Input } from '@/shared/view/ui';
 import { useKanban } from './KanbanContext';
 
 export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation('kanban');
   const { templates, createTask } = useKanban();
   const [tplId, setTplId] = useState(templates[0]?.id ?? '');
   const [input, setInput] = useState('');
@@ -21,14 +23,16 @@ export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <DialogContent className="max-w-md p-6">
-        <DialogTitle className="sr-only">New Task</DialogTitle>
+        <DialogTitle className="sr-only">{t('create.title')}</DialogTitle>
         <div className="space-y-3">
-          <h2 className="text-base font-semibold">New Task</h2>
+          <h2 className="text-base font-semibold">{t('create.title')}</h2>
           <div>
-            <div className="mb-1 text-xs text-muted-foreground">Template</div>
+            <div className="mb-1 text-xs text-muted-foreground">
+              {t('create.template')}
+            </div>
             {templates.length === 0 ? (
               <div className="text-xs text-muted-foreground">
-                No templates. Create one in the Templates editor first.
+                {t('create.noTemplates')}
               </div>
             ) : (
               <select
@@ -36,9 +40,9 @@ export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
                 value={tplId}
                 onChange={(e) => setTplId(e.target.value)}
               >
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+                {templates.map((tp) => (
+                  <option key={tp.id} value={tp.id}>
+                    {tp.name}
                   </option>
                 ))}
               </select>
@@ -46,20 +50,23 @@ export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <div className="mb-1 text-xs text-muted-foreground">
-              Input (passed to the task as &#123;&#123;input&#125;&#125;)
+              {t('create.input')}
             </div>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. implement feature X"
+              placeholder={t('create.inputPlaceholder')}
             />
+            <div className="mt-1 font-mono text-xs text-muted-foreground">
+              {t('create.inputHint', { input: '{{input}}' })}
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              {t('create.cancel')}
             </Button>
             <Button disabled={!tplId} onClick={submit}>
-              Create
+              {t('create.submit')}
             </Button>
           </div>
         </div>
