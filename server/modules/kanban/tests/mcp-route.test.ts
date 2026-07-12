@@ -23,7 +23,7 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
     prev: (_rootId: string, id: string) => { prevCalls.push(id); return { ...task }; },
   };
   return {
-    getKanban: () => ({ service: service as any, taskStore: taskStore as any }),
+    getKanban: () => ({ service: service as any, taskStore: taskStore as any, scheduler: { schedule: () => {} } }),
     nextCalls, prevCalls,
   };
 }

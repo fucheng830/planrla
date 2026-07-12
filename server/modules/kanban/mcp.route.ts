@@ -23,7 +23,7 @@ const SERVER_INFO = { name: 'planrla-kanban', version: '0.1.0' } as const;
 
 export interface KanbanMcpDeps {
   /** Lazy getter — keeps getKanban() lazy (called only on tools/call). */
-  getKanban: () => { service: KanbanService; taskStore: TaskStore };
+  getKanban: () => { service: KanbanService; taskStore: TaskStore; scheduler: { schedule: (rootId: string) => void } };
 }
 
 function textResponse(text: string) {
@@ -89,7 +89,7 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
           return res.json(jsonRpcError(id, -32601, `unknown tool: ${name}`));
         }
 
-        const { service, taskStore } = deps.getKanban();
+        const { service, taskStore, scheduler } = deps.getKanban();
         const task = taskStore.getTask(taskId);
         if (!task) {
           return res.json(jsonRpcError(id, -32602, `task not found: ${taskId}`));
@@ -99,6 +99,12 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
         if (name === 'task_next') service.next(rootId, taskId);
         else if (name === 'task_prev') service.prev(rootId, taskId);
         // task_status: no mutation
+
+        // After a stage transition, admit any newly-runnable agent stage (e.g. the agent
+        // called task_next and landed on another agent stage, or jumped back to one).
+        if (name === 'task_next' || name === 'task_prev') {
+          scheduler.schedule(rootId);
+        }
 
         const after = taskStore.getTask(taskId);
         try {

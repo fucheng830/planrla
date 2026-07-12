@@ -6,11 +6,13 @@ import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 export interface KanbanRouterDeps {
   service: KanbanService;
   templateStore: TemplateStore;
+  /** Triggered after any task mutation so the scheduler can admit newly-runnable agent stages. */
+  scheduler: { schedule: (rootId: string) => void };
 }
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service, templateStore } = deps;
+  const { service, templateStore, scheduler } = deps;
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {
@@ -54,6 +56,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     }
     try {
       const task = service.createTask({ rootId, taskTemplateId, input: input ?? '' });
+      scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
       res.json({ task });
     } catch (e: any) {
@@ -75,6 +78,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
       const task = targetIndex !== undefined
         ? (service as any)[action](rootId, taskId, targetIndex)
         : (service as any)[action](rootId, taskId);
+      scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
       res.json({ task });
     } catch (e: any) {
