@@ -52,3 +52,7 @@
 - 删除操作前确认
 - 代码同步走 git,禁止服务器直接改源码
 - 文件卫生:每文件 ≤ 500 行;新功能每会话 ≤ 300 行;bug 修复每会话 ≤ 50 行
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md

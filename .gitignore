@@ -133,10 +133,6 @@ dev-debug.log
 *.sw?
 # OS specific
 
-# Task files
-tasks.json
-tasks/ 
-
 # Translations (un-ignore tasks.json for all locales — glob, no per-locale omissions)
 !src/i18n/locales/*/tasks.json
 
@@ -173,3 +169,7 @@ debug/*.png
 # Build artifacts (landing Astro cache + packaged server tarballs)
 landing/.astro/
 *.tar.gz
+
+# Task files
+# tasks.json
+# tasks/ 
