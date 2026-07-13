@@ -31,6 +31,19 @@ function emptySchedule(rootId: string, taskTemplateId: string): KanbanSchedule {
   };
 }
 
+// Permissive 5-field cron shape check. Each field is a comma-separated list of
+// terms; a term is "*", "n", "n-m", "n-m/s", "*/s", or a short token (JAN/MON…).
+// Intentionally loose on value ranges — the server's node-cron.validate() is the
+// final arbiter of semantics, so the frontend just catches obvious typos early.
+const CRON_TERM = '\\*(?:\\/\\d{1,3})?|(?:\\d{1,2}|[A-Za-z]{1,3})(?:-\\d{1,2}|-[A-Za-z]{1,3})?(?:\\/\\d{1,3})?';
+const CRON_FIELD_RE = new RegExp(`^(?:${CRON_TERM})(?:,(?:${CRON_TERM}))*$`);
+
+function isValidCron5(expr: string): boolean {
+  const fields = expr.trim().split(/\s+/);
+  if (fields.length !== 5) return false;
+  return fields.every((f) => CRON_FIELD_RE.test(f));
+}
+
 export function SchedulesDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('kanban');
   const { rootId, templates, schedules, saveSchedule, deleteSchedule } = useKanban();
@@ -134,6 +147,12 @@ function ScheduleForm({
   const { templates } = useKanban();
   const [s, setS] = useState<KanbanSchedule>(sch);
 
+  const cronValue = s.cronExpression.trim();
+  const cronValid = isValidCron5(cronValue);
+  const showCronError = cronValue.length > 0 && !cronValid;
+  const templateEmpty = s.taskTemplateId.trim().length === 0;
+  const canSave = cronValid && !templateEmpty;
+
   return (
     <div className="space-y-3">
       <div className="space-y-1">
@@ -143,8 +162,13 @@ function ScheduleForm({
           onChange={(e) => setS({ ...s, cronExpression: e.target.value })}
           placeholder={t('schedules.cronPlaceholder')}
           className="font-mono"
+          aria-invalid={showCronError || undefined}
         />
-        <div className="font-mono text-[10px] text-muted-foreground">{t('schedules.cronHint')}</div>
+        {showCronError ? (
+          <div className="text-[10px] text-destructive">{t('schedules.cronError')}</div>
+        ) : (
+          <div className="font-mono text-[10px] text-muted-foreground">{t('schedules.cronHint')}</div>
+        )}
       </div>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">{t('schedules.template')}</label>
@@ -184,7 +208,9 @@ function ScheduleForm({
         <Button variant="ghost" onClick={onCancel}>
           {t('schedules.cancel')}
         </Button>
-        <Button onClick={() => onSave(s)}>{t('schedules.save')}</Button>
+        <Button onClick={() => onSave(s)} disabled={!canSave}>
+          {t('schedules.save')}
+        </Button>
       </div>
     </div>
   );

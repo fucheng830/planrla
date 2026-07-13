@@ -88,6 +88,7 @@
     "cron": "Cron expression",
     "cronPlaceholder": "0 9 * * * (daily 9am) or */5 * * * *",
     "cronHint": "Standard 5-field: minute hour day month weekday",
+    "cronError": "Enter 5 fields: minute hour day month weekday (e.g. 0 9 * * *)",
     "template": "Template",
     "noTemplates": "No templates. Create one in the Templates editor first.",
     "input": "Input",

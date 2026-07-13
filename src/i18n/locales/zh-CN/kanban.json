@@ -88,6 +88,7 @@
     "cron": "Cron 表达式",
     "cronPlaceholder": "0 9 * * * (每天 9 点) 或 */5 * * * *",
     "cronHint": "标准 5 段式:分 时 日 月 周",
+    "cronError": "请输入 5 段:分 时 日 月 周(如 0 9 * * *)",
     "template": "模板",
     "noTemplates": "还没有模板,先在模板编辑器里创建一个。",
     "input": "输入",
