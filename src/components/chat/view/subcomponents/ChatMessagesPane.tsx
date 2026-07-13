@@ -300,7 +300,11 @@ export default function ChatMessagesPane({
             </div>
           )}
 
-          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+          {/* REQ-031: overflow:'clip' 裁掉消息内容溢出测量盒子之外的尾部(trailing margin/绝对
+              定位子元素)。virtualizer 的 getTotalSize 只累加 offsetHeight(不含 margin),但浏览器
+              把这截溢出计入 scrollHeight → spacer 下方出现大片可滚动空白。clip 把它裁掉。
+              用 clip 而非 hidden:clip 不创建滚动上下文,不破坏展开工具区的 sticky 表头。 */}
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%', overflow: 'clip' }}>
             {virtualizer.getVirtualItems().map((vItem) => {
               const message = visibleMessages[vItem.index];
               const prevMessage = vItem.index > 0 ? visibleMessages[vItem.index - 1] : null;
