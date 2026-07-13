@@ -38,7 +38,9 @@ backlog → ready → spec → plan → doing → review → accepted → releas
 ## 阶段细则
 
 ### ① 需求收集(BACKLOG.md)
-- 任何来源(口头/bug/想法/roadmap 拆解)→ PM 整理成条目,自增 REQ-NNN
+- 任何来源(口头/bug/想法/roadmap 拆解/用户反馈)→ PM 整理成条目,自增 REQ-NNN
+- **每条 REQ 必须标 `来源` 字段**(self / user:* / data / align:* / churn),取值规范见 [FEEDBACK_TRIAGE.md](./FEEDBACK_TRIAGE.md)。新 REQ 不标来源不进 ready。
+- 用户反馈类来源按 [FEEDBACK_TRIAGE.md](./FEEDBACK_TRIAGE.md) 的回溯 SOP 入池(每 release 周期一次)
 - **ready gate 四要素**:背景 + 目标 + 范围 + 验收标准草稿,缺一不进 brainstorming
 - roadmap 仅作分类锚(M1-M6 / P0-P1-P2),不细动
 
@@ -68,7 +70,8 @@ plan frontmatter 必须写 `REQ-ID: REQ-NNN`,与 BACKLOG 双向链接。
 - 记录:`releases/v0.x.x.md`(人工主题化);`CHANGELOG.md` 由 release-it 自动生成(commit 维度)
 
 ## 文件清单
-- `BACKLOG.md` — 需求池 SSOT
+- `BACKLOG.md` — 需求池 SSOT(`来源` 字段取值见 FEEDBACK_TRIAGE.md)
+- `FEEDBACK_TRIAGE.md` — 用户反馈 → REQ 入池 SOP(Loop 3 接入)
 - `templates/acceptance.md` — 验收清单模板(plan 末尾嵌入)
 - `templates/release-checklist.md` — 发版清单(单轨 7 步)
 - `releases/v0.x.x.md` — 每版本发版记录
