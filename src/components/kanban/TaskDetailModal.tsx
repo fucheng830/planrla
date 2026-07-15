@@ -176,8 +176,8 @@ export function TaskDetailModal({
               {t(`status.${s.labelKey}`)}
             </span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {task.taskTemplateName ?? task.taskTemplateId}
+          <div className="text-sm font-medium text-foreground">
+            {task.taskTemplateName || `#${task.taskNumber}`}
           </div>
           {stageLabel && (
             <div className="text-xs text-muted-foreground">{stageLabel}</div>

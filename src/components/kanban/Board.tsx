@@ -36,13 +36,20 @@ export function Board() {
 
   return (
     <div className="flex h-full overflow-x-auto">
-      {stages.map((s, i) => (
-        <StageColumn key={s.id} stage={s.snapshot} index={i}>
-          {(byStage[i] ?? []).map((t) => (
-            <TaskCard key={t.id} task={t} />
-          ))}
-        </StageColumn>
-      ))}
+      {stages.map((s, i) => {
+        const colTasks = byStage[i] ?? [];
+        return (
+          <StageColumn key={s.id} stage={s.snapshot} index={i}>
+            {colTasks.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/50 py-4 text-center text-[11px] text-muted-foreground/50">
+                {t('board.emptyColumn')}
+              </div>
+            ) : (
+              colTasks.map((tk) => <TaskCard key={tk.id} task={tk} />)
+            )}
+          </StageColumn>
+        );
+      })}
     </div>
   );
 }

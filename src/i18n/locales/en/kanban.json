@@ -30,6 +30,7 @@
   },
   "board": {
     "emptyTasks": "No tasks yet. Create one from a template.",
+    "emptyColumn": "No tasks",
     "templateNotFound": "Template not found."
   },
   "detail": {

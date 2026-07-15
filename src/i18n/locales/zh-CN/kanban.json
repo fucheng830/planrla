@@ -30,6 +30,7 @@
   },
   "board": {
     "emptyTasks": "还没有任务,从模板创建一个吧",
+    "emptyColumn": "暂无任务",
     "templateNotFound": "找不到模板"
   },
   "detail": {
