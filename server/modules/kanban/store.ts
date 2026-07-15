@@ -1,5 +1,5 @@
 import type { Database as DB } from 'better-sqlite3';
-import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
+import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus, PendingAskUser } from '@/modules/kanban/types.js';
 import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
 
 export interface TaskStoreDeps {
@@ -15,6 +15,10 @@ export interface CreateTaskInput {
 export function createTaskStore(deps: TaskStoreDeps) {
   const { db } = deps;
   db.exec(SCHEMA_SQL);
+  // Migration: add pending_ask_user column for existing DBs (REQ-038). CREATE
+  // TABLE IF NOT EXISTS won't add the column to an already-created table, so
+  // we probe PRAGMA table_info and ALTER when missing. Idempotent.
+  migrateAddColumn(db, 'tasks', 'pending_ask_user', 'TEXT');
 
   const createTask = db.transaction((input: CreateTaskInput): Task => {
     const t = input.task;
@@ -24,12 +28,14 @@ export function createTaskStore(deps: TaskStoreDeps) {
        current_stage_index, status, scheduler_admitted, main_session_key,
        worktree_root_id, labels_json,
        aux_ask_user_waiting, aux_has_plan, aux_has_todos, aux_has_task, aux_session_error,
+       pending_ask_user,
        created_at, updated_at, completed_at)
       VALUES (@id,@taskNumber,@rootId,@taskTemplateId,@taskTemplateName,
         @createWorktree,@worktreeBranchMode,@worktreeBranch,@worktreePath,
         @currentStageIndex,@status,@schedulerAdmitted,@mainSessionKey,
         @worktreeRootId,@labelsJson,
         @askUserWaiting,@hasPlan,@hasTodos,@hasTask,@sessionError,
+        @pendingAskUser,
         @createdAt,@updatedAt,@completedAt)`)
       .run({
         ...t,
@@ -47,6 +53,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
         hasTodos: t.auxFlags.hasTodos ? 1 : 0,
         hasTask: t.auxFlags.hasTask ? 1 : 0,
         sessionError: t.auxFlags.sessionError ?? null,
+        pendingAskUser: null,
         completedAt: t.completedAt ?? null,
       });
 
@@ -137,6 +144,10 @@ export function createTaskStore(deps: TaskStoreDeps) {
     if (flags.hasTodos !== undefined) { sets.push('aux_has_todos = @hasTodos'); params.hasTodos = flags.hasTodos ? 1 : 0; }
     if (flags.hasTask !== undefined) { sets.push('aux_has_task = @hasTask'); params.hasTask = flags.hasTask ? 1 : 0; }
     if (flags.sessionError !== undefined) { sets.push('aux_session_error = @sessionError'); params.sessionError = flags.sessionError; }
+    if (flags.pendingAskUser !== undefined) {
+      sets.push('pending_ask_user = @pendingAskUser');
+      params.pendingAskUser = flags.pendingAskUser === null ? null : JSON.stringify(flags.pendingAskUser);
+    }
     if (sets.length === 0) return;
     sets.push('updated_at = @updatedAt');
     db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = @taskId`).run(params);
@@ -183,6 +194,7 @@ interface TaskRow {
   labels_json: string;
   aux_ask_user_waiting: number; aux_has_plan: number;
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
+  pending_ask_user: string | null;
   created_at: string; updated_at: string; completed_at: string | null;
 }
 
@@ -194,6 +206,29 @@ function parseLabels(labelsJson: string | null | undefined): string[] {
     labels = [];
   }
   return labels;
+}
+
+/** Deserialize the pending AskUserQuestion payload. Returns null on missing or
+ * corrupt JSON so a bad row never blocks task reads (REQ-038). */
+function parsePendingAskUser(raw: string | null | undefined): PendingAskUser | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.requestId !== 'string') return null;
+    return parsed as PendingAskUser;
+  } catch {
+    return null;
+  }
+}
+
+/** Idempotent column migration for pre-existing SQLite DBs. CREATE TABLE IF
+ * NOT EXISTS won't add a new column to an existing table, so probe the schema
+ * and ALTER when the column is missing. */
+function migrateAddColumn(db: DB, table: string, column: string, decl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (cols.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
 }
 
 function rowToTask(row: TaskRow): Task {
@@ -217,6 +252,7 @@ function rowToTask(row: TaskRow): Task {
       hasTodos: Boolean(row.aux_has_todos),
       hasTask: Boolean(row.aux_has_task),
       sessionError: row.aux_session_error ?? undefined,
+      pendingAskUser: parsePendingAskUser(row.pending_ask_user),
     },
     createdAt: row.created_at, updatedAt: row.updated_at,
     completedAt: row.completed_at ?? undefined,
@@ -267,6 +303,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   aux_has_todos INTEGER NOT NULL DEFAULT 0,
   aux_has_task INTEGER NOT NULL DEFAULT 0,
   aux_session_error TEXT,
+  pending_ask_user TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   completed_at TEXT

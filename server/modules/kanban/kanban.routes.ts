@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import cron from 'node-cron';
 import type { KanbanService } from '@/modules/kanban/service.js';
+import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
@@ -8,6 +9,7 @@ import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notific
 
 export interface KanbanRouterDeps {
   service: KanbanService;
+  taskStore: TaskStore;
   templateStore: TemplateStore;
   /** Triggered after any task mutation so the scheduler can admit newly-runnable agent stages. */
   scheduler: { schedule: (rootId: string) => void };
@@ -15,11 +17,14 @@ export interface KanbanRouterDeps {
   scheduleStore: ScheduleStore;
   /** Reload cron registrations after schedule CRUD. */
   cronDriver: { reload: () => void };
+  /** Resolves a pending Claude SDK tool approval (AskUserQuestion). The kanban
+   * answer route forwards the user's selected answers here as updatedInput. */
+  resolveToolApproval: (requestId: string, decision: { allow: boolean; updatedInput?: unknown; message?: string }) => void;
 }
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service, templateStore, scheduler, scheduleStore, cronDriver } = deps;
+  const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveToolApproval } = deps;
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {
@@ -120,6 +125,36 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     router.post(`/:taskId/${action}`, (req, res) => handleMove(req, res, action));
   }
   router.post('/:taskId/jump', (req, res) => handleMove(req, res, 'jump', Number(req.body?.targetIndex)));
+
+  // REQ-038: answer a pending AskUserQuestion inline from the kanban board.
+  // Resolves the agent's pending tool approval with the user's selected
+  // answers as updatedInput, then clears the pending flag so the modal stops
+  // showing the question.
+  router.post('/:taskId/answer', (req, res) => {
+    const taskId = req.params.taskId;
+    const rootId = String(req.body?.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(taskId);
+    if (!task || task.rootId !== rootId) {
+      return res.status(404).json({ message: 'task not found', code: 'TASK_NOT_FOUND' });
+    }
+    const pending = task.auxFlags.pendingAskUser;
+    if (!pending || !pending.requestId) {
+      return res.status(400).json({ message: 'no pending question', code: 'NO_PENDING_QUESTION' });
+    }
+    try {
+      resolveToolApproval(pending.requestId, {
+        allow: true,
+        updatedInput: req.body?.answers,
+      });
+      taskStore.updateTaskAuxFlags(taskId, { askUserWaiting: false, pendingAskUser: null });
+      const updated = taskStore.getTask(taskId)!;
+      broadcastTaskUpdated(req.app.locals.wss, rootId, updated);
+      res.json({ task: updated });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message ?? 'answer failed', code: e?.code ?? 'ANSWER_FAILED' });
+    }
+  });
 
   function handleMove(req: any, res: any, action: string, targetIndex?: number) {
     const rootId = String(req.body?.rootId ?? '');

@@ -12,6 +12,7 @@ import { createAuxBridge } from '@/modules/kanban/aux-bridge.js';
 import { createRunner } from '@/modules/kanban/runner.js';
 import { createWorktreeGit } from '@/modules/kanban/git-worktree.js';
 import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
+import { resolveToolApproval } from '@/claude-sdk.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -80,6 +81,6 @@ function buildKanban() {
   // /api/tasks request), so this runs on first kanban access — acceptable.
   try { cronDriver.start(); }
   catch (e: any) { console.error('[kanban-cron] start failed:', e?.message ?? e); }
-  const router = createKanbanRouter({ service, templateStore, scheduler, scheduleStore, cronDriver });
+  const router = createKanbanRouter({ service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveToolApproval });
   return { db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router };
 }

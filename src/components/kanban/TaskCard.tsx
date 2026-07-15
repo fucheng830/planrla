@@ -31,6 +31,11 @@ export function TaskCard({ task }: { task: Task }) {
         <div className="mt-1 truncate text-muted-foreground">
           {task.taskTemplateName ?? task.taskTemplateId}
         </div>
+        {task.auxFlags.askUserWaiting && (
+          <div className="mt-1 text-[11px] font-medium text-purple-600 dark:text-purple-400">
+            {t('answer.cta')}
+          </div>
+        )}
         <div className="mt-1">
           <AuxBadges flags={task.auxFlags} />
         </div>

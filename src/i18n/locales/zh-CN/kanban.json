@@ -48,6 +48,13 @@
     "jumpToStage": "跳转到阶段",
     "askedAgo": "agent 提了问题 · {{n}} 分钟前"
   },
+  "answer": {
+    "title": "Agent 在等你决定",
+    "submit": "提交答复",
+    "submitting": "提交中…",
+    "noOptions": "(agent 未提供可选项,请在原会话内文字回复)",
+    "cta": "Agent 在等你定 → 点击处理"
+  },
   "create": {
     "title": "新建任务",
     "template": "模板",

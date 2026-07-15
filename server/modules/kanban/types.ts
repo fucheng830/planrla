@@ -55,12 +55,25 @@ export interface TaskTemplate {
   updatedAt: string;
 }
 
+export interface PendingAskUser {
+  requestId: string;
+  /** Raw AskUserQuestion payload ({ questions: [...] }). Typed unknown — the
+   * shape comes from the provider SDK and is validated/rendered defensively
+   * on the frontend. */
+  questions: unknown;
+  capturedAt: string;
+}
+
 export interface TaskAuxFlags {
   askUserWaiting: boolean;
   hasPlan: boolean;
   hasTodos: boolean;
   hasTask: boolean;
   sessionError?: string;
+  /** When the agent calls AskUserQuestion, the bridge captures the requestId
+   * + questions payload here so the kanban UI can render an inline answer box.
+   * Cleared on answer / stage advance / cancel / complete. */
+  pendingAskUser?: PendingAskUser | null;
 }
 
 export interface Task {

@@ -48,6 +48,13 @@
     "jumpToStage": "Jump to stage",
     "askedAgo": "agent asked · {{n}} min ago"
   },
+  "answer": {
+    "title": "Agent is waiting for your decision",
+    "submit": "Submit answer",
+    "submitting": "Submitting…",
+    "noOptions": "(agent provided no options — answer in its session instead)",
+    "cta": "Agent is waiting → click to handle"
+  },
   "create": {
     "title": "New Task",
     "template": "Template",
