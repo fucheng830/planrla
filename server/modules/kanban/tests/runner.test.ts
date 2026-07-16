@@ -33,6 +33,7 @@ interface SetupOpts {
   mockSpawn: any;
   spawnFns?: Record<string, any>;
   worktreeSetup?: any;
+  stageTimeoutMs?: number;
 }
 
 function setup(opts: SetupOpts) {
@@ -51,6 +52,7 @@ function setup(opts: SetupOpts) {
     resolveRootPath,
     spawnFns: opts.spawnFns ?? { claude: opts.mockSpawn },
     worktreeSetup: opts.worktreeSetup,
+    stageTimeoutMs: opts.stageTimeoutMs,
     log: () => {},
   });
   return { db, taskStore, templateStore, service, runner };
@@ -286,5 +288,31 @@ test('runAgentStage renders prompt with MCP preamble containing taskId', async (
   // The MCP self-drive preamble instructs the agent to call task_next with the taskId.
   assert.match(seen[0]?.cmd ?? '', /task_next/);
   assert.match(seen[0]?.cmd ?? '', new RegExp(task.id));
+  db.close();
+});
+
+test('runAgentStage fails task on timeout when spawnFn hangs (no complete/error)', { timeout: 3000 }, async () => {
+  // Reproduces the "stuck running" failure mode: the provider's spawnFn never
+  // resolves and the writer never receives any message (e.g. Claude SDK hangs
+  // silently when the CLI binary is missing), so onComplete/onError never fire.
+  // Without a stage timeout the task stays "running" forever.
+  const hangingSpawn = () => new Promise<void>(() => {});
+  const { db, taskStore, templateStore, service, runner } = setup({
+    mockSpawn: hangingSpawn,
+    stageTimeoutMs: 50,
+  });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id); // → stage 1 (agent)
+
+  await runner.runAgentStage('r1', task.id, 1);
+
+  const got = taskStore.getTask(task.id);
+  assert.equal(got!.status, 'fail', 'task must leave running and be marked failed on hang');
+  assert.match(
+    String(got!.auxFlags.sessionError ?? ''),
+    /timed ?out|timeout/i,
+    'sessionError must record the timeout reason',
+  );
   db.close();
 });
