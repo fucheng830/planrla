@@ -174,6 +174,15 @@ export default tseslint.config(
           mode: "file",
         },
         {
+          type: "backend-root-runtime", // server-root-level runtime modules (not under server/modules) that modules legitimately depend on
+          pattern: [
+            "server/claude-sdk.{js,ts}",
+            "server/utils/kanban-websocket.{js,ts}",
+            "server/services/notification-orchestrator.{js,ts}",
+          ],
+          mode: "file",
+        },
+        {
           type: "backend-module", // logical element name used by boundaries rules below
           pattern: "server/modules/*", // each direct folder in server/modules is treated as one module boundary
           mode: "folder", // classify dependencies at folder-module level (not per individual file)

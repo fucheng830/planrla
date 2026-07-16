@@ -33,6 +33,14 @@ export const kanbanApi = {
     const data = (await res.json()) as TaskResponse;
     return data.task;
   },
+  // REQ-038: answer a pending AskUserQuestion inline. `answers` is forwarded as
+  // updatedInput to resolveToolApproval on the server.
+  answerTask: async (taskId: string, rootId: string, answers: unknown): Promise<Task> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/answer`, { rootId, answers });
+    if (!res.ok) throw new Error(`answer failed: ${res.status}`);
+    const data = (await res.json()) as TaskResponse;
+    return data.task;
+  },
   listTemplates: async (): Promise<TaskTemplate[]> => {
     const res = await api.get('/tasks/templates');
     if (!res.ok) throw new Error(`listTemplates failed: ${res.status}`);

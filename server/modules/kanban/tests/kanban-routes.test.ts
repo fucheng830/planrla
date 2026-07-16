@@ -20,10 +20,11 @@ function setupApp() {
   const templateStore = createTemplateStore({ dir: join(tmpdir(), `route-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`) });
   const service = createKanbanService({ taskStore, templateStore });
   const router = createKanbanRouter({
-    service, templateStore,
+    service, taskStore, templateStore,
     scheduler: { schedule: () => {} },
     scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
     cronDriver: { reload: () => {} } as any,
+    resolveToolApproval: () => {},
   });
   const app = express();
   app.use(express.json());

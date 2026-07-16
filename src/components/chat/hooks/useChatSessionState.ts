@@ -402,7 +402,7 @@ export function useChatSessionState({
         lastHeight = currentHeight;
       }
       frame++;
-      if (stableCount < 3 && frame < 60) {
+      if (stableCount < 3 && frame < 20) {
         rafId = requestAnimationFrame(tick);
       } else {
         pendingScrollRestoreRef.current = null;
@@ -454,7 +454,7 @@ export function useChatSessionState({
         lastHeight = container.scrollHeight;
       }
       frame++;
-      if (stableCount < 3 && frame < 60) {
+      if (stableCount < 3 && frame < 20) {
         rafId = requestAnimationFrame(tick);
       } else {
         pendingInitialScrollRef.current = false;

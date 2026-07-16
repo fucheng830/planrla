@@ -35,7 +35,19 @@ export function createAuxBridge(deps: AuxBridgeDeps) {
     const { kind, toolName } = msg;
 
     if (kind === 'permission_request' && toolName === 'AskUserQuestion') {
-      updateAuxFlags(taskId, { askUserWaiting: true });
+      // Capture the requestId + questions payload so the kanban UI can render
+      // an inline answer box (REQ-038). `msg.input` is the AskUserQuestion
+      // payload ({ questions: [...] }); guard defensively since the shape is
+      // provider-defined.
+      const input = msg.input;
+      updateAuxFlags(taskId, {
+        askUserWaiting: true,
+        pendingAskUser: {
+          requestId: String(msg.requestId ?? ''),
+          questions: input && typeof input === 'object' ? input : { questions: [] },
+          capturedAt: new Date().toISOString(),
+        },
+      });
       return;
     }
     if (kind === 'permission_request' && toolName === 'ExitPlanMode') {
