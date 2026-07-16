@@ -53,9 +53,9 @@ function mockExec(table) {
   };
 }
 
-test('gitReqCommits 解析 git log 输出为 hash 列表', () => {
-  const exec = mockExec([['--format=%H', 'aaa\nbbb\n']]);
-  assert.deepEqual(gitReqCommits('REQ-040', { exec }), ['aaa', 'bbb']);
+test('gitReqCommits 按 subject 过滤 REQ + 排除 docs/release', () => {
+  const exec = mockExec([['log --format', 'aaa feat(x): REQ-040 实现\nbbb docs(plan): 提到 REQ-040\nccc fix: REQ-040 修\nddd chore(release): v0.8.4 REQ-040']]);
+  assert.deepEqual(gitReqCommits('REQ-040', { exec }), ['aaa', 'ccc']);
 });
 
 test('gitReqCommits git 失败返回空数组', () => {
@@ -92,25 +92,25 @@ test('tagList 返回排序 tag', () => {
 });
 
 test('deriveTruth no-commit 分支', () => {
-  const exec = mockExec([['log', '']]);
+  const exec = mockExec([['log --format', '']]);
   assert.equal(deriveTruth('REQ-999', { exec }).status, 'no-commit');
 });
 
-test('deriveTruth released 分支(取最高 tag)', () => {
+test('deriveTruth released 分支(取首次 tag=最低)', () => {
   const exec = mockExec([
-    ['log --grep', 'aaa\n'],
+    ['log --format', 'aaa feat: REQ-040\n'],
     ['tag --contains', 'v0.8.3\nv0.8.4\n'],
     ['merge-base', ''],
     ['branch --contains', 'main\n'],
   ]);
   const t = deriveTruth('REQ-040', { exec });
   assert.equal(t.status, 'released');
-  assert.equal(t.version, 'v0.8.4');
+  assert.equal(t.version, 'v0.8.3');
 });
 
 test('deriveTruth unreleased-in-main 分支', () => {
   const exec = mockExec([
-    ['log --grep', 'aaa\n'],
+    ['log --format', 'aaa fix: REQ-040\n'],
     ['tag --contains', ''],
     ['merge-base', ''],
     ['branch --contains', 'main\n'],
@@ -120,7 +120,7 @@ test('deriveTruth unreleased-in-main 分支', () => {
 
 test('deriveTruth stranded 分支(只在 feature 分支)', () => {
   const exec = mockExec([
-    ['log --grep', 'aaa\n'],
+    ['log --format', 'aaa fix: REQ-040\n'],
     ['tag --contains', ''],
     ['merge-base', 'THROW'],
     ['branch --contains', 'feat/req040\n'],
@@ -164,7 +164,7 @@ test('ORPHAN: spec 有 backlog 无', () => {
 test('MISLABEL: backlog=ready 但 git released', () => {
   const entries = [{ id: 'REQ-031', claimedStatus: 'ready', raw: '| REQ-031 | x | ready |', section: 'Ready' }];
   const exec = mockExec([
-    ['log --grep', 'aaa\n'], ['tag --contains', 'v0.8.4\n'],
+    ['log --format', 'aaa feat: REQ-031\n'], ['tag --contains', 'v0.8.4\n'],
     ['merge-base', ''], ['branch --contains', 'main\n'],
   ]);
   const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec });
@@ -174,7 +174,7 @@ test('MISLABEL: backlog=ready 但 git released', () => {
 test('STRANDED: truth stranded', () => {
   const entries = [{ id: 'REQ-030', claimedStatus: 'spec', raw: '| REQ-030 | x | spec |', section: 'Backlog' }];
   const exec = mockExec([
-    ['log --grep', 'aaa\n'], ['tag --contains', ''],
+    ['log --format', 'aaa fix: REQ-030\n'], ['tag --contains', ''],
     ['merge-base', 'THROW'], ['branch --contains', 'feat/req030\n'],
   ]);
   const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec });
@@ -211,4 +211,18 @@ test('formatReport 有偏差列出每条', () => {
   assert.match(r, /检出 2 偏差/);
   assert.match(r, /\[MISLABEL\] REQ-031/);
   assert.match(r, /\[TAG-DRIFT\] v0.8.2/);
+});
+
+test('formatReport UNTRACKED-FEAT 默认折叠,verbose 展开', () => {
+  const deviations = [
+    { type: 'MISLABEL', id: 'REQ-031', detail: 'x' },
+    { type: 'UNTRACKED-FEAT', commit: 'aaa', detail: 'y' },
+    { type: 'UNTRACKED-FEAT', commit: 'bbb', detail: 'z' },
+  ];
+  const folded = formatReport({ deviations, scanned: 40 });
+  assert.match(folded, /检出 1 偏差\(\+2 UNTRACKED-FEAT 未展开\)/);
+  assert.ok(!/\[UNTRACKED-FEAT\]/.test(folded), '折叠时不逐条列');
+  const expanded = formatReport({ deviations, scanned: 40, verbose: true });
+  assert.match(expanded, /UNTRACKED-FEAT 展开/);
+  assert.match(expanded, /\[UNTRACKED-FEAT\] aaa/);
 });

@@ -4,6 +4,7 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // 默认 git 执行器(测试可注入 mock)
 const defaultExec = (cmd, opts) => execSync(cmd, { encoding: 'utf-8', ...opts });
@@ -42,11 +43,15 @@ export function parseBacklog(md) {
   return entries;
 }
 
-// 查某 REQ 的所有 commit hash
+// 查某 REQ 的所有实现 commit hash。只按 subject 匹配(不含 body),排除 docs/release 文档类。
 export function gitReqCommits(reqId, { cwd = process.cwd(), exec = defaultExec } = {}) {
   try {
-    const out = exec(`git log --grep="${reqId}" --format=%H`, { cwd });
-    return out.trim().split('\n').filter(Boolean);
+    const log = exec(`git log --format="%H %s"`, { cwd });
+    return log.split('\n').filter(Boolean)
+      .map(line => ({ hash: line.split(' ')[0], subject: line.slice(line.indexOf(' ') + 1) }))
+      .filter(c => new RegExp(`\\b${reqId}\\b`).test(c.subject))
+      .filter(c => !/^(docs\b|docs\(|chore\(release\)|docs\(release\))/i.test(c.subject))
+      .map(c => c.hash);
   } catch { return []; }
 }
 
@@ -87,7 +92,7 @@ export function deriveTruth(reqId, { cwd = process.cwd(), exec = defaultExec } =
   }
   if (allTags.size > 0) {
     const sorted = [...allTags].sort(compareSemver);
-    return { status: 'released', version: sorted[sorted.length - 1], commits };
+    return { status: 'released', version: sorted[0], commits };
   }
   if (inMain) return { status: 'unreleased-in-main', commits };
   const feat = [...branches].filter(b => b !== 'main' && !b.startsWith('('));
@@ -136,7 +141,7 @@ export function findDeviations({ backlogEntries, specsMap, cwd = process.cwd(), 
   }
   // SPEC-GAP: backlog 有(spec 之后状态)但无 spec/plan
   for (const [id, occs] of Object.entries(byId)) {
-    if (!specsMap[id] && occs.some(o => /spec|plan|doing|review|accepted|released/i.test(o.claimedStatus))) {
+    if (!specsMap[id] && occs.some(o => /spec|plan|doing|review|accepted/i.test(o.claimedStatus))) {
       deviations.push({ type: 'SPEC-GAP', id, detail: `BACKLOG=${occs[0].claimedStatus} 但无 spec/plan` });
     }
   }
@@ -165,6 +170,7 @@ export function findTagDrift({ cwd = process.cwd(), exec = defaultExec } = {}) {
   try {
     const log = exec(`git log --format="%H %s"`, { cwd });
     for (const line of log.split('\n')) {
+      if (!/chore\(release\)|docs\(release\)|bump/i.test(line)) continue; // 只看 release/bump 类 commit
       for (const v of line.matchAll(/v?0\.\d+\.\d+/g)) {
         const version = v[0].replace(/^v/, '');
         if (tags.has(version) || seen.has(version)) continue;
@@ -191,16 +197,58 @@ export function findUntrackedFeat({ cwd = process.cwd(), exec = defaultExec } = 
   return out;
 }
 
-// 人类可读报告
-export function formatReport({ deviations, scanned }) {
+// 人类可读报告。UNTRACKED-FEAT 默认折叠(统计信号,非待修项),--verbose 展开。
+export function formatReport({ deviations, scanned, verbose = false }) {
   if (!deviations || deviations.length === 0) {
     return `✓ 共扫 ${scanned} REQ,无偏差。`;
   }
-  const lines = [`REQ 状态校验 (git 单一真相) — 共扫 ${scanned} REQ,检出 ${deviations.length} 偏差:`, ''];
-  for (const d of deviations) {
+  const untracked = deviations.filter(d => d.type === 'UNTRACKED-FEAT');
+  const main = deviations.filter(d => d.type !== 'UNTRACKED-FEAT');
+  const shown = verbose ? deviations : main;
+  const suffix = untracked.length ? `(+${untracked.length} UNTRACKED-FEAT ${verbose ? '展开' : '未展开'})` : '';
+  const lines = [`REQ 状态校验 (git 单一真相) — 共扫 ${scanned} REQ,检出 ${main.length} 偏差${suffix}:`, ''];
+  for (const d of shown) {
     const head = d.id || d.version || d.commit || '';
     lines.push(`[${d.type}] ${head} ${d.detail}`);
   }
+  if (untracked.length && !verbose) lines.push('', `(${untracked.length} 个 feat/fix commit 未标 REQ,用 --verbose 查看)`);
   lines.push('', 'exit 1 (有偏差) · BACKLOG SSOT 未改动');
   return lines.join('\n');
+}
+
+// CLI 入口(只在直接运行时执行,测试 import 时跳过)。Windows 用 pathToFileURL 比较。
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const args = process.argv.slice(2);
+  const jsonOut = args.includes('--json');
+  const verbose = args.includes('--verbose');
+  const reqIdx = args.indexOf('--req');
+  const root = process.cwd();
+  const backlogPath = path.join(root, 'docs/process/BACKLOG.md');
+  if (!fs.existsSync(backlogPath)) {
+    console.error(`✗ 不在 planrla 根(找不到 ${backlogPath})`);
+    process.exit(2);
+  }
+  const backlogEntries = parseBacklog(fs.readFileSync(backlogPath, 'utf-8'));
+  const specsMap = parseSpecsPlans(path.join(root, 'docs/superpowers'));
+
+  // --req REQ-NNN: 单条诊断
+  if (reqIdx >= 0 && args[reqIdx + 1]) {
+    const id = args[reqIdx + 1];
+    const truth = deriveTruth(id);
+    console.log(JSON.stringify({ id, ...truth }, null, 2));
+    process.exit(0);
+  }
+
+  const deviations = [
+    ...findDeviations({ backlogEntries, specsMap }),
+    ...findTagDrift(),
+    ...findUntrackedFeat(),
+  ];
+  const scanned = new Set(backlogEntries.map(e => e.id)).size;
+  if (jsonOut) {
+    console.log(JSON.stringify({ scanned, deviations }, null, 2));
+  } else {
+    console.log(formatReport({ deviations, scanned, verbose }));
+  }
+  process.exit(deviations.length > 0 ? 1 : 0);
 }
