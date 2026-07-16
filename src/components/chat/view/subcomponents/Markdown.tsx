@@ -143,7 +143,7 @@ const markdownComponents = {
   ),
 };
 
-export function Markdown({ children, className }: MarkdownProps) {
+function MarkdownInner({ children, className }: MarkdownProps) {
   const content = normalizeInlineCodeFences(String(children ?? ''));
   const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], []);
   const rehypePlugins = useMemo(() => [rehypeKatex], []);
@@ -156,3 +156,8 @@ export function Markdown({ children, className }: MarkdownProps) {
     </div>
   );
 }
+
+// REQ-039 F1: memo skips re-parsing markdown when parent re-renders but content
+// string is unchanged (session switch re-renders all visible messages; without
+// memo each message re-runs remark/rehype/Prism even if content is identical).
+export const Markdown = React.memo(MarkdownInner);
