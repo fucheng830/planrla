@@ -335,6 +335,7 @@ function ChatInterface({
   // 确认后不自动发送本次消息——需用户再次点击发送（设计预期，见 spec）
   const guardedSubmit = useCallback(
     (event: Parameters<typeof handleSubmit>[0]) => {
+      event.preventDefault(); // 阻止 form 原生提交(否则页面 reload)
       if (needsPermissionAck) {
         setShowPermissionAck(true);
         return;

@@ -45,6 +45,11 @@ export interface RunnerDeps {
   /** W4: kanban MCP base URL, injected as an mcpServer so the agent can self-drive
    *  via task_next/task_status. If unset, no kanban MCP is injected. */
   mcpBaseUrl?: string;
+  /** Max wall-clock ms for a single agent stage before the runner fails it. Defends
+   *  against provider spawn hangs (e.g. Claude SDK hanging silently when the CLI
+   *  binary is missing — no message ever reaches the writer, so onComplete/onError
+   *  never fire and the task would otherwise stay "running" forever). Default 30 min. */
+  stageTimeoutMs?: number;
   log?: (msg: string) => void;
 }
 
@@ -58,6 +63,7 @@ export function createRunner(deps: RunnerDeps) {
     spawnFns = defaultSpawnFns,
     worktreeSetup,
     mcpBaseUrl,
+    stageTimeoutMs = Number(process.env.KANBAN_STAGE_TIMEOUT_MS) || 30 * 60 * 1000,
     log = () => {},
   } = deps;
 
@@ -144,18 +150,38 @@ export function createRunner(deps: RunnerDeps) {
       },
     });
 
+    let stageTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await spawnFn(prompt, {
-        sessionId: providerSessionId,
-        cwd,
-        projectPath: cwd,
-        model: stage.model,
-        permissionMode,
-        mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
-      } as any, writer);
+      await Promise.race([
+        spawnFn(prompt, {
+          sessionId: providerSessionId,
+          cwd,
+          projectPath: cwd,
+          model: stage.model,
+          permissionMode,
+          mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
+        } as any, writer),
+        new Promise<never>((_, reject) => {
+          stageTimer = setTimeout(
+            () => reject(new Error(`agent stage timed out after ${stageTimeoutMs}ms without completion`)),
+            stageTimeoutMs,
+          );
+        }),
+      ]);
     } catch (e: any) {
+      // Provider hang / timeout / reject: never leave the task stuck in "running".
+      // When a spawnFn neither resolves nor sends any writer message (e.g. Claude
+      // SDK hanging when the CLI binary is missing), onComplete/onError never fire —
+      // so we must fail the task ourselves to keep the board from wedging.
       taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
-      log(`[kanban-runner] spawn failed task=${taskId}: ${e}`);
+      try {
+        service.fail(rootId, taskId);
+      } catch (failErr) {
+        log(`[kanban-runner] post-fail service.fail error task=${taskId}: ${failErr}`);
+      }
+      log(`[kanban-runner] spawn failed/timeout task=${taskId}: ${e}`);
+    } finally {
+      if (stageTimer) clearTimeout(stageTimer);
     }
   }
 
