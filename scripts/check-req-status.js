@@ -156,3 +156,37 @@ export function findDeviations({ backlogEntries, specsMap, cwd = process.cwd(), 
   }
   return deviations;
 }
+
+// TAG-DRIFT: commit message 提到 vX.Y.Z(或 X.Y.Z)但无对应 tag。归一化去 v 比较。
+export function findTagDrift({ cwd = process.cwd(), exec = defaultExec } = {}) {
+  const tags = new Set(tagList({ cwd, exec }).map(t => t.replace(/^v/, '')));
+  const drift = [];
+  const seen = new Set();
+  try {
+    const log = exec(`git log --format="%H %s"`, { cwd });
+    for (const line of log.split('\n')) {
+      for (const v of line.matchAll(/v?0\.\d+\.\d+/g)) {
+        const version = v[0].replace(/^v/, '');
+        if (tags.has(version) || seen.has(version)) continue;
+        seen.add(version);
+        drift.push({ type: 'TAG-DRIFT', version: 'v' + version, commit: line.split(' ')[0], detail: `commit 提到 v${version} 但无对应 tag` });
+      }
+    }
+  } catch {}
+  return drift;
+}
+
+// UNTRACKED-FEAT: feat/fix commit 不带 REQ-NNN(漏标启发式)
+export function findUntrackedFeat({ cwd = process.cwd(), exec = defaultExec } = {}) {
+  const out = [];
+  try {
+    const log = exec(`git log --format="%H %s"`, { cwd });
+    for (const line of log.split('\n')) {
+      const m = line.match(/^[0-9a-f]+ (feat|fix)(\([^)]*\))?:\s*(.*)$/i);
+      if (m && !/REQ-\d{3}/.test(line)) {
+        out.push({ type: 'UNTRACKED-FEAT', commit: line.split(' ')[0], detail: `feat/fix 未标 REQ: ${m[3]}` });
+      }
+    }
+  } catch {}
+  return out;
+}

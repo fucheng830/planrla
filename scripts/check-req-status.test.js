@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans, findDeviations } from './check-req-status.js';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans, findDeviations, findTagDrift, findUntrackedFeat } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -179,4 +179,21 @@ test('STRANDED: truth stranded', () => {
   ]);
   const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec });
   assert.ok(d.find(x => x.type === 'STRANDED' && x.id === 'REQ-030'));
+});
+
+test('TAG-DRIFT: commit 提到 0.8.2(不带v) 但 tag 列表无', () => {
+  const exec = mockExec([
+    ['tag --list', 'v0.8.1\nv0.8.3\n'],
+    ['log --format', 'abc123 chore: bump 0.8.2\ndef456 chore(release): v0.8.3\n'],
+  ]);
+  const d = findTagDrift({ exec });
+  assert.ok(d.find(x => x.type === 'TAG-DRIFT' && x.version === 'v0.8.2'), '应抓到 v0.8.2 drift');
+  assert.ok(!d.find(x => x.version === 'v0.8.3'), 'v0.8.3 有 tag 不报');
+});
+
+test('UNTRACKED-FEAT: feat 不带 REQ', () => {
+  const exec = mockExec([['log --format', 'aaa feat(kanban): validate cron\nbbb fix(chat): REQ-031 x\n']]);
+  const d = findUntrackedFeat({ exec });
+  assert.equal(d.length, 1);
+  assert.equal(d[0].commit, 'aaa');
 });
