@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans } from './check-req-status.js';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans, findDeviations } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -140,4 +140,43 @@ test('parseSpecsPlans 从文件名提取 REQ 映射', () => {
   const m = parseSpecsPlans(tmp);
   assert.deepEqual(m['REQ-040'], { specs: ['2026-07-16-req040-status-design.md'], plans: ['2026-07-16-req040-status.md'] });
   assert.equal(m['REQ-038'], undefined);
+});
+
+test('ID-CONFLICT: 同 id 两条不同 raw', () => {
+  const entries = [
+    { id: 'REQ-030', claimedStatus: 'ready', raw: '| REQ-030 | a | ready |', section: 'Ready' },
+    { id: 'REQ-030', claimedStatus: 'spec', raw: '| REQ-030 | b | spec |', section: 'Backlog' },
+  ];
+  const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec: () => '' });
+  const conflict = d.find(x => x.type === 'ID-CONFLICT');
+  assert.ok(conflict && conflict.id === 'REQ-030');
+});
+
+test('ORPHAN: spec 有 backlog 无', () => {
+  const d = findDeviations({
+    backlogEntries: [],
+    specsMap: { 'REQ-038': { specs: ['x.md'], plans: [] } },
+    exec: () => '',
+  });
+  assert.ok(d.find(x => x.type === 'ORPHAN' && x.id === 'REQ-038'));
+});
+
+test('MISLABEL: backlog=ready 但 git released', () => {
+  const entries = [{ id: 'REQ-031', claimedStatus: 'ready', raw: '| REQ-031 | x | ready |', section: 'Ready' }];
+  const exec = mockExec([
+    ['log --grep', 'aaa\n'], ['tag --contains', 'v0.8.4\n'],
+    ['merge-base', ''], ['branch --contains', 'main\n'],
+  ]);
+  const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec });
+  assert.ok(d.find(x => x.type === 'MISLABEL' && x.id === 'REQ-031' && x.detail.includes('released@v0.8.4')));
+});
+
+test('STRANDED: truth stranded', () => {
+  const entries = [{ id: 'REQ-030', claimedStatus: 'spec', raw: '| REQ-030 | x | spec |', section: 'Backlog' }];
+  const exec = mockExec([
+    ['log --grep', 'aaa\n'], ['tag --contains', ''],
+    ['merge-base', 'THROW'], ['branch --contains', 'feat/req030\n'],
+  ]);
+  const d = findDeviations({ backlogEntries: entries, specsMap: {}, exec });
+  assert.ok(d.find(x => x.type === 'STRANDED' && x.id === 'REQ-030'));
 });

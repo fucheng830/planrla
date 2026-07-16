@@ -113,3 +113,46 @@ export function parseSpecsPlans(baseDir) {
   scan('plans', 'plans');
   return result;
 }
+
+// 拿 backlog 条目 + specs 映射 + git 真相对账,返回偏差数组
+export function findDeviations({ backlogEntries, specsMap, cwd = process.cwd(), exec = defaultExec }) {
+  const deviations = [];
+  const byId = {};
+  for (const e of backlogEntries) (byId[e.id] ??= []).push(e);
+  const knownIds = new Set(Object.keys(byId));
+
+  // ID-CONFLICT: 同 id 多条不同 raw
+  for (const [id, occs] of Object.entries(byId)) {
+    const uniqRaw = new Set(occs.map(o => o.raw));
+    if (uniqRaw.size > 1) {
+      deviations.push({ type: 'ID-CONFLICT', id, detail: `编号被 ${occs.length} 条占用`, entries: occs });
+    }
+  }
+  // ORPHAN: spec/plan 有但 backlog 无
+  for (const [id, files] of Object.entries(specsMap)) {
+    if (!knownIds.has(id)) {
+      deviations.push({ type: 'ORPHAN', id, detail: '有 spec/plan 无 BACKLOG 条目', files });
+    }
+  }
+  // SPEC-GAP: backlog 有(spec 之后状态)但无 spec/plan
+  for (const [id, occs] of Object.entries(byId)) {
+    if (!specsMap[id] && occs.some(o => /spec|plan|doing|review|accepted|released/i.test(o.claimedStatus))) {
+      deviations.push({ type: 'SPEC-GAP', id, detail: `BACKLOG=${occs[0].claimedStatus} 但无 spec/plan` });
+    }
+  }
+  // MISLABEL + STRANDED: 对每个 backlog id 推导 truth
+  for (const [id, occs] of Object.entries(byId)) {
+    const claimed = occs[0];
+    const truth = deriveTruth(id, { cwd, exec });
+    if (truth.status === 'released' && !/released/i.test(claimed.claimedStatus)) {
+      deviations.push({ type: 'MISLABEL', id, detail: `BACKLOG=${claimed.claimedStatus} → released@${truth.version}`, commit: truth.commits[0] });
+    }
+    if (truth.status === 'stranded') {
+      deviations.push({ type: 'STRANDED', id, detail: `有 commit 卡 ${truth.branches.join(',')} (未进 main)`, commit: truth.commits[0] });
+    }
+    if (truth.status === 'unreleased-in-main' && /released/i.test(claimed.claimedStatus)) {
+      deviations.push({ type: 'MISLABEL', id, detail: 'BACKLOG=released 但 git 仅 in-main 未进 tag' });
+    }
+  }
+  return deviations;
+}
