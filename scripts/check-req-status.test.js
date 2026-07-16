@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans, findDeviations, findTagDrift, findUntrackedFeat } from './check-req-status.js';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans, findDeviations, findTagDrift, findUntrackedFeat, formatReport } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -196,4 +196,19 @@ test('UNTRACKED-FEAT: feat 不带 REQ', () => {
   const d = findUntrackedFeat({ exec });
   assert.equal(d.length, 1);
   assert.equal(d[0].commit, 'aaa');
+});
+
+test('formatReport 无偏差', () => {
+  const r = formatReport({ deviations: [], scanned: 10 });
+  assert.match(r, /无偏差/);
+});
+
+test('formatReport 有偏差列出每条', () => {
+  const r = formatReport({ deviations: [
+    { type: 'MISLABEL', id: 'REQ-031', detail: 'ready → released@v0.8.4' },
+    { type: 'TAG-DRIFT', version: 'v0.8.2', detail: '无 tag' },
+  ], scanned: 40 });
+  assert.match(r, /检出 2 偏差/);
+  assert.match(r, /\[MISLABEL\] REQ-031/);
+  assert.match(r, /\[TAG-DRIFT\] v0.8.2/);
 });

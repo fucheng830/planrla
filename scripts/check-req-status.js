@@ -190,3 +190,17 @@ export function findUntrackedFeat({ cwd = process.cwd(), exec = defaultExec } = 
   } catch {}
   return out;
 }
+
+// 人类可读报告
+export function formatReport({ deviations, scanned }) {
+  if (!deviations || deviations.length === 0) {
+    return `✓ 共扫 ${scanned} REQ,无偏差。`;
+  }
+  const lines = [`REQ 状态校验 (git 单一真相) — 共扫 ${scanned} REQ,检出 ${deviations.length} 偏差:`, ''];
+  for (const d of deviations) {
+    const head = d.id || d.version || d.commit || '';
+    lines.push(`[${d.type}] ${head} ${d.detail}`);
+  }
+  lines.push('', 'exit 1 (有偏差) · BACKLOG SSOT 未改动');
+  return lines.join('\n');
+}
