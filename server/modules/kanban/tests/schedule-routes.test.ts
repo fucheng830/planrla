@@ -21,10 +21,11 @@ function setup() {
   const service = createKanbanService({ taskStore, templateStore });
   const reloadCalls: number[] = [];
   const router = createKanbanRouter({
-    service, templateStore,
+    service, taskStore, templateStore,
     scheduler: { schedule: () => {} },
     scheduleStore,
     cronDriver: { reload: () => { reloadCalls.push(1); } },
+    resolveToolApproval: () => {},
   });
   const app = express();
   app.use(express.json());

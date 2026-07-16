@@ -20,12 +20,40 @@ export type StageStatus =
 
 export type SessionReusePolicy = 'task_main' | 'same_stage' | 'always_new';
 
+/** AskUserQuestion option as emitted by the Claude SDK. Shape is provider-defined;
+ * label/description are the documented option fields. */
+export interface PendingAskUserOption {
+  label?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+/** A single question captured from a pending AskUserQuestion permission_request. */
+export interface PendingAskUserQuestion {
+  question?: string;
+  header?: string;
+  options?: PendingAskUserOption[];
+  multiSelect?: boolean;
+  [key: string]: unknown;
+}
+
+/** Full payload captured when an agent calls AskUserQuestion, persisted on the
+ * task so the kanban UI can render an inline answer box (REQ-038). */
+export interface PendingAskUser {
+  requestId: string;
+  /** AskUserQuestion payload: { questions: [...] }. Stored as unknown on the
+   * server; typed here for the frontend. */
+  questions: { questions?: PendingAskUserQuestion[] } & Record<string, unknown>;
+  capturedAt: string;
+}
+
 export interface TaskAuxFlags {
   askUserWaiting: boolean;
   hasPlan: boolean;
   hasTodos: boolean;
   hasTask: boolean;
   sessionError?: string;
+  pendingAskUser?: PendingAskUser | null;
 }
 
 export interface StageTemplate {

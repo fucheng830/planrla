@@ -26,15 +26,21 @@ function setup(): { auxBridge: ReturnType<typeof createAuxBridge>; updates: Capt
   return { auxBridge, updates };
 }
 
-test('Claude AskUserQuestion permission_request sets askUserWaiting=true', () => {
+test('Claude AskUserQuestion permission_request sets askUserWaiting=true and captures payload', () => {
   const { auxBridge, updates } = setup();
   auxBridge.handle('t1', {
     kind: 'permission_request',
     toolName: 'AskUserQuestion',
     requestId: 'r1',
-    input: {},
+    input: { questions: [{ question: 'pick one' }] },
   });
-  assert.deepEqual(updates[0], { taskId: 't1', flags: { askUserWaiting: true } });
+  // REQ-038: handler now also captures requestId + questions for inline answering.
+  assert.equal(updates[0].taskId, 't1');
+  assert.equal(updates[0].flags.askUserWaiting, true);
+  const pending = updates[0].flags.pendingAskUser as { requestId: string; questions: unknown; capturedAt: string };
+  assert.equal(pending.requestId, 'r1');
+  assert.deepEqual(pending.questions, { questions: [{ question: 'pick one' }] });
+  assert.ok(typeof pending.capturedAt === 'string');
 });
 
 test('Claude ExitPlanMode permission_request sets hasPlan=true', () => {

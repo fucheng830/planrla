@@ -1,8 +1,10 @@
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle, Button } from '@/shared/view/ui';
 import { useKanban } from './KanbanContext';
 import { AuxBadges, statusStyle } from './badges';
-import type { Task } from './types';
+import { kanbanApi } from './api';
+import type { PendingAskUserQuestion, Task } from './types';
 
 export function TaskDetailModal({
   task,
@@ -12,7 +14,7 @@ export function TaskDetailModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation('kanban');
-  const { templatesById, moveTask, jumpTask } = useKanban();
+  const { templatesById, moveTask, jumpTask, rootId, refresh } = useKanban();
   const tpl = templatesById.get(task.taskTemplateId);
   const s = statusStyle(task.status);
   const isTerminal =
@@ -20,6 +22,42 @@ export function TaskDetailModal({
     task.status === 'fail' ||
     task.status === 'cancelled';
   const stage = tpl?.stages[task.currentStageIndex]?.snapshot;
+
+  // REQ-038: inline AskUserQuestion answering.
+  const pending = task.auxFlags.pendingAskUser ?? null;
+  const questions: PendingAskUserQuestion[] = useMemo(
+    () => pending?.questions?.questions ?? [],
+    [pending],
+  );
+  // first question only (AskUserQuestion commonly carries one); multi-select
+  // picks a Set of labels, single-select picks one label.
+  const q0 = questions[0];
+  const [selected, setSelected] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const toggle = (label: string) => {
+    if (!q0?.multiSelect) {
+      setSelected([label]);
+      return;
+    }
+    setSelected((prev) =>
+      prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label],
+    );
+  };
+
+  const onSubmitAnswer = async () => {
+    if (!rootId || !pending || !q0) return;
+    setSubmitting(true);
+    try {
+      await kanbanApi.answerTask(task.id, rootId, { answers: selected });
+      await refresh();
+      onClose();
+    } catch {
+      // refresh surfaces the error via context; keep modal open on failure
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const onMove = (action: string) => {
     void moveTask(task.id, action);
@@ -74,6 +112,59 @@ export function TaskDetailModal({
           {t('detail.task')} #{task.taskNumber}
         </DialogTitle>
         <div className="space-y-3">
+          {pending && q0 && (
+            <div className="rounded-md border border-purple-500/30 bg-purple-500/5 p-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">
+                {t('answer.title')}
+              </div>
+              {q0.header && (
+                <div className="text-sm font-medium">{q0.header}</div>
+              )}
+              {q0.question && (
+                <div className="text-sm text-muted-foreground">{q0.question}</div>
+              )}
+              {q0.options && q0.options.length > 0 ? (
+                <div className="mt-2 space-y-1">
+                  {q0.options.map((opt, i) => {
+                    const label = opt.label ?? String(i);
+                    const active = selected.includes(label);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggle(label)}
+                        className={`w-full rounded border px-2 py-1 text-left text-xs transition-colors ${
+                          active
+                            ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300'
+                            : 'border-border hover:border-purple-500/40'
+                        }`}
+                      >
+                        <span className="font-medium">{label}</span>
+                        {opt.description && (
+                          <span className="ml-1 text-muted-foreground">
+                            — {opt.description}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-1 text-xs italic text-muted-foreground">
+                  {t('answer.noOptions')}
+                </div>
+              )}
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  onClick={onSubmitAnswer}
+                  disabled={submitting || selected.length === 0}
+                >
+                  {submitting ? t('answer.submitting') : t('answer.submit')}
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">
               {t('detail.task')} #{task.taskNumber}
@@ -85,8 +176,8 @@ export function TaskDetailModal({
               {t(`status.${s.labelKey}`)}
             </span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {task.taskTemplateName ?? task.taskTemplateId}
+          <div className="text-sm font-medium text-foreground">
+            {task.taskTemplateName || `#${task.taskNumber}`}
           </div>
           {stageLabel && (
             <div className="text-xs text-muted-foreground">{stageLabel}</div>

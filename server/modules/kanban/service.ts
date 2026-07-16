@@ -33,7 +33,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       taskTemplateId: tpl.id, taskTemplateName: tpl.name,
       createWorktree: true, currentStageIndex: 0,
       status: firstStatus, schedulerAdmitted: false,
-      labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false },
+      labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false, pendingAskUser: null },
       createdAt: now, updatedAt: now,
     };
     taskStore.createTask({
@@ -48,6 +48,13 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return taskStore.getTask(taskId)!;
   }
 
+  /** Clear a pending AskUserQuestion so its stale question stops rendering in
+   * the kanban modal. Called on stage advance / cancel / complete / fail (the
+   * approval resolver is dropped — the agent run for that stage is gone). */
+  function clearPendingAskUser(taskId: string): void {
+    taskStore.updateTaskAuxFlags(taskId, { askUserWaiting: false, pendingAskUser: null });
+  }
+
   function next(rootId: string, taskId: string): Task {
     const task = requireNonTerminalTask(taskId, rootId);
     const tpl = requireTemplate(task.taskTemplateId);
@@ -57,6 +64,9 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     if (currentRun) {
       taskStore.insertStageRun({ ...currentRun, id: randomUUID(), status: 'approved', finishedAt: now, updatedAt: now });
     }
+    // Stage advance invalidates any pending AskUserQuestion — clear it so a
+    // stale question doesn't keep rendering in the kanban modal (REQ-038).
+    clearPendingAskUser(taskId);
 
     const nextIndex = task.currentStageIndex + 1;
     if (nextIndex >= tpl.stages.length) {
@@ -78,6 +88,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     if (currentRun) {
       taskStore.insertStageRun({ ...currentRun, id: randomUUID(), status: 'approved', finishedAt: now, updatedAt: now });
     }
+    clearPendingAskUser(task.id);
     taskStore.updateTaskStatus(task.id, 'success');
     const updated = taskStore.getTask(task.id)!;
     onTerminal?.(updated);
@@ -95,6 +106,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
 
   function cancel(rootId: string, taskId: string): Task {
     requireTask(taskId, rootId);
+    clearPendingAskUser(taskId);
     taskStore.updateTaskStatus(taskId, 'cancelled');
     const updated = taskStore.getTask(taskId)!;
     onTerminal?.(updated);
@@ -110,6 +122,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     const tpl = requireTemplate(task.taskTemplateId);
     const prevStage = tpl.stages[prevIndex].snapshot;
     const now = new Date().toISOString();
+    clearPendingAskUser(taskId);
     taskStore.insertStageRun({
       id: randomUUID(), taskId, stageIndex: prevIndex, stageName: prevStage.name,
       role: prevStage.role, status: 'pending', createdAt: now, updatedAt: now,
@@ -127,6 +140,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     }
     const now = new Date().toISOString();
     const targetStage = tpl.stages[targetIndex].snapshot;
+    clearPendingAskUser(taskId);
     taskStore.insertStageRun({
       id: randomUUID(), taskId, stageIndex: targetIndex, stageName: targetStage.name,
       role: targetStage.role, status: 'pending', createdAt: now, updatedAt: now,
@@ -153,6 +167,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
 
   function fail(rootId: string, taskId: string): Task {
     requireNonTerminalTask(taskId, rootId);
+    clearPendingAskUser(taskId);
     taskStore.updateTaskStatus(taskId, 'fail');
     const updated = taskStore.getTask(taskId)!;
     onTerminal?.(updated);
