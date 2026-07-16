@@ -94,3 +94,22 @@ export function deriveTruth(reqId, { cwd = process.cwd(), exec = defaultExec } =
   if (feat.length) return { status: 'stranded', branches: feat, commits };
   return { status: 'unknown', commits };
 }
+
+// 扫 docs/superpowers/{specs,plans}/,提取 REQ-NNN → {specs:[], plans:[]}
+export function parseSpecsPlans(baseDir) {
+  const result = {};
+  const scan = (sub, key) => {
+    const dir = path.join(baseDir, sub);
+    if (!fs.existsSync(dir)) return;
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.endsWith('.md')) continue;
+      const m = f.match(/req0*(\d{2,3})/i);
+      if (!m) continue;
+      const id = `REQ-${m[1].padStart(3, '0')}`;
+      (result[id] ??= { specs: [], plans: [] })[key].push(f);
+    }
+  };
+  scan('specs', 'specs');
+  scan('plans', 'plans');
+  return result;
+}

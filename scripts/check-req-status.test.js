@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth } from './check-req-status.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth, parseSpecsPlans } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -125,4 +128,16 @@ test('deriveTruth stranded 分支(只在 feature 分支)', () => {
   const t = deriveTruth('REQ-040', { exec });
   assert.equal(t.status, 'stranded');
   assert.deepEqual(t.branches, ['feat/req040']);
+});
+
+test('parseSpecsPlans 从文件名提取 REQ 映射', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'specs-'));
+  fs.mkdirSync(`${tmp}/specs`);
+  fs.mkdirSync(`${tmp}/plans`);
+  fs.writeFileSync(`${tmp}/specs/2026-07-16-req040-status-design.md`, '');
+  fs.writeFileSync(`${tmp}/specs/2026-07-16-planrla-moat-roadmap.md`, '');
+  fs.writeFileSync(`${tmp}/plans/2026-07-16-req040-status.md`, '');
+  const m = parseSpecsPlans(tmp);
+  assert.deepEqual(m['REQ-040'], { specs: ['2026-07-16-req040-status-design.md'], plans: ['2026-07-16-req040-status.md'] });
+  assert.equal(m['REQ-038'], undefined);
 });
