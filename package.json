@@ -46,6 +46,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p server/tsconfig.json",
     "test": "cross-env TSX_TSCONFIG_PATH=server/tsconfig.json node --import tsx --test --test-force-exit \"server/**/*.test.ts\"",
     "test:kanban": "cross-env TSX_TSCONFIG_PATH=server/tsconfig.json node --import tsx --test --test-force-exit \"server/modules/kanban/**/*.test.ts\"",
+    "check:reqs": "node scripts/check-req-status.js",
+    "test:scripts": "node --test scripts/*.test.js",
     "lint": "eslint src/ server/",
     "lint:fix": "eslint src/ server/ --fix",
     "license:generate": "node scripts/generate-license-key.js",
