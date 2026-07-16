@@ -1,0 +1,25 @@
+[Unit]
+Description=Planrla Server (project AI workbench, server-only)
+Documentation=file:///home/ubuntu/planrla-server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/planrla-server
+Environment=NODE_ENV=production
+Environment=SERVER_PORT=3001
+Environment=HOME=/home/ubuntu
+Environment=PATH=/home/ubuntu/.nvm/versions/node/v22.23.1/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+ExecStart=/home/ubuntu/.nvm/versions/node/v22.23.1/bin/node /home/ubuntu/planrla-server/dist-server/server/index.js
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+StandardOutput=append:/home/ubuntu/planrla-server.log
+StandardError=append:/home/ubuntu/planrla-server.log
+
+[Install]
+WantedBy=multi-user.target
