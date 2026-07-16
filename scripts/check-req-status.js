@@ -41,3 +41,33 @@ export function parseBacklog(md) {
   }
   return entries;
 }
+
+// 查某 REQ 的所有 commit hash
+export function gitReqCommits(reqId, { cwd = process.cwd(), exec = defaultExec } = {}) {
+  try {
+    const out = exec(`git log --grep="${reqId}" --format=%H`, { cwd });
+    return out.trim().split('\n').filter(Boolean);
+  } catch { return []; }
+}
+
+// 查一个 commit 的位置:进了哪些 tag、是否在 main、在哪些分支
+export function commitLocations(hash, { cwd = process.cwd(), exec = defaultExec } = {}) {
+  let tags = [];
+  try { tags = exec(`git tag --contains ${hash}`, { cwd }).trim().split('\n').filter(Boolean); } catch {}
+  let inMain = false;
+  try { exec(`git merge-base --is-ancestor ${hash} main`, { cwd }); inMain = true; } catch {}
+  let branches = [];
+  try {
+    branches = exec(`git branch --contains ${hash}`, { cwd })
+      .split('\n').map(b => b.replace(/^\*?\s*/, '').trim()).filter(Boolean);
+  } catch {}
+  return { tags, inMain, branches };
+}
+
+// 排序后的 tag 列表
+export function tagList({ cwd = process.cwd(), exec = defaultExec } = {}) {
+  try {
+    const out = exec(`git tag --list "v*"`, { cwd });
+    return out.trim().split('\n').filter(Boolean).sort(compareSemver);
+  } catch { return []; }
+}

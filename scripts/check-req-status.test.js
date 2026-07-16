@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseBacklog, compareSemver } from './check-req-status.js';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -39,4 +39,51 @@ test('compareSemver 排序', () => {
   assert.ok(compareSemver('v0.8.3', 'v0.8.4') < 0);
   assert.ok(compareSemver('v0.9.0', 'v0.8.10') > 0);
   assert.equal(compareSemver('v0.8.4', '0.8.4'), 0);
+});
+
+function mockExec(table) {
+  return (cmd) => {
+    for (const [re, out] of table) {
+      if (new RegExp(re).test(cmd)) { if (out === 'THROW') throw new Error('git fail'); return out; }
+    }
+    return '';
+  };
+}
+
+test('gitReqCommits 解析 git log 输出为 hash 列表', () => {
+  const exec = mockExec([['--format=%H', 'aaa\nbbb\n']]);
+  assert.deepEqual(gitReqCommits('REQ-040', { exec }), ['aaa', 'bbb']);
+});
+
+test('gitReqCommits git 失败返回空数组', () => {
+  const exec = mockExec([['log', 'THROW']]);
+  assert.deepEqual(gitReqCommits('REQ-999', { exec }), []);
+});
+
+test('commitLocations 聚合 tags/inMain/branches', () => {
+  const exec = mockExec([
+    ['tag --contains', 'v0.8.4\nv0.8.3\n'],
+    ['merge-base --is-ancestor', ''],
+    ['branch --contains', '* main\n feat/x\n'],
+  ]);
+  const loc = commitLocations('aaa', { exec });
+  assert.deepEqual(loc.tags, ['v0.8.4', 'v0.8.3']);
+  assert.equal(loc.inMain, true);
+  assert.deepEqual(loc.branches, ['main', 'feat/x']);
+});
+
+test('commitLocations merge-base 非 0 → inMain false', () => {
+  const exec = mockExec([
+    ['tag --contains', ''],
+    ['merge-base', 'THROW'],
+    ['branch --contains', ' feat/x\n'],
+  ]);
+  const loc = commitLocations('aaa', { exec });
+  assert.equal(loc.inMain, false);
+  assert.deepEqual(loc.branches, ['feat/x']);
+});
+
+test('tagList 返回排序 tag', () => {
+  const exec = mockExec([['tag --list', 'v0.8.4\nv0.8.3\nv0.9.0\n']]);
+  assert.deepEqual(tagList({ exec }), ['v0.8.3', 'v0.8.4', 'v0.9.0']);
 });
