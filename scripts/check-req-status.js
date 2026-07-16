@@ -71,3 +71,26 @@ export function tagList({ cwd = process.cwd(), exec = defaultExec } = {}) {
     return out.trim().split('\n').filter(Boolean).sort(compareSemver);
   } catch { return []; }
 }
+
+// 从 git 推导某 REQ 的真实状态。四分支:released / unreleased-in-main / stranded / no-commit
+export function deriveTruth(reqId, { cwd = process.cwd(), exec = defaultExec } = {}) {
+  const commits = gitReqCommits(reqId, { cwd, exec });
+  if (commits.length === 0) return { status: 'no-commit', commits: [] };
+  const allTags = new Set();
+  let inMain = false;
+  const branches = new Set();
+  for (const c of commits) {
+    const loc = commitLocations(c, { cwd, exec });
+    loc.tags.forEach(t => allTags.add(t));
+    if (loc.inMain) inMain = true;
+    loc.branches.forEach(b => branches.add(b));
+  }
+  if (allTags.size > 0) {
+    const sorted = [...allTags].sort(compareSemver);
+    return { status: 'released', version: sorted[sorted.length - 1], commits };
+  }
+  if (inMain) return { status: 'unreleased-in-main', commits };
+  const feat = [...branches].filter(b => b !== 'main' && !b.startsWith('('));
+  if (feat.length) return { status: 'stranded', branches: feat, commits };
+  return { status: 'unknown', commits };
+}

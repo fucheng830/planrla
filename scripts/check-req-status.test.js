@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList } from './check-req-status.js';
+import { parseBacklog, compareSemver, gitReqCommits, commitLocations, tagList, deriveTruth } from './check-req-status.js';
 
 const SAMPLE = `# SSOT
 ## Ready(四要素补齐)
@@ -86,4 +86,43 @@ test('commitLocations merge-base 非 0 → inMain false', () => {
 test('tagList 返回排序 tag', () => {
   const exec = mockExec([['tag --list', 'v0.8.4\nv0.8.3\nv0.9.0\n']]);
   assert.deepEqual(tagList({ exec }), ['v0.8.3', 'v0.8.4', 'v0.9.0']);
+});
+
+test('deriveTruth no-commit 分支', () => {
+  const exec = mockExec([['log', '']]);
+  assert.equal(deriveTruth('REQ-999', { exec }).status, 'no-commit');
+});
+
+test('deriveTruth released 分支(取最高 tag)', () => {
+  const exec = mockExec([
+    ['log --grep', 'aaa\n'],
+    ['tag --contains', 'v0.8.3\nv0.8.4\n'],
+    ['merge-base', ''],
+    ['branch --contains', 'main\n'],
+  ]);
+  const t = deriveTruth('REQ-040', { exec });
+  assert.equal(t.status, 'released');
+  assert.equal(t.version, 'v0.8.4');
+});
+
+test('deriveTruth unreleased-in-main 分支', () => {
+  const exec = mockExec([
+    ['log --grep', 'aaa\n'],
+    ['tag --contains', ''],
+    ['merge-base', ''],
+    ['branch --contains', 'main\n'],
+  ]);
+  assert.equal(deriveTruth('REQ-040', { exec }).status, 'unreleased-in-main');
+});
+
+test('deriveTruth stranded 分支(只在 feature 分支)', () => {
+  const exec = mockExec([
+    ['log --grep', 'aaa\n'],
+    ['tag --contains', ''],
+    ['merge-base', 'THROW'],
+    ['branch --contains', 'feat/req040\n'],
+  ]);
+  const t = deriveTruth('REQ-040', { exec });
+  assert.equal(t.status, 'stranded');
+  assert.deepEqual(t.branches, ['feat/req040']);
 });
