@@ -16,6 +16,7 @@
 | REQ-026 | Sessions 切换按钮去双徽标(只留 completed 计数) | — | P1 | fix | released | self | _(ad-hoc)_ | | v0.7.1 |
 | REQ-013 | 会话重命名(chat 触发 MCP 工具) | — | P2 | feat | released | self | [spec](../superpowers/specs/2026-07-09-req013-session-rename-chat-mcp-design.md) | [plan](../superpowers/plans/2026-07-09-req013-session-rename-chat-mcp.md) | v0.8.0 |
 | REQ-020 | A2A 双向节点(client→server→内部协作,Google 标准) | — | P2 | feat | spec | self | S1 [spec](../superpowers/specs/2026-07-11-req020-a2a-s1-client-tools-design.md) | _(3 切片:S1 client 工具 → S2 server 端点 → S3 内部协作;S1 待 writing-plans)_ | |
+| REQ-040 | 状态校验工具 check-req-status(状态机↔git 自动绑定) | v0.9 | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-16-req040-status-git-binding-design.md) | [plan](../superpowers/plans/2026-07-16-req040-status-git-binding.md) | |
 
 ## Ready(四要素补齐,待规格化)
 > ⚠️ **编号冲突(待 Archie 清理)**:下面「REQ-030 loadEarlier 翻页」实为 **REQ-029**(scroll RAF,已 merge 进 main,见 plan `2026-07-10-req029-scroll-raf.md`,待发版回填 Released);「REQ-030」已正式分配给 **AI 自动重命名**(见下方 Backlog 独立区 + spec/plan `2026-07-11-req030-ai-auto-rename`)。建议把这条 stale 条目改号为 REQ-029 并移 Released。
@@ -24,7 +25,6 @@
 |----|------|--------|-----|------|------|
 | REQ-030 | loadEarlier 翻页 scroll 位置保持(RAF 补偿) | — | P1 | fix | ready |
 | REQ-031 | 对话下方大片空白(virtualizer 高度虚高) | — | P1 | fix | ready |
-| REQ-040 | 状态机↔git 自动绑定 + BACKLOG 状态校验/回填 | v0.9 | P1 | feat | ready |
 
 ### REQ-030 四要素
 - **背景**:message-virtualization 已落地(`measureElement` 动态行高,解决 104px 锚点漂移)。但翻页(滚顶自动 `loadOlderMessages`)后的 scroll 位置保持是 **one-shot `useLayoutEffect`**(`useChatSessionState.ts` L373-380),与初始滚到底的 **RAF loop**(L393-434)不一致。`measureElement` 异步测高 → 补偿执行时 `newScrollHeight` 尚未反映完新增高度 → `heightDiff` 偏小 → 残余下跳;长消息(tool diff / 长 markdown)偏差最大。手动 `loadEarlierMessages`(L797,legacy 视图)完全无补偿。
@@ -39,13 +39,6 @@
 - **范围**:主改 `ChatMessagesPane.tsx`(virtualizer 配置:`estimateSize` 策略 / `measureElement` 重测触发)+ 视根因可能触及 `useChatSessionState.ts` scroll 逻辑。**不动**分页数据模型(`visibleMessages = slice(-visibleMessageCount)`)、**不动** virtualizer 选型(message-virtualization 已落地)。**实施前先实测确认根因**(精确复现路径 + measure 时序),作为 brainstorm 输入。
 - **验收草稿**:① 短消息会话(1-3 条)无底部留白;② 长消息 / 含长 tool diff 的会话滚到底无虚高;③ 工具结果展开/折叠后高度即时收敛、无残留空白;④ REQ-029 的 loadEarlier 翻页 scroll 位置保持不回归;⑤ `npm run typecheck && npm run build:client` 干净。
 - **来源**:self(Archie 截图实测 + 代码静态分析:virtualizer getTotalSize 虚高)。**建议**:spec 前先实测确认根因(① vs ② vs ③),避免误改 virtualizer。
-
-### REQ-040 四要素
-- **背景**:状态机(`backlog→ready→…→released`)全写在 `BACKLOG.md`,是手动维护的 SSOT,与 git(commit / tag / branch)**零自动绑定**。证据:2026-07-15 `PLANS_STATUS` 梳理暴露 3 条已发版(REQ-029/031/032)仍挂 ready/spec、1 条(REQ-030)实现完卡 feature 分支未合并、编号冲突(029 误编 030)、spec 链接断链——Archie 花整次会话纯对账(交叉核对 BACKLOG × specs/plans × releases × `git merge-base --is-ancestor`),**产出零代码价值**。另有 REQ-038 有 spec 却无 BACKLOG 条目(孤儿),同症。根因:状态流转靠人手改 markdown,无机制验证"标 released 的需求其 commit 是否真在某 tag 内"。**此项是 moat roadmap 的盲点补充**(roadmap v0.9~v2.0 未列),也是 v0.9"看板收口"的治理地基——kanban runner 自驱的前提是信任地知道任务真实状态,现在连人都搞不清。
-- **目标**:每条 REQ-NNN 的状态可从 git 自动推导/校验;`PLANS_STATUS` 式梳理从"整次会话"降为"一键查询";消除纯对账人工(三类人工里 ROI 最高、零风险的一刀)。
-- **范围**:主交付一个状态校验工具(CLI / npm script):输入 git 历史 + tag,对每条 REQ-NNN 回答"代码在不在 main / 在哪个 tag / 在哪条 feature 分支",并输出与 BACKLOG.md 的偏差清单(声称 released 但 commit 不在任何 tag、声称 doing 但 main 已有 commit、编号冲突、spec 链接断链、有 spec 无 BACKLOG 条目的孤儿)。绑定机制:约定 REQ-NNN 可从 commit message / merge commit / tag 检索(grep)。**待 Archie 决策**:① 机器只报告偏差(人改 SSOT)还是直接自动回填 BACKLOG 状态列;② 一次性 CLI 还是常驻(server / 看板 UI 显示真实状态)——建议先 CLI MVP 验证准确性,再谈集成。**不动** kanban runner 本体、发版流程、spec/plan 产出流程。
-- **验收草稿**:① 跑工具正确识别 `PLANS_STATUS` 里那 4 条失真条目(3 误标未完成 + 1 卡分支)+ REQ-038 孤儿;② 给定任意 REQ-NNN 能定位其在 main / tag / feature 分支的真实位置;③ 输出完整"BACKLOG 状态 ↔ git 真相"偏差清单;④ 幂等可重跑,后续新增/发版需求持续反映真实状态;⑤ `npm run typecheck && npm run build` 干净(若含 TS 实现)。
-- **来源**:self(2026-07-16 开发流程卡点诊断:状态机↔git 零绑定 → 纯对账人工)。
 
 ## Backlog(待细化)— 按主题分组
 
