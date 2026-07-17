@@ -33,8 +33,8 @@ export interface A2aMcpDeps {
 // so both the JSON-Schema enum and runtime validation share one source.
 // ---------------------------------------------------------------------------
 
-const INTENTS = ['consultation', 'delegation', 'notification', 'query'] as const;
-const EXPECTED_ACTIONS = ['reply', 'execute', 'observe'] as const;
+const INTENTS = ['action_request', 'review', 'consultation', 'notification', 'instruction'] as const;
+const EXPECTED_ACTIONS = ['reply', 'forward', 'acknowledge'] as const;
 
 // ---------------------------------------------------------------------------
 // JSON-RPC helpers
