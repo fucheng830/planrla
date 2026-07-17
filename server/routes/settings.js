@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { apiKeysDb, credentialsDb, notificationPreferencesDb, pushSubscriptionsDb } from '../modules/database/index.js';
+import { apiKeysDb, credentialsDb, notificationPreferencesDb, pushSubscriptionsDb, a2aAgentsDb } from '../modules/database/index.js';
 import { getPublicKey } from '../services/vapid-keys.js';
 import { createNotificationEvent, notifyUserIfEnabled } from '../services/notification-orchestrator.js';
 
@@ -271,6 +271,61 @@ router.post('/push/unsubscribe', async (req, res) => {
   } catch (error) {
     console.error('Error removing push subscription:', error);
     res.status(500).json({ error: 'Failed to remove push subscription' });
+  }
+});
+
+// ===============================
+// A2A Agents Management
+// ===============================
+
+// List all A2A agents for the authenticated user (auth_token never returned)
+router.get('/a2a-agents', (req, res) => {
+  try {
+    const agents = a2aAgentsDb.getAgents(req.user.id);
+    res.json(agents);
+  } catch (error) {
+    console.error('Error fetching A2A agents:', error);
+    res.status(500).json({ error: 'Failed to fetch A2A agents' });
+  }
+});
+
+// Create a new A2A agent
+router.post('/a2a-agents', (req, res) => {
+  try {
+    const { name, url, description, authToken } = req.body || {};
+    if (!name || !url) {
+      return res.status(400).json({ error: 'name and url required' });
+    }
+    const id = a2aAgentsDb.createAgent(req.user.id, name, url, description || null, authToken || null);
+    res.json({ id });
+  } catch (error) {
+    console.error('Error creating A2A agent:', error);
+    res.status(500).json({ error: 'Failed to create A2A agent' });
+  }
+});
+
+// Update fields of an existing A2A agent
+router.put('/a2a-agents/:agentId', (req, res) => {
+  try {
+    const agentId = Number(req.params.agentId);
+    const fields = req.body || {};
+    a2aAgentsDb.updateAgent(req.user.id, agentId, fields);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error updating A2A agent:', error);
+    res.status(500).json({ error: 'Failed to update A2A agent' });
+  }
+});
+
+// Delete an A2A agent
+router.delete('/a2a-agents/:agentId', (req, res) => {
+  try {
+    const agentId = Number(req.params.agentId);
+    const ok = a2aAgentsDb.deleteAgent(req.user.id, agentId);
+    res.json({ ok });
+  } catch (error) {
+    console.error('Error deleting A2A agent:', error);
+    res.status(500).json({ error: 'Failed to delete A2A agent' });
   }
 });
 
