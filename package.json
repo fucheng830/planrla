@@ -1,6 +1,6 @@
 {
   "name": "planrla",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "productName": "Planrla",
   "description": "A web-based UI for Claude Code CLI",
   "type": "module",
