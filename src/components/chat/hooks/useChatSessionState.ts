@@ -579,39 +579,29 @@ export function useChatSessionState({
       setVisibleMessageCount(Infinity);
 
       const findAndScroll = (retriesLeft: number) => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
-
-        let targetElement: Element | null = null;
-
-        if (target.snippet) {
-          const cleanSnippet = target.snippet.replace(/^\.{3}/, '').replace(/\.{3}$/, '').trim();
-          const searchPhrase = cleanSnippet.slice(0, 80).toLowerCase().trim();
-          if (searchPhrase.length >= 10) {
-            const messageElements = container.querySelectorAll('.chat-message');
-            for (const el of messageElements) {
-              const text = (el.textContent || '').toLowerCase();
-              if (text.includes(searchPhrase)) { targetElement = el; break; }
-            }
-          }
-        }
-
-        if (!targetElement && target.timestamp) {
+        // REQ-041: virtua 虚拟列表只渲染可见 item,target 可能未挂载 DOM,scrollIntoView 无效。
+        // 改在 visibleMessages 数据里按 timestamp 找 index,virtuaRef.scrollToIndex 滚过去(virtua 会渲染该 item)。
+        let targetIndex = -1;
+        if (target.timestamp) {
           const targetDate = new Date(target.timestamp).getTime();
-          const messageElements = container.querySelectorAll('[data-message-timestamp]');
           let closestDiff = Infinity;
-          for (const el of messageElements) {
-            const ts = el.getAttribute('data-message-timestamp');
-            if (!ts) continue;
-            const diff = Math.abs(new Date(ts).getTime() - targetDate);
-            if (diff < closestDiff) { closestDiff = diff; targetElement = el; }
-          }
+          visibleMessages.forEach((m, i) => {
+            if (!m.timestamp) return;
+            const diff = Math.abs(new Date(m.timestamp).getTime() - targetDate);
+            if (diff < closestDiff) { closestDiff = diff; targetIndex = i; }
+          });
         }
 
-        if (targetElement) {
-          targetElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          targetElement.classList.add('search-highlight-flash');
-          setTimeout(() => targetElement?.classList.remove('search-highlight-flash'), 4000);
+        if (targetIndex >= 0) {
+          virtuaRef.current?.scrollToIndex(targetIndex, { align: 'center' });
+          // virtua 滚动后该 item 才渲染,延迟加高亮 flash
+          setTimeout(() => {
+            const el = target.timestamp
+              ? document.querySelector(`[data-message-timestamp="${target.timestamp}"]`)
+              : null;
+            el?.classList.add('search-highlight-flash');
+            setTimeout(() => el?.classList.remove('search-highlight-flash'), 4000);
+          }, 350);
           searchScrollActiveRef.current = false;
         } else if (retriesLeft > 0) {
           setTimeout(() => findAndScroll(retriesLeft - 1), 200);
