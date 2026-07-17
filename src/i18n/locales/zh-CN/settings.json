@@ -5,7 +5,8 @@
     "permissions": "权限",
     "mcpServers": "MCP 服务器",
     "appearance": "外观",
-    "defaults": "默认值"
+    "defaults": "默认值",
+    "a2a": "A2A 节点"
   },
   "account": {
     "title": "账户",
@@ -784,6 +785,22 @@
       "label": "默认模型",
       "description": "本会话未手动选模型时使用",
       "placeholder": "如 opus、sonnet、gpt-5.4"
+    }
+  },
+  "a2a": {
+    "title": "A2A 节点",
+    "description": "注册远程 Agent-to-Agent（A2A）端点，智能体可通过 a2a MCP 工具调用它们。鉴权令牌加密存储，保存后不再回显。",
+    "addButton": "添加节点",
+    "empty": "尚未添加 A2A 节点。",
+    "added": "添加时间：",
+    "confirmDelete": "确定要删除此 A2A 节点吗？",
+    "form": {
+      "namePlaceholder": "节点名称（例如：远程研究员）",
+      "urlPlaceholder": "节点 URL（例如：https://host:port）",
+      "descriptionPlaceholder": "描述（可选）",
+      "authTokenPlaceholder": "鉴权令牌（可选）",
+      "addButton": "添加节点",
+      "cancelButton": "取消"
     }
   }
 }
