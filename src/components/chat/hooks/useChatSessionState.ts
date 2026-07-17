@@ -357,15 +357,11 @@ export function useChatSessionState({
     const nearBottom = isNearBottom();
     setIsUserScrolledUp(!nearBottom);
 
-    if (!allMessagesLoadedRef.current) {
-      const scrolledNearTop = ref.scrollOffset < 100;
-      if (!scrolledNearTop) { topLoadLockRef.current = false; return; }
-      if (topLoadLockRef.current) {
-        if (ref.scrollOffset > 20) topLoadLockRef.current = false;
-        return;
-      }
-      const didLoad = await loadOlderMessages();
-      if (didLoad) topLoadLockRef.current = true;
+    // REQ-041: 删 topLoadLock。它原是 react-virtual 时代防 applyOffset 推 scrollTop 反复触发
+    // loadMore 的(virtua delta 补偿不改 scrollOffset,翻页时 offset 一直小,lock 的"offset>20 解锁"
+    // 永不成立 → 只加载一次)。virtua 下不会反复触发,loadOlderMessages 内 isLoadingMoreRef 已防重入。
+    if (!allMessagesLoadedRef.current && ref.scrollOffset < 100) {
+      await loadOlderMessages();
     }
   }, [isNearBottom, loadOlderMessages]);
 
