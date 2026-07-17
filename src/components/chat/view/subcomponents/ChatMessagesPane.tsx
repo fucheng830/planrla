@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import { VList, type VListHandle } from 'virtua';
 
@@ -39,6 +39,8 @@ interface ChatMessagesPaneProps {
   setGeminiModel: (model: string) => void;
   opencodeModel: string;
   setOpenCodeModel: (model: string) => void;
+  kimiModel: string;
+  setKimiModel: (model: string) => void;
   providerModelCatalog: Partial<Record<LLMProvider, ProviderModelsDefinition>>;
   providerModelsLoading: boolean;
   tasksEnabled: boolean;
@@ -91,6 +93,8 @@ export default function ChatMessagesPane({
   setGeminiModel,
   opencodeModel,
   setOpenCodeModel,
+  kimiModel,
+  setKimiModel,
   providerModelCatalog,
   providerModelsLoading,
   tasksEnabled,
@@ -148,6 +152,12 @@ export default function ChatMessagesPane({
     return candidateKey;
   }, []);
 
+  // REQ-041: 流式生成中的最后一条 keepMounted,防虚拟列表回收导致 markdown 动画重放
+  const streamingIndices = useMemo(() => {
+    if (!isProcessing || visibleMessages.length === 0) return [];
+    return [visibleMessages.length - 1];
+  }, [isProcessing, visibleMessages.length]);
+
   return (
     <div
       ref={scrollContainerRef}
@@ -179,6 +189,8 @@ export default function ChatMessagesPane({
           setGeminiModel={setGeminiModel}
           opencodeModel={opencodeModel}
           setOpenCodeModel={setOpenCodeModel}
+          kimiModel={kimiModel}
+          setKimiModel={setKimiModel}
           providerModelCatalog={providerModelCatalog}
           providerModelsLoading={providerModelsLoading}
           tasksEnabled={tasksEnabled}
@@ -260,7 +272,7 @@ export default function ChatMessagesPane({
           {/* REQ-041: virtua VList(flow 布局 + delta 同帧补偿)替代 @tanstack/react-virtual。
               virtua 在 item 高度从 estimate 收敛到真实时把 delta 同帧应用到 scroll offset,
               消除"涌入虚高 + measure 回落"两次 commit 的中间态抖动。 */}
-          <VList ref={virtuaRef} data={visibleMessages} onScroll={onWheel} style={{ flex: 1, overflowAnchor: 'none' }}>
+          <VList ref={virtuaRef} data={visibleMessages} keepMounted={streamingIndices} onScroll={onWheel} style={{ flex: 1, overflowAnchor: 'none' }}>
             {(message: ChatMessage, index: number) => {
               const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
               return (
