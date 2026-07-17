@@ -1,6 +1,7 @@
 import { Database } from 'better-sqlite3';
 
 import {
+  A2A_AGENTS_TABLE_SCHEMA_SQL,
   APP_CONFIG_TABLE_SCHEMA_SQL,
   LAST_SCANNED_AT_SQL,
   PROJECTS_TABLE_SCHEMA_SQL,
@@ -468,6 +469,8 @@ export const runMigrations = (db: Database) => {
     }
 
     db.exec(LAST_SCANNED_AT_SQL);
+
+    db.exec(A2A_AGENTS_TABLE_SCHEMA_SQL);
     console.log('Database migrations completed successfully');
   } catch (error: any) {
     console.error('Error running migrations:', error.message);

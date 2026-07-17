@@ -6,7 +6,8 @@
     "mcpServers": "MCP Servers",
     "skills": "Skills",
     "appearance": "Appearance",
-    "defaults": "Defaults"
+    "defaults": "Defaults",
+    "a2a": "A2A Agents"
   },
   "account": {
     "title": "Account",
@@ -865,6 +866,22 @@
       "label": "Default model",
       "description": "Used when you haven't picked a model this session",
       "placeholder": "e.g. opus, sonnet, gpt-5.4"
+    }
+  },
+  "a2a": {
+    "title": "A2A Agents",
+    "description": "Register remote Agent-to-Agent (A2A) endpoints so the agent can call them via the a2a MCP tool. Auth tokens are stored encrypted and never shown again after saving.",
+    "addButton": "Add Agent",
+    "empty": "No A2A agents added yet.",
+    "added": "Added:",
+    "confirmDelete": "Are you sure you want to delete this A2A agent?",
+    "form": {
+      "namePlaceholder": "Agent Name (e.g., Remote Researcher)",
+      "urlPlaceholder": "Agent URL (e.g., https://host:port)",
+      "descriptionPlaceholder": "Description (optional)",
+      "authTokenPlaceholder": "Auth Token (optional)",
+      "addButton": "Add Agent",
+      "cancelButton": "Cancel"
     }
   }
 }

@@ -1,5 +1,7 @@
 export { initializeDatabase } from '@/modules/database/init-db.js';
 export { closeConnection, getConnection, getDatabasePath } from '@/modules/database/connection.js';
+export { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';
+export type { A2aAgentRow } from '@/modules/database/repositories/a2a-agents.js';
 export { apiKeysDb } from '@/modules/database/repositories/api-keys.js';
 export { appConfigDb } from '@/modules/database/repositories/app-config.js';
 export { credentialsDb } from '@/modules/database/repositories/credentials.js';

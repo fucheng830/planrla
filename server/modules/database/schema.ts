@@ -128,6 +128,23 @@ CREATE VIRTUAL TABLE IF NOT EXISTS session_search USING fts5(
 );
 `;
 
+export const A2A_AGENTS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS a2a_agents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    description TEXT,
+    auth_token TEXT,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_a2a_agents_user_id ON a2a_agents(user_id);
+CREATE INDEX IF NOT EXISTS idx_a2a_agents_active ON a2a_agents(is_active);
+`;
+
 export const INIT_SCHEMA_SQL = `
 -- Initialize authentication database
 PRAGMA foreign_keys = ON;
@@ -169,4 +186,6 @@ ${LAST_SCANNED_AT_SQL}
 ${APP_CONFIG_TABLE_SCHEMA_SQL}
 
 ${SESSION_SEARCH_TABLE_SCHEMA_SQL}
+
+${A2A_AGENTS_TABLE_SCHEMA_SQL}
 `;
