@@ -72,6 +72,7 @@ import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
+import { createA2aMcpRouter } from './modules/a2a/mcp.route.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -246,6 +247,14 @@ app.use('/api/mcp/internal', sessionQueryMcpRoute);
 // task_next/task_prev/task_status over JSON-RPC with only a taskId arg. The
 // global express.json() at line ~164 parses the JSON-RPC body.
 app.use('/api/mcp/kanban', createKanbanMcpRouter({ getKanban: () => getKanban() }));
+
+// A2A (Agent-to-Agent) MCP self-drive endpoint (REQ-020 S1, Task 5). Mounted
+// BEFORE auth, same as /api/mcp/kanban above — the provider CLI agent has no
+// JWT, so it reaches this loopback-only route directly. Tools expose the
+// current user's registered A2A agents (a2a_list / a2a_discover / a2a_call).
+// Single-user host: userId is resolved from the first active user row, the
+// same pattern middleware/auth.js uses in platform mode.
+app.use('/api/mcp/a2a', createA2aMcpRouter({ getUserId: () => userDb.getFirstUser()?.id ?? null }));
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
@@ -1825,6 +1834,32 @@ async function registerSessionQueryMcp(port) {
     }
 }
 
+// Register the A2A HTTP MCP server to every provider so agents can drive
+// Agent-to-Agent workflows (a2a_list / a2a_discover / a2a_call, REQ-020 S1).
+// Hosted in-process at /api/mcp/a2a — same loopback-only pattern as
+// session-query above. Idempotent (upsert); providers that reject http upsert
+// are warned and skipped.
+const A2A_MCP_NAME = 'planrla-a2a';
+async function registerA2aMcp(port) {
+    try {
+        const results = await providerMcpService.addMcpServerToAllProviders({
+            name: A2A_MCP_NAME,
+            scope: 'user',
+            transport: 'http',
+            url: `http://127.0.0.1:${port}/api/mcp/a2a`,
+        });
+
+        const ok = results.filter((r) => r.created).map((r) => r.provider);
+        const failed = results.filter((r) => !r.created);
+        console.log(`${c.info('[INFO]')} [a2a-mcp] registered to: ${ok.join(', ') || '(none)'}`);
+        for (const r of failed) {
+            console.warn(`[a2a-mcp] skipped for ${r.provider}: ${r.error}`);
+        }
+    } catch (err) {
+        console.error('[a2a-mcp] registration failed:', err?.message || err);
+    }
+}
+
 // Initialize database and start server
 async function startServer() {
     try {
@@ -1890,6 +1925,13 @@ async function startServer() {
             // provider that does not support stdio MCP upsert is warned, not fatal.
             registerSessionQueryMcp(SERVER_PORT).catch(err => {
                 console.error('[session-query-mcp] registration failed:', err?.message || err);
+            });
+
+            // Register the A2A MCP server (http) to all providers. Exposes
+            // a2a_list / a2a_discover / a2a_call to the provider CLI agent
+            // (REQ-020 S1). Idempotent via upsert; failures are warned, not fatal.
+            registerA2aMcp(SERVER_PORT).catch(err => {
+                console.error('[a2a-mcp] registration failed:', err?.message || err);
             });
         });
 
