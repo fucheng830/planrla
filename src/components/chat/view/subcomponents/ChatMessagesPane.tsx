@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useRef } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { VList } from 'virtua';
+import { VList, type VListHandle } from 'virtua';
 
 import type { ChatMessage } from '../../types/types';
 import type {
@@ -17,6 +17,7 @@ import ProviderSelectionEmptyState from './ProviderSelectionEmptyState';
 
 interface ChatMessagesPaneProps {
   scrollContainerRef: RefObject<HTMLDivElement>;
+  virtuaRef: RefObject<VListHandle>;
   onWheel: () => void;
   onTouchMove: () => void;
   isLoadingSessionMessages: boolean;
@@ -69,6 +70,7 @@ interface ChatMessagesPaneProps {
 
 export default function ChatMessagesPane({
   scrollContainerRef,
+  virtuaRef,
   onWheel,
   onTouchMove,
   isLoadingSessionMessages,
@@ -258,7 +260,7 @@ export default function ChatMessagesPane({
           {/* REQ-041: virtua VList(flow 布局 + delta 同帧补偿)替代 @tanstack/react-virtual。
               virtua 在 item 高度从 estimate 收敛到真实时把 delta 同帧应用到 scroll offset,
               消除"涌入虚高 + measure 回落"两次 commit 的中间态抖动。 */}
-          <VList data={visibleMessages} style={{ flex: 1, overflowAnchor: 'none' }}>
+          <VList ref={virtuaRef} data={visibleMessages} style={{ flex: 1, overflowAnchor: 'none' }}>
             {(message: ChatMessage, index: number) => {
               const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
               return (

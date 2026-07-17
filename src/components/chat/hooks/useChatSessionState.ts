@@ -10,6 +10,7 @@ import { createCachedDiffCalculator, type DiffCalculator } from '../utils/messag
 
 import { normalizedToChatMessages } from './useChatMessages';
 import { measureAsync } from '../../../shared/perf/timing';
+import type { VListHandle } from 'virtua';
 
 const MESSAGES_PER_PAGE = 20;
 const INITIAL_VISIBLE_MESSAGES = 100;
@@ -122,6 +123,8 @@ export function useChatSessionState({
   const [viewHiddenCount, setViewHiddenCount] = useState(0);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const virtuaRef = useRef<VListHandle>(null);
+  const visibleMessagesLengthRef = useRef(0);
   const [searchTarget, setSearchTarget] = useState<{ timestamp?: string; uuid?: string; snippet?: string } | null>(null);
   const searchScrollActiveRef = useRef(false);
   const isLoadingSessionRef = useRef(false);
@@ -302,9 +305,8 @@ export function useChatSessionState({
   const rewindMessages = useCallback((count: number) => setViewHiddenCount(count), []);
 
   const scrollToBottom = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    container.scrollTop = container.scrollHeight;
+    const last = visibleMessagesLengthRef.current - 1;
+    if (last >= 0) virtuaRef.current?.scrollToIndex(last, { align: 'end' });
   }, []);
 
   const scrollToBottomAndReset = useCallback(() => {
@@ -402,7 +404,11 @@ export function useChatSessionState({
         lastHeight = currentHeight;
       }
       frame++;
-      if (stableCount < 3 && frame < 20) {
+      // 上限是泄漏护栏,不是性能预算:循环在 scrollHeight 连续 3 帧稳定后即早退,
+      // 快路径(短消息)零开销。切勿为"减 layout thrashing"再收紧——REQ-039 曾
+      // 60→20,导致长 markdown / 长 tool diff / 代码块的旧消息高度 settle 慢于 20 帧,
+      // 循环提前终止后迟到测量无人校正,造成翻页残余抖动(REQ-029 在 60 帧通过验收)。
+      if (stableCount < 3 && frame < 60) {
         rafId = requestAnimationFrame(tick);
       } else {
         pendingScrollRestoreRef.current = null;
@@ -430,41 +436,14 @@ export function useChatSessionState({
   // 回流校正(markdown/代码/图片落位),因用户已在底部,读作"贴住"而非"下冲"。
   // 同文件 ~L380 的"加载更多滚位恢复"已用同款 useLayoutEffect+RAF 模式,此处对齐。
   useLayoutEffect(() => {
-    if (!pendingInitialScrollRef.current || !scrollContainerRef.current || isLoadingSessionMessages) return;
+    if (!pendingInitialScrollRef.current || !virtuaRef.current || isLoadingSessionMessages) return;
     if (chatMessages.length === 0) { pendingInitialScrollRef.current = false; return; }
     if (searchScrollActiveRef.current) { pendingInitialScrollRef.current = false; return; }
-
-    const container = scrollContainerRef.current;
-
-    // 首帧绘制前同步钉到底 —— 关键:这是用户"看不到滚动"的直接来源。
-    container.scrollTop = container.scrollHeight;
-
-    let frame = 0;
-    let lastHeight = container.scrollHeight;
-    let stableCount = 0;
-    let rafId = 0;
-
-    const tick = () => {
-      if (!pendingInitialScrollRef.current || !scrollContainerRef.current) return;
-      container.scrollTop = container.scrollHeight;
-      if (container.scrollHeight === lastHeight) {
-        stableCount++;
-      } else {
-        stableCount = 0;
-        lastHeight = container.scrollHeight;
-      }
-      frame++;
-      if (stableCount < 3 && frame < 20) {
-        rafId = requestAnimationFrame(tick);
-      } else {
-        pendingInitialScrollRef.current = false;
-      }
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [chatMessages.length, isLoadingSessionMessages, scrollToBottom]);
+    // REQ-041: virtua scrollToIndex 钉到底,virtua 内部处理高度收敛的 delta 补偿。
+    const last = visibleMessagesLengthRef.current - 1;
+    if (last >= 0) virtuaRef.current.scrollToIndex(last, { align: 'end' });
+    pendingInitialScrollRef.current = false;
+  }, [chatMessages.length, isLoadingSessionMessages]);
 
   // Main session loading effect — store-based
   useEffect(() => {
@@ -727,6 +706,8 @@ export function useChatSessionState({
     if (chatMessages.length <= visibleMessageCount) return chatMessages;
     return chatMessages.slice(-visibleMessageCount);
   }, [chatMessages, visibleMessageCount]);
+  // REQ-041: scrollToBottom/初始滚底 在 visibleMessages 声明前调用,用 ref 桥接长度。
+  visibleMessagesLengthRef.current = visibleMessages.length;
 
   useEffect(() => {
     if (!autoScrollToBottom && scrollContainerRef.current) {
@@ -871,6 +852,7 @@ export function useChatSessionState({
     showLoadAllOverlay,
     createDiff,
     scrollContainerRef,
+    virtuaRef,
     scrollToBottom,
     scrollToBottomAndReset,
     isNearBottom,

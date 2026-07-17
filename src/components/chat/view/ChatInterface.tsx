@@ -130,6 +130,7 @@ function ChatInterface({
     showLoadAllOverlay,
     createDiff,
     scrollContainerRef,
+    virtuaRef,
     scrollToBottom,
     scrollToBottomAndReset,
     handleScroll,
@@ -395,6 +396,7 @@ function ChatInterface({
         <div className="flex h-full flex-col">
         <ChatMessagesPane
           scrollContainerRef={scrollContainerRef}
+          virtuaRef={virtuaRef}
           onWheel={handleScroll}
           onTouchMove={handleScroll}
           isLoadingSessionMessages={isLoadingSessionMessages}
