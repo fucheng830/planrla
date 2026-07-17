@@ -1,4 +1,4 @@
-﻿# Providers Module Guide
+# Providers Module Guide
 
 This file documents the current provider contract in `server/modules/providers`.
 Keep it current whenever provider wiring, skill discovery, or session sync
@@ -38,6 +38,7 @@ Current provider ids in this repo are:
 - `cursor`
 - `gemini`
 - `opencode`
+- `kimi`
 
 Those ids are mirrored in backend unions and frontend provider constants. If
 adding a new provider, update every place that hardcodes this list.
@@ -56,8 +57,8 @@ server/modules/providers/list/<provider>/
   <provider>-session-synchronizer.provider.ts
 ```
 
-The existing provider folders are `claude`, `codex`, `cursor`, `gemini`, and
-`opencode`.
+The existing provider folders are `claude`, `codex`, `cursor`, `gemini`,
+`opencode`, and `kimi`.
 
 ## What Each Facet Does
 
@@ -125,6 +126,7 @@ Current MCP formats in this repo are:
 | Cursor | `.cursor/mcp.json` | `user`, `project` | `stdio`, `http` |
 | Gemini | `.gemini/settings.json` | `user`, `project` | `stdio`, `http` |
 | OpenCode | `~/.config/opencode/opencode.json` or `<workspace>/opencode.json` (`.jsonc` is read when present) | `user`, `project` | `stdio`, `http` |
+| Kimi | `$KIMI_CODE_HOME/mcp.json` (default `~/.kimi-code/mcp.json`) or `<workspace>/.kimi-code/mcp.json` | `user`, `project` | `stdio`, `http` |
 
 5. Implement skills.
 
@@ -146,6 +148,7 @@ Current skill discovery roots are:
 | Cursor | `~/.cursor/skills` | `<workspace>/.cursor/skills`, `<workspace>/.agents/skills` | `/` | Uses slash-style commands. |
 | Gemini | `~/.gemini/skills`, `~/.agents/skills` | `<workspace>/.gemini/skills`, `<workspace>/.agents/skills` | `/` | Uses slash-style commands. |
 | OpenCode | `~/.config/opencode/skills`, `~/.claude/skills`, `~/.agents/skills` | Cwd-to-topmost-git-root `.opencode/skills`, `.claude/skills`, and `.agents/skills` | `/` | Reuses OpenCode, Claude, and Agents skill locations. Overlapping roots are deduplicated before scanning. |
+| Kimi | `$KIMI_CODE_HOME/skills` (default `~/.kimi-code/skills`), `~/.agents/skills` | Nearest-git-root `.kimi-code/skills`, `.agents/skills` | `/skill:` | Directory-form `<name>/SKILL.md` and flat `<name>.md` are both discovered; the directory form wins on name clashes. Invoked as `/skill:<name>`. |
 
 Command forms currently used by the providers are:
 
@@ -155,6 +158,7 @@ Command forms currently used by the providers are:
 - Cursor skills: `/skill-name`
 - Gemini skills: `/skill-name`
 - OpenCode skills: `/skill-name`
+- Kimi skills: `/skill:skill-name`
 
 6. Implement sessions.
 
@@ -193,6 +197,7 @@ Current session sync roots are:
 | Cursor | `~/.cursor/projects/**/*.jsonl` | Uses sibling `worker.log` to recover `workspacePath`, then derives the session title from the first user prompt. |
 | Gemini | `~/.gemini/tmp/**/*.jsonl` | Current full scans only index temp JSONL chat artifacts. Single-file sync also accepts legacy `.json` files. |
 | OpenCode | `~/.local/share/opencode/opencode.db` | Reads active sessions/messages/parts from OpenCode's shared SQLite database and stores `jsonl_path` as `null` so deleting one app session cannot remove the shared DB. |
+| Kimi | `$KIMI_CODE_HOME/session_index.jsonl` → `<sessionDir>/state.json` | The global index maps session id → session dir → work dir. `state.json` supplies title/timestamps; `agents/main/wire.jsonl` is stored as `jsonl_path` for history loads. Directories missing from disk are skipped. |
 
 8. Register the provider.
 
@@ -332,6 +337,7 @@ Useful tests in this repo:
 - `server/modules/providers/tests/mcp.test.ts`
 - `server/modules/providers/tests/skills.test.ts`
 - `server/modules/providers/tests/opencode-sessions.test.ts`
+- `server/modules/providers/tests/kimi-sessions.test.ts`
 
 If you touch sessions or session synchronization, add or update focused tests
 alongside the implementation.

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/logo.svg" alt="Planrla" width="64" height="64">
   <h1>Planrla</h1>
-  <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, and <a href="https://geminicli.com/">Gemini-CLI</a>.<br>Use it locally or remotely to view your active projects and sessions from everywhere.</p>
+  <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, <a href="https://geminicli.com/">Gemini-CLI</a>, <a href="https://opencode.ai">OpenCode</a>, and <a href="https://moonshotai.github.io/kimi-code/">Kimi Code</a>.<br>Use it locally or remotely to view your active projects and sessions from everywhere.</p>
 </div>
 
 <p align="center">
@@ -43,7 +43,7 @@
 <h3>CLI Selection</h3>
 <img src="public/screenshots/cli-selection.png" alt="CLI Selection" width="400">
 <br>
-<em>Select between Claude Code, Gemini, Cursor CLI and Codex</em>
+<em>Select between Claude Code, Gemini, Cursor CLI, Codex, OpenCode and Kimi Code</em>
 </td>
 </tr>
 </table>
@@ -120,7 +120,7 @@ Planrla is the UI layer that powers Planrla Hosted. You can self-host it on your
 | **Isolation** | Runs on your host | Hypervisor-level sandbox (microVM) | Full cloud isolation |
 | **Machine needs to stay on** | Yes | Yes | No |
 | **Mobile access** | Any browser on your network | Any browser on your network | Any device, native app coming |
-| **Agents supported** | Claude Code, Cursor CLI, Codex, Gemini CLI | Claude Code, Codex, Gemini CLI | Claude Code, Cursor CLI, Codex, Gemini CLI |
+| **Agents supported** | Claude Code, Cursor CLI, Codex, Gemini CLI, OpenCode, Kimi Code | Claude Code, Codex, Gemini CLI | Claude Code, Cursor CLI, Codex, Gemini CLI, OpenCode, Kimi Code |
 | **File explorer and Git** | Yes | Yes | Yes |
 | **MCP configuration** | Synced with `~/.claude` | Managed via UI | Managed via UI |
 | **REST API** | Yes | Yes | Yes |
@@ -192,7 +192,7 @@ Here's what that means in practice:
 
 - **All your sessions, not just one** — Planrla auto-discovers every session from your `~/.claude` folder. Remote Control only exposes the single active session to make it available in the Claude mobile app.
 - **Your settings are your settings** — MCP servers, tool permissions, and project config you change in Planrla are written directly to your Claude Code config and take effect immediately, and vice versa.
-- **Works with more agents** — Claude Code, Cursor CLI, Codex, and Gemini CLI, not just Claude Code.
+- **Works with more agents** — Claude Code, Cursor CLI, Codex, Gemini CLI, OpenCode, and Kimi Code, not just Claude Code.
 - **Full UI, not just a chat window** — file explorer, Git integration, MCP management, and a shell terminal are all built in.
 - **Planrla Hosted runs in the cloud** — close your laptop, the agent keeps running. No terminal to babysit, no machine to keep awake.
 
@@ -201,7 +201,7 @@ Here's what that means in practice:
 <details>
 <summary>Do I need to pay for an AI subscription separately?</summary>
 
-Yes. Planrla provides the environment, not the AI. You bring your own Claude, Cursor, Codex, or Gemini subscription. Planrla Hosted starts at $7/month for the hosted environment on top of that.
+Yes. Planrla provides the environment, not the AI. You bring your own Claude, Cursor, Codex, Gemini, OpenCode, or Kimi Code subscription. Planrla Hosted starts at $7/month for the hosted environment on top of that.
 
 </details>
 
@@ -241,6 +241,8 @@ Planrla  - (https://planrla.com).
 - **[Cursor CLI](https://docs.cursor.com/en/cli/overview)** - Cursor's official CLI
 - **[Codex](https://developers.openai.com/codex)** - OpenAI Codex
 - **[Gemini-CLI](https://geminicli.com/)** - Google Gemini CLI
+- **[OpenCode](https://opencode.ai)** - Open source coding agent CLI
+- **[Kimi Code](https://moonshotai.github.io/kimi-code/)** - Moonshot AI's official CLI
 - **[React](https://react.dev/)** - User interface library
 - **[Vite](https://vitejs.dev/)** - Fast build tool and dev server
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework

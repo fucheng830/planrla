@@ -89,6 +89,8 @@ function ChatInterface({
     setGeminiModel,
     opencodeModel,
     setOpenCodeModel,
+    kimiModel,
+    setKimiModel,
     permissionMode,
     pendingPermissionRequests,
     setPendingPermissionRequests,
@@ -223,6 +225,7 @@ function ChatInterface({
     codexModel,
     geminiModel,
     opencodeModel,
+    kimiModel,
     isLoading: isProcessing,
     canAbortSession,
     tokenBudget,
@@ -374,7 +377,9 @@ function ChatInterface({
             ? t('messageTypes.gemini')
             : provider === 'opencode'
               ? t('messageTypes.opencode', { defaultValue: 'OpenCode' })
-            : t('messageTypes.claude');
+              : provider === 'kimi'
+                ? t('messageTypes.kimi', { defaultValue: 'Kimi Code' })
+                : t('messageTypes.claude');
 
     return (
       <div className="flex h-full items-center justify-center">
@@ -417,6 +422,8 @@ function ChatInterface({
           setGeminiModel={setGeminiModel}
           opencodeModel={opencodeModel}
           setOpenCodeModel={setOpenCodeModel}
+          kimiModel={kimiModel}
+          setKimiModel={setKimiModel}
           providerModelCatalog={providerModelCatalog}
           providerModelsLoading={providerModelsLoading}
           tasksEnabled={tasksEnabled}
@@ -509,7 +516,9 @@ function ChatInterface({
                     ? t('messageTypes.gemini')
                     : provider === 'opencode'
                       ? t('messageTypes.opencode', { defaultValue: 'OpenCode' })
-                    : t('messageTypes.claude'),
+                      : provider === 'kimi'
+                        ? t('messageTypes.kimi', { defaultValue: 'Kimi Code' })
+                        : t('messageTypes.claude'),
           })}
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}

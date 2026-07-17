@@ -207,7 +207,7 @@ function TemplateForm({
                   onChange={(e) => updateStage(i, { agent: e.target.value })}
                   className="rounded border border-border bg-background p-1 text-xs"
                 >
-                  {['claude', 'codex', 'cursor', 'gemini', 'opencode'].map((p) => (
+                  {['claude', 'codex', 'cursor', 'gemini', 'opencode', 'kimi'].map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>

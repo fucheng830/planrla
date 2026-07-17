@@ -17,6 +17,7 @@ const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   codex: 'gpt-5.4',
   gemini: 'gemini-3.1-pro-preview',
   opencode: 'anthropic/claude-sonnet-4-5',
+  kimi: 'kimi-code/kimi-for-coding',
 };
 
 /**
@@ -31,6 +32,7 @@ const FALLBACK_PERMISSION_MODES: Record<LLMProvider, PermissionMode[]> = {
   codex: ['default', 'acceptEdits', 'bypassPermissions'],
   gemini: ['default', 'yolo'],
   opencode: ['default'],
+  kimi: ['default'],
 };
 
 type ProviderCapabilities = {
@@ -100,6 +102,9 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const [opencodeModel, setOpenCodeModel] = useState<string>(() => {
     return resolveInitialModel('opencode', FALLBACK_DEFAULT_MODEL.opencode);
   });
+  const [kimiModel, setKimiModel] = useState<string>(() => {
+    return resolveInitialModel('kimi', FALLBACK_DEFAULT_MODEL.kimi);
+  });
 
   /**
    * Backend-owned capability matrix keyed by provider. Drives the permission
@@ -148,12 +153,18 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       return;
     }
 
+    if (targetProvider === 'kimi') {
+      setKimiModel(model);
+      localStorage.setItem('kimi-model', model);
+      return;
+    }
+
     setOpenCodeModel(model);
     localStorage.setItem('opencode-model', model);
   }, []);
 
   const loadProviderModels = useCallback(async (options: { bypassCache?: boolean } = {}) => {
-    const providers: LLMProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode'];
+    const providers: LLMProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi'];
     const requestId = providerModelsRequestIdRef.current + 1;
     providerModelsRequestIdRef.current = requestId;
     const isHardRefresh = options.bypassCache === true;
@@ -340,6 +351,20 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   }, [providerModelCatalog.opencode, opencodeModel]);
 
   useEffect(() => {
+    const kimi = providerModelCatalog.kimi;
+    if (kimi) {
+      const next = pickStoredOrCurrent('kimi-model', kimiModel, kimi);
+      if (next !== kimiModel) {
+        setKimiModel(next);
+      }
+      const existing = localStorage.getItem('kimi-model');
+      if (existing !== null && existing !== next) {
+        localStorage.setItem('kimi-model', next);
+      }
+    }
+  }, [providerModelCatalog.kimi, kimiModel]);
+
+  useEffect(() => {
     // 优先 per-session 记忆，其次全局默认 default-permission-mode[provider]，最后 'default'
     // 用 resolveSessionPermissionMode 替代旧的 validModes 校验：capabilities 的 validModes
     // 不含 gemini 'yolo'，旧守卫会拒绝它；resolver 直接返回保存值，gemini 不限权限可生效。
@@ -446,6 +471,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     setGeminiModel,
     opencodeModel,
     setOpenCodeModel,
+    kimiModel,
+    setKimiModel,
     permissionMode,
     setPermissionMode,
     pendingPermissionRequests,

@@ -79,6 +79,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   codex: 'Codex',
   gemini: 'Gemini',
   opencode: 'OpenCode',
+  kimi: 'Kimi Code',
 };
 
 const getProviderLabel = (provider: string | undefined, fallback = 'Unknown') => {

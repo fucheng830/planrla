@@ -78,6 +78,19 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsPermissionRequests: false,
     supportsTokenUsage: true,
   },
+  kimi: {
+    provider: 'kimi',
+    // kimi -p (headless) always runs under the CLI's own auto permission policy;
+    // --yolo/--auto/--plan cannot be combined with -p, so no mode is switchable.
+    permissionModes: ['default'],
+    defaultPermissionMode: 'default',
+    supportsImages: false,
+    supportsAbort: true,
+    supportsPermissionRequests: false,
+    // wire.jsonl carries usage.record events, but the token-usage endpoint has
+    // no kimi branch yet.
+    supportsTokenUsage: false,
+  },
 };
 
 /**

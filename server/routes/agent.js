@@ -10,6 +10,7 @@ import { spawnCursor } from '../cursor-cli.js';
 import { queryCodex } from '../openai-codex.js';
 import { spawnGemini } from '../gemini-cli.js';
 import { spawnOpenCode } from '../opencode-cli.js';
+import { spawnKimi } from '../kimi-cli.js';
 import { Octokit } from '@octokit/rest';
 import { providerModelsService } from '../modules/providers/services/provider-models.service.js';
 import { IS_PLATFORM } from '../constants/config.js';
@@ -636,7 +637,7 @@ class ResponseCollector {
  *                          - Source for auto-generated branch names (if createBranch=true and no branchName)
  *                          - Fallback for PR title if no commits are made
  *
- * @param {string} provider - (Optional) AI provider to use. Options: 'claude' | 'cursor' | 'codex' | 'gemini' | 'opencode'
+ * @param {string} provider - (Optional) AI provider to use. Options: 'claude' | 'cursor' | 'codex' | 'gemini' | 'opencode' | 'kimi'
  *                           Default: 'claude'
  *
  * @param {boolean} stream - (Optional) Enable Server-Sent Events (SSE) streaming for real-time updates.
@@ -754,7 +755,7 @@ class ResponseCollector {
  * Input Validations (400 Bad Request):
  *   - Either githubUrl OR projectPath must be provided (not neither)
  *   - message must be non-empty string
- *   - provider must be 'claude', 'cursor', 'codex', 'gemini', or 'opencode'
+ *   - provider must be 'claude', 'cursor', 'codex', 'gemini', 'opencode', or 'kimi'
  *   - createBranch/createPR requires githubUrl OR projectPath (not neither)
  *   - branchName must pass Git naming rules (if provided)
  *
@@ -862,8 +863,8 @@ router.post('/', validateExternalApiKey, async (req, res) => {
     return res.status(400).json({ error: 'message is required' });
   }
 
-  if (!['claude', 'cursor', 'codex', 'gemini', 'opencode'].includes(provider)) {
-    return res.status(400).json({ error: 'provider must be "claude", "cursor", "codex", "gemini", or "opencode"' });
+  if (!['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi'].includes(provider)) {
+    return res.status(400).json({ error: 'provider must be "claude", "cursor", "codex", "gemini", "opencode", or "kimi"' });
   }
 
   // Validate GitHub branch/PR creation requirements
@@ -944,6 +945,7 @@ router.post('/', validateExternalApiKey, async (req, res) => {
     const codexModels = (await providerModelsService.getProviderModels('codex')).models;
     const geminiModels = (await providerModelsService.getProviderModels('gemini')).models;
     const opencodeModels = (await providerModelsService.getProviderModels('opencode')).models;
+    const kimiModels = (await providerModelsService.getProviderModels('kimi')).models;
 
     // Start the appropriate session
     if (provider === 'claude') {
@@ -995,6 +997,15 @@ router.post('/', validateExternalApiKey, async (req, res) => {
         cwd: finalProjectPath,
         sessionId: sessionId || null,
         model: model || opencodeModels.DEFAULT
+      }, writer);
+    } else if (provider === 'kimi') {
+      console.log('Starting Kimi Code CLI session');
+
+      await spawnKimi(message.trim(), {
+        projectPath: finalProjectPath,
+        cwd: finalProjectPath,
+        sessionId: sessionId || null,
+        model: model || kimiModels.DEFAULT
       }, writer);
     }
 

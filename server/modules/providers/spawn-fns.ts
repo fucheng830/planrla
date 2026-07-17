@@ -15,6 +15,7 @@ import { queryClaudeSDK } from '@/claude-sdk.js';
 import { queryCodex } from '@/openai-codex.js';
 import { spawnCursor } from '@/cursor-cli.js';
 import { spawnGemini } from '@/gemini-cli.js';
+import { spawnKimi } from '@/kimi-cli.js';
 import { spawnOpenCode } from '@/opencode-cli.js';
 
 /**
@@ -27,7 +28,7 @@ export type SpawnFn = (command: string, options: any, writer: any) => Promise<un
 
 /**
  * Map of provider key → spawn function. The key matches `StageTemplate.agent`
- * ("claude" | "codex" | "cursor" | "gemini" | "opencode").
+ * ("claude" | "codex" | "cursor" | "gemini" | "opencode" | "kimi").
  */
 export const spawnFns: Record<string, SpawnFn> = {
   claude: queryClaudeSDK,
@@ -35,4 +36,5 @@ export const spawnFns: Record<string, SpawnFn> = {
   cursor: spawnCursor,
   gemini: spawnGemini,
   opencode: spawnOpenCode,
+  kimi: spawnKimi,
 };

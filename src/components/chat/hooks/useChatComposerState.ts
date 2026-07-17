@@ -46,6 +46,7 @@ interface UseChatComposerStateArgs {
   codexModel: string;
   geminiModel: string;
   opencodeModel: string;
+  kimiModel: string;
   isLoading: boolean;
   canAbortSession: boolean;
   tokenBudget: Record<string, unknown> | null;
@@ -181,6 +182,7 @@ export function useChatComposerState({
   codexModel,
   geminiModel,
   opencodeModel,
+  kimiModel,
   isLoading,
   canAbortSession,
   tokenBudget,
@@ -370,7 +372,9 @@ export function useChatComposerState({
                 ? geminiModel
                 : provider === 'opencode'
                   ? opencodeModel
-                  : claudeModel,
+                  : provider === 'kimi'
+                    ? kimiModel
+                    : claudeModel,
           tokenUsage: tokenBudget,
         };
 
@@ -425,6 +429,7 @@ export function useChatComposerState({
       cursorModel,
       geminiModel,
       opencodeModel,
+      kimiModel,
       handleBuiltInCommand,
       handleCustomCommand,
       input,
@@ -782,7 +787,9 @@ export function useChatComposerState({
                   ? 'gemini-settings'
                   : provider === 'opencode'
                     ? 'opencode-settings'
-                  : 'claude-settings';
+                    : provider === 'kimi'
+                      ? 'kimi-settings'
+                      : 'claude-settings';
           const savedSettings = safeLocalStorage.getItem(settingsKey);
           if (savedSettings) {
             return JSON.parse(savedSettings);
@@ -808,7 +815,9 @@ export function useChatComposerState({
               ? geminiModel
               : provider === 'opencode'
                 ? opencodeModel
-                : claudeModel;
+                : provider === 'kimi'
+                  ? kimiModel
+                  : claudeModel;
 
       // One message shape for every provider. The backend resolves the
       // provider, project path, and provider-native resume id from the
@@ -856,6 +865,7 @@ export function useChatComposerState({
       formattedHints,
       geminiModel,
       opencodeModel,
+      kimiModel,
       isLoading,
       onSessionProcessing,
       onSessionEstablished,

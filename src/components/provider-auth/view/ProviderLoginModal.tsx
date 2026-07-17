@@ -42,6 +42,10 @@ const getProviderCommand = ({
     return 'opencode auth login';
   }
 
+  if (provider === 'kimi') {
+    return 'kimi login';
+  }
+
   return 'gemini status';
 };
 

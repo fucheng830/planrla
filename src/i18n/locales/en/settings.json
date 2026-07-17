@@ -227,6 +227,7 @@
       "cursor": "Cursor CLI Login",
       "codex": "Codex CLI Login",
       "opencode": "OpenCode CLI Login",
+      "kimi": "Kimi Code CLI Login",
       "gemini": "Gemini CLI Configuration"
     },
     "gemini": {
@@ -615,6 +616,9 @@
       },
       "opencode": {
         "description": "OpenCode CLI assistant"
+      },
+      "kimi": {
+        "description": "Kimi Code CLI assistant"
       }
     },
     "connectionStatus": "Connection Status",
@@ -710,7 +714,8 @@
       "claude": "Model Context Protocol servers provide additional tools and data sources to Claude",
       "cursor": "Model Context Protocol servers provide additional tools and data sources to Cursor",
       "codex": "Model Context Protocol servers provide additional tools and data sources to Codex",
-      "opencode": "Model Context Protocol servers provide additional tools and data sources to OpenCode"
+      "opencode": "Model Context Protocol servers provide additional tools and data sources to OpenCode",
+      "kimi": "Model Context Protocol servers provide additional tools and data sources to Kimi Code"
     },
     "globalAddButton": "Add Global MCP Server",
     "providerAddButton": "Add {{provider}} MCP Server",

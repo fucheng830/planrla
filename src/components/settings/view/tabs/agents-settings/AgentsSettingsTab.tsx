@@ -29,7 +29,7 @@ export default function AgentsSettingsTab({
   ), [selectedAgent]);
 
   const visibleAgents = useMemo<AgentProvider[]>(() => {
-    return ['claude', 'cursor', 'codex', 'gemini', 'opencode'];
+    return ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi'];
   }, []);
 
   const agentContextById = useMemo<Record<AgentProvider, AgentContext>>(() => ({
@@ -53,6 +53,10 @@ export default function AgentsSettingsTab({
       authStatus: providerAuthStatus.opencode,
       onLogin: () => onProviderLogin('opencode'),
     },
+    kimi: {
+      authStatus: providerAuthStatus.kimi,
+      onLogin: () => onProviderLogin('kimi'),
+    },
   }), [
     onProviderLogin,
     providerAuthStatus.claude,
@@ -60,6 +64,7 @@ export default function AgentsSettingsTab({
     providerAuthStatus.cursor,
     providerAuthStatus.gemini,
     providerAuthStatus.opencode,
+    providerAuthStatus.kimi,
   ]);
 
   useEffect(() => {

@@ -39,6 +39,10 @@ const PROVIDER_WATCH_PATHS: Array<{ provider: LLMProvider; rootPath: string }> =
     provider: 'opencode',
     rootPath: path.join(os.homedir(), '.local', 'share', 'opencode'),
   },
+  {
+    provider: 'kimi',
+    rootPath: path.join(process.env.KIMI_CODE_HOME || path.join(os.homedir(), '.kimi-code'), 'sessions'),
+  },
 ];
 
 const WATCHER_IGNORED_PATTERNS = [

@@ -206,6 +206,7 @@
       "cursor": "Cursor 命令行登录",
       "codex": "Codex 命令行登录",
       "opencode": "OpenCode 命令行登录",
+      "kimi": "Kimi Code 命令行登录",
       "gemini": "Gemini 命令行配置"
     },
     "gemini": {
@@ -686,7 +687,8 @@
       "claude": "Model Context Protocol 服务器为 Claude 提供额外的工具和数据源",
       "cursor": "Model Context Protocol 服务器为 Cursor 提供额外的工具和数据源",
       "codex": "Model Context Protocol 服务器为 Codex 提供额外的工具和数据源",
-      "opencode": "Model Context Protocol 服务器为 OpenCode 提供额外的工具和数据源"
+      "opencode": "Model Context Protocol 服务器为 OpenCode 提供额外的工具和数据源",
+      "kimi": "Model Context Protocol 服务器为 Kimi Code 提供额外的工具和数据源"
     },
     "globalAddButton": "添加全局 MCP 服务器",
     "providerAddButton": "添加 {{provider}} MCP 服务器",

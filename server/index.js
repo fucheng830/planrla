@@ -44,6 +44,10 @@ import {
     spawnOpenCode,
     abortOpenCodeSession,
 } from './opencode-cli.js';
+import {
+    spawnKimi,
+    abortKimiSession,
+} from './kimi-cli.js';
 import sessionManager from './sessionManager.js';
 import {
     stripAnsiSequences,
@@ -127,6 +131,7 @@ const wss = createWebSocketServer(server, {
             codex: queryCodex,
             gemini: spawnGemini,
             opencode: spawnOpenCode,
+            kimi: spawnKimi,
         },
         abortFns: {
             claude: abortClaudeSDKSession,
@@ -134,6 +139,7 @@ const wss = createWebSocketServer(server, {
             codex: abortCodexSession,
             gemini: abortGeminiSession,
             opencode: abortOpenCodeSession,
+            kimi: abortKimiSession,
         },
         resolveToolApproval,
         getPendingApprovalsForSession,
