@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { VList } from 'virtua';
 
 import type { ChatMessage } from '../../types/types';
 import type {
@@ -14,8 +14,6 @@ import { getIntrinsicMessageKey } from '../../utils/messageKeys';
 
 import MessageComponent from './MessageComponent';
 import ProviderSelectionEmptyState from './ProviderSelectionEmptyState';
-
-const VIRTUALIZATION_OVERSCAN = 18;
 
 interface ChatMessagesPaneProps {
   scrollContainerRef: RefObject<HTMLDivElement>;
@@ -124,15 +122,6 @@ export default function ChatMessagesPane({
   const allocatedKeysRef = useRef<Set<string>>(new Set());
   const generatedMessageKeyCounterRef = useRef(0);
 
-  // REQ-032 F3: 已测消息高度的滚动平均 → estimateSize(种子 104,首条测量前用之)。
-  // 让虚拟器预测量 spacer 更接近真实内容高度,缩短初始滚底 RAF 尾巴;顺带缓解
-  // REQ-031 的 estimateSize 虚高根因(不覆盖其 measureElement 重测工作)。
-  // 按 data-index 去重(同一逻辑消息滚回不重复计入);切会话时重置(见下方 effect)。
-  // 注:这是质心估计启发式(F3b 逐条缓存才是精确方案),双峰分布下会偏短,但仍远优于固定 104。
-  const measuredHeightSumRef = useRef(0);
-  const measuredCountRef = useRef(0);
-  const measuredKeysRef = useRef<Set<string>>(new Set());
-
   // Keep keys stable across prepends so existing MessageComponent instances retain local state.
   const getMessageKey = useCallback((message: ChatMessage) => {
     const existingKey = messageKeyMapRef.current.get(message);
@@ -157,46 +146,12 @@ export default function ChatMessagesPane({
     return candidateKey;
   }, []);
 
-  const virtualizer = useVirtualizer({
-    count: visibleMessages.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () =>
-      measuredCountRef.current > 0
-        ? measuredHeightSumRef.current / measuredCountRef.current
-        : 104,
-    overscan: VIRTUALIZATION_OVERSCAN,
-  });
-
-  // REQ-032 F3: 包一层 measureElement —— 在虚拟器测量之前,按 data-index 把挂载元素
-  // 实测高度计入滚动平均。data-index 在同一 visibleMessages 内对每条消息稳定,故消息
-  // 滚出再滚回(新 DOM 节点)不会重复计入;virtualizer 实例稳定,故 [virtualizer] 依赖
-  // 稳定,measureAndTrack 引用稳定,ref 回调不会每渲染触发。
-  const measureAndTrack = useCallback((el: HTMLElement | null) => {
-    const idxAttr = el?.getAttribute('data-index') ?? null;
-    if (el && idxAttr !== null && !measuredKeysRef.current.has(idxAttr)) {
-      measuredKeysRef.current.add(idxAttr);
-      const height = el.offsetHeight;
-      if (height > 0) {
-        measuredHeightSumRef.current += height;
-        measuredCountRef.current += 1;
-      }
-    }
-    virtualizer.measureElement(el);
-  }, [virtualizer]);
-
-  // REQ-032 F3: 切换会话时重置测高统计,避免上一会话的平均高度污染下一会话的初始锚定。
-  useEffect(() => {
-    measuredHeightSumRef.current = 0;
-    measuredCountRef.current = 0;
-    measuredKeysRef.current = new Set();
-  }, [currentSessionId]);
-
   return (
     <div
       ref={scrollContainerRef}
       onWheel={onWheel}
       onTouchMove={onTouchMove}
-      className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-0 py-3 sm:space-y-4 sm:p-4"
+      className="relative flex flex-1 flex-col overflow-hidden px-0 py-3 sm:p-4"
     >
       {(isLoadingSessionMessages || isProcessing) && chatMessages.length === 0 ? (
         <div className="mt-8 text-center text-gray-500 dark:text-gray-400">
@@ -300,28 +255,14 @@ export default function ChatMessagesPane({
             </div>
           )}
 
-          {/* REQ-031: overflow:'clip' 裁掉消息内容溢出测量盒子之外的尾部(trailing margin/绝对
-              定位子元素)。virtualizer 的 getTotalSize 只累加 offsetHeight(不含 margin),但浏览器
-              把这截溢出计入 scrollHeight → spacer 下方出现大片可滚动空白。clip 把它裁掉。
-              用 clip 而非 hidden:clip 不创建滚动上下文,不破坏展开工具区的 sticky 表头。 */}
-          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%', overflow: 'clip' }}>
-            {virtualizer.getVirtualItems().map((vItem) => {
-              const message = visibleMessages[vItem.index];
-              const prevMessage = vItem.index > 0 ? visibleMessages[vItem.index - 1] : null;
+          {/* REQ-041: virtua VList(flow 布局 + delta 同帧补偿)替代 @tanstack/react-virtual。
+              virtua 在 item 高度从 estimate 收敛到真实时把 delta 同帧应用到 scroll offset,
+              消除"涌入虚高 + measure 回落"两次 commit 的中间态抖动。 */}
+          <VList data={visibleMessages} style={{ flex: 1, overflowAnchor: 'none' }}>
+            {(message: ChatMessage, index: number) => {
+              const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
               return (
-                <div
-                  key={getMessageKey(message)}
-                  data-index={vItem.index}
-                  ref={measureAndTrack}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${vItem.start}px)`,
-                    paddingBottom: '0.75rem',
-                  }}
-                >
+                <div key={getMessageKey(message)} style={{ paddingBottom: '0.75rem' }}>
                   <MessageComponent
                     message={message}
                     prevMessage={prevMessage}
@@ -338,11 +279,10 @@ export default function ChatMessagesPane({
                   />
                 </div>
               );
-            })}
-          </div>
+            }}
+          </VList>
         </>
       )}
     </div>
   );
 }
-
