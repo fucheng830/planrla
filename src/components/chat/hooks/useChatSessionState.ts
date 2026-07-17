@@ -319,21 +319,18 @@ export function useChatSessionState({
   }, [allMessagesLoaded, scrollToBottom]);
 
   const isNearBottom = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return false;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    return scrollHeight - scrollTop - clientHeight < 50;
+    const ref = virtuaRef.current;
+    if (!ref) return false;
+    return ref.scrollSize - ref.scrollOffset - ref.viewportSize < 50;
   }, []);
 
   const loadOlderMessages = useCallback(
-    async (container: HTMLDivElement) => {
-      if (!container || isLoadingMoreRef.current || isLoadingMoreMessages) return false;
+    async () => {
+      if (isLoadingMoreRef.current || isLoadingMoreMessages) return false;
       if (allMessagesLoadedRef.current) return false;
       if (!hasMoreMessages || !selectedSession || !selectedProject) return false;
 
       isLoadingMoreRef.current = true;
-      const previousScrollHeight = container.scrollHeight;
-      const previousScrollTop = container.scrollTop;
 
       try {
         const slot = await sessionStore.fetchMore(selectedSession.id, {
@@ -341,7 +338,7 @@ export function useChatSessionState({
         });
         if (!slot || slot.serverMessages.length === 0) return false;
 
-        pendingScrollRestoreRef.current = { height: previousScrollHeight, top: previousScrollTop };
+        // REQ-041: 翻页锚定由 virtua delta 同帧补偿接管,不再设 pendingScrollRestore。
         setHasMoreMessages(slot.hasMore);
         setTotalMessages(slot.total);
         setVisibleMessageCount((prev) => prev + MESSAGES_PER_PAGE);
@@ -354,71 +351,26 @@ export function useChatSessionState({
   );
 
   const handleScroll = useCallback(async () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const ref = virtuaRef.current;
+    if (!ref) return;
 
     const nearBottom = isNearBottom();
     setIsUserScrolledUp(!nearBottom);
 
     if (!allMessagesLoadedRef.current) {
-      const scrolledNearTop = container.scrollTop < 100;
+      const scrolledNearTop = ref.scrollOffset < 100;
       if (!scrolledNearTop) { topLoadLockRef.current = false; return; }
       if (topLoadLockRef.current) {
-        if (container.scrollTop > 20) topLoadLockRef.current = false;
+        if (ref.scrollOffset > 20) topLoadLockRef.current = false;
         return;
       }
-      const didLoad = await loadOlderMessages(container);
+      const didLoad = await loadOlderMessages();
       if (didLoad) topLoadLockRef.current = true;
     }
   }, [isNearBottom, loadOlderMessages]);
 
-  // Restore scroll position after loadEarlier expands the visible window.
-  // react-virtual's measureElement measures newly-rendered items asynchronously,
-  // so scrollHeight keeps growing for several frames after the window expands.
-  // The old single-shot offset was computed before all new heights settled →
-  // under-compensated → the viewport jumped down (worst on long tool diffs /
-  // markdown blocks). Re-apply every frame until scrollHeight stabilizes — same
-  // shape as the initial-scroll-to-bottom RAF loop below (L403-434).
-  useLayoutEffect(() => {
-    if (!pendingScrollRestoreRef.current || !scrollContainerRef.current) return;
-    const { height: anchorHeight, top: anchorTop } = pendingScrollRestoreRef.current;
-    const container = scrollContainerRef.current;
+  // REQ-041: 翻页锚定由 virtua 的 delta 同帧补偿接管(原 RAF restore useLayoutEffect 已删)。
 
-    const applyOffset = () => {
-      container.scrollTop = anchorTop + Math.max(container.scrollHeight - anchorHeight, 0);
-    };
-    applyOffset(); // first frame synchronous (useLayoutEffect, pre-paint) — avoids initial flash
-
-    let frame = 0;
-    let lastHeight = container.scrollHeight;
-    let stableCount = 0;
-    let rafId = 0;
-    const tick = () => {
-      if (!scrollContainerRef.current) return;
-      applyOffset();
-      const currentHeight = container.scrollHeight;
-      if (currentHeight === lastHeight) {
-        stableCount++;
-      } else {
-        stableCount = 0;
-        lastHeight = currentHeight;
-      }
-      frame++;
-      // 上限是泄漏护栏,不是性能预算:循环在 scrollHeight 连续 3 帧稳定后即早退,
-      // 快路径(短消息)零开销。切勿为"减 layout thrashing"再收紧——REQ-039 曾
-      // 60→20,导致长 markdown / 长 tool diff / 代码块的旧消息高度 settle 慢于 20 帧,
-      // 循环提前终止后迟到测量无人校正,造成翻页残余抖动(REQ-029 在 60 帧通过验收)。
-      if (stableCount < 3 && frame < 60) {
-        rafId = requestAnimationFrame(tick);
-      } else {
-        pendingScrollRestoreRef.current = null;
-      }
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [chatMessages.length, visibleMessageCount]);
 
   // Reset scroll/pagination state on session change
   useEffect(() => {
