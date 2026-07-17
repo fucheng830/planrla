@@ -68,6 +68,28 @@ const mapRowWithToken = (row: Record<string, unknown>): A2aAgentWithTokenRow => 
 
 export const a2aAgentsDb = {
   /**
+   * Lists all active A2A agents for a user as a compact, secret-free summary
+   * (name/url/description/has_auth). Used by the MCP `a2a_list` tool so the
+   * agent can enumerate registered targets without ever receiving the token.
+   * `has_auth` is a boolean flag derived from `auth_token IS NOT NULL`.
+   * Only active agents are returned (matches `getAgentForCall` visibility).
+   */
+  getAgentsList(userId: number): Array<{ name: string; url: string; description: string | null; hasAuth: boolean }> {
+    const db = getConnection();
+    const rows = db
+      .prepare(
+        'SELECT name, url, description, (auth_token IS NOT NULL AND auth_token != \'\') AS has_auth FROM a2a_agents WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC'
+      )
+      .all(userId) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      name: row.name as string,
+      url: row.url as string,
+      description: (row.description as string | null) ?? null,
+      hasAuth: Boolean(row.has_auth),
+    }));
+  },
+
+  /**
    * Lists all A2A agents for a user (excluding auth_token).
    * Used by list/detail APIs that must not leak secrets.
    */
