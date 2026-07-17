@@ -210,17 +210,7 @@ export default function ChatMessagesPane({
             </div>
           )}
 
-          {/* Indicator showing there are more messages to load (hide when all loaded) */}
-          {hasMoreMessages && !isLoadingMoreMessages && !allMessagesLoaded && (
-            <div className="border-b border-gray-200 py-2 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              {totalMessages > 0 && (
-                <span>
-                  {t('session.messages.showingOf', { shown: sessionMessagesCount, total: totalMessages })}{' '}
-                  <span className="text-xs">{t('session.messages.scrollToLoad')}</span>
-                </span>
-              )}
-            </div>
-          )}
+          {/* REQ-041: 删"显示 X/Y 向上滚动以加载更多"indicator(virtua 翻页靠 onScroll 触发,不依赖提示) */}
 
           {/* Floating "Load all messages" overlay */}
           {(showLoadAllOverlay || isLoadingAllMessages || loadAllJustFinished) && (
