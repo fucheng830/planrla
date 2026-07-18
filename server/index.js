@@ -73,6 +73,7 @@ import searchRoutes from './modules/search/search.routes.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
 import { createA2aMcpRouter } from './modules/a2a/mcp.route.js';
+import { createA2aInboundRouter } from './modules/a2a/inbound.route.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -255,6 +256,15 @@ app.use('/api/mcp/kanban', createKanbanMcpRouter({ getKanban: () => getKanban() 
 // Single-user host: userId is resolved from the first active user row, the
 // same pattern middleware/auth.js uses in platform mode.
 app.use('/api/mcp/a2a', createA2aMcpRouter({ getUserId: () => userDb.getFirstUser()?.id ?? null }));
+
+// A2A inbound endpoint (REQ-020 S2, Task 5). Mounted BEFORE auth, alongside
+// /api/mcp/a2a above — remote A2A clients call this loopback-exposed route
+// without a user JWT. Serves the Agent Card (/.well-known/agent.json) and the
+// JSON-RPC task send/stream endpoints for the single-user host. SERVER_PORT is
+// read inline because the `const SERVER_PORT` (declared further down at
+// line ~1789) is still in the temporal dead zone when this module-level
+// app.use runs; the same `process.env.SERVER_PORT || 3001` fallback is used.
+app.use('/api/a2a', createA2aInboundRouter(process.env.SERVER_PORT || 3001, () => userDb.getFirstUser()?.id ?? 0));
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
