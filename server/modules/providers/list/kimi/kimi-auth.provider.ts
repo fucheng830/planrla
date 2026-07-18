@@ -32,10 +32,18 @@ export function getKimiCodeHome(): string {
 let cachedKimiBinary: string | null = null;
 
 /**
+ * Directory the native installer puts the kimi executable in, when present.
+ */
+export function getKimiCodeBinDir(): string | null {
+  const binDir = path.join(getKimiCodeHome(), 'bin');
+  return fsSync.existsSync(binDir) ? binDir : null;
+}
+
+/**
  * Resolves the kimi CLI executable. The native installer drops it under
  * <KIMI_CODE_HOME>/bin, which is not necessarily on PATH for long-running
  * server processes (on Windows it typically is not), so probe PATH first and
- * fall back to the install directory.
+ * fall back to well-known install locations.
  */
 export function resolveKimiBinary(): string {
   if (cachedKimiBinary) {
@@ -49,15 +57,25 @@ export function resolveKimiBinary(): string {
       return cachedKimiBinary;
     }
   } catch {
-    // Fall through to the install-dir candidate.
+    // Fall through to the install-dir candidates.
   }
 
-  const candidate = path.join(
-    getKimiCodeHome(),
-    'bin',
-    process.platform === 'win32' ? 'kimi.exe' : 'kimi',
-  );
-  cachedKimiBinary = fsSync.existsSync(candidate) ? candidate : 'kimi';
+  const binaryName = process.platform === 'win32' ? 'kimi.exe' : 'kimi';
+  const candidates = [path.join(getKimiCodeHome(), 'bin', binaryName)];
+  if (process.platform !== 'win32') {
+    // Homebrew and manual installs link into these prefix bins, which GUI
+    // launchers (Finder, systemd) often leave out of PATH.
+    candidates.push('/opt/homebrew/bin/kimi', '/usr/local/bin/kimi');
+  }
+
+  for (const candidate of candidates) {
+    if (fsSync.existsSync(candidate)) {
+      cachedKimiBinary = candidate;
+      return candidate;
+    }
+  }
+
+  cachedKimiBinary = 'kimi';
   return cachedKimiBinary;
 }
 

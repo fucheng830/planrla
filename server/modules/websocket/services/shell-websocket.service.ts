@@ -5,6 +5,7 @@ import path from 'node:path';
 import pty, { type IPty } from 'node-pty';
 import { WebSocket, type RawData } from 'ws';
 
+import { getKimiCodeBinDir } from '@/modules/providers/index.js';
 import { parseIncomingJsonObject } from '@/shared/utils.js';
 
 type ShellIncomingMessage = {
@@ -235,6 +236,28 @@ function prioritizeUserNpmGlobalBin(env: NodeJS.ProcessEnv): { key: string; valu
 }
 
 /**
+ * Prepends the Kimi Code install bin dir to a PATH env value so bare `kimi`
+ * commands work in embedded terminals even when the OS PATH lacks it (the
+ * Windows native installer never registers it system-wide). Unconditional,
+ * like the npm-global handling above: a missing dir is skipped, an already
+ * present one is left alone.
+ */
+function prioritizeKimiCodeBin(env: { key: string; value: string | undefined }): { key: string; value: string | undefined } {
+  const binDir = getKimiCodeBinDir();
+  if (!binDir) {
+    return env;
+  }
+
+  const entries = (env.value ?? '').split(path.delimiter).filter(Boolean);
+  const normalize = (entry: string) => (os.platform() === 'win32' ? entry.toLowerCase() : entry);
+  if (entries.some((entry) => normalize(entry) === normalize(binDir))) {
+    return env;
+  }
+
+  return { key: env.key, value: [binDir, ...entries].join(path.delimiter) };
+}
+
+/**
  * Handles websocket connections used by the standalone shell terminal UI.
  */
 export function handleShellConnection(
@@ -347,7 +370,7 @@ export function handleShellConnection(
           os.platform() === 'win32' ? ['-Command', shellCommand] : ['-c', shellCommand];
         const termCols = readNumber(data.cols, 80);
         const termRows = readNumber(data.rows, 24);
-        const prioritizedPath = prioritizeUserNpmGlobalBin(process.env);
+        const prioritizedPath = prioritizeKimiCodeBin(prioritizeUserNpmGlobalBin(process.env));
 
         shellProcess = pty.spawn(shell, shellArgs, {
           name: 'xterm-256color',
