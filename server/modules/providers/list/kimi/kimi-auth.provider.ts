@@ -1,3 +1,4 @@
+import fsSync from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -28,13 +29,45 @@ export function getKimiCodeHome(): string {
   return process.env.KIMI_CODE_HOME || path.join(os.homedir(), '.kimi-code');
 }
 
+let cachedKimiBinary: string | null = null;
+
+/**
+ * Resolves the kimi CLI executable. The native installer drops it under
+ * <KIMI_CODE_HOME>/bin, which is not necessarily on PATH for long-running
+ * server processes (on Windows it typically is not), so probe PATH first and
+ * fall back to the install directory.
+ */
+export function resolveKimiBinary(): string {
+  if (cachedKimiBinary) {
+    return cachedKimiBinary;
+  }
+
+  try {
+    const result = spawn.sync('kimi', ['--version'], { stdio: 'ignore', timeout: 5000 });
+    if (!result.error && result.status === 0) {
+      cachedKimiBinary = 'kimi';
+      return cachedKimiBinary;
+    }
+  } catch {
+    // Fall through to the install-dir candidate.
+  }
+
+  const candidate = path.join(
+    getKimiCodeHome(),
+    'bin',
+    process.platform === 'win32' ? 'kimi.exe' : 'kimi',
+  );
+  cachedKimiBinary = fsSync.existsSync(candidate) ? candidate : 'kimi';
+  return cachedKimiBinary;
+}
+
 export class KimiProviderAuth implements IProviderAuth {
   /**
    * Checks whether the Kimi Code CLI is available to the server process.
    */
   private checkInstalled(): boolean {
     try {
-      const result = spawn.sync('kimi', ['--version'], { stdio: 'ignore', timeout: 5000 });
+      const result = spawn.sync(resolveKimiBinary(), ['--version'], { stdio: 'ignore', timeout: 5000 });
       return !result.error && result.status === 0;
     } catch {
       return false;

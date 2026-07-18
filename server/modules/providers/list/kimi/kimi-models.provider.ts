@@ -5,7 +5,7 @@ import path from 'node:path';
 import toml from '@iarna/toml';
 import crossSpawn from 'cross-spawn';
 
-import { getKimiCodeHome } from '@/modules/providers/list/kimi/kimi-auth.provider.js';
+import { getKimiCodeHome, resolveKimiBinary } from '@/modules/providers/list/kimi/kimi-auth.provider.js';
 import type { IProviderModels } from '@/shared/interfaces.js';
 import type {
   ProviderChangeActiveModelInput,
@@ -108,7 +108,7 @@ const buildKimiModelsDefinition = (
 });
 
 const runKimiProviderListCommand = (): Promise<string> => new Promise((resolve, reject) => {
-  const kimiProcess = spawnFunction('kimi', ['provider', 'list', '--json'], {
+  const kimiProcess = spawnFunction(resolveKimiBinary(), ['provider', 'list', '--json'], {
     cwd: process.cwd(),
     env: { ...process.env },
   });

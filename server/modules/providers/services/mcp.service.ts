@@ -2,6 +2,22 @@ import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import type { LLMProvider, McpScope, ProviderMcpServer, UpsertProviderMcpServerInput } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
+// Provider MCP configs are read-modify-write file updates. Startup
+// auto-registrations (session-query, a2a, browser-use) and UI actions can fire
+// several mutations at the same files concurrently, which loses updates and
+// can interleave two writers into a corrupt file. Serialize all mutations
+// through one promise chain; reads stay unqueued.
+let mcpMutationQueue: Promise<unknown> = Promise.resolve();
+
+const enqueueMcpMutation = <T>(mutation: () => Promise<T>): Promise<T> => {
+  const run = mcpMutationQueue.then(mutation);
+  mcpMutationQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+};
+
 
 export const providerMcpService = {
   /**
@@ -34,8 +50,10 @@ export const providerMcpService = {
     providerName: string,
     input: UpsertProviderMcpServerInput,
   ): Promise<ProviderMcpServer> {
-    const provider = providerRegistry.resolveProvider(providerName);
-    return provider.mcp.upsertServer(input);
+    return enqueueMcpMutation(() => {
+      const provider = providerRegistry.resolveProvider(providerName);
+      return provider.mcp.upsertServer(input);
+    });
   },
 
   /**
@@ -45,8 +63,10 @@ export const providerMcpService = {
     providerName: string,
     input: { name: string; scope?: McpScope; workspacePath?: string },
   ): Promise<{ removed: boolean; provider: LLMProvider; name: string; scope: McpScope }> {
-    const provider = providerRegistry.resolveProvider(providerName);
-    return provider.mcp.removeServer(input);
+    return enqueueMcpMutation(() => {
+      const provider = providerRegistry.resolveProvider(providerName);
+      return provider.mcp.removeServer(input);
+    });
   },
 
   /**
@@ -63,22 +83,24 @@ export const providerMcpService = {
     }
 
     const scope = input.scope ?? 'project';
-    const results: Array<{ provider: LLMProvider; created: boolean; error?: string }> = [];
-    const providers = providerRegistry.listProviders();
-    for (const provider of providers) {
-      try {
-        await provider.mcp.upsertServer({ ...input, scope });
-        results.push({ provider: provider.id, created: true });
-      } catch (error) {
-        results.push({
-          provider: provider.id,
-          created: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+    return enqueueMcpMutation(async () => {
+      const results: Array<{ provider: LLMProvider; created: boolean; error?: string }> = [];
+      const providers = providerRegistry.listProviders();
+      for (const provider of providers) {
+        try {
+          await provider.mcp.upsertServer({ ...input, scope });
+          results.push({ provider: provider.id, created: true });
+        } catch (error) {
+          results.push({
+            provider: provider.id,
+            created: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
       }
-    }
 
-    return results;
+      return results;
+    });
   },
 
   /**
@@ -89,21 +111,23 @@ export const providerMcpService = {
   async removeMcpServerFromAllProviders(
     input: { name: string; scope?: McpScope; workspacePath?: string },
   ): Promise<Array<{ provider: LLMProvider; removed: boolean; error?: string }>> {
-    const results: Array<{ provider: LLMProvider; removed: boolean; error?: string }> = [];
-    const providers = providerRegistry.listProviders();
-    for (const provider of providers) {
-      try {
-        const result = await provider.mcp.removeServer(input);
-        results.push({ provider: provider.id, removed: result.removed });
-      } catch (error) {
-        results.push({
-          provider: provider.id,
-          removed: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+    return enqueueMcpMutation(async () => {
+      const results: Array<{ provider: LLMProvider; removed: boolean; error?: string }> = [];
+      const providers = providerRegistry.listProviders();
+      for (const provider of providers) {
+        try {
+          const result = await provider.mcp.removeServer(input);
+          results.push({ provider: provider.id, removed: result.removed });
+        } catch (error) {
+          results.push({
+            provider: provider.id,
+            removed: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
       }
-    }
 
-    return results;
+      return results;
+    });
   },
 };

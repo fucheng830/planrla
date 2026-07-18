@@ -5,6 +5,7 @@ import crossSpawn from 'cross-spawn';
 import { sessionsService } from './modules/providers/services/sessions.service.js';
 import { providerAuthService } from './modules/providers/services/provider-auth.service.js';
 import { providerModelsService } from './modules/providers/services/provider-models.service.js';
+import { resolveKimiBinary } from './modules/providers/list/kimi/kimi-auth.provider.js';
 import { notifyRunFailed, notifyRunStopped } from './services/notification-orchestrator.js';
 import { createCompleteMessage, createNormalizedMessage } from './shared/utils.js';
 
@@ -166,7 +167,7 @@ async function spawnKimi(command, options = {}, ws) {
         args.push('--model', resolvedModel);
       }
 
-      kimiProcess = spawnFunction('kimi', args, {
+      kimiProcess = spawnFunction(resolveKimiBinary(), args, {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env },
