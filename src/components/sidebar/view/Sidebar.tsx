@@ -15,6 +15,7 @@ import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
 import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
+import { A2aDelegateProvider } from '../contexts/A2aDelegateContext';
 
 type TaskMasterSidebarContext = {
   setCurrentProject: (project: Project) => void;
@@ -112,6 +113,7 @@ function Sidebar({
     setDeleteConfirmation,
     setSessionDeleteConfirmation,
     setShowVersionModal,
+    a2aDelegateValue,
   } = useSidebarController({
     projects,
     selectedProject,
@@ -197,7 +199,7 @@ function Sidebar({
   };
 
   return (
-    <>
+    <A2aDelegateProvider value={a2aDelegateValue}>
         <SidebarModals
           projects={projects}
         showSettings={showSettings}
@@ -313,7 +315,7 @@ function Sidebar({
         </>
       )}
 
-    </>
+    </A2aDelegateProvider>
   );
 }
 

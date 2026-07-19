@@ -149,6 +149,12 @@ export async function handleTaskSend(
   if (!session) {
     return { taskId: '', state: 'failed', text: '', error: 'session not found' };
   }
+  // S3 whitelist: only sessions explicitly marked a2a_exposed may receive
+  // inbound delegations. Gate before acquiring the run lock so a rejected
+  // request never blocks the chat websocket path.
+  if (!session.a2a_exposed) {
+    return { taskId: '', state: 'failed', text: '', error: 'session not exposed for A2A delegation' };
+  }
 
   // Acquire the shared chat-run lock. Returns null if a run (chat or A2A) is
   // already in flight on this session — surface as A2A state=working so the

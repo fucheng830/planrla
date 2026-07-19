@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as a2aClient from '@/modules/a2a/a2a-client.service.js';
 import { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';
+import { sessionsDb } from '@/modules/database/index.js';
 
 /**
  * In-process HTTP MCP server exposing A2A (Agent-to-Agent) tools to the
@@ -15,9 +16,10 @@ import { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';
  * the kanban MCP route. The agent always calls from localhost.
  *
  * Tools:
- *  - a2a_list     : enumerate the caller's registered A2A agents (no tokens).
- *  - a2a_discover : fetch a remote agent's card (by url or registered name).
- *  - a2a_call     : send a message to a remote agent (by url or name).
+ *  - a2a_list          : enumerate the caller's registered A2A agents (no tokens).
+ *  - a2a_list_sessions : enumerate local planrla sessions exposed for delegation.
+ *  - a2a_discover      : fetch a remote agent's card (by url or registered name).
+ *  - a2a_call          : send a message to a remote agent (by url or name).
  */
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_INFO = { name: 'planrla-a2a', version: '1.0' } as const;
@@ -64,6 +66,12 @@ const TOOL_DEFS = [
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
+    name: 'a2a_list_sessions',
+    description:
+      'List local planrla sessions exposed for A2A delegation. Use these with a2a_call (url=http://127.0.0.1:<port>/api/a2a, sessionId=<id>) to delegate a task to another session agent.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
     name: 'a2a_discover',
     description:
       'Fetch a remote A2A agent\'s agent card (name, description, version, skills, capabilities) from its /.well-known/agent.json endpoint. Provide exactly one of `url` (a remote base URL) or `name` (a registered agent).',
@@ -101,7 +109,7 @@ const TOOL_DEFS = [
   },
 ] as const;
 
-const KNOWN_TOOLS = new Set(['a2a_list', 'a2a_discover', 'a2a_call']);
+const KNOWN_TOOLS = new Set(['a2a_list', 'a2a_list_sessions', 'a2a_discover', 'a2a_call']);
 
 // ---------------------------------------------------------------------------
 // Target resolution
@@ -192,6 +200,22 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
             has_auth: a.hasAuth,
           }));
           return res.json(jsonRpc(id, textResponse(JSON.stringify(agents, null, 2))));
+        }
+
+        if (name === 'a2a_list_sessions') {
+          const sessions = sessionsDb.listA2aExposed();
+          const port = process.env.SERVER_PORT || 3001;
+          const payload = {
+            sessions: sessions.map((s) => ({
+              id: s.session_id,
+              provider: s.provider,
+              summary: s.custom_name || '',
+              projectPath: s.project_path,
+            })),
+            count: sessions.length,
+            endpoint: `http://127.0.0.1:${port}/api/a2a`,
+          };
+          return res.json(jsonRpc(id, textResponse(JSON.stringify(payload, null, 2))));
         }
 
         if (name === 'a2a_discover') {

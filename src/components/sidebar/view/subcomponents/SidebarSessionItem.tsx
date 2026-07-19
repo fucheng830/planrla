@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Check, Edit2, Trash2, X } from 'lucide-react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { Check, Edit2, Network, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Badge, Button } from '../../../../shared/view/ui';
@@ -10,6 +11,7 @@ import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
 import type { SessionWithProvider } from '../../types/types';
 import { createSessionViewModel } from '../../utils/utils';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
+import { useA2aDelegate } from '../../contexts/A2aDelegateContext';
 
 type SidebarSessionItemProps = {
   project: Project;
@@ -87,6 +89,21 @@ export default function SidebarSessionItem({
   const compactSessionAge = formatCompactSessionAge(sessionView.sessionTime, currentTime);
   const editingContainerRef = useRef<HTMLDivElement>(null);
 
+  // REQ-020 S3 — A2A delegation toggle state. The server-provided flag travels
+  // on the session payload as `a2a_exposed`; the context layers an optimistic
+  // override on top so the toggle reacts instantly.
+  const a2aDelegate = useA2aDelegate();
+  const serverA2aExposed = Boolean((session as { a2a_exposed?: unknown }).a2a_exposed);
+  const a2aExposed = a2aDelegate.isExposed(session.id, serverA2aExposed);
+  const a2aPending = a2aDelegate.isPending(session.id);
+  const toggleA2aExposed = (event: ReactMouseEvent) => {
+    event.stopPropagation();
+    if (a2aPending) {
+      return;
+    }
+    void a2aDelegate.toggle(session.id, !a2aExposed);
+  };
+
   // The rename panel sits inside a group-hover opacity wrapper, so leaving the row
   // would visually hide it. While editing, dismiss only when the user clicks outside
   // the panel (matches Escape / cancel-button behaviour).
@@ -159,15 +176,32 @@ export default function SidebarSessionItem({
             </div>
 
             {!isProcessing && (
-              <button
-                className="ml-1 flex h-5 w-5 items-center justify-center rounded-md bg-red-50 opacity-70 transition-transform active:scale-95 dark:bg-red-900/20"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  requestDeleteSession();
-                }}
-              >
-                <Trash2 className="h-2.5 w-2.5 text-red-600 dark:text-red-400" />
-              </button>
+              <>
+                <button
+                  className={cn(
+                    'ml-1 flex h-5 w-5 items-center justify-center rounded-md transition-transform active:scale-95',
+                    a2aExposed
+                      ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                      : 'bg-muted/50 text-muted-foreground',
+                    a2aPending && 'opacity-50 pointer-events-none',
+                  )}
+                  onClick={toggleA2aExposed}
+                  title={a2aExposed ? t('tooltips.a2aDelegateEnabled') : t('tooltips.a2aDelegate')}
+                  aria-label={t('tooltips.a2aDelegate')}
+                  aria-pressed={a2aExposed}
+                >
+                  <Network className={cn('h-2.5 w-2.5', a2aExposed && 'fill-current')} />
+                </button>
+                <button
+                  className="ml-1 flex h-5 w-5 items-center justify-center rounded-md bg-red-50 opacity-70 transition-transform active:scale-95 dark:bg-red-900/20"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    requestDeleteSession();
+                  }}
+                >
+                  <Trash2 className="h-2.5 w-2.5 text-red-600 dark:text-red-400" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -261,6 +295,21 @@ export default function SidebarSessionItem({
               </>
             ) : (
               <>
+                <button
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded transition-colors',
+                    a2aExposed
+                      ? 'bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-900/20 dark:text-gray-400 dark:hover:bg-gray-900/40',
+                    a2aPending && 'opacity-50 pointer-events-none',
+                  )}
+                  onClick={toggleA2aExposed}
+                  title={a2aExposed ? t('tooltips.a2aDelegateEnabled') : t('tooltips.a2aDelegate')}
+                  aria-label={t('tooltips.a2aDelegate')}
+                  aria-pressed={a2aExposed}
+                >
+                  <Network className={cn('h-3 w-3', a2aExposed && 'fill-current')} />
+                </button>
                 <button
                   className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
                   onClick={(event) => {

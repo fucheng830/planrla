@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { apiKeysDb, credentialsDb, notificationPreferencesDb, pushSubscriptionsDb, a2aAgentsDb } from '../modules/database/index.js';
+import { apiKeysDb, credentialsDb, notificationPreferencesDb, pushSubscriptionsDb, a2aAgentsDb, sessionsDb } from '../modules/database/index.js';
 import { getPublicKey } from '../services/vapid-keys.js';
 import { createNotificationEvent, notifyUserIfEnabled } from '../services/notification-orchestrator.js';
 
@@ -327,6 +327,17 @@ router.delete('/a2a-agents/:agentId', (req, res) => {
     console.error('Error deleting A2A agent:', error);
     res.status(500).json({ error: 'Failed to delete A2A agent' });
   }
+});
+
+// Toggle a chat session's A2A exposure flag (REQ-020 S3). Body: { exposed: boolean }.
+// Mounted at /api/settings/sessions/:sessionId/a2a-exposed (authenticateToken applied on mount).
+router.patch('/sessions/:sessionId/a2a-exposed', (req, res) => {
+  const { exposed } = req.body || {};
+  if (typeof exposed !== 'boolean') {
+    return res.status(400).json({ error: 'exposed boolean required' });
+  }
+  const ok = sessionsDb.setA2aExposed(req.params.sessionId, exposed);
+  res.json({ ok });
 });
 
 export default router;

@@ -45,6 +45,8 @@
     "removeFromFavorites": "从收藏移除",
     "editSessionName": "手动编辑会话名称",
     "deleteSession": "永久删除此会话",
+    "a2aDelegate": "允许 A2A 委托",
+    "a2aDelegateEnabled": "已允许 A2A 委托 — 点击关闭",
     "activeSessionIndicator": "最近活跃的会话（最近 10 分钟）",
     "save": "保存",
     "cancel": "取消",
