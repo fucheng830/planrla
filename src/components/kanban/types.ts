@@ -119,6 +119,21 @@ export interface Task {
   completedAt?: string;
 }
 
+export interface TaskDiffFile {
+  path: string;
+  status: 'added' | 'modified' | 'deleted' | 'untracked';
+  additions: number;
+  deletions: number;
+}
+
+export interface TaskDiffResult {
+  worktreePath: string;
+  baseSha: string;
+  files: TaskDiffFile[];
+  patch: string;
+  truncated: boolean;
+}
+
 export interface TaskListResponse { tasks: Task[] }
 export interface TaskResponse { task: Task }
 export interface TemplateListResponse { templates: TaskTemplate[] }

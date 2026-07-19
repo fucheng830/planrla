@@ -81,6 +81,16 @@
     "submit": "Generate tasks",
     "submitting": "Generating (may take a minute)..."
   },
+  "review": {
+    "showDiff": "View changes",
+    "hideDiff": "Hide changes",
+    "diffLoading": "Loading diff...",
+    "diffEmpty": "No changes in this worktree yet.",
+    "placeholder": "Review feedback for the agent (resumes its session)...",
+    "submit": "Send feedback",
+    "submitting": "Sending...",
+    "sent": "Sent — the agent is working on it."
+  },
   "priority": {
     "high": "High",
     "medium": "Medium",

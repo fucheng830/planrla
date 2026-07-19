@@ -83,6 +83,6 @@ function buildKanban() {
   // /api/tasks request), so this runs on first kanban access — acceptable.
   try { cronDriver.start(); }
   catch (e: any) { console.error('[kanban-cron] start failed:', e?.message ?? e); }
-  const router = createKanbanRouter({ service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, resolveToolApproval });
+  const router = createKanbanRouter({ service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval });
   return { db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router };
 }

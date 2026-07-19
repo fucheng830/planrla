@@ -27,6 +27,7 @@ function setup() {
     scheduleStore,
     cronDriver: { reload: () => { reloadCalls.push(1); } },
     resolveRootPath: () => null,
+    runner: { startReviewComment: () => { throw new Error('not used in this test'); } },
     resolveToolApproval: () => {},
   });
   const app = express();

@@ -316,3 +316,63 @@ test('runAgentStage fails task on timeout when spawnFn hangs (no complete/error)
   );
   db.close();
 });
+
+test('startReviewComment resumes the provider session and restores status', async () => {
+  const calls: any[] = [];
+  const { db, taskStore, templateStore, service, runner } = setup({
+    mockSpawn: async (cmd: string, opts: any, writer: any) => {
+      calls.push({ cmd, opts, statusAtCall: taskStore.getTask(task.id)?.status });
+      if (calls.length === 1 && writer.setSessionId) writer.setSessionId('prov-1');
+      writer.send(JSON.stringify({ kind: 'complete' }));
+    },
+  });
+  // agentCanControlStage=false 的人工评审阶段:完成后任务停在 agent 阶段
+  templateStore.saveTaskTemplate({
+    id: 't1',
+    name: 'T',
+    maxConcurrency: 1,
+    createdAt: NOW,
+    updatedAt: NOW,
+    stages: [
+      { id: 's0', position: 0, snapshot: { id: 'ss0', name: 'Plan', role: 'user', autoAdvance: true, createdAt: NOW, updatedAt: NOW } },
+      { id: 's1', position: 1, snapshot: { id: 'ss1', name: 'Do', role: 'agent', agent: 'claude', autoAdvance: false, agentCanControlStage: false, promptTemplate: 'do it', createdAt: NOW, updatedAt: NOW } },
+    ],
+  });
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(taskStore.getTask(task.id)?.status, 'queued');
+
+  // mock 同步完成:评审运行期间(readable at spawn time)是 running,完成后恢复
+  const { done } = runner.startReviewComment('r1', task.id, 'please fix the edge case');
+  await done;
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].opts.sessionId, 'prov-1');
+  assert.match(calls[1].cmd, /please fix the edge case/);
+  // 评审 spawn 被调用时任务处于 running
+  assert.equal(calls[1].statusAtCall, 'running');
+  assert.equal(taskStore.getTask(task.id)?.status, 'queued');
+  db.close();
+});
+
+test('startReviewComment rejects when there is no live provider session', () => {
+  const mockSpawn = async (_cmd: string, _opts: any, writer: any) => {
+    writer.send(JSON.stringify({ kind: 'complete' }));
+  };
+  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  assert.throws(() => runner.startReviewComment('r1', task.id, 'x'), /no live provider session/);
+  db.close();
+});
+
+test('startReviewComment rejects on a non-agent current stage', () => {
+  const mockSpawn = async () => {};
+  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  assert.throws(() => runner.startReviewComment('r1', task.id, 'x'), /agent stage/);
+  db.close();
+});

@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useKanban } from './KanbanContext';
 import { AuxBadges, statusStyle } from './badges';
 import { kanbanApi } from './api';
-import type { PendingAskUserQuestion, Task } from './types';
+import GitDiffViewer from '../git-panel/view/shared/GitDiffViewer';
+import type { PendingAskUserQuestion, Task, TaskDiffResult } from './types';
 
 import { Dialog, DialogContent, DialogTitle, Button } from '@/shared/view/ui';
 
@@ -24,6 +25,50 @@ export function TaskDetailModal({
     task.status === 'fail' ||
     task.status === 'cancelled';
   const stage = tpl?.stages[task.currentStageIndex]?.snapshot;
+  const isAgentStage = stage?.role === 'agent';
+
+  // Review loop: worktree diff view + reviewer comment back to the agent.
+  const [showDiff, setShowDiff] = useState(false);
+  const [diff, setDiff] = useState<TaskDiffResult | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSent, setReviewSent] = useState(false);
+
+  const onToggleDiff = async () => {
+    if (showDiff) {
+      setShowDiff(false);
+      return;
+    }
+    setShowDiff(true);
+    if (diff || diffLoading || !rootId) return;
+    setDiffLoading(true);
+    setDiffError(null);
+    try {
+      setDiff(await kanbanApi.getTaskDiff(task.id, rootId));
+    } catch (e: unknown) {
+      setDiffError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDiffLoading(false);
+    }
+  };
+
+  const onSubmitReview = async () => {
+    if (!rootId || !comment.trim() || reviewSubmitting) return;
+    setReviewSubmitting(true);
+    setReviewError(null);
+    try {
+      await kanbanApi.submitReview(task.id, rootId, comment.trim());
+      setReviewSent(true);
+      setComment('');
+    } catch (e: unknown) {
+      setReviewError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   // REQ-038: inline AskUserQuestion answering.
   const pending = task.auxFlags.pendingAskUser ?? null;
@@ -230,6 +275,75 @@ export function TaskDetailModal({
               {t('detail.delete')}
             </Button>
           </div>
+          {(task.worktreePath || (isAgentStage && !isTerminal)) && (
+            <div className="space-y-2 border-t border-border pt-3">
+              {task.worktreePath && (
+                <div>
+                  <Button size="sm" variant="outline" onClick={() => void onToggleDiff()}>
+                    {showDiff ? t('review.hideDiff') : t('review.showDiff')}
+                  </Button>
+                  {showDiff && (
+                    <div className="mt-2 max-h-72 overflow-y-auto rounded border border-border">
+                      {diffLoading && (
+                        <div className="p-3 text-xs text-muted-foreground">
+                          {t('review.diffLoading')}
+                        </div>
+                      )}
+                      {diffError && (
+                        <div className="p-3 text-xs text-destructive">{diffError}</div>
+                      )}
+                      {diff && (
+                        <>
+                          {diff.files.length > 0 && (
+                            <div className="border-b border-border p-2 text-[11px] text-muted-foreground">
+                              {diff.files
+                                .map((f) => `${f.path} +${f.additions}/-${f.deletions}`)
+                                .join(' · ')}
+                            </div>
+                          )}
+                          {diff.patch ? (
+                            <GitDiffViewer diff={diff.patch} isMobile={false} wrapText={false} />
+                          ) : (
+                            <div className="p-3 text-xs text-muted-foreground">
+                              {t('review.diffEmpty')}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {isAgentStage && !isTerminal && (
+                <div className="space-y-2">
+                  <textarea
+                    className="h-20 w-full resize-none rounded border border-border bg-background p-2 text-xs"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder={t('review.placeholder')}
+                    disabled={reviewSubmitting}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      disabled={!comment.trim() || reviewSubmitting}
+                      onClick={() => void onSubmitReview()}
+                    >
+                      {reviewSubmitting ? t('review.submitting') : t('review.submit')}
+                    </Button>
+                    {reviewSent && !reviewError && (
+                      <span className="text-xs text-green-600 dark:text-green-400">
+                        {t('review.sent')}
+                      </span>
+                    )}
+                    {reviewError && (
+                      <span className="text-xs text-destructive">{reviewError}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {tpl && (
             <div className="border-t border-border pt-3">
               <div className="mb-2 text-xs text-muted-foreground">

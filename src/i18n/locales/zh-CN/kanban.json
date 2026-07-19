@@ -81,6 +81,16 @@
     "submit": "生成任务",
     "submitting": "正在生成(可能需要一分钟)..."
   },
+  "review": {
+    "showDiff": "查看变更",
+    "hideDiff": "收起变更",
+    "diffLoading": "正在加载 diff...",
+    "diffEmpty": "该工作区还没有变更。",
+    "placeholder": "给 agent 的评审意见(将续跑其会话)...",
+    "submit": "发送评审意见",
+    "submitting": "发送中...",
+    "sent": "已发送,agent 正在处理。"
+  },
   "priority": {
     "high": "高",
     "medium": "中",

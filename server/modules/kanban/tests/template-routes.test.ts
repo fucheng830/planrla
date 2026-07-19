@@ -25,6 +25,7 @@ function setup() {
     scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
     cronDriver: { reload: () => {} } as any,
     resolveRootPath: () => null,
+    runner: { startReviewComment: () => { throw new Error('not used in this test'); } },
     resolveToolApproval: () => {},
   });
   const app = express();

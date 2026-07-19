@@ -1,7 +1,7 @@
 import type {
   Task, TaskPriority, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
-  KanbanSchedule,
+  KanbanSchedule, TaskDiffResult,
 } from './types';
 
 import { api } from '@/utils/api';
@@ -52,6 +52,23 @@ export const kanbanApi = {
     }
     const data = (await res.json()) as { tasks: Task[] };
     return data.tasks;
+  },
+  getTaskDiff: async (taskId: string, rootId: string): Promise<TaskDiffResult> => {
+    const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/diff?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `getTaskDiff failed: ${res.status}`);
+    }
+    return (await res.json()) as TaskDiffResult;
+  },
+  submitReview: async (taskId: string, rootId: string, comment: string): Promise<Task> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/review`, { rootId, comment });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `submitReview failed: ${res.status}`);
+    }
+    const data = (await res.json()) as TaskResponse;
+    return data.task;
   },
   deleteTask: async (taskId: string, rootId: string): Promise<void> => {
     const res = await api.delete(`/tasks/${encodeURIComponent(taskId)}?rootId=${encodeURIComponent(rootId)}`);

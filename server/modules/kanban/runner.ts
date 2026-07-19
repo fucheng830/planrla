@@ -22,12 +22,14 @@
 // next invocation.
 
 import type { TaskStore } from '@/modules/kanban/store.js';
+import type { Task, TaskStatus } from '@/modules/kanban/types.js';
+import { AppError } from '@/shared/utils.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { AuxBridge } from '@/modules/kanban/aux-bridge.js';
 import { RunnerWriter } from '@/modules/kanban/runner-writer.js';
-import { spawnFns as defaultSpawnFns } from '@/modules/providers/spawn-fns.js';
-import type { SpawnFn } from '@/modules/providers/spawn-fns.js';
+import { spawnFns as defaultSpawnFns } from '@/modules/providers/index.js';
+import type { SpawnFn } from '@/modules/providers/index.js';
 import { renderStagePrompt } from '@/modules/kanban/prompt.js';
 import type { WorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 
@@ -185,7 +187,111 @@ export function createRunner(deps: RunnerDeps) {
     }
   }
 
-  return { runAgentStage };
+  /**
+   * Review loop: re-runs the current agent stage with a human review comment,
+   * resuming the provider session the original stage run established (same
+   * process only — the session map is in-memory). The task is marked running
+   * while the review executes and its previous status is restored afterwards;
+   * a review run never advances the stage.
+   *
+   * Returns the updated task immediately; `done` settles when the review run
+   * finishes so callers can broadcast the restored state.
+   */
+  function startReviewComment(rootId: string, taskId: string, comment: string): { task: Task; done: Promise<void> } {
+    const task = taskStore.getTask(taskId);
+    if (!task) throw new AppError(`task ${taskId} not found`, { code: 'TASK_NOT_FOUND', statusCode: 404 });
+    if (task.rootId !== rootId) {
+      throw new AppError('task 不属于该 root', { code: 'TASK_ROOT_MISMATCH', statusCode: 403 });
+    }
+
+    const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+    const stage = tpl?.stages[task.currentStageIndex]?.snapshot;
+    if (!stage || stage.role !== 'agent' || !stage.agent) {
+      throw new AppError('review comments require the current stage to be an agent stage', { code: 'REVIEW_REQUIRES_AGENT_STAGE', statusCode: 400 });
+    }
+    if (task.status === 'success' || task.status === 'fail' || task.status === 'cancelled') {
+      throw new AppError('task is in terminal status', { code: 'TASK_TERMINAL', statusCode: 400 });
+    }
+    if (task.schedulerAdmitted) {
+      throw new AppError('task is already running', { code: 'TASK_ALREADY_RUNNING', statusCode: 409 });
+    }
+
+    const trimmed = comment.trim();
+    if (!trimmed) {
+      throw new AppError('comment is required', { code: 'COMMENT_REQUIRED', statusCode: 400 });
+    }
+
+    const sessionKey = task.mainSessionKey ?? taskId;
+    const providerSessionId = sessionMap.get(sessionKey);
+    if (!providerSessionId) {
+      throw new AppError('no live provider session for this task (only tasks run in this server process can be reviewed)', { code: 'NO_LIVE_SESSION', statusCode: 409 });
+    }
+    const spawnFn = spawnFns[stage.agent];
+    if (!spawnFn) throw new AppError(`unknown provider: ${stage.agent}`, { code: 'UNKNOWN_PROVIDER', statusCode: 400 });
+
+    const previousStatus = task.status;
+    taskStore.updateTaskStage(taskId, task.currentStageIndex, 'running');
+
+    const prompt = [
+      'A human reviewer left the following feedback on your work in this workspace.',
+      'Address the feedback now. Do not create git commits unless the reviewer asked you to.',
+      '',
+      trimmed,
+    ].join('\n');
+
+    const restoreStatus = () => {
+      taskStore.updateTaskStage(taskId, task.currentStageIndex, previousStatus as TaskStatus);
+    };
+    const writer = new RunnerWriter({
+      taskId,
+      auxBridge,
+      onProviderSessionId: (sid: string) => {
+        sessionMap.set(sessionKey, sid);
+      },
+      onComplete: restoreStatus,
+      onError: (m: any) => {
+        restoreStatus();
+        taskStore.updateTaskAuxFlags(taskId, { sessionError: String(m?.message ?? m) });
+      },
+    });
+
+    const cwd = task.worktreePath ?? resolveRootPath(rootId) ?? undefined;
+    log(`[kanban-runner] review task=${taskId} stage=${task.currentStageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}`);
+
+    const done = (async () => {
+      let stageTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          spawnFn(prompt, {
+            sessionId: providerSessionId,
+            cwd,
+            projectPath: cwd,
+            model: stage.model,
+            permissionMode: 'bypassPermissions',
+          } as any, writer),
+          new Promise<never>((_, reject) => {
+            stageTimer = setTimeout(
+              () => reject(new Error(`review run timed out after ${stageTimeoutMs}ms without completion`)),
+              stageTimeoutMs,
+            );
+          }),
+        ]);
+        // Backstop: a provider that resolves without a complete message still
+        // restores the status (onComplete normally handles it first).
+        restoreStatus();
+      } catch (e: any) {
+        restoreStatus();
+        taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
+        log(`[kanban-runner] review failed task=${taskId}: ${e}`);
+      } finally {
+        if (stageTimer) clearTimeout(stageTimer);
+      }
+    })();
+
+    return { task: taskStore.getTask(taskId)!, done };
+  }
+
+  return { runAgentStage, startReviewComment };
 }
 
 export type Runner = ReturnType<typeof createRunner>;

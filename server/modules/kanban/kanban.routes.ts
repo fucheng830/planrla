@@ -7,6 +7,7 @@ import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import { broadcastTaskDeleted, broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 import { decomposePrd } from '@/modules/kanban/prd-decompose.js';
+import { getTaskDiff } from '@/modules/kanban/review.js';
 import type { Task } from '@/modules/kanban/types.js';
 import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notification-orchestrator.js';
 
@@ -23,6 +24,14 @@ export interface KanbanRouterDeps {
   /** Resolves a root id to its on-disk project path (used as the cwd for
    * PRD decomposition runs). */
   resolveRootPath: (rootId: string) => string | null;
+  /** Review loop entry: resumes the task's provider session with a review
+   * comment (see runner.startReviewComment). */
+  runner: {
+    startReviewComment: (rootId: string, taskId: string, comment: string) => {
+      task: Task;
+      done: Promise<void>;
+    };
+  };
   /** Resolves a pending Claude SDK tool approval (AskUserQuestion). The kanban
    * answer route forwards the user's selected answers here as updatedInput. */
   resolveToolApproval: (requestId: string, decision: { allow: boolean; updatedInput?: unknown; message?: string }) => void;
@@ -30,7 +39,7 @@ export interface KanbanRouterDeps {
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, resolveToolApproval } = deps;
+  const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval } = deps;
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {
@@ -160,6 +169,39 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
         broadcastTaskUpdated(req.app.locals.wss, rootId, task);
       }
       res.json({ tasks: createdTasks, count: createdTasks.length });
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
+
+  // Review loop (diff view): everything the task worktree changed relative
+  // to its branch point, as a unified patch + per-file numstat.
+  router.get('/:taskId/diff', async (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    try {
+      const result = await getTaskDiff({ taskStore, resolveRootPath, rootId, taskId: req.params.taskId });
+      res.json(result);
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
+
+  // Review loop (comment): resume the task's provider session with the
+  // reviewer's feedback. Responds 202 immediately; status broadcasts happen
+  // now (running) and when the run settles (previous status restored).
+  router.post('/:taskId/review', (req, res) => {
+    const rootId = String(req.body?.rootId ?? '');
+    const comment = String(req.body?.comment ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    try {
+      const { task, done } = runner.startReviewComment(rootId, req.params.taskId, comment);
+      broadcastTaskUpdated(req.app.locals.wss, rootId, task);
+      void done.then(() => {
+        const settled = taskStore.getTask(req.params.taskId);
+        if (settled) broadcastTaskUpdated(req.app.locals.wss, rootId, settled);
+      });
+      res.status(202).json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
     }
