@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
-import type { Task, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
-import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
+import type { Task, TaskPriority, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
+import { isTaskPriority, isTerminalTaskStatus } from '@/modules/kanban/types.js';
 import { AppError } from '@/shared/utils.js';
 
 export interface KanbanServiceDeps {
@@ -16,11 +16,31 @@ export interface KanbanServiceDeps {
 export function createKanbanService(deps: KanbanServiceDeps) {
   const { taskStore, templateStore, onTerminal } = deps;
 
-  function createTask(input: { rootId: string; taskTemplateId: string; input: string }): Task {
+  function createTask(input: {
+    rootId: string;
+    taskTemplateId: string;
+    input: string;
+    priority?: TaskPriority;
+    dependencies?: string[];
+  }): Task {
     const tpl = requireTemplate(input.taskTemplateId);
     const firstStage = tpl.stages[0]?.snapshot;
     if (!firstStage) throw new AppError('template has no stages', { code: 'INVALID_TEMPLATE', statusCode: 400 });
     if (firstStage.role !== 'user') throw new AppError('first stage must be user role', { code: 'INVALID_TEMPLATE', statusCode: 400 });
+
+    const priority = input.priority ?? 'medium';
+    if (!isTaskPriority(priority)) {
+      throw new AppError(`invalid priority "${input.priority}"`, { code: 'INVALID_PRIORITY', statusCode: 400 });
+    }
+    const dependencies = normalizeDependencies(input.dependencies);
+    if (dependencies.length > 0) {
+      const known = new Set(taskStore.listTasks(input.rootId).map((task) => task.id));
+      for (const depId of dependencies) {
+        if (!known.has(depId)) {
+          throw new AppError(`dependency task ${depId} not found in this root`, { code: 'DEPENDENCY_NOT_FOUND', statusCode: 400 });
+        }
+      }
+    }
 
     const now = new Date().toISOString();
     const taskId = randomUUID();
@@ -34,7 +54,8 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       taskTemplateId: tpl.id, taskTemplateName: tpl.name,
       createWorktree: true, currentStageIndex: 0,
       status: firstStatus, schedulerAdmitted: false,
-      labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false, pendingAskUser: null },
+      labels: [], priority, dependencies,
+      auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false, pendingAskUser: null },
       createdAt: now, updatedAt: now,
     };
     taskStore.createTask({
@@ -212,6 +233,19 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       throw new AppError(`task ${taskId} is in terminal status ${task.status}`, { code: 'TASK_TERMINAL', statusCode: 400 });
     }
     return task;
+  }
+
+  /** Dedupes and validates dependency ids shape; existence is checked by callers. */
+  function normalizeDependencies(raw: string[] | undefined): string[] {
+    if (!Array.isArray(raw)) return [];
+    const seen = new Set<string>();
+    for (const value of raw) {
+      if (typeof value !== 'string' || !value.trim()) {
+        throw new AppError('dependencies must be non-empty task id strings', { code: 'INVALID_DEPENDENCIES', statusCode: 400 });
+      }
+      seen.add(value.trim());
+    }
+    return [...seen];
   }
 
   function requireTemplate(id: string) {

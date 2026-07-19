@@ -1,5 +1,5 @@
 import type {
-  Task, TaskTemplate, TaskListResponse, TaskResponse,
+  Task, TaskPriority, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
   KanbanSchedule,
 } from './types';
@@ -16,8 +16,13 @@ export const kanbanApi = {
     const data = (await res.json()) as TaskListResponse;
     return data.tasks;
   },
-  createTask: async (rootId: string, taskTemplateId: string, input: string): Promise<Task> => {
-    const res = await api.post('/tasks', { rootId, taskTemplateId, input });
+  createTask: async (
+    rootId: string,
+    taskTemplateId: string,
+    input: string,
+    options?: { priority?: TaskPriority; dependencies?: string[] },
+  ): Promise<Task> => {
+    const res = await api.post('/tasks', { rootId, taskTemplateId, input, ...options });
     if (!res.ok) throw new Error(`createTask failed: ${res.status}`);
     const data = (await res.json()) as TaskResponse;
     return data.task;

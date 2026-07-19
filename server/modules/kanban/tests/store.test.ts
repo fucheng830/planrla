@@ -224,3 +224,26 @@ test('deleteTask removes task, stage runs and events in one transaction', () => 
   assert.equal(store.latestStageRun('t', 0), null);
   assert.equal(store.latestStageRun('t', 1), null);
 });
+
+test('priority and dependencies round-trip; legacy rows fall back to defaults', () => {
+  const store = newTestStore();
+  const now = '2026-01-01T00:00:00.000Z';
+  store.createTask({
+    task: { id: 't1', taskNumber: 1, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], priority: 'high', dependencies: ['dep-1', 'dep-2'], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'r1', taskId: 't1', stageIndex: 0, stageName: 'S', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'e1', taskId: 't1', type: 'task_created', createdAt: now },
+  });
+  const got = store.getTask('t1');
+  assert.equal(got?.priority, 'high');
+  assert.deepEqual(got?.dependencies, ['dep-1', 'dep-2']);
+
+  // 无新字段的旧 fixture(类型上可选)应读到默认值
+  store.createTask({
+    task: { id: 't2', taskNumber: 2, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'r2', taskId: 't2', stageIndex: 0, stageName: 'S', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'e2', taskId: 't2', type: 'task_created', createdAt: now },
+  });
+  const legacy = store.getTask('t2');
+  assert.equal(legacy?.priority, 'medium');
+  assert.deepEqual(legacy?.dependencies, []);
+});

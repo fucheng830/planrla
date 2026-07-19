@@ -91,12 +91,12 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   });
 
   router.post('/', (req, res) => {
-    const { rootId, taskTemplateId, input } = req.body ?? {};
+    const { rootId, taskTemplateId, input, priority, dependencies } = req.body ?? {};
     if (!rootId || !taskTemplateId) {
       return res.status(400).json({ message: 'rootId and taskTemplateId required' });
     }
     try {
-      const task = service.createTask({ rootId, taskTemplateId, input: input ?? '' });
+      const task = service.createTask({ rootId, taskTemplateId, input: input ?? '', priority, dependencies });
       scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
       try {

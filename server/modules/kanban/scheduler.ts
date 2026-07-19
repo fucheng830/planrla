@@ -1,6 +1,7 @@
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { Task, TaskStatus } from '@/modules/kanban/types.js';
+import { taskPriorityRank } from '@/modules/kanban/types.js';
 
 export interface SchedulerDeps {
   taskStore: TaskStore;
@@ -42,7 +43,15 @@ export function createScheduler(deps: SchedulerDeps) {
     let admittedSomething = true;
     while (admittedSomething) {
       admittedSomething = false;
-      const queued = taskStore.listQueuedTasks(rootId);
+      // Dependency readiness is evaluated once per pass; status changes from
+      // this pass's admits are picked up by the next pass's re-query.
+      const byId = new Map(taskStore.listTasks(rootId).map((t) => [t.id, t]));
+      // Priority first (high > medium > low), then FIFO by creation time.
+      const queued = taskStore.listQueuedTasks(rootId)
+        .filter((task) => dependenciesMet(task, byId))
+        .sort((a, b) =>
+          taskPriorityRank(a.priority) - taskPriorityRank(b.priority)
+          || a.createdAt.localeCompare(b.createdAt));
       for (const task of queued) {
         if (task.schedulerAdmitted) continue;
         if (isTerminalStatus(task.status)) continue;
@@ -55,6 +64,15 @@ export function createScheduler(deps: SchedulerDeps) {
         onAdmit(task.id);
       }
     }
+  }
+
+  /** A queued task may only be admitted once every dependency reached success. */
+  function dependenciesMet(task: Task, byId: Map<string, Task>): boolean {
+    for (const depId of task.dependencies ?? []) {
+      const dep = byId.get(depId);
+      if (!dep || dep.status !== 'success') return false;
+    }
+    return true;
   }
 
   function hasSlot(candidate: Task, maxConcurrency: number, all: Task[]): boolean {

@@ -76,6 +76,21 @@ export interface TaskAuxFlags {
   pendingAskUser?: PendingAskUser | null;
 }
 
+export type TaskPriority = 'high' | 'medium' | 'low';
+
+export const TASK_PRIORITIES: readonly TaskPriority[] = ['high', 'medium', 'low'];
+
+export function isTaskPriority(value: unknown): value is TaskPriority {
+  return value === 'high' || value === 'medium' || value === 'low';
+}
+
+/** Lower rank = scheduled earlier. */
+export function taskPriorityRank(priority: TaskPriority | undefined): number {
+  if (priority === 'high') return 0;
+  if (priority === 'low') return 2;
+  return 1;
+}
+
 export interface Task {
   id: string;
   taskNumber: number;
@@ -92,6 +107,13 @@ export interface Task {
   mainSessionKey?: string;
   worktreeRootId?: string;
   labels: string[];
+  /** Optional for legacy rows and partial fixtures; the store/service always
+   * persist a concrete value (default 'medium'). */
+  priority?: TaskPriority;
+  /** Ids of tasks (same root) that must reach `success` before this task may
+   * be admitted by the scheduler. Queued tasks with unmet dependencies stay
+   * queued; a failed/cancelled dependency blocks until a human intervenes. */
+  dependencies?: string[];
   auxFlags: TaskAuxFlags;
   createdAt: string;
   updatedAt: string;

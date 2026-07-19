@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { kanbanApi } from './api';
-import type { Task, TaskTemplate, KanbanSchedule } from './types';
+import type { Task, TaskPriority, TaskTemplate, KanbanSchedule } from './types';
 
 import { useWebSocket } from '@/contexts/WebSocketContext';
 
@@ -14,7 +14,11 @@ interface KanbanContextValue {
   error: string | null;
   rootId: string | null;
   refresh: () => Promise<void>;
-  createTask: (taskTemplateId: string, input: string) => Promise<void>;
+  createTask: (
+    taskTemplateId: string,
+    input: string,
+    options?: { priority?: TaskPriority; dependencies?: string[] },
+  ) => Promise<void>;
   moveTask: (taskId: string, action: string) => Promise<void>;
   jumpTask: (taskId: string, targetIndex: number) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -116,10 +120,14 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
   }, [subscribe, rootId, refresh]);
 
   const createTask = useCallback(
-    async (taskTemplateId: string, input: string) => {
+    async (
+      taskTemplateId: string,
+      input: string,
+      options?: { priority?: TaskPriority; dependencies?: string[] },
+    ) => {
       if (!rootId) return;
       try {
-        const t = await kanbanApi.createTask(rootId, taskTemplateId, input);
+        const t = await kanbanApi.createTask(rootId, taskTemplateId, input, options);
         setTasks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'createTask failed');

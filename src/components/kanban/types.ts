@@ -20,6 +20,8 @@ export type StageStatus =
 
 export type SessionReusePolicy = 'task_main' | 'same_stage' | 'always_new';
 
+export type TaskPriority = 'high' | 'medium' | 'low';
+
 /** AskUserQuestion option as emitted by the Claude SDK. Shape is provider-defined;
  * label/description are the documented option fields. */
 export interface PendingAskUserOption {
@@ -107,6 +109,10 @@ export interface Task {
   mainSessionKey?: string;
   worktreeRootId?: string;
   labels: string[];
+  priority?: TaskPriority;
+  /** Ids of tasks (same root) that must succeed before the scheduler admits
+   * this task. See server/modules/kanban/types.ts. */
+  dependencies?: string[];
   auxFlags: TaskAuxFlags;
   createdAt: string;
   updatedAt: string;

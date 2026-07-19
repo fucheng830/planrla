@@ -65,8 +65,16 @@
     "input": "Input (passed to the task as {{input}})",
     "inputPlaceholder": "e.g. implement feature X",
     "inputHint": "Injected into the prompt as {{input}}",
+    "priority": "Priority",
+    "dependencies": "Depends on (starts only after these succeed)",
+    "dependenciesHint": "The task stays queued until all selected tasks complete successfully.",
     "cancel": "Cancel",
     "submit": "Create"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
   },
   "editor": {
     "title": "Task Templates",

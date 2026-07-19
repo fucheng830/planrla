@@ -65,8 +65,16 @@
     "input": "输入",
     "inputPlaceholder": "例如:实现某个功能",
     "inputHint": "作为 {{input}} 注入到 prompt",
+    "priority": "优先级",
+    "dependencies": "依赖于(这些任务成功后才开始)",
+    "dependenciesHint": "所选任务全部成功完成前,该任务保持排队。",
     "cancel": "取消",
     "submit": "创建任务"
+  },
+  "priority": {
+    "high": "高",
+    "medium": "中",
+    "low": "低"
   },
   "editor": {
     "title": "任务模板",

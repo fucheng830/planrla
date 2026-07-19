@@ -1,17 +1,39 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle, Button, Input } from '@/shared/view/ui';
 import { useKanban } from './KanbanContext';
+import type { TaskPriority } from './types';
+
+const PRIORITIES: TaskPriority[] = ['high', 'medium', 'low'];
 
 export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('kanban');
-  const { templates, createTask } = useKanban();
+  const { tasks, templates, createTask } = useKanban();
   const [tplId, setTplId] = useState(templates[0]?.id ?? '');
   const [input, setInput] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [dependencies, setDependencies] = useState<string[]>([]);
+
+  // Dependency candidates: live tasks only (terminal ones already satisfy a
+  // dependency, so offering them would be noise).
+  const depCandidates = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          task.status !== 'success' && task.status !== 'fail' && task.status !== 'cancelled',
+      ),
+    [tasks],
+  );
+
+  const toggleDep = (taskId: string) => {
+    setDependencies((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+    );
+  };
 
   const submit = async () => {
     if (!tplId) return;
-    await createTask(tplId, input);
+    await createTask(tplId, input, { priority, dependencies });
     onClose();
   };
 
@@ -61,6 +83,52 @@ export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
               {t('create.inputHint', { input: '{{input}}' })}
             </div>
           </div>
+          <div>
+            <div className="mb-1 text-xs text-muted-foreground">
+              {t('create.priority')}
+            </div>
+            <select
+              className="w-full rounded border border-border bg-background p-1.5 text-sm"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            >
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {t(`priority.${p}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          {depCandidates.length > 0 && (
+            <div>
+              <div className="mb-1 text-xs text-muted-foreground">
+                {t('create.dependencies')}
+              </div>
+              <div className="max-h-32 space-y-1 overflow-y-auto rounded border border-border p-2">
+                {depCandidates.map((task) => (
+                  <label
+                    key={task.id}
+                    className="flex cursor-pointer items-center gap-2 text-xs"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={dependencies.includes(task.id)}
+                      onChange={() => toggleDep(task.id)}
+                    />
+                    <span className="font-mono text-muted-foreground">
+                      #{task.taskNumber}
+                    </span>
+                    <span className="truncate">
+                      {task.taskTemplateName || task.id}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                {t('create.dependenciesHint')}
+              </div>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>
               {t('create.cancel')}

@@ -82,3 +82,52 @@ test('schedule on root with no tasks does not throw', () => {
   assert.doesNotThrow(() => scheduler.schedule('empty-root'));
   db.close();
 });
+
+test('schedule holds tasks with unmet dependencies until dependency succeeds', () => {
+  const { db, templateStore, service, scheduler, admitted } = setup();
+  saveTpl(templateStore, 't1', 10);
+  const dep = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'dep' });
+  service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'blocked', dependencies: [dep.id] });
+
+  scheduler.schedule('r1');
+  assert.deepEqual(admitted, [dep.id]);
+
+  // dep 走到 success 后(单阶段模板 next 即完成),被阻塞的任务才能进槽
+  service.next('r1', dep.id);
+  scheduler.schedule('r1');
+  assert.equal(admitted.length, 2);
+  db.close();
+});
+
+test('schedule admits higher priority tasks first', () => {
+  const { db, templateStore, service, scheduler, admitted } = setup();
+  saveTpl(templateStore, 't1', 2);
+  service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'low', priority: 'low' });
+  const high = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'high', priority: 'high' });
+  service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'mid' });
+
+  scheduler.schedule('r1');
+  assert.equal(admitted[0], high.id);
+  assert.equal(admitted.length, 2);
+  db.close();
+});
+
+test('createTask rejects unknown or cross-root dependencies and bad priority', () => {
+  const { db, service, templateStore } = setup();
+  saveTpl(templateStore, 't1', 1);
+  const other = service.createTask({ rootId: 'r2', taskTemplateId: 't1', input: 'other' });
+
+  assert.throws(
+    () => service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x', dependencies: ['missing-id'] }),
+    /dependency task .* not found/,
+  );
+  assert.throws(
+    () => service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x', dependencies: [other.id] }),
+    /dependency task .* not found/,
+  );
+  assert.throws(
+    () => service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x', priority: 'urgent' as any }),
+    /invalid priority/,
+  );
+  db.close();
+});

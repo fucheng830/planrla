@@ -1,7 +1,7 @@
 import type { Database as DB } from 'better-sqlite3';
 
-import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus, PendingAskUser } from '@/modules/kanban/types.js';
-import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
+import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus, PendingAskUser, TaskPriority } from '@/modules/kanban/types.js';
+import { isTaskPriority, isTerminalTaskStatus } from '@/modules/kanban/types.js';
 
 export interface TaskStoreDeps {
   db: DB;
@@ -20,6 +20,8 @@ export function createTaskStore(deps: TaskStoreDeps) {
   // TABLE IF NOT EXISTS won't add the column to an already-created table, so
   // we probe PRAGMA table_info and ALTER when missing. Idempotent.
   migrateAddColumn(db, 'tasks', 'pending_ask_user', 'TEXT');
+  migrateAddColumn(db, 'tasks', 'priority', "TEXT NOT NULL DEFAULT 'medium'");
+  migrateAddColumn(db, 'tasks', 'dependencies_json', "TEXT NOT NULL DEFAULT '[]'");
 
   const createTask = db.transaction((input: CreateTaskInput): Task => {
     const t = input.task;
@@ -27,14 +29,14 @@ export function createTaskStore(deps: TaskStoreDeps) {
       (id, task_number, root_id, task_template_id, task_template_name,
        create_worktree, worktree_branch_mode, worktree_branch, worktree_path,
        current_stage_index, status, scheduler_admitted, main_session_key,
-       worktree_root_id, labels_json,
+       worktree_root_id, labels_json, priority, dependencies_json,
        aux_ask_user_waiting, aux_has_plan, aux_has_todos, aux_has_task, aux_session_error,
        pending_ask_user,
        created_at, updated_at, completed_at)
       VALUES (@id,@taskNumber,@rootId,@taskTemplateId,@taskTemplateName,
         @createWorktree,@worktreeBranchMode,@worktreeBranch,@worktreePath,
         @currentStageIndex,@status,@schedulerAdmitted,@mainSessionKey,
-        @worktreeRootId,@labelsJson,
+        @worktreeRootId,@labelsJson,@priority,@dependenciesJson,
         @askUserWaiting,@hasPlan,@hasTodos,@hasTask,@sessionError,
         @pendingAskUser,
         @createdAt,@updatedAt,@completedAt)`)
@@ -49,6 +51,8 @@ export function createTaskStore(deps: TaskStoreDeps) {
         mainSessionKey: t.mainSessionKey ?? null,
         worktreeRootId: t.worktreeRootId ?? null,
         labelsJson: JSON.stringify(t.labels ?? []),
+        priority: t.priority ?? 'medium',
+        dependenciesJson: JSON.stringify(t.dependencies ?? []),
         askUserWaiting: t.auxFlags.askUserWaiting ? 1 : 0,
         hasPlan: t.auxFlags.hasPlan ? 1 : 0,
         hasTodos: t.auxFlags.hasTodos ? 1 : 0,
@@ -202,10 +206,27 @@ interface TaskRow {
   current_stage_index: number; status: string; scheduler_admitted: number;
   main_session_key: string | null; worktree_root_id: string | null;
   labels_json: string;
+  priority: string | null;
+  dependencies_json: string | null;
   aux_ask_user_waiting: number; aux_has_plan: number;
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
   pending_ask_user: string | null;
   created_at: string; updated_at: string; completed_at: string | null;
+}
+
+function parseTaskPriority(raw: string | null | undefined): TaskPriority {
+  return isTaskPriority(raw) ? raw : 'medium';
+}
+
+function parseStringArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+  } catch {
+    return [];
+  }
 }
 
 function parseLabels(labelsJson: string | null | undefined): string[] {
@@ -256,6 +277,8 @@ function rowToTask(row: TaskRow): Task {
     mainSessionKey: row.main_session_key ?? undefined,
     worktreeRootId: row.worktree_root_id ?? undefined,
     labels: parseLabels(row.labels_json),
+    priority: parseTaskPriority(row.priority),
+    dependencies: parseStringArray(row.dependencies_json),
     auxFlags: {
       askUserWaiting: Boolean(row.aux_ask_user_waiting),
       hasPlan: Boolean(row.aux_has_plan),
@@ -308,6 +331,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   main_session_key TEXT,
   worktree_root_id TEXT,
   labels_json TEXT NOT NULL DEFAULT '[]',
+  priority TEXT NOT NULL DEFAULT 'medium',
+  dependencies_json TEXT NOT NULL DEFAULT '[]',
   aux_ask_user_waiting INTEGER NOT NULL DEFAULT 0,
   aux_has_plan INTEGER NOT NULL DEFAULT 0,
   aux_has_todos INTEGER NOT NULL DEFAULT 0,

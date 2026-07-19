@@ -68,13 +68,24 @@ export function TaskCard({ task }: { task: Task }) {
           {task.taskTemplateName || `#${task.taskNumber}`}
         </div>
 
-        {/* Row 3: template chip + stage progress */}
+        {/* Row 3: template chip + stage progress + priority */}
         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
           {task.taskTemplateName && (
             <span className="rounded bg-muted px-1 py-0.5">{task.taskTemplateName}</span>
           )}
           {totalStages > 0 && (
             <span>{task.currentStageIndex + 1}/{totalStages}</span>
+          )}
+          {task.priority && task.priority !== 'medium' && (
+            <span
+              className={`rounded px-1 py-0.5 font-medium ${
+                task.priority === 'high'
+                  ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+              }`}
+            >
+              {t(`priority.${task.priority}`)}
+            </span>
           )}
         </div>
 
