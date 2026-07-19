@@ -14,6 +14,9 @@ type SessionSummary = {
   summary: string;
   messageCount: number;
   lastActivity: string;
+  // REQ-020 S3: surfaces the A2A delegation opt-in flag so the sidebar can
+  // render the "Allow A2A delegation" toggle in its current state.
+  a2a_exposed?: boolean;
 };
 
 type SessionRepositoryRow = {
@@ -22,6 +25,7 @@ type SessionRepositoryRow = {
   custom_name?: string | null;
   updated_at?: string | null;
   created_at?: string | null;
+  a2a_exposed?: number | null;
 };
 
 export type ProjectListItem = {
@@ -125,6 +129,7 @@ function mapSessionRowToSummary(row: SessionRepositoryRow): SessionSummary {
     summary: row.custom_name || '',
     messageCount: 0,
     lastActivity: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+    a2a_exposed: Boolean(row.a2a_exposed),
   };
 }
 

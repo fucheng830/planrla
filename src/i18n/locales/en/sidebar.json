@@ -45,6 +45,8 @@
     "removeFromFavorites": "Remove from favorites",
     "editSessionName": "Manually edit session name",
     "deleteSession": "Delete this session permanently",
+    "a2aDelegate": "Allow A2A delegation",
+    "a2aDelegateEnabled": "A2A delegation enabled — click to disable",
     "activeSessionIndicator": "Recently active session (last 10 minutes)",
     "save": "Save",
     "cancel": "Cancel",

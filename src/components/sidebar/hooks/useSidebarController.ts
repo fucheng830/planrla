@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
-import { api } from '../../../utils/api';
+import { api, authenticatedFetch } from '../../../utils/api';
 import { usePaletteOps } from '../../../contexts/PaletteOpsContext';
 import type { Project, ProjectSession, LLMProvider } from '../../../types/app';
 import type { SessionActivityMap } from '../../../hooks/useSessionProtection';
@@ -14,6 +14,7 @@ import type {
   SessionDeleteConfirmation,
   SessionWithProvider,
 } from '../types/types';
+import type { A2aDelegateContextValue } from '../contexts/A2aDelegateContext';
 import {
   clearLegacyStarredProjectIds,
   filterProjects,
@@ -183,6 +184,11 @@ export function useSidebarController({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [optimisticStarByProjectId, setOptimisticStarByProjectId] = useState<Map<string, boolean>>(new Map());
   const [loadingMoreProjects, setLoadingMoreProjects] = useState<Set<string>>(new Set());
+  // REQ-020 S3: optimistic override of each session's A2A exposure flag.
+  // Keyed by sessionId. When present, it wins over the server-provided value
+  // so the toggle reacts instantly while the PATCH is in flight.
+  const [a2aExposedOverride, setA2aExposedOverride] = useState<Map<string, boolean>>(new Map());
+  const [a2aExposedPending, setA2aExposedPending] = useState<Set<string>>(new Set());
   const searchSeqRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const starToggleSequenceByProjectRef = useRef<Map<string, number>>(new Map());
@@ -946,6 +952,63 @@ export function useSidebarController({
     setSidebarVisible(true);
   }, [setSidebarVisible]);
 
+  // REQ-020 S3 — A2A delegation toggle. The optimistic override lets the row
+  // update instantly; the PATCH call persists it. On failure the override is
+  // dropped so the UI snaps back to the last known server value (refreshed on
+  // the next projects fetch / websocket upsert).
+  const toggleA2aExposed = useCallback(async (sessionId: string, next: boolean) => {
+    setA2aExposedOverride((prev) => {
+      const nextMap = new Map(prev);
+      nextMap.set(sessionId, next);
+      return nextMap;
+    });
+    setA2aExposedPending((prev) => {
+      const nextSet = new Set(prev);
+      nextSet.add(sessionId);
+      return nextSet;
+    });
+
+    try {
+      const response = await authenticatedFetch(
+        `/api/settings/sessions/${encodeURIComponent(sessionId)}/a2a-exposed`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ exposed: next }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`PATCH a2a-exposed failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error toggling A2A exposure for session', sessionId, error);
+      setA2aExposedOverride((prev) => {
+        const nextMap = new Map(prev);
+        nextMap.delete(sessionId);
+        return nextMap;
+      });
+    } finally {
+      setA2aExposedPending((prev) => {
+        const nextSet = new Set(prev);
+        nextSet.delete(sessionId);
+        return nextSet;
+      });
+    }
+  }, []);
+
+  const a2aDelegateValue = useMemo<A2aDelegateContextValue>(
+    () => ({
+      isExposed: (sessionId, serverValue) => {
+        if (a2aExposedOverride.has(sessionId)) {
+          return Boolean(a2aExposedOverride.get(sessionId));
+        }
+        return Boolean(serverValue);
+      },
+      toggle: toggleA2aExposed,
+      isPending: (sessionId) => a2aExposedPending.has(sessionId),
+    }),
+    [a2aExposedOverride, a2aExposedPending, toggleA2aExposed],
+  );
+
   return {
     isSidebarCollapsed,
     expandedProjects,
@@ -1014,5 +1077,6 @@ export function useSidebarController({
     setDeleteConfirmation,
     setSessionDeleteConfirmation,
     setShowVersionModal,
+    a2aDelegateValue,
   };
 }
