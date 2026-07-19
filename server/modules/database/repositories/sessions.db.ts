@@ -10,12 +10,13 @@ type SessionRow = {
   jsonl_path: string | null;
   custom_name: string | null;
   isArchived: number;
+  a2a_exposed: number;
   created_at: string;
   updated_at: string;
 };
 
 const SESSION_ROW_COLUMNS =
-  'session_id, provider, provider_session_id, project_path, jsonl_path, custom_name, isArchived, created_at, updated_at';
+  'session_id, provider, provider_session_id, project_path, jsonl_path, custom_name, isArchived, a2a_exposed, created_at, updated_at';
 
 const SQLITE_UTC_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
 
@@ -471,5 +472,42 @@ export const sessionsDb = {
   deleteSessionById(sessionId: string): boolean {
     const db = getConnection();
     return db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId).changes > 0;
+  },
+
+  /**
+   * Returns every non-archived session that has been opted into A2A exposure.
+   * A2A peers discover these sessions through the gateway so their transcripts
+   * can be shared on demand. COALESCE guards legacy rows where isArchived is
+   * still NULL before the backfill migration runs.
+   */
+  listA2aExposed(): SessionRow[] {
+    const db = getConnection();
+    const rows = db
+      .prepare(
+        `SELECT ${SESSION_ROW_COLUMNS}
+         FROM sessions
+         WHERE a2a_exposed = 1
+           AND COALESCE(isArchived, 0) = 0
+         ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC`
+      )
+      .all() as SessionRow[];
+
+    return normalizeSessionRows(rows);
+  },
+
+  /**
+   * Toggles the A2A exposure flag on one session. Returns true when the row
+   * existed and was updated (changes > 0), false when the session id did not
+   * match any row.
+   */
+  setA2aExposed(sessionId: string, exposed: boolean): boolean {
+    const db = getConnection();
+    return db
+      .prepare(
+        `UPDATE sessions
+         SET a2a_exposed = ?
+         WHERE session_id = ?`
+      )
+      .run(exposed ? 1 : 0, sessionId).changes > 0;
   },
 };
