@@ -81,6 +81,11 @@
     "submit": "生成任务",
     "submitting": "正在生成(可能需要一分钟)..."
   },
+  "timeline": {
+    "title": "阶段历史",
+    "loading": "加载中...",
+    "empty": "还没有阶段历史。"
+  },
   "review": {
     "showDiff": "查看变更",
     "hideDiff": "收起变更",

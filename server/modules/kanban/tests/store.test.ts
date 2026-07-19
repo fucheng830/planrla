@@ -247,3 +247,24 @@ test('priority and dependencies round-trip; legacy rows fall back to defaults', 
   assert.equal(legacy?.priority, 'medium');
   assert.deepEqual(legacy?.dependencies, []);
 });
+
+test('updateProviderSessionId persists and listStageRuns/listTaskEvents read history in order', () => {
+  const store = newTestStore();
+  const now = '2026-01-01T00:00:00.000Z';
+  store.createTask({
+    task: { id: 't', taskNumber: 1, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'r1', taskId: 't', stageIndex: 0, stageName: 'Plan', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'e1', taskId: 't', type: 'task_created', createdAt: now },
+  });
+  store.insertStageRun({ id: 'r2', taskId: 't', stageIndex: 1, stageName: 'Do', role: 'agent', status: 'pending', createdAt: '2026-01-01T01:00:00.000Z', updatedAt: now });
+
+  store.updateProviderSessionId('t', 'provider-xyz');
+  assert.equal(store.getTask('t')?.providerSessionId, 'provider-xyz');
+
+  const runs = store.listStageRuns('t');
+  assert.equal(runs.length, 2);
+  assert.deepEqual(runs.map((r) => r.stageIndex), [0, 1]);
+  const events = store.listTaskEvents('t');
+  assert.equal(events.length, 1);
+  assert.equal(events[0]?.type, 'task_created');
+});

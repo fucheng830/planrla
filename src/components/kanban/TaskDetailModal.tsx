@@ -5,7 +5,7 @@ import { useKanban } from './KanbanContext';
 import { AuxBadges, statusStyle } from './badges';
 import { kanbanApi } from './api';
 import GitDiffViewer from '../git-panel/view/shared/GitDiffViewer';
-import type { PendingAskUserQuestion, Task, TaskDiffResult } from './types';
+import type { PendingAskUserQuestion, StageRun, Task, TaskDiffResult, TaskEvent } from './types';
 
 import { Dialog, DialogContent, DialogTitle, Button } from '@/shared/view/ui';
 
@@ -36,6 +36,26 @@ export function TaskDetailModal({
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSent, setReviewSent] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [timeline, setTimeline] = useState<{ runs: StageRun[]; events: TaskEvent[] } | null>(null);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+
+  const onToggleTimeline = async () => {
+    if (showTimeline) {
+      setShowTimeline(false);
+      return;
+    }
+    setShowTimeline(true);
+    if (timeline || timelineLoading || !rootId) return;
+    setTimelineLoading(true);
+    try {
+      setTimeline(await kanbanApi.getTaskTimeline(task.id, rootId));
+    } catch {
+      // 失败时保持空态,下次展开重试
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
 
   const onToggleDiff = async () => {
     if (showDiff) {
@@ -344,6 +364,39 @@ export function TaskDetailModal({
               )}
             </div>
           )}
+          <div className="border-t border-border pt-3">
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => void onToggleTimeline()}
+            >
+              {showTimeline ? '▾ ' : '▸ '}
+              {t('timeline.title')}
+            </button>
+            {showTimeline && (
+              <div className="mt-2 max-h-48 space-y-1 overflow-y-auto text-[11px]">
+                {timelineLoading && (
+                  <div className="text-muted-foreground">{t('timeline.loading')}</div>
+                )}
+                {!timelineLoading && timeline && timeline.runs.length === 0 && (
+                  <div className="text-muted-foreground">{t('timeline.empty')}</div>
+                )}
+                {!timelineLoading &&
+                  timeline?.runs.map((run) => (
+                    <div key={run.id} className="flex items-center gap-2">
+                      <span className="font-mono text-muted-foreground">{run.stageIndex}</span>
+                      <span className="font-medium">{run.stageName}</span>
+                      <span className="text-muted-foreground">{t(`role.${run.role}`)}</span>
+                      <span>{t(`status.${run.status}`)}</span>
+                      <span className="ml-auto text-muted-foreground">
+                        {run.startedAt ? new Date(run.startedAt).toLocaleTimeString() : ''}
+                        {run.finishedAt ? ` → ${new Date(run.finishedAt).toLocaleTimeString()}` : ''}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
           {tpl && (
             <div className="border-t border-border pt-3">
               <div className="mb-2 text-xs text-muted-foreground">

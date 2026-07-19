@@ -92,3 +92,76 @@ test('GET /api/tasks lists tasks for root', async () => {
   assert.equal(res.body.tasks.length, 2);
   db.close();
 });
+
+function setupAnswerApp(captured: any[]) {
+  const db = new Database(join(tmpdir(), `route-${Date.now()}-${Math.random().toString(36).slice(2)}.db`));
+  db.pragma('journal_mode = WAL');
+  const taskStore = createTaskStore({ db });
+  const templateStore = createTemplateStore({ dir: join(tmpdir(), `route-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`) });
+  const service = createKanbanService({ taskStore, templateStore });
+  const router = createKanbanRouter({
+    service, taskStore, templateStore,
+    scheduler: { schedule: () => {} },
+    scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
+    cronDriver: { reload: () => {} } as any,
+    resolveRootPath: () => null,
+    runner: { startReviewComment: () => { throw new Error('not used in this test'); } },
+    resolveToolApproval: (requestId: string, decision: any) => { captured.push({ requestId, decision }); },
+  });
+  const app = express();
+  app.use(express.json());
+  app.locals.wss = null;
+  app.use('/api/tasks', router);
+  return { app, db, templateStore, service, taskStore };
+}
+
+test('POST /api/tasks/:taskId/answer resolves the pending approval and clears flags', async () => {
+  const captured: any[] = [];
+  const { app, db, templateStore, service, taskStore } = setupAnswerApp(captured);
+  saveTpl(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x' });
+  taskStore.updateTaskAuxFlags(task.id, {
+    askUserWaiting: true,
+    pendingAskUser: { requestId: 'req-1', questions: { questions: [] }, capturedAt: NOW },
+  });
+
+  const res = await request(app)
+    .post(`/api/tasks/${task.id}/answer`)
+    .send({ rootId: 'r1', answers: ['option A'] });
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(captured, [{ requestId: 'req-1', decision: { allow: true, updatedInput: ['option A'] } }]);
+  assert.equal(res.body.task.auxFlags.askUserWaiting, false);
+  assert.equal(res.body.task.auxFlags.pendingAskUser, null);
+  db.close();
+});
+
+test('POST /api/tasks/:taskId/answer rejects when no question is pending', async () => {
+  const captured: any[] = [];
+  const { app, db, templateStore, service } = setupAnswerApp(captured);
+  saveTpl(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'x' });
+
+  const res = await request(app)
+    .post(`/api/tasks/${task.id}/answer`)
+    .send({ rootId: 'r1', answers: [] });
+
+  assert.equal(res.status, 400);
+  assert.equal(captured.length, 0);
+  db.close();
+});
+
+test('POST /api/tasks/:taskId/answer rejects a task from another root', async () => {
+  const captured: any[] = [];
+  const { app, db, templateStore, service } = setupAnswerApp(captured);
+  saveTpl(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r2', taskTemplateId: 't1', input: 'x' });
+
+  const res = await request(app)
+    .post(`/api/tasks/${task.id}/answer`)
+    .send({ rootId: 'r1', answers: [] });
+
+  assert.equal(res.status, 404);
+  assert.equal(captured.length, 0);
+  db.close();
+});

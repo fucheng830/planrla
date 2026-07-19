@@ -81,6 +81,11 @@
     "submit": "Generate tasks",
     "submitting": "Generating (may take a minute)..."
   },
+  "timeline": {
+    "title": "Stage history",
+    "loading": "Loading...",
+    "empty": "No stage history yet."
+  },
   "review": {
     "showDiff": "View changes",
     "hideDiff": "Hide changes",

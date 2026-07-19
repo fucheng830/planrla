@@ -169,6 +169,10 @@ const wss = createWebSocketServer(server, {
 // Make WebSocket server available to routes
 app.locals.wss = wss;
 
+// REQ-034: runner/scheduler-driven kanban task changes (status transitions,
+// aux flags) broadcast over WS so the board updates in realtime.
+getKanban().setTaskBroadcaster((rootId, task) => broadcastTaskUpdated(wss, rootId, task));
+
 app.use(cors({ exposedHeaders: ['X-Refreshed-Token'] }));
 app.use(express.json({
     limit: '50mb',

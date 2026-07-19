@@ -14,6 +14,7 @@ import { createRunner } from '@/modules/kanban/runner.js';
 import { createWorktreeGit } from '@/modules/kanban/git-worktree.js';
 import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 import { resolveToolApproval } from '@/claude-sdk.js';
+import type { Task } from '@/modules/kanban/types.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -21,6 +22,21 @@ export function getKanban() {
   if (cached) return cached;
   cached = buildKanban();
   return cached;
+}
+
+// Broadcast hook for runner/scheduler-driven task changes (REQ-034). The WS
+// server does not exist when buildKanban() runs, so index.js registers the
+// real broadcaster after listen via setTaskBroadcaster; until then emits are
+// no-ops (route-driven mutations already broadcast themselves).
+let taskBroadcaster: ((rootId: string, task: Task) => void) | null = null;
+
+function emitTaskChanged(task: Task): void {
+  if (!taskBroadcaster) return;
+  try {
+    taskBroadcaster(task.rootId, task);
+  } catch {
+    // Broadcast must never break the runner.
+  }
 }
 
 function buildKanban() {
@@ -49,8 +65,14 @@ function buildKanban() {
         .catch((e) => console.error('[kanban-worktree] terminal cleanup failed:', e));
     },
   });
-  const auxBridge = createAuxBridge({ updateAuxFlags: taskStore.updateTaskAuxFlags });
-  const runner = createRunner({ taskStore, templateStore, service, auxBridge, resolveRootPath, worktreeSetup, mcpBaseUrl });
+  const auxBridge = createAuxBridge({
+    updateAuxFlags: (taskId, flags) => {
+      taskStore.updateTaskAuxFlags(taskId, flags);
+      const updated = taskStore.getTask(taskId);
+      if (updated) emitTaskChanged(updated);
+    },
+  });
+  const runner = createRunner({ taskStore, templateStore, service, auxBridge, resolveRootPath, worktreeSetup, mcpBaseUrl, onTaskChanged: emitTaskChanged });
   const scheduler = createScheduler({
     taskStore,
     templateStore,
@@ -60,6 +82,7 @@ function buildKanban() {
       const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
       const stage = tpl?.stages[task.currentStageIndex]?.snapshot;
       if (!stage) return;
+      emitTaskChanged(task);
       if (stage.role === 'agent' && stage.agent) {
         void runner.runAgentStage(task.rootId, taskId, task.currentStageIndex)
           .catch((e: any) => console.error('[kanban-runner]', e));
@@ -84,5 +107,10 @@ function buildKanban() {
   try { cronDriver.start(); }
   catch (e: any) { console.error('[kanban-cron] start failed:', e?.message ?? e); }
   const router = createKanbanRouter({ service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval });
-  return { db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router };
+  return {
+    db, taskStore, templateStore, scheduleStore, service, scheduler, runner, router,
+    setTaskBroadcaster(fn: (rootId: string, task: Task) => void) {
+      taskBroadcaster = fn;
+    },
+  };
 }

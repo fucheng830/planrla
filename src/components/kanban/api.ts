@@ -1,7 +1,7 @@
 import type {
   Task, TaskPriority, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
-  KanbanSchedule, TaskDiffResult,
+  KanbanSchedule, TaskDiffResult, StageRun, TaskEvent,
 } from './types';
 
 import { api } from '@/utils/api';
@@ -52,6 +52,11 @@ export const kanbanApi = {
     }
     const data = (await res.json()) as { tasks: Task[] };
     return data.tasks;
+  },
+  getTaskTimeline: async (taskId: string, rootId: string): Promise<{ runs: StageRun[]; events: TaskEvent[] }> => {
+    const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/timeline?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) throw new Error(`getTaskTimeline failed: ${res.status}`);
+    return (await res.json()) as { runs: StageRun[]; events: TaskEvent[] };
   },
   getTaskDiff: async (taskId: string, rootId: string): Promise<TaskDiffResult> => {
     const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/diff?rootId=${encodeURIComponent(rootId)}`);

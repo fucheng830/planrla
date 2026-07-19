@@ -307,8 +307,8 @@
       }
     },
     "settings": {
-      "enableLabel": "Activer l'intégration TaskMaster",
-      "enableDescription": "Afficher les tâches TaskMaster, les bannières et les indicateurs dans la barre latérale"
+      "enableLabel": "Activer l'intégration TaskMaster (Obsolète)",
+      "enableDescription": "Afficher les tâches TaskMaster, les bannières et les indicateurs dans la barre latérale. Obsolète : le kanban natif prend désormais en charge priorités, dépendances et génération de tâches depuis un PRD — migrez vers lui"
     }
   },
   "agents": {

@@ -105,6 +105,9 @@ export interface Task {
   status: TaskStatus;
   schedulerAdmitted: boolean;
   mainSessionKey?: string;
+  /** Provider-native session id captured from the runtime (persisted so the
+   * runner can resume/review across process restarts). */
+  providerSessionId?: string;
   worktreeRootId?: string;
   labels: string[];
   /** Optional for legacy rows and partial fixtures; the store/service always

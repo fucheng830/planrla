@@ -17,8 +17,8 @@ import crypto from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
-import { CLAUDE_FALLBACK_MODELS } from './modules/providers/list/claude/claude-models.provider.js';
-import { providerModelsService } from './modules/providers/services/provider-models.service.js';
+import { CLAUDE_FALLBACK_MODELS } from './modules/providers/index.js';
+import { providerModelsService } from './modules/providers/index.js';
 import { resolveClaudeCodeExecutablePath } from './shared/claude-cli-path.js';
 import {
   createNotificationEvent,
@@ -26,8 +26,8 @@ import {
   notifyRunStopped,
   notifyUserIfEnabled
 } from './services/notification-orchestrator.js';
-import { sessionsService } from './modules/providers/services/sessions.service.js';
-import { providerAuthService } from './modules/providers/services/provider-auth.service.js';
+import { sessionsService } from './modules/providers/index.js';
+import { providerAuthService } from './modules/providers/index.js';
 import { createCompleteMessage, createNormalizedMessage } from './shared/utils.js';
 
 const activeSessions = new Map();
@@ -157,7 +157,13 @@ function mapCliOptionsToSDK(options = {}) {
 
   // Forward all host env vars (e.g. ANTHROPIC_BASE_URL) to the subprocess.
   // Since SDK 0.2.113, options.env replaces process.env instead of overlaying it.
-  sdkOptions.env = { ...process.env };
+  // options.envStrip removes specific keys (kanban runner strips GLM proxy vars
+  // that collapse tool-heavy runs, see KANBAN_STRIP_ENV_KEYS).
+  const spawnEnv = { ...process.env };
+  for (const key of options.envStrip ?? []) {
+    delete spawnEnv[key];
+  }
+  sdkOptions.env = spawnEnv;
 
   // Resolve the executable eagerly on Windows because the SDK uses raw child_process.spawn,
   // which does not reliably follow npm's shell wrappers like cross-spawn does.

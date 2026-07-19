@@ -52,6 +52,9 @@ export interface RunnerDeps {
    *  binary is missing — no message ever reaches the writer, so onComplete/onError
    *  never fire and the task would otherwise stay "running" forever). Default 30 min. */
   stageTimeoutMs?: number;
+  /** Called whenever the runner changes a task (status transitions, aux flags,
+   *  session capture) so the assembly can broadcast it (REQ-034). */
+  onTaskChanged?: (task: Task) => void;
   log?: (msg: string) => void;
 }
 
@@ -66,12 +69,27 @@ export function createRunner(deps: RunnerDeps) {
     worktreeSetup,
     mcpBaseUrl,
     stageTimeoutMs = Number(process.env.KANBAN_STAGE_TIMEOUT_MS) || 30 * 60 * 1000,
+    onTaskChanged,
     log = () => {},
   } = deps;
 
   // sessionKey → provider native sessionId. Lets a follow-up run resume the
-  // provider session the first run established.
+  // provider session the first run established. Seeded from the persisted
+  // task.providerSessionId so resume survives process restarts.
   const sessionMap = new Map<string, string>();
+
+  // REQ-037: env keys stripped from provider spawns (e.g. GLM proxy vars like
+  // ANTHROPIC_BASE_URL that collapse tool-heavy kanban runs). Configured via
+  // KANBAN_STRIP_ENV_KEYS=comma,separated,keys; empty by default.
+  const envStrip = (process.env.KANBAN_STRIP_ENV_KEYS ?? '')
+    .split(',')
+    .map((key) => key.trim())
+    .filter(Boolean);
+
+  function emitTask(taskId: string): void {
+    const current = taskStore.getTask(taskId);
+    if (current) onTaskChanged?.(current);
+  }
 
   async function runAgentStage(rootId: string, taskId: string, stageIndex: number): Promise<void> {
     const task = taskStore.getTask(taskId);
@@ -84,7 +102,11 @@ export function createRunner(deps: RunnerDeps) {
     }
 
     const sessionKey = task.mainSessionKey ?? taskId;
-    const providerSessionId = sessionMap.get(sessionKey);
+    let providerSessionId = sessionMap.get(sessionKey);
+    if (!providerSessionId && task.providerSessionId) {
+      providerSessionId = task.providerSessionId;
+      sessionMap.set(sessionKey, providerSessionId);
+    }
     const rootPath = resolveRootPath(rootId);
     const permissionMode: 'plan' | 'bypassPermissions' = stage.planMode ? 'plan' : 'bypassPermissions';
 
@@ -126,9 +148,11 @@ export function createRunner(deps: RunnerDeps) {
       auxBridge,
       onProviderSessionId: (sid) => {
         sessionMap.set(sessionKey, sid);
+        taskStore.updateProviderSessionId(taskId, sid);
       },
       onComplete: () => {
         log(`[kanban-runner] complete task=${taskId}`);
+        emitTask(taskId);
         // If the agent already self-advanced via the task_next MCP tool (stageIndex moved
         // on) or the task reached a terminal state, do nothing — avoids double-advance.
         const cur = taskStore.getTask(taskId);
@@ -149,6 +173,7 @@ export function createRunner(deps: RunnerDeps) {
       },
       onError: (m) => {
         taskStore.updateTaskAuxFlags(taskId, { sessionError: String(m?.message ?? m) });
+        emitTask(taskId);
       },
     });
 
@@ -161,6 +186,7 @@ export function createRunner(deps: RunnerDeps) {
           projectPath: cwd,
           model: stage.model,
           permissionMode,
+          envStrip: envStrip.length > 0 ? envStrip : undefined,
           mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
         } as any, writer),
         new Promise<never>((_, reject) => {
@@ -222,7 +248,11 @@ export function createRunner(deps: RunnerDeps) {
     }
 
     const sessionKey = task.mainSessionKey ?? taskId;
-    const providerSessionId = sessionMap.get(sessionKey);
+    let providerSessionId = sessionMap.get(sessionKey);
+    if (!providerSessionId && task.providerSessionId) {
+      providerSessionId = task.providerSessionId;
+      sessionMap.set(sessionKey, providerSessionId);
+    }
     if (!providerSessionId) {
       throw new AppError('no live provider session for this task (only tasks run in this server process can be reviewed)', { code: 'NO_LIVE_SESSION', statusCode: 409 });
     }
@@ -241,12 +271,14 @@ export function createRunner(deps: RunnerDeps) {
 
     const restoreStatus = () => {
       taskStore.updateTaskStage(taskId, task.currentStageIndex, previousStatus as TaskStatus);
+      emitTask(taskId);
     };
     const writer = new RunnerWriter({
       taskId,
       auxBridge,
       onProviderSessionId: (sid: string) => {
         sessionMap.set(sessionKey, sid);
+        taskStore.updateProviderSessionId(taskId, sid);
       },
       onComplete: restoreStatus,
       onError: (m: any) => {

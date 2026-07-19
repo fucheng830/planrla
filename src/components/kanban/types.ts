@@ -107,6 +107,8 @@ export interface Task {
   status: TaskStatus;
   schedulerAdmitted: boolean;
   mainSessionKey?: string;
+  /** Provider-native session id (used to resume/review the same agent session). */
+  providerSessionId?: string;
   worktreeRootId?: string;
   labels: string[];
   priority?: TaskPriority;
@@ -132,6 +134,31 @@ export interface TaskDiffResult {
   files: TaskDiffFile[];
   patch: string;
   truncated: boolean;
+}
+
+export interface StageRun {
+  id: string;
+  taskId: string;
+  stageIndex: number;
+  stageName: string;
+  role: 'user' | 'agent';
+  status: StageStatus;
+  sessionKey?: string;
+  input?: string;
+  renderedPrompt?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskEvent {
+  id: string;
+  taskId: string;
+  stageRunId?: string;
+  type: string;
+  payloadJson?: string;
+  createdAt: string;
 }
 
 export interface TaskListResponse { tasks: Task[] }

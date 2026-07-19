@@ -22,6 +22,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
   migrateAddColumn(db, 'tasks', 'pending_ask_user', 'TEXT');
   migrateAddColumn(db, 'tasks', 'priority', "TEXT NOT NULL DEFAULT 'medium'");
   migrateAddColumn(db, 'tasks', 'dependencies_json', "TEXT NOT NULL DEFAULT '[]'");
+  migrateAddColumn(db, 'tasks', 'provider_session_id', 'TEXT');
 
   const createTask = db.transaction((input: CreateTaskInput): Task => {
     const t = input.task;
@@ -29,14 +30,14 @@ export function createTaskStore(deps: TaskStoreDeps) {
       (id, task_number, root_id, task_template_id, task_template_name,
        create_worktree, worktree_branch_mode, worktree_branch, worktree_path,
        current_stage_index, status, scheduler_admitted, main_session_key,
-       worktree_root_id, labels_json, priority, dependencies_json,
+       worktree_root_id, labels_json, priority, dependencies_json, provider_session_id,
        aux_ask_user_waiting, aux_has_plan, aux_has_todos, aux_has_task, aux_session_error,
        pending_ask_user,
        created_at, updated_at, completed_at)
       VALUES (@id,@taskNumber,@rootId,@taskTemplateId,@taskTemplateName,
         @createWorktree,@worktreeBranchMode,@worktreeBranch,@worktreePath,
         @currentStageIndex,@status,@schedulerAdmitted,@mainSessionKey,
-        @worktreeRootId,@labelsJson,@priority,@dependenciesJson,
+        @worktreeRootId,@labelsJson,@priority,@dependenciesJson,@providerSessionId,
         @askUserWaiting,@hasPlan,@hasTodos,@hasTask,@sessionError,
         @pendingAskUser,
         @createdAt,@updatedAt,@completedAt)`)
@@ -53,6 +54,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
         labelsJson: JSON.stringify(t.labels ?? []),
         priority: t.priority ?? 'medium',
         dependenciesJson: JSON.stringify(t.dependencies ?? []),
+        providerSessionId: t.providerSessionId ?? null,
         askUserWaiting: t.auxFlags.askUserWaiting ? 1 : 0,
         hasPlan: t.auxFlags.hasPlan ? 1 : 0,
         hasTodos: t.auxFlags.hasTodos ? 1 : 0,
@@ -184,6 +186,27 @@ export function createTaskStore(deps: TaskStoreDeps) {
       .run(value ? 1 : 0, new Date().toISOString(), taskId);
   }
 
+  /** Persists the provider-native session id so resume/review works across
+   * process restarts (the in-memory runner sessionMap is only a cache). */
+  function updateProviderSessionId(taskId: string, providerSessionId: string): void {
+    db.prepare('UPDATE tasks SET provider_session_id = ?, updated_at = ? WHERE id = ?')
+      .run(providerSessionId, new Date().toISOString(), taskId);
+  }
+
+  /** Stage history of one task in execution order (timeline view). */
+  function listStageRuns(taskId: string): StageRun[] {
+    const rows = db.prepare('SELECT * FROM stage_runs WHERE task_id = ? ORDER BY created_at ASC, rowid ASC')
+      .all(taskId) as StageRunRow[];
+    return rows.map(rowToStageRun);
+  }
+
+  /** Audit events of one task in chronological order. */
+  function listTaskEvents(taskId: string): TaskEvent[] {
+    const rows = db.prepare('SELECT * FROM task_events WHERE task_id = ? ORDER BY created_at ASC, rowid ASC')
+      .all(taskId) as TaskEventRow[];
+    return rows.map(rowToTaskEvent);
+  }
+
   /** Removes one task with its stage runs and events in a single transaction. */
   function deleteTask(taskId: string): void {
     db.transaction(() => {
@@ -193,7 +216,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
     })();
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask };
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, listStageRuns, listTaskEvents };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
@@ -208,6 +231,7 @@ interface TaskRow {
   labels_json: string;
   priority: string | null;
   dependencies_json: string | null;
+  provider_session_id: string | null;
   aux_ask_user_waiting: number; aux_has_plan: number;
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
   pending_ask_user: string | null;
@@ -279,6 +303,7 @@ function rowToTask(row: TaskRow): Task {
     labels: parseLabels(row.labels_json),
     priority: parseTaskPriority(row.priority),
     dependencies: parseStringArray(row.dependencies_json),
+    providerSessionId: row.provider_session_id ?? undefined,
     auxFlags: {
       askUserWaiting: Boolean(row.aux_ask_user_waiting),
       hasPlan: Boolean(row.aux_has_plan),
@@ -298,6 +323,21 @@ interface StageRunRow {
   session_key: string | null; input: string | null; rendered_prompt: string | null;
   started_at: string | null; finished_at: string | null;
   created_at: string; updated_at: string;
+}
+
+interface TaskEventRow {
+  id: string; task_id: string; stage_run_id: string | null;
+  type: string; payload_json: string | null; created_at: string;
+}
+
+function rowToTaskEvent(row: TaskEventRow): TaskEvent {
+  return {
+    id: row.id, taskId: row.task_id,
+    stageRunId: row.stage_run_id ?? undefined,
+    type: row.type,
+    payloadJson: row.payload_json ?? undefined,
+    createdAt: row.created_at,
+  };
 }
 
 function rowToStageRun(row: StageRunRow): StageRun {
@@ -333,6 +373,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   labels_json TEXT NOT NULL DEFAULT '[]',
   priority TEXT NOT NULL DEFAULT 'medium',
   dependencies_json TEXT NOT NULL DEFAULT '[]',
+  provider_session_id TEXT,
   aux_ask_user_waiting INTEGER NOT NULL DEFAULT 0,
   aux_has_plan INTEGER NOT NULL DEFAULT 0,
   aux_has_todos INTEGER NOT NULL DEFAULT 0,

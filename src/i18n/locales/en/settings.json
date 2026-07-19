@@ -588,8 +588,8 @@
       }
     },
     "settings": {
-      "enableLabel": "Enable TaskMaster Integration",
-      "enableDescription": "Show TaskMaster tasks, banners, and sidebar indicators across the interface"
+      "enableLabel": "Enable TaskMaster Integration (Deprecated)",
+      "enableDescription": "Show TaskMaster tasks, banners, and sidebar indicators across the interface. Deprecated: the native kanban board now supports priorities, dependencies, and PRD-to-tasks — migrate there"
     }
   },
   "agents": {

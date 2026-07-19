@@ -174,6 +174,20 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     }
   });
 
+  // Stage timeline: stage runs + audit events of one task in execution order.
+  router.get('/:taskId/timeline', (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(req.params.taskId);
+    if (!task || task.rootId !== rootId) {
+      return res.status(404).json({ message: 'task not found', code: 'TASK_NOT_FOUND' });
+    }
+    res.json({
+      runs: taskStore.listStageRuns(task.id),
+      events: taskStore.listTaskEvents(task.id),
+    });
+  });
+
   // Review loop (diff view): everything the task worktree changed relative
   // to its branch point, as a unified patch + per-file numstat.
   router.get('/:taskId/diff', async (req, res) => {
