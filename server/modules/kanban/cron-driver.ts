@@ -1,4 +1,5 @@
 import * as realCron from 'node-cron';
+
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import type { KanbanService } from '@/modules/kanban/service.js';
 
@@ -11,6 +12,11 @@ export interface CronModule {
 export interface CronDriverDeps {
   scheduleStore: ScheduleStore;
   service: KanbanService;
+  /**
+   * Scheduler used to admit newly created tasks immediately. Without it,
+   * cron-created tasks would sit queued until some unrelated schedule() call.
+   */
+  scheduler?: { schedule: (rootId: string) => void };
   /** Injectable for tests; defaults to the real node-cron. */
   cron?: CronModule;
   log?: (msg: string) => void;
@@ -26,7 +32,7 @@ export interface KanbanCronDriver {
 }
 
 export function createKanbanCron(deps: CronDriverDeps): KanbanCronDriver {
-  const { scheduleStore, service, cron = realCron, log = () => {} } = deps;
+  const { scheduleStore, service, scheduler, cron = realCron, log = () => {} } = deps;
   const tasks = new Map<string, { stop: () => void }>();
 
   function trigger(
@@ -38,6 +44,9 @@ export function createKanbanCron(deps: CronDriverDeps): KanbanCronDriver {
     try {
       service.createTask({ rootId, taskTemplateId, input });
       scheduleStore.updateLastRun(scheduleId, new Date().toISOString());
+      // Admit the fresh task right away; otherwise it would wait for the next
+      // unrelated schedule() tick (route, MCP tool, or another cron fire).
+      scheduler?.schedule(rootId);
       log(`[kanban-cron] triggered schedule=${scheduleId}`);
     } catch (e: any) {
       log(`[kanban-cron] trigger failed schedule=${scheduleId}: ${e?.message ?? e}`);

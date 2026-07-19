@@ -46,6 +46,8 @@
     "resume": "Resume",
     "complete": "Complete",
     "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete task #{{number}}? This removes the task and its history.",
     "jumpToStage": "Jump to stage",
     "askedAgo": "agent asked · {{n}} min ago"
   },

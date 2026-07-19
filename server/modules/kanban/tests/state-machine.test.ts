@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import Database from 'better-sqlite3';
 
 import { createKanbanService } from '@/modules/kanban/service.js';
@@ -289,4 +290,61 @@ test('getTask on unknown id returns 404 TASK_NOT_FOUND via requireTask', () => {
   templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: false }]));
   // next on nonexistent -> requireNonTerminalTask -> requireTask -> 404
   assert.throws(() => service.next('r1', 'no-such-id'), /not found/i);
+});
+
+test('deleteTask on non-terminal task cancels first (terminal hook fires) then removes rows', () => {
+  const dbPath = join(tmpdir(), `kanban-svc-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const tplDir = join(tmpdir(), `kanban-svc-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  const taskStore = createTaskStore({ db });
+  const templateStore = createTemplateStore({ dir: tplDir });
+  const terminalCalls: string[] = [];
+  const service = createKanbanService({
+    taskStore,
+    templateStore,
+    onTerminal: (task) => { terminalCalls.push(`${task.id}:${task.status}`); },
+  });
+
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.equal(task.status, 'queued');
+
+  service.deleteTask('r1', task.id);
+
+  // cancel 路径先触发一次 cancelled 终态回调,随后行被物理删除
+  assert.deepEqual(terminalCalls, [`${task.id}:cancelled`]);
+  assert.throws(() => service.getTask('r1', task.id), /not found/i);
+  assert.equal(taskStore.getTask(task.id), null);
+});
+
+test('deleteTask on terminal task skips the cancel path', () => {
+  const dbPath = join(tmpdir(), `kanban-svc-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const tplDir = join(tmpdir(), `kanban-svc-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  const taskStore = createTaskStore({ db });
+  const templateStore = createTemplateStore({ dir: tplDir });
+  const terminalCalls: string[] = [];
+  const service = createKanbanService({
+    taskStore,
+    templateStore,
+    onTerminal: (task) => { terminalCalls.push(`${task.id}:${task.status}`); },
+  });
+
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  service.cancel('r1', task.id);
+  assert.deepEqual(terminalCalls, [`${task.id}:cancelled`]);
+
+  service.deleteTask('r1', task.id);
+  assert.equal(terminalCalls.length, 1);
+  assert.equal(taskStore.getTask(task.id), null);
+});
+
+test('deleteTask enforces root ownership', () => {
+  const { service, templateStore } = newService();
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'user', autoAdvance: true }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.throws(() => service.deleteTask('other-root', task.id), /TASK_ROOT_MISMATCH|root/i);
 });

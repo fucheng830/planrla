@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogTitle, Button } from '@/shared/view/ui';
+
 import { useKanban } from './KanbanContext';
 import { AuxBadges, statusStyle } from './badges';
 import { kanbanApi } from './api';
 import type { PendingAskUserQuestion, Task } from './types';
+
+import { Dialog, DialogContent, DialogTitle, Button } from '@/shared/view/ui';
 
 export function TaskDetailModal({
   task,
@@ -14,7 +16,7 @@ export function TaskDetailModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation('kanban');
-  const { templatesById, moveTask, jumpTask, rootId, refresh } = useKanban();
+  const { templatesById, moveTask, jumpTask, deleteTask, rootId, refresh } = useKanban();
   const tpl = templatesById.get(task.taskTemplateId);
   const s = statusStyle(task.status);
   const isTerminal =
@@ -64,6 +66,13 @@ export function TaskDetailModal({
   };
   const onJump = (target: number) => {
     void jumpTask(task.id, target);
+  };
+  const onDelete = async () => {
+    if (!window.confirm(t('detail.deleteConfirm', { number: task.taskNumber }))) {
+      return;
+    }
+    await deleteTask(task.id);
+    onClose();
   };
 
   const MoveBtn = ({
@@ -217,6 +226,9 @@ export function TaskDetailModal({
             />
             <MoveBtn action="complete" label={`✓ ${t('detail.complete')}`} />
             <MoveBtn action="cancel" label={t('detail.cancel')} />
+            <Button size="sm" variant="destructive" onClick={() => void onDelete()}>
+              {t('detail.delete')}
+            </Button>
           </div>
           {tpl && (
             <div className="border-t border-border pt-3">

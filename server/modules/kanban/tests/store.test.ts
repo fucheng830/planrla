@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import Database from 'better-sqlite3';
 
 import { createTaskStore } from '@/modules/kanban/store.js';
@@ -205,4 +206,21 @@ test('updateTaskWorktree no-op when no fields given', () => {
   store.updateTaskWorktree('t', {});
   const after = store.getTask('t');
   assert.deepEqual(after?.worktreePath, before?.worktreePath);
+});
+
+test('deleteTask removes task, stage runs and events in one transaction', () => {
+  const store = newTestStore();
+  const now = '2026-01-01T00:00:00.000Z';
+  store.createTask({
+    task: { id: 't', taskNumber: 1, rootId: 'root-1', taskTemplateId: 'tpl', createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false, labels: [], auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false }, createdAt: now, updatedAt: now },
+    initialStageRun: { id: 'rt', taskId: 't', stageIndex: 0, stageName: 'S', role: 'user', status: 'approved', createdAt: now, updatedAt: now },
+    event: { id: 'et', taskId: 't', type: 'task_created', createdAt: now },
+  });
+  store.insertStageRun({ id: 'rt-2', taskId: 't', stageIndex: 1, stageName: 'A', role: 'agent', status: 'pending', createdAt: now, updatedAt: now });
+
+  store.deleteTask('t');
+
+  assert.equal(store.getTask('t'), null);
+  assert.equal(store.latestStageRun('t', 0), null);
+  assert.equal(store.latestStageRun('t', 1), null);
 });

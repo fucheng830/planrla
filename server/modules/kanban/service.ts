@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { Task, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
@@ -113,6 +114,20 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return updated;
   }
 
+  /**
+   * Deletes one task with its stage runs and events. Non-terminal tasks go
+   * through the cancel path first so terminal side effects (worktree cleanup,
+   * pending-question clearing, scheduler slot release) fire before the rows
+   * disappear.
+   */
+  function deleteTask(rootId: string, taskId: string): void {
+    const task = requireTask(taskId, rootId);
+    if (!isTerminalTaskStatus(task.status)) {
+      cancel(rootId, taskId);
+    }
+    taskStore.deleteTask(taskId);
+  }
+
   function prev(rootId: string, taskId: string): Task {
     const task = requireNonTerminalTask(taskId, rootId);
     if (task.currentStageIndex <= 0) {
@@ -205,7 +220,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tpl;
   }
 
-  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, listTasks, getTask };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, deleteTask, listTasks, getTask };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;

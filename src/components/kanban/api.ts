@@ -1,9 +1,10 @@
-import { api } from '@/utils/api';
 import type {
   Task, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
   KanbanSchedule,
 } from './types';
+
+import { api } from '@/utils/api';
 
 // The generic api methods (api.get/post/delete) prepend `/api` themselves and
 // return the raw fetch Response. Each method below throws on non-ok responses
@@ -32,6 +33,10 @@ export const kanbanApi = {
     if (!res.ok) throw new Error(`jump failed: ${res.status}`);
     const data = (await res.json()) as TaskResponse;
     return data.task;
+  },
+  deleteTask: async (taskId: string, rootId: string): Promise<void> => {
+    const res = await api.delete(`/tasks/${encodeURIComponent(taskId)}?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) throw new Error(`deleteTask failed: ${res.status}`);
   },
   // REQ-038: answer a pending AskUserQuestion inline. `answers` is forwarded as
   // updatedInput to resolveToolApproval on the server.

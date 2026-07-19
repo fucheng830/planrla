@@ -1,5 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
+
 import { getConnection, projectsDb } from '@/modules/database/index.js';
 import { createTaskStore } from '@/modules/kanban/store.js';
 import { createTemplateStore } from '@/modules/kanban/template-store.js';
@@ -74,6 +75,7 @@ function buildKanban() {
   const cronDriver = createKanbanCron({
     scheduleStore,
     service,
+    scheduler,
     log: (m) => console.log(m),
   });
   // Register all enabled cron schedules on startup so they fire without waiting

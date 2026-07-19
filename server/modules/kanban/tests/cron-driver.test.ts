@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { createKanbanCron, type CronModule } from '@/modules/kanban/cron-driver.js';
 
 function mockCron(): {
@@ -52,6 +53,23 @@ test('trigger (firing registered callback) calls service.createTask + updateLast
   registered[0].cb(); // fire the registered callback manually (simulates cron triggering)
   assert.deepEqual(created, [{ rootId: 'r1', taskTemplateId: 'tpl', input: 'morning' }]);
   assert.deepEqual(lastRuns, ['s1']);
+});
+
+test('trigger schedules the root so the fresh task is admitted immediately', () => {
+  const { mod, registered } = mockCron();
+  const scheduledRoots: string[] = [];
+  const scheduleStore = {
+    listAllEnabledSchedules: () => [
+      { id: 's1', rootId: 'r1', taskTemplateId: 'tpl', cronExpression: '0 9 * * *', input: 'x', enabled: true } as any,
+    ],
+    updateLastRun: () => {},
+  } as any;
+  const service = { createTask: () => ({ id: 'task-1' }) } as any;
+  const scheduler = { schedule: (rootId: string) => { scheduledRoots.push(rootId); } };
+  const driver = createKanbanCron({ scheduleStore, service, scheduler, cron: mod });
+  driver.start();
+  registered[0].cb();
+  assert.deepEqual(scheduledRoots, ['r1']);
 });
 
 test('reload stops all + re-registers from store', () => {

@@ -1,7 +1,9 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+
 import { kanbanApi } from './api';
 import type { Task, TaskTemplate, KanbanSchedule } from './types';
+
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface KanbanContextValue {
   tasks: Task[];
@@ -15,6 +17,7 @@ interface KanbanContextValue {
   createTask: (taskTemplateId: string, input: string) => Promise<void>;
   moveTask: (taskId: string, action: string) => Promise<void>;
   jumpTask: (taskId: string, targetIndex: number) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
   reloadTemplates: () => Promise<void>;
   saveTemplate: (tpl: TaskTemplate) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
@@ -91,8 +94,14 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
         void refresh();
         return;
       }
-      if (event.type !== 'kanban-task-updated') return;
+      if (event.type !== 'kanban-task-updated' && event.type !== 'kanban-task-deleted') return;
       if (event.rootId !== rootId) return;
+      if (event.type === 'kanban-task-deleted') {
+        const taskId = event.taskId as string | undefined;
+        if (!taskId) return;
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        return;
+      }
       const task = event.task as Task | undefined;
       if (!task) return;
       setTasks((prev) => {
@@ -142,6 +151,20 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
         setTasks((prev) => prev.map((x) => (x.id === t.id ? t : x)));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'jump failed');
+        void refresh();
+      }
+    },
+    [rootId, refresh],
+  );
+
+  const deleteTask = useCallback(
+    async (taskId: string) => {
+      if (!rootId) return;
+      try {
+        await kanbanApi.deleteTask(taskId, rootId);
+        setTasks((prev) => prev.filter((x) => x.id !== taskId));
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'deleteTask failed');
         void refresh();
       }
     },
@@ -216,6 +239,7 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     createTask,
     moveTask,
     jumpTask,
+    deleteTask,
     reloadTemplates,
     saveTemplate,
     deleteTemplate,

@@ -46,6 +46,8 @@
     "resume": "继续",
     "complete": "完成",
     "cancel": "取消",
+    "delete": "删除",
+    "deleteConfirm": "确定删除任务 #{{number}} 吗？将一并删除其阶段历史。",
     "jumpToStage": "跳转到阶段",
     "askedAgo": "agent 提了问题 · {{n}} 分钟前"
   },

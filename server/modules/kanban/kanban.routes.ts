@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import cron from 'node-cron';
+
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
-import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
+import { broadcastTaskDeleted, broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notification-orchestrator.js';
 
 export interface KanbanRouterDeps {
@@ -125,6 +126,23 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     router.post(`/:taskId/${action}`, (req, res) => handleMove(req, res, action));
   }
   router.post('/:taskId/jump', (req, res) => handleMove(req, res, 'jump', Number(req.body?.targetIndex)));
+
+  // Delete one task with its stage runs/events. Non-terminal tasks are
+  // cancelled first (service) so terminal side effects fire before removal.
+  router.delete('/:taskId', (req, res) => {
+    const rootId = String(req.body?.rootId ?? req.query.rootId ?? '');
+    const taskId = req.params.taskId;
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    try {
+      service.deleteTask(rootId, taskId);
+      // A cancelled-then-deleted running task freed its scheduler slot.
+      scheduler.schedule(rootId);
+      broadcastTaskDeleted(req.app.locals.wss, rootId, taskId);
+      res.json({ deleted: true, taskId });
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
 
   // REQ-038: answer a pending AskUserQuestion inline from the kanban board.
   // Resolves the agent's pending tool approval with the user's selected

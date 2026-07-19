@@ -1,4 +1,5 @@
 import type { Database as DB } from 'better-sqlite3';
+
 import type { Task, StageRun, TaskEvent, TaskAuxFlags, TaskStatus, StageStatus, PendingAskUser } from '@/modules/kanban/types.js';
 import { isTerminalTaskStatus } from '@/modules/kanban/types.js';
 
@@ -179,7 +180,16 @@ export function createTaskStore(deps: TaskStoreDeps) {
       .run(value ? 1 : 0, new Date().toISOString(), taskId);
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber };
+  /** Removes one task with its stage runs and events in a single transaction. */
+  function deleteTask(taskId: string): void {
+    db.transaction(() => {
+      db.prepare('DELETE FROM task_events WHERE task_id = ?').run(taskId);
+      db.prepare('DELETE FROM stage_runs WHERE task_id = ?').run(taskId);
+      db.prepare('DELETE FROM tasks WHERE id = ?').run(taskId);
+    })();
+  }
+
+  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
