@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import express from 'express';
-import request from 'supertest';
-import Database from 'better-sqlite3';
 import { mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import express from 'express';
+import request from 'supertest';
+import Database from 'better-sqlite3';
+
 import { createTaskStore } from '@/modules/kanban/store.js';
 import { createTemplateStore } from '@/modules/kanban/template-store.js';
 import { createKanbanService } from '@/modules/kanban/service.js';
@@ -22,6 +24,7 @@ function setup() {
     scheduler: { schedule: () => {} },
     scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
     cronDriver: { reload: () => {} } as any,
+    resolveRootPath: () => null,
     resolveToolApproval: () => {},
   });
   const app = express();

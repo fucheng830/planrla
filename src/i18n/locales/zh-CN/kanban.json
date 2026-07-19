@@ -25,6 +25,7 @@
     "newTask": "新建任务",
     "templates": "模板",
     "schedules": "定时",
+    "parsePrd": "PRD 生成任务",
     "refresh": "刷新",
     "loading": "加载中…"
   },
@@ -70,6 +71,15 @@
     "dependenciesHint": "所选任务全部成功完成前,该任务保持排队。",
     "cancel": "取消",
     "submit": "创建任务"
+  },
+  "prd": {
+    "title": "从 PRD 生成任务",
+    "provider": "执行 provider",
+    "input": "PRD 内容",
+    "placeholder": "把产品需求文档粘贴到这里...",
+    "hint": "provider 会把 PRD 拆解成带依赖关系的任务列表,并按所选模板批量创建。",
+    "submit": "生成任务",
+    "submitting": "正在生成(可能需要一分钟)..."
   },
   "priority": {
     "high": "高",

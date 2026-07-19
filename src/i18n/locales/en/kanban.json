@@ -25,6 +25,7 @@
     "newTask": "New Task",
     "templates": "Templates",
     "schedules": "Schedules",
+    "parsePrd": "PRD → Tasks",
     "refresh": "Refresh",
     "loading": "Loading…"
   },
@@ -70,6 +71,15 @@
     "dependenciesHint": "The task stays queued until all selected tasks complete successfully.",
     "cancel": "Cancel",
     "submit": "Create"
+  },
+  "prd": {
+    "title": "Generate tasks from PRD",
+    "provider": "Provider",
+    "input": "PRD content",
+    "placeholder": "Paste your product requirements document here...",
+    "hint": "The provider decomposes the PRD into ordered tasks with dependencies, created from the selected template.",
+    "submit": "Generate tasks",
+    "submitting": "Generating (may take a minute)..."
   },
   "priority": {
     "high": "High",

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { useKanban } from './KanbanContext';
-import { Button } from '@/shared/view/ui';
 import { Board } from './Board';
 import { CreateTaskDialog } from './CreateTaskDialog';
+import { ParsePrdDialog } from './ParsePrdDialog';
 import { TaskTemplateEditor } from './TaskTemplateEditor';
 import { SchedulesDialog } from './SchedulesDialog';
+
+import { Button } from '@/shared/view/ui';
 
 export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   const { t } = useTranslation('kanban');
@@ -16,6 +19,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSchedules, setShowSchedules] = useState(false);
+  const [showParsePrd, setShowParsePrd] = useState(false);
 
   return (
     <div className={`${isVisible ? 'block' : 'hidden'} h-full`}>
@@ -26,6 +30,9 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <Button size="sm" onClick={() => setShowCreate(true)}>
               {t('panel.newTask')}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowParsePrd(true)}>
+              {t('panel.parsePrd')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)}>
               {t('panel.templates')}
@@ -49,6 +56,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
         </div>
       )}
       {showCreate && <CreateTaskDialog onClose={() => setShowCreate(false)} />}
+      {showParsePrd && <ParsePrdDialog onClose={() => setShowParsePrd(false)} />}
       {showTemplates && (
         <TaskTemplateEditor onClose={() => setShowTemplates(false)} />
       )}

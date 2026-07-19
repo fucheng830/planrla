@@ -39,6 +39,20 @@ export const kanbanApi = {
     const data = (await res.json()) as TaskResponse;
     return data.task;
   },
+  parsePrd: async (
+    rootId: string,
+    taskTemplateId: string,
+    prd: string,
+    provider: string,
+  ): Promise<Task[]> => {
+    const res = await api.post('/tasks/parse-prd', { rootId, taskTemplateId, prd, provider });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `parsePrd failed: ${res.status}`);
+    }
+    const data = (await res.json()) as { tasks: Task[] };
+    return data.tasks;
+  },
   deleteTask: async (taskId: string, rootId: string): Promise<void> => {
     const res = await api.delete(`/tasks/${encodeURIComponent(taskId)}?rootId=${encodeURIComponent(rootId)}`);
     if (!res.ok) throw new Error(`deleteTask failed: ${res.status}`);

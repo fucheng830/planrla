@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import express from 'express';
-import request from 'supertest';
-import Database from 'better-sqlite3';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import express from 'express';
+import request from 'supertest';
+import Database from 'better-sqlite3';
 
 import { createTaskStore } from '@/modules/kanban/store.js';
 import { createTemplateStore } from '@/modules/kanban/template-store.js';
@@ -25,6 +26,7 @@ function setup() {
     scheduler: { schedule: () => {} },
     scheduleStore,
     cronDriver: { reload: () => { reloadCalls.push(1); } },
+    resolveRootPath: () => null,
     resolveToolApproval: () => {},
   });
   const app = express();
