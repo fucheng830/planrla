@@ -102,6 +102,19 @@ const TOOL_DEFS = [
           enum: EXPECTED_ACTIONS,
           description: 'Metadata expected action. Defaults to reply.',
         },
+        spawn: {
+          type: 'boolean',
+          description:
+            'If true, create a NEW session (spawn) instead of using an existing sessionId. Requires projectPath + optional provider (default claude). Only works when url points to a planrla /api/a2a endpoint.',
+        },
+        provider: {
+          type: 'string',
+          description: 'Provider for spawned session (default claude). Used with spawn=true.',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Working directory for spawned session (required when spawn=true).',
+        },
       },
       required: ['message'],
       additionalProperties: false,
@@ -241,6 +254,11 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
         const intent = typeof args.intent === 'string' ? args.intent : undefined;
         const expectedAction =
           typeof args.expected_action === 'string' ? args.expected_action : undefined;
+        // S4 spawn passthrough — only forwarded when explicitly provided.
+        const spawn = typeof args.spawn === 'boolean' ? args.spawn : undefined;
+        const provider = typeof args.provider === 'string' && args.provider ? args.provider : undefined;
+        const projectPath =
+          typeof args.projectPath === 'string' && args.projectPath ? args.projectPath : undefined;
 
         const result = await a2aClient.call(
           target.url,
@@ -250,6 +268,9 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
             replyToTaskId,
             intent,
             expectedAction,
+            spawn,
+            provider,
+            projectPath,
           },
           target.authToken
         );

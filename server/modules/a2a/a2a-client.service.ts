@@ -289,6 +289,12 @@ export interface A2aCallArgs {
   expectedAction?: string;
   /** Hermes metadata.sender_name; default 'planrla-agent'. */
   senderName?: string;
+  /** S4 spawn signal: mint a new planrla app session at the remote endpoint. */
+  spawn?: boolean;
+  /** Provider for the spawned session (default 'claude'). Used with spawn=true. */
+  provider?: string;
+  /** Working directory for the spawned session (required when spawn=true). */
+  projectPath?: string;
 }
 
 export interface A2aCallResult {
@@ -319,6 +325,11 @@ function buildSendPayload(args: A2aCallArgs, taskId: string): Record<string, unk
           context_scope: 'full', // hardcoded, not exposed on the tool
           reply_to_task_id: args.replyToTaskId || '',
           sender_name: args.senderName || 'planrla-agent',
+          // S4 spawn passthrough — only emitted when explicitly set so legacy
+          // peers that don't know these fields are unaffected.
+          ...(args.spawn !== undefined ? { spawn: args.spawn } : {}),
+          ...(args.provider ? { provider: args.provider } : {}),
+          ...(args.projectPath ? { projectPath: args.projectPath } : {}),
         },
       },
     },
