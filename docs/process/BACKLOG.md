@@ -17,7 +17,7 @@
 ## In Progress(在做 / 待验收)
 | ID | 标题 | 里程碑 | P | 类型 | 状态 | 来源 | spec | plan | 版本 |
 |----|------|--------|-----|------|------|------|------|------|------|
-| REQ-020 | A2A 双向节点(Google 标准,S1 client→S2 server→S3 内部) | — | P2 | feat | review | self | S1 [spec](../superpowers/specs/2026-07-11-req020-a2a-s1-client-tools-design.md) | [plan](../superpowers/plans/2026-07-17-req020-a2a-s1.md) | **S1 已合 main `e15acb9`**(`server/modules/a2a/`),待实测验收;S2/S3 待排 |
+| REQ-020 | A2A 双向节点(Google 标准,S1 client→S2 server→S3 内部→S4 派生) | v0.8.7 | P2 | feat | released | self | S1 [spec](../superpowers/specs/2026-07-11-req020-a2a-s1-client-tools-design.md) | [plan](../superpowers/plans/2026-07-17-req020-a2a-s1.md) | **S1+S2+S3+S4 全合 main,四切片完整**;S1 client(c57bd7e)/ S2 inbound(ddafb46)/ S3 内部协作(52c34b5)/ S4 派生(94b30d2);loopback only |
 | REQ-009 | 项目级工作台(需求/方案/任务/验收/归档) | — | P1 | feat | doing | self | _(分支内)_ | _(分支内)_ | **`feat/req009-requirements` 17 commits 未入 main**:RequirementsView + REQ-014 sidebar 右键「新需求」入口 + NewRequirementModal。含子 REQ-014(已并入此分支)/ REQ-019(Kanban 维度待澄清)。见 `PROJECT_WORKBENCH_FUNCTIONAL_REQUIREMENTS.md` |
 | REQ-030 | AI 自动重命名(10 轮触发) | — | P2 | feat | doing | self | [spec](../superpowers/specs/2026-07-11-req030-ai-auto-rename-design.md) | [plan](../superpowers/plans/2026-07-11-req030-ai-auto-rename.md) | `feat/req030-auto-rename` 9 commits(Task 7 review),未入 main |
 | REQ-040 | 状态校验工具 check-req-status(状态机↔git 自动绑定) | v0.9 | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-16-req040-status-git-binding-design.md) | [plan](../superpowers/plans/2026-07-16-req040-status-git-binding.md) | `a476b7b` 在 main,待三道门验收 |
