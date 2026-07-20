@@ -32,8 +32,9 @@ import { randomUUID } from 'node:crypto';
 
 import { spawnFns } from '../providers/spawn-fns.js';
 import { sessionsDb } from '../database/index.js';
+import { sessionsService } from '../providers/services/sessions.service.js';
 import { chatRunRegistry } from '../websocket/services/chat-run-registry.service.js';
-import type { RealtimeClientConnection } from '@/shared/types.js';
+import type { RealtimeClientConnection, LLMProvider } from '@/shared/types.js';
 import { A2AInboundWriter } from './a2a-inbound-writer.js';
 import { sanitizeInbound } from './inbound.security.js';
 import { filterOutbound } from './a2a-client.service.js';
@@ -114,6 +115,10 @@ interface TaskSendParams {
   };
   metadata?: {
     sessionId?: string;
+    /** S4 spawn: mint a fresh app session and delegate there (skip a2a_exposed). */
+    spawn?: boolean;
+    provider?: string;
+    projectPath?: string;
   };
 }
 
@@ -139,6 +144,81 @@ export async function handleTaskSend(
     return { taskId: '', state: 'failed', text: '', error: 'empty message' };
   }
   const sanitized = sanitizeInbound(rawText);
+
+  // S4 spawn branch: mint a fresh app session and delegate there. This path
+  // bypasses the sessionId + a2a_exposed whitelist (the new session is by
+  // definition not exposed to a human and has no prior provider run). It does
+  // still acquire the same per-session chat-run lock, so a follow-up delegation
+  // on the freshly minted id is serialized just like the normal path.
+  if (params.metadata?.spawn) {
+    const provider = (params.metadata.provider || 'claude') as LLMProvider;
+    const projectPath = params.metadata.projectPath?.trim();
+    if (!projectPath) {
+      return { taskId: '', state: 'failed', text: '', error: 'projectPath required for spawn' };
+    }
+    const spawnFn = spawnFns[provider];
+    if (!spawnFn) {
+      return { taskId: '', state: 'failed', text: '', error: `provider "${provider}" not supported` };
+    }
+
+    // createAppSession is synchronous (returns { sessionId, provider, projectPath }).
+    const newSessionId = sessionsService.createAppSession(provider, projectPath).sessionId;
+
+    const run = chatRunRegistry.startRun({
+      appSessionId: newSessionId,
+      provider,
+      providerSessionId: null,
+      connection: STUB_CONNECTION,
+      userId: null,
+    });
+    if (!run) {
+      return { taskId: '', state: 'working', text: '', error: 'Agent busy (spawned session has an active run)' };
+    }
+
+    const taskId = randomUUID();
+    const task: Task = { id: taskId, state: 'working', text: '', createdAt: Date.now() };
+    tasks.set(taskId, task);
+
+    const writer = new A2AInboundWriter();
+    try {
+      // First spawn on this session: no provider-native id yet (undefined).
+      spawnFn(
+        sanitized,
+        {
+          sessionId: undefined,
+          cwd: projectPath,
+          projectPath,
+          permissionMode: PERMISSION_MODE,
+        },
+        writer,
+      ).catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : String(e);
+        writer.send({ kind: 'error', content: message });
+      });
+
+      const result = await writer.waitComplete(RESPONSE_TIMEOUT_MS);
+
+      if (result.error === 'timeout') {
+        task.state = 'working';
+        task.text = filterOutbound(result.text);
+      } else if (result.error) {
+        task.state = 'failed';
+        task.text = filterOutbound(result.text);
+        task.error = result.error;
+      } else {
+        task.state = 'completed';
+        task.text = filterOutbound(result.text);
+      }
+    } catch (e: unknown) {
+      task.state = 'failed';
+      task.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      // Same release path as the S3 delegation branch (completeRun, not run.end).
+      chatRunRegistry.completeRun(newSessionId, { exitCode: task.state === 'failed' ? 1 : 0 });
+    }
+
+    return { taskId, state: task.state, text: task.text, error: task.error };
+  }
 
   const sessionId = params.metadata?.sessionId;
   if (!sessionId) {
