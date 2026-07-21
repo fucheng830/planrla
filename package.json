@@ -123,7 +123,9 @@
       "target": [
         "nsis",
         "zip"
-      ],
+      ]
+    },
+    "nsis": {
       "shortcutName": "Planrla"
     },
     "linux": {
