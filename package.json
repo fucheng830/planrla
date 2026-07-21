@@ -123,7 +123,8 @@
       "target": [
         "nsis",
         "zip"
-      ]
+      ],
+      "shortcutName": "Planrla"
     },
     "linux": {
       "icon": "public/logo-512.png",

@@ -5,7 +5,7 @@
 // electron 拦截返回 API)。ESM named import 拿不到 API —— 用 createRequire 走 CJS require。
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell, Notification } = require('electron');
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -62,6 +62,42 @@ ipcMain.handle('cloud-auth:remove', () => deleteCloudToken());
 // Renderer 主题变化时同步缓存，供下次启动选背景色（见 createWindow）
 ipcMain.on('theme-cache:set', (_e, effectiveDark) => {
   if (typeof effectiveDark === 'boolean') writeThemeCache(app.getPath('userData'), effectiveDark);
+});
+
+// ---- 系统通知（REQ-042）----
+// Renderer 经 window.api?.notify?.show(...) → preload → ipcMain 'show-notification'。
+// permission 类型带 hasReply（行内输入批准理由）+ 批准/拒绝按钮；其它类型纯展示。
+// 用户互动（reply/action/click）回推 'notification-callback' 给渲染层处理。
+ipcMain.on('show-notification', (_event, { type, title, body, sessionId, requestId } = {}) => {
+  if (!Notification.isSupported()) return;
+  const isPermission = type === 'permission';
+  const n = new Notification({
+    title: title || APP_NAME,
+    body: body || '',
+    icon: resolveAppIcon(),
+    hasReply: isPermission,
+    replyPlaceholder: '回复(可选)...',
+    actions: isPermission
+      ? [{ type: 'button', text: '批准' }, { type: 'button', text: '拒绝' }]
+      : [],
+  });
+  n.on('reply', (_e, reply) => {
+    mainWindow?.webContents.send('notification-callback', { type: 'reply', reply, requestId, sessionId });
+  });
+  n.on('action', (_e, index) => {
+    mainWindow?.webContents.send('notification-callback', {
+      type: 'action',
+      action: index === 0 ? 'allow' : 'deny',
+      requestId,
+      sessionId,
+    });
+  });
+  n.on('click', () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+    mainWindow?.webContents.send('notification-callback', { type: 'click', sessionId });
+  });
+  n.show();
 });
 
 function findFreePort() {

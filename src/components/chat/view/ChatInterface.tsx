@@ -313,6 +313,28 @@ function ChatInterface({
     };
   }, [resetStreamingState]);
 
+  // REQ-042: 系统通知回调 —— 点击切 session / reply+action 回灌 permission 决策
+  useEffect(() => {
+    const cleanup = (window as any).onNotificationCallback?.((data: any) => {
+      if (!data) return;
+
+      if (data.type === 'click' && data.sessionId) {
+        onNavigateToSession?.(data.sessionId);
+        return;
+      }
+
+      if ((data.type === 'reply' || data.type === 'action') && data.requestId) {
+        // reply 默认批准并把用户回复作为 message；action 按 data.action 映射 allow/deny
+        const allow = data.type === 'reply' ? true : data.action !== 'deny';
+        handlePermissionDecision(data.requestId as string, {
+          allow,
+          message: typeof data.reply === 'string' ? data.reply : undefined,
+        });
+      }
+    });
+    return cleanup;
+  }, [onNavigateToSession, handlePermissionDecision]);
+
   const permissionContextValue = useMemo(() => ({
     pendingPermissionRequests,
     handlePermissionDecision,
