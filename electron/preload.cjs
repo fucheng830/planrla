@@ -34,3 +34,14 @@ contextBridge.exposeInMainWorld('updater', {
     return () => ipcRenderer.removeListener('updater:state', handler);
   },
 });
+
+// System notification bridge (REQ-042). Renderer fires show-notification;
+// main 进程回调（点击/动作）经 notification-callback 推回 renderer。
+contextBridge.exposeInMainWorld('systemNotify', {
+  show: (opts) => ipcRenderer.send('show-notification', opts),
+  onNotificationCallback: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('notification-callback', handler);
+    return () => ipcRenderer.removeListener('notification-callback', handler);
+  },
+});
