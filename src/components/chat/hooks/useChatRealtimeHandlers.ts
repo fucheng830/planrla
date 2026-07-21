@@ -309,6 +309,18 @@ export function useChatRealtimeHandlers({
           const terminalStatus = msg.success === false ? 'failed' : 'completed';
           onSessionCompleted?.(sid, terminalStatus);
 
+          // REQ-042: 任务完成系统通知（仅失焦时打扰）
+          if (sid && terminalStatus === 'completed'
+            && typeof document !== 'undefined'
+            && (!document.hasFocus() || document.hidden)) {
+            (window as any).systemNotify?.show({
+              type: 'task-complete',
+              title: '任务完成',
+              body: '',
+              sessionId: sid,
+            });
+          }
+
           // Celebrate only successful runs.
           if (terminalStatus === 'completed') {
             showCompletionTitleIndicator();
@@ -333,6 +345,19 @@ export function useChatRealtimeHandlers({
           if (!msg.requestId) break;
           if (isActionablePermissionRequest({ toolName: msg.toolName })) {
             void playNotificationSound();
+
+            // REQ-042: 权限请求系统通知（仅失焦时打扰，且通知带 reply/action 回调）
+            if (typeof document !== 'undefined'
+              && (!document.hasFocus() || document.hidden)
+              && sid && msg.requestId) {
+              (window as any).systemNotify?.show({
+                type: 'permission',
+                title: '需要确认',
+                body: (msg.toolName as string) || '工具请求权限',
+                requestId: msg.requestId as string,
+                sessionId: sid,
+              });
+            }
           }
 
           if (sid === activeViewSessionId) {
