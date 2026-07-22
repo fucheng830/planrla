@@ -54,3 +54,25 @@ test('renderStagePrompt handles missing promptTemplate (empty base + preamble)',
   const out = renderStagePrompt({ stage, ctx });
   assert.match(out, /^--- planrla kanban ---/);
 });
+
+// --- REQ-043 goal preamble ---
+
+const NOW = '2026-01-01T00:00:00.000Z';
+const goalBaseStage = { id: 's', name: 'Do', role: 'agent' as const, agent: 'claude', autoAdvance: false, createdAt: NOW, updatedAt: NOW };
+const goalBaseCtx = { taskId: 't-1', taskNumber: 1, stageName: 'Do', stageIndex: 1, rootPath: '/r', input: 'go' };
+
+test('renderStagePrompt appends goal preamble when stage has goalCondition', () => {
+  const out = renderStagePrompt({
+    stage: { ...goalBaseStage, goalCondition: '所有测试通过' } as any,
+    ctx: goalBaseCtx,
+  });
+  assert.match(out, /所有测试通过/);
+  assert.match(out, /task_complete/);
+  assert.match(out, /t-1/);
+});
+
+test('renderStagePrompt omits goal preamble when no goalCondition', () => {
+  const out = renderStagePrompt({ stage: goalBaseStage as any, ctx: goalBaseCtx });
+  assert.doesNotMatch(out, /你的目标/);
+  assert.doesNotMatch(out, /task_complete/);
+});

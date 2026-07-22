@@ -32,6 +32,20 @@ export function buildMcpPreamble(ctx: PromptContext, opts: { enabled: boolean })
   ].join('\n');
 }
 
+/** REQ-043: goal stage 的 preamble——告诉 agent 目标 + 完成时调 task_complete。 */
+export function buildGoalPreamble(stage: StageTemplate, ctx: PromptContext): string {
+  if (!stage.goalCondition) return '';
+  return [
+    '',
+    '--- goal ---',
+    `你的目标:${stage.goalCondition}`,
+    `持续工作直到目标完成。完成后必须调用 MCP 工具 task_complete(taskId: "${ctx.taskId}", summary: "...") 声明完成,summary 简述成果。`,
+    '未完成时不要停止;中途可调 task_status 查看。',
+    '--- end goal ---',
+    '',
+  ].join('\n');
+}
+
 export interface RenderStagePromptArgs {
   stage: StageTemplate;
   ctx: PromptContext;
@@ -48,6 +62,8 @@ export function renderStagePrompt({ stage, ctx }: RenderStagePromptArgs): string
     project_path: ctx.rootPath ?? '',
   });
   const preamble = buildMcpPreamble(ctx, { enabled: stage.agentCanControlStage !== false });
-  if (!base) return preamble.replace(/^\n/, '');
-  return base + preamble;
+  const goal = buildGoalPreamble(stage, ctx);
+  const tail = preamble + goal;
+  if (!base) return tail.replace(/^\n/, '');
+  return base + tail;
 }
