@@ -183,12 +183,16 @@ export function createKanbanClaudeHooks(deps: KanbanClaudeHooksDeps): Record<str
   // PostToolUse[task_complete] 设 flag;Stop 读 flag:true 放行,false 返回顶层
   // {decision:'block', reason} 让 claude 续跑到 maxTurns(spike-verified:
   // 顶层 decision 生效;hookSpecificOutput 形态只对 PreToolUse 的 permissionDecision 有效)。
-  // matcher 用 glob `*task_complete` 匹配任意 MCP server 的 task_complete。
+  // matcher:spike(debug/spike-goal-e2e.mjs)证 glob `*task_complete` 不命中 MCP 全名
+  // mcp__<server>__task_complete(`*` 不跨 `__`),改 catch-all `''` + tool_name 内判断。
   if (goalCondition) {
     const completed = { value: false };
     hooks.PostToolUse = [{
-      matcher: '*task_complete',
-      hooks: [async () => { completed.value = true; return {}; }],
+      matcher: '',
+      hooks: [async (input: any) => {
+        if (String(input?.tool_name || '').includes('task_complete')) completed.value = true;
+        return {};
+      }],
     }];
     hooks.Stop = (hooks.Stop ?? []).concat([{
       matcher: '',
