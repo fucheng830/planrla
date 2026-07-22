@@ -34,6 +34,11 @@ export interface StageTemplate {
   sessionReusePolicy?: SessionReusePolicy;
   promptTemplate?: string;
   agentCanControlStage?: boolean;
+  /** REQ-043: 有此字段 = goal stage。claude 持续工作直到自判完成并调 task_complete MCP,
+   *  Stop hook 阻止提前停。缺失 = 现有单次行为(零回归)。 */
+  goalCondition?: string;
+  /** REQ-043: goal stage 的 maxTurns 上限,默认 300。耗尽 → spawnFn reject → service.fail。 */
+  goalMaxTurns?: number;
   createdAt: string;
   updatedAt: string;
 }
