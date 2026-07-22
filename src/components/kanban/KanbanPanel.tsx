@@ -12,7 +12,7 @@ import { Button } from '@/shared/view/ui';
 
 export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
   const { t } = useTranslation('kanban');
-  const { rootId, loading, error, refresh } = useKanban();
+  const { rootId, loading, error, refresh, nextTask } = useKanban();
   // CreateTaskDialog and TaskTemplateEditor are mounted at the panel root so
   // their portaled overlays render above the board regardless of which column
   // owns focus. The buttons just toggle the flags on.
@@ -50,6 +50,18 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
             )}
             {error && <span className="text-xs text-destructive">{error}</span>}
           </div>
+          {nextTask && (
+            <div className="flex items-center gap-2 border-b border-border bg-primary/5 px-3 py-1.5 text-xs">
+              <span className="font-medium text-primary">{t('banner.nextTask')}</span>
+              <span className="font-mono font-semibold">#{nextTask.taskNumber}</span>
+              <span className="truncate text-muted-foreground">{nextTask.taskTemplateName}</span>
+              {nextTask.priority === 'high' && (
+                <span className="rounded bg-red-500/10 px-1 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+                  {t('priority.high')}
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex-1 overflow-hidden">
             <Board />
           </div>

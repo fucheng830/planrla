@@ -34,6 +34,18 @@ export function createAuxBridge(deps: AuxBridgeDeps) {
     if (!msg || typeof msg.kind !== 'string') return;
     const { kind, toolName } = msg;
 
+    if (kind === 'hook_event') {
+      // REQ-037 liveness channel from the Claude SDK hooks (kanban runner
+      // only, see claude-hooks.ts). A fresh prompt submission means any stale
+      // "waiting for answer" state is obsolete — e.g. the user replied
+      // directly in the session (or a review comment was sent) instead of
+      // answering on the board. Stop carries no flag work today; it exists so
+      // future stuck-detection can timestamp it.
+      if (msg.hookEvent === 'UserPromptSubmit') {
+        updateAuxFlags(taskId, { askUserWaiting: false, pendingAskUser: null });
+      }
+      return;
+    }
     if (kind === 'permission_request' && toolName === 'AskUserQuestion') {
       // Capture the requestId + questions payload so the kanban UI can render
       // an inline answer box (REQ-038). `msg.input` is the AskUserQuestion

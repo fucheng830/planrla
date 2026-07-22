@@ -3,7 +3,6 @@
  * ==========================
  *
  * Broadcasts kanban task state changes via WebSocket.
- * Pattern mirrors server/utils/taskmaster-websocket.js.
  */
 
 /**

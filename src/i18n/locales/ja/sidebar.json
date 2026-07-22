@@ -54,8 +54,7 @@
     "chat": "チャット",
     "files": "ファイル",
     "git": "Git",
-    "terminal": "ターミナル",
-    "tasks": "タスク"
+    "terminal": "ターミナル"
   },
   "actions": {
     "refresh": "更新",

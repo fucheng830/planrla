@@ -413,9 +413,6 @@
   "projectSelection": {
     "startChatWithProvider": "Select a project to start chatting with {{provider}}"
   },
-  "tasks": {
-    "nextTaskPrompt": "Start the next task"
-  },
   "defaults": {
     "permission": {
       "ackTitle": "Default: unrestricted permissions",

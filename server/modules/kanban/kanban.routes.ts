@@ -35,11 +35,14 @@ export interface KanbanRouterDeps {
   /** Resolves a pending Claude SDK tool approval (AskUserQuestion). The kanban
    * answer route forwards the user's selected answers here as updatedInput. */
   resolveToolApproval: (requestId: string, decision: { allow: boolean; updatedInput?: unknown; message?: string }) => void;
+  /** Injectable task decomposition for the expand route (tests stub the
+   * provider call); defaults to the real PRD decompose. */
+  decomposePrdFn?: typeof decomposePrd;
 }
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
-  const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval } = deps;
+  const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval, decomposePrdFn = decomposePrd } = deps;
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {
@@ -137,6 +140,14 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
 
   // PRD -> tasks: decompose a PRD with a provider runtime, then create the
   // resulting tasks with dependencies wired to the freshly created ids.
+  // TaskMaster-style "next task" recommendation: highest-priority runnable
+  // task whose dependencies have all succeeded (mirrors the MCP task_next_up tool).
+  router.get('/next', (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    res.json({ task: service.getNextTask(rootId) });
+  });
+
   router.post('/parse-prd', async (req, res) => {
     const { rootId, taskTemplateId, prd, provider } = req.body ?? {};
     if (!rootId || !taskTemplateId) {
@@ -271,6 +282,35 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
       res.json({ task: updated });
     } catch (e: any) {
       res.status(500).json({ message: e?.message ?? 'answer failed', code: e?.code ?? 'ANSWER_FAILED' });
+    }
+  });
+
+  // TaskMaster expand_task analogue: decompose one task into follow-up tasks
+  // that replace it (the original is cancelled; both sides get audit events).
+  router.post('/:taskId/expand', async (req, res) => {
+    const taskId = req.params.taskId;
+    const rootId = String(req.body?.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(taskId);
+    if (!task || task.rootId !== rootId) {
+      return res.status(404).json({ message: 'task not found', code: 'TASK_NOT_FOUND' });
+    }
+    try {
+      const baseInput = taskStore.latestStageRun(taskId, 0)?.input ?? '';
+      const items = await decomposePrdFn({
+        prd: `原任务：${baseInput}
+
+请把该任务拆解为可顺序执行的子任务。`,
+        provider: typeof req.body?.provider === 'string' && req.body.provider ? req.body.provider : 'claude',
+        cwd: resolveRootPath(rootId) ?? undefined,
+      });
+      const { created, cancelled } = service.expandTask(rootId, taskId, items);
+      scheduler.schedule(rootId);
+      for (const t of created) broadcastTaskUpdated(req.app.locals.wss, rootId, t);
+      broadcastTaskUpdated(req.app.locals.wss, rootId, cancelled);
+      res.json({ created, cancelled });
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
     }
   });
 

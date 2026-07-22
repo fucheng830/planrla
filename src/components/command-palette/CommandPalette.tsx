@@ -53,7 +53,6 @@ const NAV_TABS: Array<{ id: AppTab; keywords: string }> = [
   { id: 'files', keywords: 'files file tree explorer' },
   { id: 'shell', keywords: 'shell terminal console' },
   { id: 'git', keywords: 'git diff branches' },
-  { id: 'tasks', keywords: 'tasks taskmaster' },
 ];
 
 export default function CommandPalette({

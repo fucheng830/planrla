@@ -11,35 +11,6 @@ import type { SessionEstablishedContext, SessionNavigationOptions } from '../../
 import type { PickerCandidateSession } from '../../chat/view/subcomponents/SessionReferencePicker';
 import type { SettingsMainTab } from '../../settings/types/types';
 
-export type TaskMasterTask = {
-  id: string | number;
-  title?: string;
-  description?: string;
-  status?: string;
-  priority?: string;
-  details?: string;
-  testStrategy?: string;
-  parentId?: string | number;
-  dependencies?: Array<string | number>;
-  subtasks?: TaskMasterTask[];
-  [key: string]: unknown;
-};
-
-export type TaskReference = {
-  id: string | number;
-  title?: string;
-  [key: string]: unknown;
-};
-
-export type TaskSelection = TaskMasterTask | TaskReference;
-
-export type PrdFile = {
-  name: string;
-  content?: string;
-  isExisting?: boolean;
-  [key: string]: unknown;
-};
-
 export type MainContentProps = {
   selectedProject: Project | null;
   selectedSession: ProjectSession | null;
@@ -71,7 +42,6 @@ export type MainContentHeaderProps = {
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
-  shouldShowTasksTab: boolean;
   shouldShowBrowserTab: boolean;
   isMobile: boolean;
   onMenuClick: () => void;
@@ -86,8 +56,4 @@ export type MainContentStateViewProps = {
 export type MobileMenuButtonProps = {
   onMenuClick: () => void;
   compact?: boolean;
-};
-
-export type TaskMasterPanelProps = {
-  isVisible: boolean;
 };

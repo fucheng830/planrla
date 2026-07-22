@@ -79,6 +79,13 @@ export const kanbanApi = {
     const res = await api.delete(`/tasks/${encodeURIComponent(taskId)}?rootId=${encodeURIComponent(rootId)}`);
     if (!res.ok) throw new Error(`deleteTask failed: ${res.status}`);
   },
+  // TaskMaster expand_task analogue: decompose one task into follow-up tasks
+  // that replace it (the original is cancelled). Decomposition runs server-side.
+  expandTask: async (taskId: string, rootId: string, provider?: string): Promise<{ created: Task[]; cancelled: Task }> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/expand`, { rootId, provider });
+    if (!res.ok) throw new Error(`expand failed: ${res.status}`);
+    return (await res.json()) as { created: Task[]; cancelled: Task };
+  },
   // REQ-038: answer a pending AskUserQuestion inline. `answers` is forwarded as
   // updatedInput to resolveToolApproval on the server.
   answerTask: async (taskId: string, rootId: string, answers: unknown): Promise<Task> => {

@@ -22,8 +22,6 @@ import enSidebar from './locales/en/sidebar.json';
 import enChat from './locales/en/chat.json';
 import enCodeEditor from './locales/en/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import enTasks from './locales/en/tasks.json';
-// eslint-disable-next-line import-x/order
 import enKanban from './locales/en/kanban.json';
 
 import koCommon from './locales/ko/common.json';
@@ -39,10 +37,7 @@ import zhSettings from './locales/zh-CN/settings.json';
 import zhAuth from './locales/zh-CN/auth.json';
 import zhSidebar from './locales/zh-CN/sidebar.json';
 import zhChat from './locales/zh-CN/chat.json';
-// eslint-disable-next-line import-x/order
 import zhCodeEditor from './locales/zh-CN/codeEditor.json';
-// eslint-disable-next-line import-x/order
-import zhTasks from './locales/zh-CN/tasks.json';
 // eslint-disable-next-line import-x/order
 import zhKanban from './locales/zh-CN/kanban.json';
 
@@ -51,27 +46,24 @@ import jaSettings from './locales/ja/settings.json';
 import jaAuth from './locales/ja/auth.json';
 import jaSidebar from './locales/ja/sidebar.json';
 import jaChat from './locales/ja/chat.json';
-import jaCodeEditor from './locales/ja/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import jaTasks from './locales/ja/tasks.json';
+import jaCodeEditor from './locales/ja/codeEditor.json';
 
 import ruCommon from './locales/ru/common.json';
 import ruSettings from './locales/ru/settings.json';
 import ruAuth from './locales/ru/auth.json';
 import ruSidebar from './locales/ru/sidebar.json';
 import ruChat from './locales/ru/chat.json';
-import ruCodeEditor from './locales/ru/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import ruTasks from './locales/ru/tasks.json';
+import ruCodeEditor from './locales/ru/codeEditor.json';
 
 import deCommon from './locales/de/common.json';
 import deSettings from './locales/de/settings.json';
 import deAuth from './locales/de/auth.json';
 import deSidebar from './locales/de/sidebar.json';
 import deChat from './locales/de/chat.json';
-import deCodeEditor from './locales/de/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import deTasks from './locales/de/tasks.json';
+import deCodeEditor from './locales/de/codeEditor.json';
 
 import trCommon from './locales/tr/common.json';
 import trSettings from './locales/tr/settings.json';
@@ -79,34 +71,29 @@ import trAuth from './locales/tr/auth.json';
 import trSidebar from './locales/tr/sidebar.json';
 import trChat from './locales/tr/chat.json';
 import trCodeEditor from './locales/tr/codeEditor.json';
-// eslint-disable-next-line import-x/order
-import trTasks from './locales/tr/tasks.json';
 import itCommon from './locales/it/common.json';
 import itSettings from './locales/it/settings.json';
 import itAuth from './locales/it/auth.json';
 import itSidebar from './locales/it/sidebar.json';
 import itChat from './locales/it/chat.json';
-import itCodeEditor from './locales/it/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import itTasks from './locales/it/tasks.json';
+import itCodeEditor from './locales/it/codeEditor.json';
 
 import frCommon from './locales/fr/common.json';
 import frSettings from './locales/fr/settings.json';
 import frAuth from './locales/fr/auth.json';
 import frSidebar from './locales/fr/sidebar.json';
 import frChat from './locales/fr/chat.json';
-import frCodeEditor from './locales/fr/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import frTasks from './locales/fr/tasks.json';
+import frCodeEditor from './locales/fr/codeEditor.json';
 
 import zhTWCommon from './locales/zh-TW/common.json';
 import zhTWSettings from './locales/zh-TW/settings.json';
 import zhTWAuth from './locales/zh-TW/auth.json';
 import zhTWSidebar from './locales/zh-TW/sidebar.json';
 import zhTWChat from './locales/zh-TW/chat.json';
-import zhTWCodeEditor from './locales/zh-TW/codeEditor.json';
 // eslint-disable-next-line import-x/order
-import zhTWTasks from './locales/zh-TW/tasks.json';
+import zhTWCodeEditor from './locales/zh-TW/codeEditor.json';
 
 // Import supported languages configuration
 import { languages } from './languages.js';
@@ -138,7 +125,6 @@ i18n
         sidebar: enSidebar,
         chat: enChat,
         codeEditor: enCodeEditor,
-        tasks: enTasks,
         kanban: enKanban,
       },
       ko: {
@@ -156,7 +142,6 @@ i18n
         sidebar: zhSidebar,
         chat: zhChat,
         codeEditor: zhCodeEditor,
-        tasks: zhTasks,
         kanban: zhKanban,
       },
       ja: {
@@ -166,7 +151,6 @@ i18n
         sidebar: jaSidebar,
         chat: jaChat,
         codeEditor: jaCodeEditor,
-        tasks: jaTasks,
       },
       ru: {
         common: ruCommon,
@@ -175,7 +159,6 @@ i18n
         sidebar: ruSidebar,
         chat: ruChat,
         codeEditor: ruCodeEditor,
-        tasks: ruTasks,
       },
       de: {
         common: deCommon,
@@ -184,7 +167,6 @@ i18n
         sidebar: deSidebar,
         chat: deChat,
         codeEditor: deCodeEditor,
-        tasks: deTasks,
       },
       tr: {
         common: trCommon,
@@ -193,7 +175,6 @@ i18n
         sidebar: trSidebar,
         chat: trChat,
         codeEditor: trCodeEditor,
-        tasks: trTasks,
       },
       it: {
         common: itCommon,
@@ -202,7 +183,6 @@ i18n
         sidebar: itSidebar,
         chat: itChat,
         codeEditor: itCodeEditor,
-        tasks: itTasks,
       },
       fr: {
         common: frCommon,
@@ -211,7 +191,6 @@ i18n
         sidebar: frSidebar,
         chat: frChat,
         codeEditor: frCodeEditor,
-        tasks: frTasks,
       },
       'zh-TW': {
         common: zhTWCommon,
@@ -220,7 +199,6 @@ i18n
         sidebar: zhTWSidebar,
         chat: zhTWChat,
         codeEditor: zhTWCodeEditor,
-        tasks: zhTWTasks,
       },
     },
 
@@ -237,7 +215,7 @@ i18n
     debug: false,
 
     // Namespaces - load only what's needed
-    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'tasks', 'kanban'],
+    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'kanban'],
     defaultNS: 'common',
 
     // Key separator for nested keys (default: '.')

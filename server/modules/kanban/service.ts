@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { Task, TaskPriority, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
-import { isTaskPriority, isTerminalTaskStatus } from '@/modules/kanban/types.js';
+import { isTaskPriority, isTerminalTaskStatus, taskPriorityRank } from '@/modules/kanban/types.js';
 import { AppError } from '@/shared/utils.js';
 
 export interface KanbanServiceDeps {
@@ -15,6 +15,20 @@ export interface KanbanServiceDeps {
 
 export function createKanbanService(deps: KanbanServiceDeps) {
   const { taskStore, templateStore, onTerminal } = deps;
+
+  /** Append an audit event to task_events (best-effort — a logging failure
+   * must never break a state transition). Powers the detail modal timeline. */
+  function recordEvent(taskId: string, type: string, payload?: Record<string, unknown>): void {
+    try {
+      taskStore.insertTaskEvent({
+        id: randomUUID(), taskId, type,
+        payloadJson: payload ? JSON.stringify(payload) : undefined,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error('[kanban-events] insert failed:', e);
+    }
+  }
 
   function createTask(input: {
     rootId: string;
@@ -65,7 +79,8 @@ export function createKanbanService(deps: KanbanServiceDeps) {
         role: 'user', status: firstRunStatus, input: input.input,
         createdAt: now, updatedAt: now,
       },
-      event: { id: randomUUID(), taskId, type: 'task_created', createdAt: now },
+      event: { id: randomUUID(), taskId, type: 'task_created',
+        payloadJson: JSON.stringify({ input: input.input, priority, dependencies }), createdAt: now },
     });
     return taskStore.getTask(taskId)!;
   }
@@ -99,6 +114,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       id: randomUUID(), taskId, stageIndex: nextIndex, stageName: nextStage.name,
       role: nextStage.role, status: 'pending', startedAt: now, createdAt: now, updatedAt: now,
     });
+    recordEvent(taskId, 'stage_advanced', { fromStage: task.currentStageIndex, toStage: nextIndex, stageName: nextStage.name });
     const nextStatus: TaskStatus = nextStage.role === 'user' ? 'waiting_user' : 'queued';
     taskStore.updateTaskStage(taskId, nextIndex, nextStatus);
     return taskStore.getTask(taskId)!;
@@ -112,6 +128,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     }
     clearPendingAskUser(task.id);
     taskStore.updateTaskStatus(task.id, 'success');
+    recordEvent(task.id, 'task_completed');
     const updated = taskStore.getTask(task.id)!;
     onTerminal?.(updated);
     return updated;
@@ -130,6 +147,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     requireTask(taskId, rootId);
     clearPendingAskUser(taskId);
     taskStore.updateTaskStatus(taskId, 'cancelled');
+    recordEvent(taskId, 'task_cancelled');
     const updated = taskStore.getTask(taskId)!;
     onTerminal?.(updated);
     return updated;
@@ -163,6 +181,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       id: randomUUID(), taskId, stageIndex: prevIndex, stageName: prevStage.name,
       role: prevStage.role, status: 'pending', createdAt: now, updatedAt: now,
     });
+    recordEvent(taskId, 'stage_returned', { fromStage: task.currentStageIndex, toStage: prevIndex, stageName: prevStage.name });
     const nextStatus: TaskStatus = prevStage.role === 'user' ? 'waiting_user' : 'queued';
     taskStore.updateTaskStage(taskId, prevIndex, nextStatus);
     return taskStore.getTask(taskId)!;
@@ -181,6 +200,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       id: randomUUID(), taskId, stageIndex: targetIndex, stageName: targetStage.name,
       role: targetStage.role, status: 'pending', createdAt: now, updatedAt: now,
     });
+    recordEvent(taskId, 'stage_jumped', { fromStage: task.currentStageIndex, toStage: targetIndex, stageName: targetStage.name });
     const nextStatus: TaskStatus = targetStage.role === 'user' ? 'waiting_user' : 'queued';
     taskStore.updateTaskStage(taskId, targetIndex, nextStatus);
     return taskStore.getTask(taskId)!;
@@ -189,6 +209,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
   function pause(rootId: string, taskId: string): Task {
     requireNonTerminalTask(taskId, rootId);
     taskStore.updateTaskStatus(taskId, 'paused');
+    recordEvent(taskId, 'task_paused');
     return taskStore.getTask(taskId)!;
   }
 
@@ -198,6 +219,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       throw new AppError('只能 resume 处于 paused 状态的任务', { code: 'INVALID_STATUS', statusCode: 400 });
     }
     taskStore.updateTaskStatus(taskId, 'queued');
+    recordEvent(taskId, 'task_resumed');
     return taskStore.getTask(taskId)!;
   }
 
@@ -205,6 +227,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     requireNonTerminalTask(taskId, rootId);
     clearPendingAskUser(taskId);
     taskStore.updateTaskStatus(taskId, 'fail');
+    recordEvent(taskId, 'task_failed');
     const updated = taskStore.getTask(taskId)!;
     onTerminal?.(updated);
     return updated;
@@ -216,6 +239,55 @@ export function createKanbanService(deps: KanbanServiceDeps) {
 
   function getTask(rootId: string, taskId: string): Task | null {
     return requireTask(taskId, rootId);
+  }
+
+  /** TaskMaster-style "what should I work on next": the highest-priority
+   * runnable task whose dependencies have all succeeded. Runnable = queued
+   * (agent stage awaiting a slot) or waiting_user (a human stage awaiting
+   * input); already-admitted tasks are someone else's work in flight. */
+  function getNextTask(rootId: string): Task | null {
+    const all = taskStore.listTasks(rootId);
+    const byId = new Map(all.map((t) => [t.id, t]));
+    const eligible = all
+      .filter((t) => (t.status === 'queued' || t.status === 'waiting_user') && !t.schedulerAdmitted)
+      .filter((t) => (t.dependencies ?? []).every((d) => byId.get(d)?.status === 'success'))
+      .sort((a, b) => taskPriorityRank(a.priority) - taskPriorityRank(b.priority) || a.createdAt.localeCompare(b.createdAt));
+    return eligible[0] ?? null;
+  }
+
+  /** TaskMaster expand_task analogue: replace one task with a set of
+   * follow-up tasks. `items` come from the caller (PRD/task decomposition);
+   * each new task depends on the entries its `dependsOn` indices point to.
+   * The original is cancelled so its work is not duplicated — the expansion
+   * replaces it — and both sides get audit events linking them. */
+  function expandTask(
+    rootId: string,
+    taskId: string,
+    items: Array<{ input: string; priority?: TaskPriority; dependsOn?: number[] }>,
+  ): { created: Task[]; cancelled: Task } {
+    const task = requireNonTerminalTask(taskId, rootId);
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new AppError('expand produced no tasks', { code: 'EXPAND_EMPTY', statusCode: 400 });
+    }
+    const created: Task[] = [];
+    for (const [index, item] of items.entries()) {
+      const deps = (item.dependsOn ?? [])
+        .map((i) => created[i]?.id)
+        .filter((v): v is string => Boolean(v));
+      created.push(createTask({
+        rootId,
+        taskTemplateId: task.taskTemplateId,
+        input: item.input,
+        priority: item.priority,
+        dependencies: deps,
+      }));
+    }
+    recordEvent(taskId, 'task_expanded', { into: created.map((t) => ({ id: t.id, taskNumber: t.taskNumber })) });
+    for (const c of created) {
+      recordEvent(c.id, 'task_expanded_from', { fromTaskNumber: task.taskNumber, fromTaskId: task.id });
+    }
+    const cancelled = cancel(rootId, taskId);
+    return { created, cancelled };
   }
 
   function requireTask(taskId: string, rootId: string): Task {
@@ -254,7 +326,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tpl;
   }
 
-  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, deleteTask, listTasks, getTask };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, deleteTask, listTasks, getTask, getNextTask, expandTask };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;

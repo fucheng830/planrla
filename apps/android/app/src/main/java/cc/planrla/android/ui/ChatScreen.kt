@@ -1898,7 +1898,9 @@ private fun ComposerBar(vm: ChatViewModel) {
         if (granted) startVoiceInput()
     }
     Surface(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).imePadding(),
+        // imePadding removed: the outer windowInsetsPadding(safeContent) in MainActivity already
+        // lifts content above the IME. Adding imePadding here double-counted ime and left a gap.
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),  // web bg-card/80
         shadowElevation = 0.dp,

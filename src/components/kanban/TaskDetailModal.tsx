@@ -36,6 +36,29 @@ export function TaskDetailModal({
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSent, setReviewSent] = useState(false);
+
+  // TaskMaster expand_task analogue: two-step button, decomposes this task
+  // into follow-up tasks that replace it (original is cancelled server-side).
+  const [expandState, setExpandState] = useState<'idle' | 'confirm' | 'running' | 'done' | 'error'>('idle');
+  const [expandInfo, setExpandInfo] = useState<string | null>(null);
+  const onExpand = async () => {
+    if (!rootId || isTerminal) return;
+    if (expandState === 'idle') {
+      setExpandState('confirm');
+      return;
+    }
+    setExpandState('running');
+    setExpandInfo(null);
+    try {
+      const { created } = await kanbanApi.expandTask(task.id, rootId);
+      setExpandState('done');
+      setExpandInfo(t('expand.done', { ids: created.map((c) => `#${c.taskNumber}`).join(', ') }));
+      await refresh();
+    } catch (e: unknown) {
+      setExpandState('error');
+      setExpandInfo(e instanceof Error ? e.message : String(e));
+    }
+  };
   const [showTimeline, setShowTimeline] = useState(false);
   const [timeline, setTimeline] = useState<{ runs: StageRun[]; events: TaskEvent[] } | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
@@ -291,10 +314,30 @@ export function TaskDetailModal({
             />
             <MoveBtn action="complete" label={`✓ ${t('detail.complete')}`} />
             <MoveBtn action="cancel" label={t('detail.cancel')} />
+            {!isTerminal && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={expandState === 'running'}
+                onClick={() => void onExpand()}
+                title={t('expand.hint')}
+              >
+                {expandState === 'confirm'
+                  ? t('expand.confirm')
+                  : expandState === 'running'
+                    ? t('expand.running')
+                    : t('expand.button')}
+              </Button>
+            )}
             <Button size="sm" variant="destructive" onClick={() => void onDelete()}>
               {t('detail.delete')}
             </Button>
           </div>
+          {expandInfo && (
+            <div className={`text-xs ${expandState === 'error' ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+              {expandInfo}
+            </div>
+          )}
           {(task.worktreePath || (isAgentStage && !isTerminal)) && (
             <div className="space-y-2 border-t border-border pt-3">
               {task.worktreePath && (
@@ -394,6 +437,21 @@ export function TaskDetailModal({
                       </span>
                     </div>
                   ))}
+                {!timelineLoading && timeline && timeline.events.length > 0 && (
+                  <>
+                    <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('timeline.events')}
+                    </div>
+                    {timeline.events.map((ev) => (
+                      <div key={ev.id} className="flex items-center gap-2">
+                        <span>{t(`events.${ev.type}`, { defaultValue: ev.type })}</span>
+                        <span className="ml-auto text-muted-foreground">
+                          {new Date(ev.createdAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </div>

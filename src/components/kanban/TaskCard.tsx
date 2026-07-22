@@ -8,12 +8,20 @@ import { useKanban } from './KanbanContext';
 
 export function TaskCard({ task }: { task: Task }) {
   const { t } = useTranslation('kanban');
-  const { moveTask, templatesById } = useKanban();
+  const { moveTask, templatesById, tasksById } = useKanban();
   const [open, setOpen] = useState(false);
   const s = statusStyle(task.status);
   const isDone = task.status === 'success' || task.status === 'cancelled';
   const tpl = templatesById.get(task.taskTemplateId);
   const totalStages = tpl?.stages.length ?? 0;
+  // TaskMaster-style blocked indicator: dependencies that haven't succeeded
+  // yet. Derived client-side from the synced board (the server gates
+  // scheduling on the same rule), so it updates live via WebSocket.
+  const blockers = (task.dependencies ?? [])
+    .map((id) => tasksById.get(id))
+    .filter((dep): dep is Task => Boolean(dep) && dep!.status !== 'success');
+  const isTerminal = task.status === 'success' || task.status === 'fail' || task.status === 'cancelled';
+  const blockedBy = !isTerminal ? blockers : [];
 
   const handleMove = (e: MouseEvent, action: string) => {
     e.stopPropagation();
@@ -85,6 +93,14 @@ export function TaskCard({ task }: { task: Task }) {
               }`}
             >
               {t(`priority.${task.priority}`)}
+            </span>
+          )}
+          {blockedBy.length > 0 && (
+            <span
+              className="rounded bg-amber-500/10 px-1 py-0.5 font-medium text-amber-600 dark:text-amber-400"
+              title={blockedBy.map((b) => `#${b.taskNumber}`).join(', ')}
+            >
+              {t('blocked.badge', { ids: blockedBy.map((b) => `#${b.taskNumber}`).join(', ') })}
             </span>
           )}
         </div>

@@ -173,7 +173,10 @@ export type MessageKind =
   | 'permission_cancelled'
   | 'session_created'
   | 'interactive_prompt'
-  | 'task_notification';
+  | 'task_notification'
+  // Claude SDK hook liveness signal (UserPromptSubmit/Stop). Kanban runner
+  // only — the chat frontend persists unknown kinds, so it is never sent there.
+  | 'hook_event';
 
 /**
  * Event kinds added by the chat gateway layer on top of provider message kinds.

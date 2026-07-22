@@ -54,9 +54,14 @@ const TOOL_DEFS = [
     description: 'Get the current status, stage index, and aux flags of a planrla kanban task.',
     inputSchema: { type: 'object', properties: { taskId: { type: 'string' } }, required: ['taskId'] },
   },
+  {
+    name: 'task_next_up',
+    description: 'Get the next runnable task in this root (highest priority, all dependencies satisfied). TaskMaster-style "what should I work on next".',
+    inputSchema: { type: 'object', properties: { taskId: { type: 'string' } }, required: ['taskId'] },
+  },
 ] as const;
 
-const KNOWN_TOOLS = new Set(['task_next', 'task_prev', 'task_status']);
+const KNOWN_TOOLS = new Set(['task_next', 'task_prev', 'task_status', 'task_next_up']);
 
 export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
   const router = Router();
@@ -110,7 +115,23 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
 
         if (name === 'task_next') service.next(rootId, taskId);
         else if (name === 'task_prev') service.prev(rootId, taskId);
-        // task_status: no mutation
+        // task_status / task_next_up: no mutation
+
+        // task_next_up answers with the recommendation directly — no task
+        // mutation, no broadcast, and the calling task's own JSON is useless.
+        if (name === 'task_next_up') {
+          const nextTask = service.getNextTask(rootId);
+          return res.json(jsonRpc(id, textResponse(JSON.stringify({
+            nextTask: nextTask ? {
+              taskId: nextTask.id,
+              taskNumber: nextTask.taskNumber,
+              status: nextTask.status,
+              priority: nextTask.priority,
+              taskTemplateName: nextTask.taskTemplateName,
+              stageIndex: nextTask.currentStageIndex,
+            } : null,
+          }, null, 2))));
+        }
 
         // After a stage transition, admit any newly-runnable agent stage (e.g. the agent
         // called task_next and landed on another agent stage, or jumped back to one).
@@ -120,7 +141,6 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
 
         const after = taskStore.getTask(taskId);
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           broadcastTaskUpdated((req.app.locals as any).wss, rootId, after ?? task);
         } catch {
           // WebSocket broadcast is best-effort; never fail the MCP call.

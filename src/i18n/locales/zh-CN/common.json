@@ -22,7 +22,6 @@
     "shell": "终端",
     "files": "文件",
     "git": "源代码管理",
-    "tasks": "任务",
     "browser": "浏览器",
     "kanban": "看板"
   },
@@ -142,8 +141,7 @@
       "chat": "打开聊天",
       "files": "打开文件",
       "shell": "打开终端",
-      "git": "打开源码管理",
-      "tasks": "打开任务"
+      "git": "打开源码管理"
     },
     "git": {
       "fetch": "Git：获取",
@@ -156,7 +154,6 @@
       "git": "Git",
       "api": "API 和令牌",
       "license": "许可证",
-      "tasks": "任务",
       "browser": "浏览器",
       "notifications": "通知",
       "plugins": "插件",
@@ -336,7 +333,7 @@
     "restartServer": "请重启服务器以应用更改。",
     "updateFailed": "更新失败",
     "buttons": {
-    "close": "关闭",
+      "close": "关闭",
       "later": "稍后",
       "copyCommand": "复制命令",
       "updateNow": "立即更新",

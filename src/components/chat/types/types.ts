@@ -137,7 +137,6 @@ export interface ChatInterfaceProps {
   externalMessageUpdate?: number;
   newSessionTrigger?: number;
   onTaskClick?: (...args: unknown[]) => void;
-  onShowAllTasks?: (() => void) | null;
   /** Cross-project sessions for the SessionReferencePicker's "search all"
    *  mode. Built by AppContent from the full projects array. */
   allPickerSessions?: PickerCandidateSession[];

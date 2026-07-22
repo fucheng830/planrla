@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useRef } from 'react';
-import type { Dispatch, RefObject, SetStateAction } from 'react';
+import type { RefObject } from 'react';
 import { VList, type VListHandle } from 'virtua';
 
 import type { ChatMessage } from '../../types/types';
@@ -43,10 +43,6 @@ interface ChatMessagesPaneProps {
   setKimiModel: (model: string) => void;
   providerModelCatalog: Partial<Record<LLMProvider, ProviderModelsDefinition>>;
   providerModelsLoading: boolean;
-  tasksEnabled: boolean;
-  isTaskMasterInstalled: boolean | null;
-  onShowAllTasks?: (() => void) | null;
-  setInput: Dispatch<SetStateAction<string>>;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   totalMessages: number;
@@ -97,10 +93,6 @@ export default function ChatMessagesPane({
   setKimiModel,
   providerModelCatalog,
   providerModelsLoading,
-  tasksEnabled,
-  isTaskMasterInstalled,
-  onShowAllTasks,
-  setInput,
   isLoadingMoreMessages,
   hasMoreMessages,
   totalMessages,
@@ -193,10 +185,6 @@ export default function ChatMessagesPane({
           setKimiModel={setKimiModel}
           providerModelCatalog={providerModelCatalog}
           providerModelsLoading={providerModelsLoading}
-          tasksEnabled={tasksEnabled}
-          isTaskMasterInstalled={isTaskMasterInstalled}
-          onShowAllTasks={onShowAllTasks}
-          setInput={setInput}
         />
       ) : (
         <>

@@ -5,8 +5,6 @@ import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, ProtectedRoute } from './components/auth';
 import { CloudAccountProvider } from './components/cloud-account/context/CloudAccountContext';
-import { TaskMasterProvider } from './contexts/TaskMasterContext';
-import { TasksSettingsProvider } from './contexts/TasksSettingsContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { PluginsProvider } from './contexts/PluginsContext';
 import AppContent from './components/app/AppContent';
@@ -128,18 +126,14 @@ export default function App() {
         <AuthProvider>
           <WebSocketProvider>
             <PluginsProvider>
-              <TasksSettingsProvider>
-                <TaskMasterProvider>
-                <ProtectedRoute>
-                  <Router basename={routerBasename}>
-                    <Routes>
-                      <Route path="/" element={<AppContent />} />
-                      <Route path="/session/:sessionId" element={<AppContent />} />
-                    </Routes>
-                  </Router>
-                </ProtectedRoute>
-                </TaskMasterProvider>
-              </TasksSettingsProvider>
+              <ProtectedRoute>
+                <Router basename={routerBasename}>
+                  <Routes>
+                    <Route path="/" element={<AppContent />} />
+                    <Route path="/session/:sessionId" element={<AppContent />} />
+                  </Routes>
+                </Router>
+              </ProtectedRoute>
             </PluginsProvider>
           </WebSocketProvider>
         </AuthProvider>

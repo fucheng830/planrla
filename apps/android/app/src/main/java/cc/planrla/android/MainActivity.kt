@@ -13,7 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +65,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    // safeContent = safeDrawing ∪ ime: bottom inset = max(navBar, ime) — keeps
+                    // content above the nav bar normally, and flush against the keyboard (no gap) when IME open.
+                    Box(Modifier.windowInsetsPadding(WindowInsets.safeContent)) {
                         NomadNav()
                     }
                 }

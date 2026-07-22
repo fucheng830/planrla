@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createKanbanMcpRouter } from '@/modules/kanban/mcp.route.js';
 import type { Task } from '@/modules/kanban/types.js';
 
-function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[]; throwOnNext?: boolean } = {}) {
+function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[]; throwOnNext?: boolean; nextTask?: Task | null } = {}) {
   const task: Task = overrides.task ?? {
     id: 't1', taskNumber: 1, rootId: 'r1', taskTemplateId: 'tpl', createWorktree: true,
     currentStageIndex: 0, status: 'running', schedulerAdmitted: true, labels: [],
@@ -21,6 +21,7 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
       nextCalls.push(id); return { ...task, currentStageIndex: task.currentStageIndex + 1 };
     },
     prev: (_rootId: string, id: string) => { prevCalls.push(id); return { ...task }; },
+    getNextTask: () => overrides.nextTask ?? null,
   };
   return {
     getKanban: () => ({ service: service as any, taskStore: taskStore as any, scheduler: { schedule: () => {} } }),
@@ -48,7 +49,7 @@ test('tools/list advertises task_next, task_prev, task_status', async () => {
   const app = appFor(fakeKanban());
   const res = await request(app).post('/api/mcp/kanban').send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
   const names = res.body.result.tools.map((t: any) => t.name);
-  assert.deepEqual(names.sort(), ['task_next', 'task_prev', 'task_status']);
+  assert.deepEqual(names.sort(), ['task_next', 'task_next_up', 'task_prev', 'task_status']);
 });
 
 test('tools/call task_next advances via service.next(rootId, taskId)', async () => {
@@ -146,4 +147,36 @@ test('kanban MCP rejects non-loopback requests (403, loopback guard)', async () 
     .send({ jsonrpc: '2.0', id: 1, method: 'initialize' });
   assert.equal(res.status, 403);
   assert.match(JSON.stringify(res.body), /loopback-only/);
+});
+
+
+test('tools/call task_next_up returns the service.getNextTask recommendation', async () => {
+  const nextTask = {
+    id: 't2', taskNumber: 2, rootId: 'r1', taskTemplateId: 'tpl', taskTemplateName: 'T-tpl',
+    createWorktree: true, currentStageIndex: 0, status: 'queued', schedulerAdmitted: false,
+    labels: [], priority: 'high', dependencies: [],
+    auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false },
+    createdAt: '', updatedAt: '',
+  } as any;
+  const app = appFor(fakeKanban({ nextTask }));
+  const res = await request(app).post('/api/mcp/kanban').send({
+    jsonrpc: '2.0', id: 9, method: 'tools/call',
+    params: { name: 'task_next_up', arguments: { taskId: 't1' } },
+  });
+  assert.equal(res.status, 200);
+  const payload = JSON.parse(res.body.result.content[0].text);
+  assert.equal(payload.nextTask.taskId, 't2');
+  assert.equal(payload.nextTask.taskNumber, 2);
+  assert.equal(payload.nextTask.priority, 'high');
+});
+
+test('tools/call task_next_up returns null when nothing is runnable', async () => {
+  const app = appFor(fakeKanban({ nextTask: null }));
+  const res = await request(app).post('/api/mcp/kanban').send({
+    jsonrpc: '2.0', id: 10, method: 'tools/call',
+    params: { name: 'task_next_up', arguments: { taskId: 't1' } },
+  });
+  assert.equal(res.status, 200);
+  const payload = JSON.parse(res.body.result.content[0].text);
+  assert.equal(payload.nextTask, null);
 });

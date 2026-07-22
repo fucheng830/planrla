@@ -22,7 +22,6 @@
     "shell": "Shell",
     "files": "Files",
     "git": "Source Control",
-    "tasks": "Tasks",
     "browser": "Browser",
     "kanban": "Kanban"
   },
@@ -142,8 +141,7 @@
       "chat": "Go to Chat",
       "files": "Go to Files",
       "shell": "Go to Shell",
-      "git": "Go to Source Control",
-      "tasks": "Go to Tasks"
+      "git": "Go to Source Control"
     },
     "git": {
       "fetch": "Git: Fetch",
@@ -156,7 +154,6 @@
       "git": "Git",
       "api": "API Tokens",
       "license": "License",
-      "tasks": "Tasks",
       "browser": "Browser",
       "notifications": "Notifications",
       "plugins": "Plugins",
@@ -336,7 +333,7 @@
     "restartServer": "Please restart the server to apply changes.",
     "updateFailed": "Update failed",
     "buttons": {
-    "close": "Close",
+      "close": "Close",
       "later": "Later",
       "copyCommand": "Copy Command",
       "updateNow": "Update Now",

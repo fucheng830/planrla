@@ -251,9 +251,6 @@
   "projectSelection": {
     "startChatWithProvider": "選擇一個專案以開始與 {{provider}} 聊天"
   },
-  "tasks": {
-    "nextTaskPrompt": "開始下一個任務"
-  },
   "defaults": {
     "permission": {
       "ackTitle": "預設：不限權限",

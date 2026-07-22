@@ -21,6 +21,8 @@
 // onProviderSessionId), and the runner feeds it back as opts.sessionId on the
 // next invocation.
 
+import { randomUUID } from 'node:crypto';
+
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { Task, TaskStatus } from '@/modules/kanban/types.js';
 import { AppError } from '@/shared/utils.js';
@@ -86,6 +88,20 @@ export function createRunner(deps: RunnerDeps) {
     .map((key) => key.trim())
     .filter(Boolean);
 
+  /** Append an audit event to task_events (best-effort — never break a run).
+   * Mirrors the service's helper; the runner owns agent-lifecycle events. */
+  function recordEvent(taskId: string, type: string, payload?: Record<string, unknown>): void {
+    try {
+      taskStore.insertTaskEvent({
+        id: randomUUID(), taskId, type,
+        payloadJson: payload ? JSON.stringify(payload) : undefined,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      log(`[kanban-events] insert failed: ${e}`);
+    }
+  }
+
   function emitTask(taskId: string): void {
     const current = taskStore.getTask(taskId);
     if (current) onTaskChanged?.(current);
@@ -142,6 +158,7 @@ export function createRunner(deps: RunnerDeps) {
     if (!spawnFn) throw new Error(`unknown provider: ${stage.agent}`);
 
     log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}`);
+    recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd });
 
     const writer = new RunnerWriter({
       taskId,
@@ -152,6 +169,7 @@ export function createRunner(deps: RunnerDeps) {
       },
       onComplete: () => {
         log(`[kanban-runner] complete task=${taskId}`);
+        recordEvent(taskId, 'agent_stage_completed', { stageIndex });
         emitTask(taskId);
         // If the agent already self-advanced via the task_next MCP tool (stageIndex moved
         // on) or the task reached a terminal state, do nothing — avoids double-advance.
@@ -186,6 +204,8 @@ export function createRunner(deps: RunnerDeps) {
           projectPath: cwd,
           model: stage.model,
           permissionMode,
+          // REQ-037: opt into SDK hook_event liveness signals (UserPromptSubmit/Stop).
+          emitHookEvents: true,
           envStrip: envStrip.length > 0 ? envStrip : undefined,
           mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
         } as any, writer),
@@ -202,6 +222,7 @@ export function createRunner(deps: RunnerDeps) {
       // SDK hanging when the CLI binary is missing), onComplete/onError never fire —
       // so we must fail the task ourselves to keep the board from wedging.
       taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
+      recordEvent(taskId, 'agent_stage_failed', { stageIndex, error: String(e?.message ?? e) });
       try {
         service.fail(rootId, taskId);
       } catch (failErr) {
@@ -261,6 +282,7 @@ export function createRunner(deps: RunnerDeps) {
 
     const previousStatus = task.status;
     taskStore.updateTaskStage(taskId, task.currentStageIndex, 'running');
+    recordEvent(taskId, 'review_submitted', { stageIndex: task.currentStageIndex, comment: trimmed.slice(0, 500) });
 
     const prompt = [
       'A human reviewer left the following feedback on your work in this workspace.',
@@ -300,6 +322,7 @@ export function createRunner(deps: RunnerDeps) {
             projectPath: cwd,
             model: stage.model,
             permissionMode: 'bypassPermissions',
+            emitHookEvents: true, // REQ-037: SDK hook_event liveness signals
           } as any, writer),
           new Promise<never>((_, reject) => {
             stageTimer = setTimeout(

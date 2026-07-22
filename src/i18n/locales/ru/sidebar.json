@@ -55,8 +55,7 @@
     "chat": "Чат",
     "files": "Файлы",
     "git": "Git",
-    "terminal": "Терминал",
-    "tasks": "Задачи"
+    "terminal": "Терминал"
   },
   "actions": {
     "refresh": "Обновить",

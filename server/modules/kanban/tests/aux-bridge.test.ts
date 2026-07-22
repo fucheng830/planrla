@@ -84,3 +84,22 @@ test('unrelated events do nothing', () => {
   auxBridge.handle('t1', { kind: 'tool_use', toolName: 'Bash', toolInput: {} });
   assert.equal(updates.length, 0);
 });
+
+// REQ-037: hook_event liveness channel (Claude SDK hooks, kanban runner only).
+
+test('hook_event UserPromptSubmit clears a stale askUserWaiting flag', () => {
+  const { auxBridge, updates } = setup();
+  auxBridge.handle('t1', { kind: 'hook_event', hookEvent: 'UserPromptSubmit' });
+  assert.deepEqual(updates[0], {
+    taskId: 't1',
+    flags: { askUserWaiting: false, pendingAskUser: null },
+  });
+});
+
+test('hook_event Stop and unknown hook events produce no flag update', () => {
+  const { auxBridge, updates } = setup();
+  auxBridge.handle('t1', { kind: 'hook_event', hookEvent: 'Stop' });
+  auxBridge.handle('t1', { kind: 'hook_event', hookEvent: 'SessionStart' });
+  auxBridge.handle('t1', { kind: 'hook_event' });
+  assert.equal(updates.length, 0);
+});

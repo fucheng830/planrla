@@ -29,6 +29,7 @@ import {
 import { sessionsService } from './modules/providers/index.js';
 import { providerAuthService } from './modules/providers/index.js';
 import { createCompleteMessage, createNormalizedMessage } from './shared/utils.js';
+import { createKanbanClaudeHooks } from './modules/kanban/index.js';
 
 const activeSessions = new Map();
 const pendingToolApprovals = new Map();
@@ -579,15 +580,39 @@ async function queryClaudeSDK(command, options = {}, ws) {
           }));
           return {};
         }]
-      }]
+      }],
+      // REQ-038/REQ-037: PreToolUse interception of AskUserQuestion in
+      // bypassPermissions mode (where canUseTool below is skipped), plus
+      // opt-in hook_event liveness signals for the kanban runner
+      // (options.emitHookEvents). See server/modules/kanban/claude-hooks.ts.
+      ...createKanbanClaudeHooks({
+        send: (msg) => ws.send(msg),
+        waitForToolApproval,
+        createRequestId,
+        getSessionId: () => capturedSessionId || sessionId || null,
+        emitHookEvents: options.emitHookEvents === true,
+        onActionRequired: ({ requestId, toolName }) => {
+          emitNotification(createNotificationEvent({
+            provider: 'claude',
+            sessionId: capturedSessionId || sessionId || null,
+            kind: 'action_required',
+            code: 'permission.required',
+            meta: { toolName, sessionName: sessionSummary },
+            severity: 'warning',
+            requiresUserAction: true,
+            dedupeKey: `claude:permission:${capturedSessionId || sessionId || 'none'}:${requestId}`
+          }));
+        },
+        log: (m) => console.log(m),
+      }),
     };
 
     // Caveat: in 'auto' and 'bypassPermissions' modes the SDK resolves approval
     // at the permission-mode step and skips this callback, so interactive tools
-    // (AskUserQuestion, ExitPlanMode) won't reach the UI — the classifier/bypass
-    // auto-approves them and the model acts on a generated answer. Move these
-    // tools to a PreToolUse hook (runs before the mode check) if we need them
-    // to work in those modes.
+    // won't reach the UI through it — the classifier/bypass auto-approves them
+    // and the model acts on a generated answer. AskUserQuestion is therefore
+    // intercepted by the PreToolUse hook above (runs before the mode check);
+    // ExitPlanMode remains plan-mode-only, where this callback does fire.
     sdkOptions.canUseTool = async (toolName, input, context) => {
       const requiresInteraction = TOOLS_REQUIRING_INTERACTION.has(toolName);
 

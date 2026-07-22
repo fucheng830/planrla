@@ -1,4 +1,34 @@
 {
+  "blocked": {
+    "badge": "阻塞于 {{ids}}"
+  },
+  "banner": {
+    "nextTask": "下一个任务"
+  },
+  "expand": {
+    "button": "展开",
+    "confirm": "确认展开？",
+    "running": "展开中…",
+    "done": "已展开为 {{ids}}",
+    "hint": "把该任务拆解为若干后续任务（原任务将被替换）"
+  },
+  "events": {
+    "task_created": "任务创建",
+    "stage_advanced": "阶段推进",
+    "stage_returned": "阶段回退",
+    "stage_jumped": "阶段跳转",
+    "task_completed": "任务完成",
+    "task_cancelled": "任务取消",
+    "task_paused": "任务暂停",
+    "task_resumed": "任务恢复",
+    "task_failed": "任务失败",
+    "task_expanded": "展开为子任务",
+    "task_expanded_from": "由展开创建",
+    "agent_stage_started": "Agent 开始执行",
+    "agent_stage_completed": "Agent 执行完成",
+    "agent_stage_failed": "Agent 执行失败",
+    "review_submitted": "评审意见已发送"
+  },
   "status": {
     "running": "运行中",
     "queued": "排队中",
@@ -83,6 +113,7 @@
   },
   "timeline": {
     "title": "阶段历史",
+    "events": "事件",
     "loading": "加载中...",
     "empty": "还没有阶段历史。"
   },

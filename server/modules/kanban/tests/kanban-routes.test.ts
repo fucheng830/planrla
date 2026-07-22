@@ -165,3 +165,70 @@ test('POST /api/tasks/:taskId/answer rejects a task from another root', async ()
   assert.equal(captured.length, 0);
   db.close();
 });
+
+// --------------------------- TaskMaster-inspired: /next + /expand ---------------------------
+
+function setupAppWithDecompose(decomposePrdFn: any) {
+  const db = new Database(join(tmpdir(), `route-${Date.now()}-${Math.random().toString(36).slice(2)}.db`));
+  db.pragma('journal_mode = WAL');
+  const taskStore = createTaskStore({ db });
+  const templateStore = createTemplateStore({ dir: join(tmpdir(), `route-tpl-${Date.now()}-${Math.random().toString(36).slice(2)}`) });
+  const service = createKanbanService({ taskStore, templateStore });
+  const router = createKanbanRouter({
+    service, taskStore, templateStore,
+    scheduler: { schedule: () => {} },
+    scheduleStore: { listSchedules: () => [], listAllEnabledSchedules: () => [], getSchedule: () => null, saveSchedule: (s: any) => s, deleteSchedule: () => {}, updateLastRun: () => {} } as any,
+    cronDriver: { reload: () => {} } as any,
+    resolveRootPath: () => null,
+    runner: { startReviewComment: () => { throw new Error('not used in this test'); } },
+    resolveToolApproval: () => {},
+    decomposePrdFn,
+  });
+  const app = express();
+  app.use(express.json());
+  app.locals.wss = null;
+  app.use('/api/tasks', router);
+  return { app, db, templateStore, service, taskStore };
+}
+
+test('GET /api/tasks/next returns the highest-priority runnable task', async () => {
+  const { app, db, templateStore, service } = setupAppWithDecompose(undefined);
+  saveTpl(templateStore, 't1');
+  service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'later', priority: 'low' });
+  const high = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'urgent', priority: 'high' });
+  const res = await request(app).get('/api/tasks/next?rootId=r1');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.task.id, high.id);
+  db.close();
+});
+
+test('GET /api/tasks/next returns null task when nothing is runnable', async () => {
+  const { app, db } = setupAppWithDecompose(undefined);
+  const res = await request(app).get('/api/tasks/next?rootId=r1');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.task, null);
+  db.close();
+});
+
+test('POST /api/tasks/:taskId/expand decomposes and replaces the task', async () => {
+  const calls: any[] = [];
+  const decomposePrdFn = async (opts: any) => {
+    calls.push(opts);
+    return [
+      { title: 'a', input: 'part a', priority: 'medium', dependsOn: [] },
+      { title: 'b', input: 'part b', priority: 'high', dependsOn: [0] },
+    ];
+  };
+  const { app, db, templateStore, service, taskStore } = setupAppWithDecompose(decomposePrdFn);
+  saveTpl(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'big thing' });
+  const res = await request(app).post(`/api/tasks/${task.id}/expand`).send({ rootId: 'r1' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.created.length, 2);
+  assert.equal(res.body.cancelled.status, 'cancelled');
+  assert.equal(res.body.created[1].dependencies[0], res.body.created[0].id);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].prd, /big thing/);
+  assert.ok(taskStore.listTaskEvents(task.id).some((e) => e.type === 'task_expanded'));
+  db.close();
+});

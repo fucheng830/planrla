@@ -1,4 +1,34 @@
 {
+  "blocked": {
+    "badge": "blocked by {{ids}}"
+  },
+  "banner": {
+    "nextTask": "Next up"
+  },
+  "expand": {
+    "button": "Expand",
+    "confirm": "Confirm expand?",
+    "running": "Expanding…",
+    "done": "Expanded into {{ids}}",
+    "hint": "Decompose this task into follow-up tasks (replaces the original)"
+  },
+  "events": {
+    "task_created": "Task created",
+    "stage_advanced": "Stage advanced",
+    "stage_returned": "Returned to stage",
+    "stage_jumped": "Jumped to stage",
+    "task_completed": "Task completed",
+    "task_cancelled": "Task cancelled",
+    "task_paused": "Task paused",
+    "task_resumed": "Task resumed",
+    "task_failed": "Task failed",
+    "task_expanded": "Expanded into subtasks",
+    "task_expanded_from": "Created by expansion",
+    "agent_stage_started": "Agent started",
+    "agent_stage_completed": "Agent finished",
+    "agent_stage_failed": "Agent failed",
+    "review_submitted": "Review comment sent"
+  },
   "status": {
     "running": "Running",
     "queued": "Queued",
@@ -83,6 +113,7 @@
   },
   "timeline": {
     "title": "Stage history",
+    "events": "Events",
     "loading": "Loading...",
     "empty": "No stage history yet."
   },

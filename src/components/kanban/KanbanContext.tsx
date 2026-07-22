@@ -7,6 +7,10 @@ import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface KanbanContextValue {
   tasks: Task[];
+  tasksById: Map<string, Task>;
+  /** TaskMaster-style "next task": highest-priority runnable task whose
+   * dependencies have all succeeded (mirrors service.getNextTask). */
+  nextTask: Task | null;
   templates: TaskTemplate[];
   templatesById: Map<string, TaskTemplate>;
   schedules: KanbanSchedule[];
@@ -32,6 +36,9 @@ interface KanbanContextValue {
 
 const KanbanContext = createContext<KanbanContextValue | null>(null);
 
+// Mirrors server taskPriorityRank (high < medium < low by rank value).
+const priorityRank = (p?: TaskPriority) => (p === 'high' ? 0 : p === 'low' ? 2 : 1);
+
 export function useKanban(): KanbanContextValue {
   const ctx = useContext(KanbanContext);
   if (!ctx) throw new Error('useKanban must be used within KanbanProvider');
@@ -50,6 +57,17 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
   // identity is stable across renders — prevents infinite loops if a consumer
   // adds it to a useMemo/useEffect dependency array.
   const templatesById = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
+  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  // Derived from the WS-synced board, so the banner is always live. A task is
+  // runnable when queued (agent stage) or waiting_user (human stage) and not
+  // already admitted by the scheduler.
+  const nextTask = useMemo(() => {
+    const eligible = tasks
+      .filter((t) => (t.status === 'queued' || t.status === 'waiting_user') && !t.schedulerAdmitted)
+      .filter((t) => (t.dependencies ?? []).every((d) => tasksById.get(d)?.status === 'success'))
+      .sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.createdAt.localeCompare(b.createdAt));
+    return eligible[0] ?? null;
+  }, [tasks, tasksById]);
 
   const refresh = useCallback(async () => {
     if (!rootId) {
@@ -237,6 +255,8 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
 
   const value: KanbanContextValue = {
     tasks,
+    tasksById,
+    nextTask,
     templates,
     templatesById,
     schedules,
