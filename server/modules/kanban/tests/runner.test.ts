@@ -376,3 +376,77 @@ test('startReviewComment rejects on a non-agent current stage', () => {
   assert.throws(() => runner.startReviewComment('r1', task.id, 'x'), /agent stage/);
   db.close();
 });
+
+// ------------------- REQ-043: goal stage 透传 goalCondition + maxTurns -------------------
+
+test('goal stage passes goalCondition + maxTurns to spawnFn', async () => {
+  let called: any = null;
+  const mockSpawn = async (cmd: string, opts: any, writer: any) => {
+    called = { opts };
+    writer.send(JSON.stringify({ kind: 'complete' }));
+  };
+  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  templateStore.saveTaskTemplate({
+    id: 't1', name: 'T', maxConcurrency: 1, createdAt: NOW, updatedAt: NOW,
+    stages: [
+      { id: 's0', position: 0, snapshot: { id: 'ss0', name: 'U', role: 'user', autoAdvance: true, createdAt: NOW, updatedAt: NOW } },
+      { id: 's1', position: 1, snapshot: { id: 'ss1', name: 'Do', role: 'agent', agent: 'claude', autoAdvance: false, goalCondition: '测试通过', goalMaxTurns: 50, promptTemplate: 'do', createdAt: NOW, updatedAt: NOW } },
+    ],
+  });
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(called.opts.goalCondition, '测试通过');
+  assert.equal(called.opts.maxTurns, 50);
+  db.close();
+});
+
+test('goal stage defaults maxTurns to 300 when goalMaxTurns unset', async () => {
+  let called: any = null;
+  const mockSpawn = async (cmd: string, opts: any, writer: any) => { called = { opts }; writer.send(JSON.stringify({ kind: 'complete' })); };
+  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  templateStore.saveTaskTemplate({
+    id: 't1', name: 'T', maxConcurrency: 1, createdAt: NOW, updatedAt: NOW,
+    stages: [
+      { id: 's0', position: 0, snapshot: { id: 'ss0', name: 'U', role: 'user', autoAdvance: true, createdAt: NOW, updatedAt: NOW } },
+      { id: 's1', position: 1, snapshot: { id: 'ss1', name: 'Do', role: 'agent', agent: 'claude', autoAdvance: false, goalCondition: 'x', promptTemplate: 'do', createdAt: NOW, updatedAt: NOW } },
+    ],
+  });
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(called.opts.maxTurns, 300);
+  db.close();
+});
+
+test('goal stage fails task when spawnFn rejects (max_turns exhausted)', async () => {
+  const rejectSpawn = async () => { throw new Error('Reached maximum number of turns (50)'); };
+  const { db, taskStore, templateStore, service, runner } = setup({ mockSpawn: rejectSpawn });
+  templateStore.saveTaskTemplate({
+    id: 't1', name: 'T', maxConcurrency: 1, createdAt: NOW, updatedAt: NOW,
+    stages: [
+      { id: 's0', position: 0, snapshot: { id: 'ss0', name: 'U', role: 'user', autoAdvance: true, createdAt: NOW, updatedAt: NOW } },
+      { id: 's1', position: 1, snapshot: { id: 'ss1', name: 'Do', role: 'agent', agent: 'claude', autoAdvance: false, goalCondition: 'x', goalMaxTurns: 50, promptTemplate: 'do', createdAt: NOW, updatedAt: NOW } },
+    ],
+  });
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+  const got = taskStore.getTask(task.id);
+  assert.equal(got!.status, 'fail', 'max_turns reject → service.fail');
+  assert.match(String(got!.auxFlags.sessionError ?? ''), /maximum number of turns/i);
+  db.close();
+});
+
+test('non-goal stage passes neither goalCondition nor maxTurns', async () => {
+  let called: any = null;
+  const mockSpawn = async (cmd: string, opts: any, writer: any) => { called = { opts }; writer.send(JSON.stringify({ kind: 'complete' })); };
+  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(called.opts.goalCondition, undefined);
+  assert.equal(called.opts.maxTurns, undefined);
+  db.close();
+});

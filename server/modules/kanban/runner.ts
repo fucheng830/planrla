@@ -208,6 +208,12 @@ export function createRunner(deps: RunnerDeps) {
           emitHookEvents: true,
           envStrip: envStrip.length > 0 ? envStrip : undefined,
           mcpServers: mcpBaseUrl ? { 'planrla-kanban': { type: 'http', url: mcpBaseUrl } } : undefined,
+          // REQ-043: goal stage 透传 goalCondition(→ claude-sdk.js → createKanbanClaudeHooks 挂 goal Stop hook)
+          // + maxTurns(→ sdkOptions.maxTurns,SDK 原生截断 → error_max_turns reject → 现有 catch → fail)
+          ...(stage.goalCondition ? {
+            goalCondition: stage.goalCondition,
+            maxTurns: stage.goalMaxTurns ?? 300,
+          } : {}),
         } as any, writer),
         new Promise<never>((_, reject) => {
           stageTimer = setTimeout(
