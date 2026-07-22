@@ -174,10 +174,10 @@ private val UserTimestampBlue = Color(0xFFDBEAFE)   // blue-100 (user timestamp 
 private val PERMISSION_MODES = listOf("default", "plan", "acceptEdits", "auto", "bypassPermissions")
 private val ModeColors = mapOf(
     "default" to ModeStyle(Color(0xFF64748B), Color(0xFF1E293B)),
-    "plan" to ModeStyle(Color(0xFF3B82F6), Color(0x143B82F6)),
-    "acceptEdits" to ModeStyle(Color(0xFF22C55E), Color(0x1422C55E)),
-    "auto" to ModeStyle(Color(0xFF3B82F6), Color(0x143B82F6)),
-    "bypassPermissions" to ModeStyle(Color(0xFFF97316), Color(0x14F97316)),
+    "plan" to ModeStyle(Color(0xFF3B82F6), Color(0x333B82F6)),
+    "acceptEdits" to ModeStyle(Color(0xFF22C55E), Color(0x3322C55E)),
+    "auto" to ModeStyle(Color(0xFF3B82F6), Color(0x333B82F6)),
+    "bypassPermissions" to ModeStyle(Color(0xFFF97316), Color(0x33F97316)),
 )
 private data class ModeStyle(val text: Color, val bg: Color)
 private fun parseTime(iso: String?): Long = iso?.let {
@@ -1964,7 +1964,7 @@ private fun ComposerBar(vm: ChatViewModel) {
                     Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(style.bg)
-                        .border(1.dp, style.text.copy(alpha = 0.4f))
+                        .border(1.dp, style.text.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                         .clickable { vm.cyclePermissionMode() }
                         .padding(horizontal = 8.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,

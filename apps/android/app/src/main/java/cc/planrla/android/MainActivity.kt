@@ -8,8 +8,17 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -44,12 +53,24 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* result ignored; best-effort */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         App.init(applicationContext, TokenStore(applicationContext), TokenHolder())
         createRunChannel()
         ensureNotificationPermission()
         ProcessLifecycleOwner.get().lifecycle.addObserver(processObserver)
-        setContent { NomadTheme { NomadNav() } }
+        setContent {
+            NomadTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
+                        NomadNav()
+                    }
+                }
+            }
+        }
         // Check for updates in background (silent — only shows dialog if newer version found)
         checkForUpdates()
     }
