@@ -54,6 +54,7 @@
 |----|------|----|------|------|------|
 | REQ-005 | Provider 诊断面板 | P1 | plan | self | spec + plan 齐在 `feat/provider-diag` 分支(4 commits 纯文档,0 实现);待派 subagent。M3 里程碑 |
 | REQ-038 | kanban pending reply(待回复状态/提醒) | — | spec | self | [spec](../superpowers/specs/2026-07-14-req038-kanban-pending-reply-design.md);`feat/req038-kanban-pending-reply` 占位(0 commits),待 writing-plans |
+| REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主,claude 软自判 + task_complete MCP + Stop hook block + maxTurns 300) | P1 | spec | self | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md);spike `debug/spike-stop-hook-block.mjs` 证 Stop hook 顶层 `{decision:'block'}` 生效 + `error_max_turns` 走 reject/catch;基底 `1ed6a8e`(task-master 退役 + claude-hooks 实时化)已合 main;待 writing-plans |
 
 ## Backlog(待细化)
 | ID | 标题 | P | 类型 | 状态 | 来源 | 备注 |
