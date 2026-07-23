@@ -557,6 +557,9 @@ async function queryClaudeSDK(command, options = {}, ws) {
       sdkOptions.mcpServers = mcpServers;
     }
 
+    // REQ-043: goal stage 的 maxTurns 上限(SDK 原生截断 → error_max_turns reject)
+    if (options.maxTurns) sdkOptions.maxTurns = options.maxTurns;
+
     // Handle images - save to temp files and modify prompt
     const imageResult = await handleImages(command, options.images, options.cwd);
     const finalCommand = imageResult.modifiedCommand;
@@ -591,6 +594,7 @@ async function queryClaudeSDK(command, options = {}, ws) {
         createRequestId,
         getSessionId: () => capturedSessionId || sessionId || null,
         emitHookEvents: options.emitHookEvents === true,
+        goalCondition: options.goalCondition,  // REQ-043
         onActionRequired: ({ requestId, toolName }) => {
           emitNotification(createNotificationEvent({
             provider: 'claude',

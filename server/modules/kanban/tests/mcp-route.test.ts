@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createKanbanMcpRouter } from '@/modules/kanban/mcp.route.js';
 import type { Task } from '@/modules/kanban/types.js';
 
-function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[]; throwOnNext?: boolean; nextTask?: Task | null } = {}) {
+function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevCalls?: string[]; throwOnNext?: boolean; nextTask?: Task | null; events?: any[] } = {}) {
   const task: Task = overrides.task ?? {
     id: 't1', taskNumber: 1, rootId: 'r1', taskTemplateId: 'tpl', createWorktree: true,
     currentStageIndex: 0, status: 'running', schedulerAdmitted: true, labels: [],
@@ -14,7 +14,11 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
   } as any;
   const nextCalls = overrides.nextCalls ?? [];
   const prevCalls = overrides.prevCalls ?? [];
-  const taskStore = { getTask: (id: string) => (id === task.id ? { ...task } : null) };
+  const events = overrides.events ?? [];
+  const taskStore = {
+    getTask: (id: string) => (id === task.id ? { ...task } : null),
+    insertTaskEvent: (e: any) => { events.push(e); },
+  };
   const service = {
     next: (_rootId: string, id: string) => {
       if (overrides.throwOnNext) throw new Error('cannot advance: terminal guard');
@@ -25,7 +29,7 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
   };
   return {
     getKanban: () => ({ service: service as any, taskStore: taskStore as any, scheduler: { schedule: () => {} } }),
-    nextCalls, prevCalls,
+    nextCalls, prevCalls, events,
   };
 }
 
@@ -49,7 +53,7 @@ test('tools/list advertises task_next, task_prev, task_status', async () => {
   const app = appFor(fakeKanban());
   const res = await request(app).post('/api/mcp/kanban').send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
   const names = res.body.result.tools.map((t: any) => t.name);
-  assert.deepEqual(names.sort(), ['task_next', 'task_next_up', 'task_prev', 'task_status']);
+  assert.deepEqual(names.sort(), ['task_complete', 'task_next', 'task_next_up', 'task_prev', 'task_status']);
 });
 
 test('tools/call task_next advances via service.next(rootId, taskId)', async () => {
@@ -179,4 +183,38 @@ test('tools/call task_next_up returns null when nothing is runnable', async () =
   assert.equal(res.status, 200);
   const payload = JSON.parse(res.body.result.content[0].text);
   assert.equal(payload.nextTask, null);
+});
+
+test('tools/call task_complete records goal_completed event + advances via service.next(rootId, taskId)', async () => {
+  const kanban = fakeKanban({ nextCalls: [], events: [] });
+  const app = appFor(kanban);
+  const res = await request(app).post('/api/mcp/kanban').send({
+    jsonrpc: '2.0', id: 11, method: 'tools/call',
+    params: { name: 'task_complete', arguments: { taskId: 't1', summary: 'done' } },
+  });
+  assert.equal(res.status, 200);
+  // service.next must be invoked to advance the stage.
+  assert.equal(kanban.nextCalls[0], 't1');
+  // A goal_completed event must be recorded with the summary payload.
+  const goalEvents = kanban.events.filter((e: any) => e.type === 'goal_completed');
+  assert.equal(goalEvents.length, 1);
+  assert.equal(goalEvents[0].taskId, 't1');
+  assert.equal(goalEvents[0].stageRunId, undefined);
+  assert.deepEqual(JSON.parse(goalEvents[0].payloadJson), { summary: 'done' });
+});
+
+test('tools/call task_complete without summary records goal_completed with no payload', async () => {
+  // summary is optional — the event should still be recorded so the timeline
+  // shows the declaration even if the agent omits it.
+  const kanban = fakeKanban({ nextCalls: [], events: [] });
+  const app = appFor(kanban);
+  const res = await request(app).post('/api/mcp/kanban').send({
+    jsonrpc: '2.0', id: 12, method: 'tools/call',
+    params: { name: 'task_complete', arguments: { taskId: 't1' } },
+  });
+  assert.equal(res.status, 200);
+  assert.equal(kanban.nextCalls[0], 't1');
+  const goalEvents = kanban.events.filter((e: any) => e.type === 'goal_completed');
+  assert.equal(goalEvents.length, 1);
+  assert.equal(goalEvents[0].payloadJson, undefined);
 });

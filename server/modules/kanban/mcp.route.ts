@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
@@ -59,9 +60,21 @@ const TOOL_DEFS = [
     description: 'Get the next runnable task in this root (highest priority, all dependencies satisfied). TaskMaster-style "what should I work on next".',
     inputSchema: { type: 'object', properties: { taskId: { type: 'string' } }, required: ['taskId'] },
   },
+  {
+    name: 'task_complete',
+    description: "Declare this kanban task's current goal complete. Call when the goal condition is satisfied. Advances the task to its next stage.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        summary: { type: 'string', description: 'brief summary of what was accomplished' },
+      },
+      required: ['taskId'],
+    },
+  },
 ] as const;
 
-const KNOWN_TOOLS = new Set(['task_next', 'task_prev', 'task_status', 'task_next_up']);
+const KNOWN_TOOLS = new Set(['task_next', 'task_prev', 'task_status', 'task_next_up', 'task_complete']);
 
 export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
   const router = Router();
@@ -113,8 +126,27 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
         }
         const rootId = task.rootId;
 
-        if (name === 'task_next') service.next(rootId, taskId);
-        else if (name === 'task_prev') service.prev(rootId, taskId);
+        // task_complete: the agent declares its current goal satisfied. Record
+        // the goal_completed event FIRST (best-effort — never let an event-log
+        // failure block the stage advance) so the timeline shows the signal,
+        // THEN drive the same stage transition as task_next.
+        if (name === 'task_complete') {
+          const summary = String(msg.params?.arguments?.summary ?? '');
+          try {
+            taskStore.insertTaskEvent({
+              id: randomUUID(), taskId, type: 'goal_completed',
+              payloadJson: summary ? JSON.stringify({ summary }) : undefined,
+              createdAt: new Date().toISOString(),
+            });
+          } catch {
+            // best-effort: event recording must not block the advance
+          }
+          service.next(rootId, taskId);
+        } else if (name === 'task_next') {
+          service.next(rootId, taskId);
+        } else if (name === 'task_prev') {
+          service.prev(rootId, taskId);
+        }
         // task_status / task_next_up: no mutation
 
         // task_next_up answers with the recommendation directly — no task
@@ -135,7 +167,7 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
 
         // After a stage transition, admit any newly-runnable agent stage (e.g. the agent
         // called task_next and landed on another agent stage, or jumped back to one).
-        if (name === 'task_next' || name === 'task_prev') {
+        if (name === 'task_next' || name === 'task_prev' || name === 'task_complete') {
           scheduler.schedule(rootId);
         }
 

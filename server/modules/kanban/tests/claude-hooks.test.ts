@@ -26,6 +26,7 @@ interface SentMessage {
 function setup(opts: {
   decision?: HookApprovalDecision | null;
   emitHookEvents?: boolean;
+  goalCondition?: string;
 } = {}) {
   const sent: SentMessage[] = [];
   const waits: Array<{ requestId: string; options: { timeoutMs: number } }> = [];
@@ -39,6 +40,7 @@ function setup(opts: {
     createRequestId: () => 'req-1',
     getSessionId: () => 'sid-1',
     emitHookEvents: opts.emitHookEvents,
+    goalCondition: opts.goalCondition,
     onActionRequired: () => { notifications += 1; },
   });
   return { hooks, sent, waits, notifications: () => notifications };
@@ -167,4 +169,38 @@ test('UserPromptSubmit/Stop hooks forward hook_event messages and never block', 
   assert.equal(sent[0].hookEvent, 'UserPromptSubmit');
   assert.equal(sent[0].sessionId, 'sid-9');
   assert.equal(sent[1].hookEvent, 'Stop');
+});
+
+// --------------------------- REQ-043 goal stop hook ---------------------------
+
+test('goal hooks only registered when goalCondition is set', () => {
+  const off = setup({ goalCondition: undefined });
+  assert.equal(off.hooks.PostToolUse, undefined);
+  const on = setup({ goalCondition: '测试通过' });
+  assert.ok(on.hooks.PostToolUse);
+  assert.ok(on.hooks.Stop && on.hooks.Stop.length >= 1);
+});
+
+test('goal Stop hook blocks when task_complete not yet called', async () => {
+  const { hooks } = setup({ goalCondition: '所有测试通过' });
+  const goalBlock = hooks.Stop![hooks.Stop!.length - 1].hooks[0];
+  const out: any = await goalBlock({}, undefined, {});
+  assert.equal(out.decision, 'block');
+  assert.match(out.reason, /所有测试通过/);
+});
+
+test('goal PostToolUse on task_complete sets flag → Stop allows', async () => {
+  const { hooks } = setup({ goalCondition: '所有测试通过' });
+  const post = hooks.PostToolUse![0].hooks[0];
+  await post({ tool_name: 'mcp__planrla-kanban__task_complete' }, undefined, {});
+  const goalBlock = hooks.Stop![hooks.Stop!.length - 1].hooks[0];
+  const out = await goalBlock({}, undefined, {});
+  assert.deepEqual(out, {});
+});
+
+test('goal hooks absent does not break existing liveness Stop hook', async () => {
+  const { hooks } = setup({ emitHookEvents: true });
+  assert.equal(hooks.Stop!.length, 1);
+  const out = await hooks.Stop![0].hooks[0]({ session_id: 'sid', hook_event_name: 'Stop' }, undefined, {});
+  assert.deepEqual(out, {});
 });
