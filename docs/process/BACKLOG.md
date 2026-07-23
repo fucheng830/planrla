@@ -22,6 +22,7 @@
 | REQ-030 | AI 自动重命名(10 轮触发) | — | P2 | feat | doing | self | [spec](../superpowers/specs/2026-07-11-req030-ai-auto-rename-design.md) | [plan](../superpowers/plans/2026-07-11-req030-ai-auto-rename.md) | `feat/req030-auto-rename` 9 commits(Task 7 review),未入 main |
 | REQ-040 | 状态校验工具 check-req-status(状态机↔git 自动绑定) | v0.9 | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-16-req040-status-git-binding-design.md) | [plan](../superpowers/plans/2026-07-16-req040-status-git-binding.md) | `a476b7b` 在 main,待三道门验收 |
 | REQ-027 | UX 对齐 Codex · 渲染层交互(① diff 高亮 + ② plan 展示 + ④ diff 评论) | — | P1 | feat | review | align:codex | [spec](../superpowers/specs/2026-07-08-req027-ux-align-codex-design.md) | [plan](../superpowers/plans/2026-07-08-req027-ux-align-codex.md) | 随 v0.8.0 发,待验收置 accepted |
+| REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主,task_complete MCP + Stop hook 顶层 block + maxTurns 300) | — | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md) | [plan](../superpowers/plans/2026-07-22-req043-kanban-goal-stop-hook.md) | `2fc2021` 合 main(8 commits);typecheck 干净 + kanban 208/208 + 端到端 spike(顶层 decision:block + catch-all matcher)+ final review 可合并;待 dogfood 验收 |
 
 ## Ready(四要素齐,待规格化)
 | ID | 标题 | P | 类型 | 状态 | 来源 |
@@ -54,7 +55,6 @@
 |----|------|----|------|------|------|
 | REQ-005 | Provider 诊断面板 | P1 | plan | self | spec + plan 齐在 `feat/provider-diag` 分支(4 commits 纯文档,0 实现);待派 subagent。M3 里程碑 |
 | REQ-038 | kanban pending reply(待回复状态/提醒) | — | spec | self | [spec](../superpowers/specs/2026-07-14-req038-kanban-pending-reply-design.md);`feat/req038-kanban-pending-reply` 占位(0 commits),待 writing-plans |
-| REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主,claude 软自判 + task_complete MCP + Stop hook block + maxTurns 300) | P1 | spec | self | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md);spike `debug/spike-stop-hook-block.mjs` 证 Stop hook 顶层 `{decision:'block'}` 生效 + `error_max_turns` 走 reject/catch;基底 `1ed6a8e`(task-master 退役 + claude-hooks 实时化)已合 main;待 writing-plans |
 
 ## Backlog(待细化)
 | ID | 标题 | P | 类型 | 状态 | 来源 | 备注 |
