@@ -214,7 +214,7 @@ export function createRunner(deps: RunnerDeps) {
             goalCondition: stage.goalCondition,
             maxTurns: stage.goalMaxTurns ?? 300,
           } : {}),
-        } as any, writer),
+        }, writer),
         new Promise<never>((_, reject) => {
           stageTimer = setTimeout(
             () => reject(new Error(`agent stage timed out after ${stageTimeoutMs}ms without completion`)),
