@@ -22,7 +22,6 @@
 | REQ-030 | AI 自动重命名(10 轮触发) | — | P2 | feat | doing | self | [spec](../superpowers/specs/2026-07-11-req030-ai-auto-rename-design.md) | [plan](../superpowers/plans/2026-07-11-req030-ai-auto-rename.md) | `feat/req030-auto-rename` 9 commits(Task 7 review),未入 main |
 | REQ-040 | 状态校验工具 check-req-status(状态机↔git 自动绑定) | v0.9 | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-16-req040-status-git-binding-design.md) | [plan](../superpowers/plans/2026-07-16-req040-status-git-binding.md) | `a476b7b` 在 main,待三道门验收 |
 | REQ-027 | UX 对齐 Codex · 渲染层交互(① diff 高亮 + ② plan 展示 + ④ diff 评论) | — | P1 | feat | review | align:codex | [spec](../superpowers/specs/2026-07-08-req027-ux-align-codex-design.md) | [plan](../superpowers/plans/2026-07-08-req027-ux-align-codex.md) | 随 v0.8.0 发,待验收置 accepted |
-| REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主,task_complete MCP + Stop hook 顶层 block + maxTurns 300) | — | P1 | feat | review | self | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md) | [plan](../superpowers/plans/2026-07-22-req043-kanban-goal-stop-hook.md) | `2fc2021` 合 main(8 commits);typecheck 干净 + kanban 208/208 + 端到端 spike(顶层 decision:block + catch-all matcher)+ final review 可合并;待 dogfood 验收 |
 
 ## Ready(四要素齐,待规格化)
 | ID | 标题 | P | 类型 | 状态 | 来源 |
@@ -78,6 +77,7 @@
 ## Released / Superseded
 | ID | 标题 | 版本 | spec | 备注 |
 |----|------|------|------|------|
+| REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主) | v0.9.0 | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md) · [plan](../superpowers/plans/2026-07-22-req043-kanban-goal-stop-hook.md) | Stop hook 顶层 `{decision:'block'}` + task_complete MCP + maxTurns(默认 300)兜底;catch-all matcher(spike 证 glob 不命中 MCP 全名);`2fc2021` 合 main;typecheck + 208/208 + final review 可合并 |
 | REQ-041 | 聊天列表迁移 virtua 消除翻页抖动 | v0.8.6 | [spec](../superpowers/specs/2026-07-17-req041-virtua-migration-design.md) · [plan](../superpowers/plans/2026-07-17-req041-virtua-migration.md) | 根因 react-virtual 异步 measureElement 两次 commit,补偿层(RAF/RO/批次)全证伪;改 virtua VList 同帧补偿。Archie electron 已验。**取代 REQ-029/031/032** |
 | REQ-029 | loadEarlier 翻页 scroll RAF 补偿 | v0.8.3 | _(plan `2026-07-10-req029-scroll-raf.md`)_ | ⚰️ **superseded**:方案(RAF 补偿)被 REQ-041 证伪取代 |
 | REQ-031 | 对话底部大片留白(virtualizer 高度虚高) | v0.8.4 | [spec](../superpowers/specs/2026-07-13-req031-chat-bottom-whitespace-design.md) | ⚰️ **superseded**:被 REQ-041 virtua 取代 |
