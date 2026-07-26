@@ -1638,6 +1638,21 @@ app.use((err, req, res, next) => {
     });
   }
 
+  // REQ-044: surface errors that carry their own statusCode (e.g. body-parser
+  // JSON SyntaxError — type 'entity.parse.failed', status 400). Without this
+  // they fall through to the anonymous 500 below, hiding the real cause and
+  // making a client-side bad-JSON look like a server crash.
+  if (err && typeof err.statusCode === 'number') {
+    console.error(err);
+    return res.status(err.statusCode).json({
+      success: false,
+      error: {
+        code: err.code || err.type || 'ERROR',
+        message: err.message || 'Request error',
+      },
+    });
+  }
+
   console.error(err);
 
   return res.status(500).json({
