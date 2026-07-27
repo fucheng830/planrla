@@ -319,18 +319,24 @@ function buildSendPayload(args: A2aCallArgs, taskId: string): Record<string, unk
       message: {
         role: 'user',
         parts: [{ type: 'text', text: filterOutbound(args.message) }],
+        // Message-level metadata (A2A spec: Message.metadata) — per-message hints.
         metadata: {
           intent: args.intent || 'consultation',
           expected_action: args.expectedAction || 'reply',
           context_scope: 'full', // hardcoded, not exposed on the tool
           reply_to_task_id: args.replyToTaskId || '',
           sender_name: args.senderName || 'planrla-agent',
-          // S4 spawn passthrough — only emitted when explicitly set so legacy
-          // peers that don't know these fields are unaffected.
-          ...(args.spawn !== undefined ? { spawn: args.spawn } : {}),
-          ...(args.provider ? { provider: args.provider } : {}),
-          ...(args.projectPath ? { projectPath: args.projectPath } : {}),
         },
+      },
+      // Task-level metadata (A2A spec: SendTaskParams.metadata). spawn/provider/
+      // projectPath live HERE, not under message — planrla's inbound handler
+      // reads `params.metadata.*` (inbound.service.ts L153/155). Nesting them
+      // under message.metadata made spawn silently fall through to the non-spawn
+      // branch ('metadata.sessionId required'). See REQ-044②.
+      metadata: {
+        ...(args.spawn !== undefined ? { spawn: args.spawn } : {}),
+        ...(args.provider ? { provider: args.provider } : {}),
+        ...(args.projectPath ? { projectPath: args.projectPath } : {}),
       },
     },
   };
