@@ -46,6 +46,17 @@
 - **发版**:只在主 worktree(main)跑 `release-checklist`
 - **命名**:`.claude/worktrees/req<NNN>-<topic>`(如 `req010-toast-fix`)
 
+## UI 层问题分流(强制:A2A → Kimi)
+
+**所有 UI 层相关的问题**——Android Compose UI(`apps/android/.../ui/`)、前端 web UI(`src/components/`、`src/`)的样式 / 布局 / 交互 / 组件 / 主题配色 / 间距——**不自己改代码**,统一通过 A2A 委托 **Kimi** 处理:
+
+- 先 `a2a_list_sessions`(`url=http://127.0.0.1:3001/api/a2a`)看有没有现成可复用的 kimi 会话;没有就 spawn。
+- 调用:`a2a_call(url="http://127.0.0.1:3001/api/a2a", provider="kimi", spawn=true, projectPath=<相关项目路径>, message=<UI 问题描述 + 验收标准>)`,或带现有 kimi `sessionId` 委托已有会话。
+- 我(hub / 中心)只负责:把 UI 问题拆清楚派给 Kimi、收回结果、做集成 / 验收 / 发版,**不直接动 UI 代码**。
+- 非 UI 层(后端 / infra / 数据库 / 发版流程 / A2A 本身)照常自己处理,不走这条。
+
+> 设计意图:UI 细节多、迭代频,交给专注 UI 的 Kimi agent 并行处理,hub 聚焦架构与发版。
+
 ## 项目约定(继承 workspace)
 - 称呼用户:**Archie**;回复语言:**中文**
 - 提交前确认根目录**无 `nul` 文件**
