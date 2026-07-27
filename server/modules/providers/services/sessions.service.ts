@@ -5,6 +5,7 @@ import path from 'node:path';
 import { projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
+import { filterSilentRenameTurns } from '@/shared/rename-command-filter.js';
 import type {
   FetchHistoryOptions,
   FetchHistoryResult,
@@ -182,7 +183,12 @@ export const sessionsService = {
 
     return {
       ...result,
-      messages: result.messages.map((message) => ({
+      // REQ-030: strip silent rename turns (auto-rename hint + assistant reply
+      // + set_session_title tool_use/tool_result) before remapping ids, so
+      // neither REST nor MCP history consumers ever surface them on reload.
+      // The provider runtime persists the synthetic turn to the transcript on
+      // disk; this read-side filter makes it invisible without touching writes.
+      messages: filterSilentRenameTurns(result.messages).map((message) => ({
         ...message,
         sessionId,
       })),
