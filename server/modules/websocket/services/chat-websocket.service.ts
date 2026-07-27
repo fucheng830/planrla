@@ -78,6 +78,17 @@ function sendJson(ws: WebSocket, payload: unknown): void {
  * Protocol errors deliberately use their own `kind` (instead of the provider
  * `error` message kind) so the frontend can distinguish "your request was
  * invalid" from "the model run produced an error" without inspecting text.
+ *
+ * REQ-030 silent-tagging gap (intentional): pre-`startRun` errors emitted
+ * here (SESSION_ID_REQUIRED / SESSION_NOT_FOUND / UNSUPPORTED_PROVIDER /
+ * RUN_IN_PROGRESS) bypass `decorateAndRecordEvent`, so they are never tagged
+ * `silent:true` even when the triggering `chat.send` carried `options.silent`.
+ * This is unreachable from `useAutoRename`: it pre-validates every trigger
+ * condition before sending (session exists in the local store, provider has
+ * a spawn fn, sessionId is always set in `buildSilentRenameFrame`), and the
+ * backend's own `handleChatSend` reads `silent` only AFTER these branches
+ * return — so a silent send that reaches this fn would have to come from a
+ * caller that already violated those preconditions. Document and move on.
  */
 function sendProtocolError(
   ws: WebSocket,
@@ -134,12 +145,20 @@ async function handleChatSend(
     return;
   }
 
+  // Silent runs (REQ-030 auto-rename) must NOT be rejected when a normal run
+  // is already in progress for this session, and vice versa. The registry
+  // isolates them under a separate key (`${sessionId}:silent`), so threading
+  // the flag here is all that's needed to bypass the per-session mutex.
+  const clientOptions = (data.options ?? {}) as AnyRecord;
+  const silent = Boolean(clientOptions.silent);
+
   const run = chatRunRegistry.startRun({
     appSessionId: sessionId,
     provider,
     providerSessionId: session.provider_session_id,
     connection: ws,
     userId,
+    silent,
   });
 
   if (!run) {
@@ -152,7 +171,6 @@ async function handleChatSend(
     return;
   }
 
-  const clientOptions = (data.options ?? {}) as AnyRecord;
   const command = typeof data.content === 'string' ? data.content : '';
 
   // The provider runtimes receive the provider-native session id (that is the
@@ -176,7 +194,7 @@ async function handleChatSend(
     // Safety net: a runtime that crashed (or resolved) without emitting its
     // terminal `complete` would otherwise leave the session stuck in
     // "processing" forever on every connected client.
-    chatRunRegistry.completeRun(sessionId, { exitCode: 1 });
+    chatRunRegistry.completeRun(sessionId, { exitCode: 1, silent });
   }
 }
 

@@ -10,6 +10,7 @@ import { useChatProviderState } from '../hooks/useChatProviderState';
 import { useChatSessionState } from '../hooks/useChatSessionState';
 import { useChatRealtimeHandlers } from '../hooks/useChatRealtimeHandlers';
 import { useChatComposerState } from '../hooks/useChatComposerState';
+import { useAutoRename } from '../hooks/useAutoRename';
 import { useSessionStore } from '../../../stores/useSessionStore';
 import { isPermissionAcked, setPermissionAcked } from '../../../shared/defaults/permissionDefaults';
 import {
@@ -265,6 +266,21 @@ function ChatInterface({
     });
   }, [selectedProject, selectedSession, sendMessage, sessionStore]);
 
+  // REQ-030: auto-rename at the 10th assistant turn. `useAutoRename` exposes
+  // two entry points: `onNormalRunCompleted` (the trigger — fires the silent
+  // rename request when a NORMAL run completes and the viewed session crosses
+  // the turn threshold) and `onSilentRunCompleted` (resets the in-flight guard
+  // when the silent rename run itself finishes). Both wire into
+  // `useChatRealtimeHandlers` below.
+  // `sendMessage: (message: unknown) => void` is structurally assignable to
+  // `useAutoRename`'s narrowed `(frame: SilentRenameSendFrame) => void`
+  // (parameter contravariance — a sink accepting `unknown` accepts any frame).
+  const { onNormalRunCompleted, onSilentRunCompleted } = useAutoRename({
+    selectedSession,
+    sessionStore,
+    sendMessage,
+  });
+
   useChatRealtimeHandlers({
     subscribe,
     provider,
@@ -280,6 +296,8 @@ function ChatInterface({
     onSessionProcessing,
     onSessionIdle,
     onSessionCompleted,
+    onNormalRunCompleted,
+    onSilentRunCompleted,
     onWebSocketReconnect: handleWebSocketReconnect,
     sessionStore,
   });

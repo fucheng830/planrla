@@ -263,6 +263,8 @@ export type NormalizedMessage = {
   toolUseResult?: unknown;
   sequence?: number;
   rowid?: number;
+  /** Set by silent runs (REQ-030); frontend drops these frames. */
+  silent?: boolean;
   [key: string]: unknown;
 };
 

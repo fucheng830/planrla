@@ -41,6 +41,22 @@ interface UseChatRealtimeHandlersArgs {
   onSessionProcessing?: MarkSessionProcessing;
   onSessionIdle?: MarkSessionIdle;
   onSessionCompleted?: MarkSessionCompleted;
+  /**
+   * REQ-030: invoked when a NORMAL (user-visible) run completes successfully.
+   * Wire `useAutoRename`'s turn trigger here — it fires the silent rename
+   * request when the viewed session crosses the 10-turn threshold. Only
+   * called for non-silent runs; carries the run's success flag so the
+   * trigger can ignore failed/aborted completions.
+   */
+  onNormalRunCompleted?: (sessionId: string | null | undefined, success: boolean) => void;
+  /**
+   * REQ-030: invoked when a silent run completes (server tags every frame
+   * of a silent run with `silent: true`). Wire `useAutoRename`'s in-flight
+   * reset here. Silent runs bypass ALL UI side-effects (no badge, no bell,
+   * no transcript refresh) — this narrow channel is the only signal they
+   * surface to the frontend.
+   */
+  onSilentRunCompleted?: (sessionId: string | null | undefined, success: boolean) => void;
   onWebSocketReconnect?: () => void;
   sessionStore: SessionStore;
 }
@@ -73,6 +89,8 @@ export function useChatRealtimeHandlers({
   onSessionProcessing,
   onSessionIdle,
   onSessionCompleted,
+  onNormalRunCompleted,
+  onSilentRunCompleted,
   onWebSocketReconnect,
   sessionStore,
 }: UseChatRealtimeHandlersArgs) {
@@ -205,6 +223,10 @@ export function useChatRealtimeHandlers({
 
       // --- Streaming: buffer for performance ---
       if (msg.kind === 'stream_delta') {
+        // REQ-030: silent runs (server tags every frame with silent:true) must
+        // never touch the UI — drop before buffering so the background rename
+        // agent's tokens don't bleed into the user's conversation view.
+        if (msg.silent) return;
         const text = (msg.content as string) || '';
         if (!text) return;
         // 性能测点 first-token:仅在每个响应的「首条 stream_delta」触发一次,
@@ -237,6 +259,8 @@ export function useChatRealtimeHandlers({
       }
 
       if (msg.kind === 'stream_end') {
+        // REQ-030: silent runs never finalize a visible stream.
+        if (msg.silent) return;
         if (streamTimerRef.current) {
           clearTimeout(streamTimerRef.current);
           streamTimerRef.current = null;
@@ -274,6 +298,17 @@ export function useChatRealtimeHandlers({
       // --- UI side effects for specific kinds ---
       switch (msg.kind) {
         case 'complete': {
+          // REQ-030: silent completion. Fire the narrow silent-observer
+          // callback (ChatInterface wires useAutoRename here so it can reset
+          // its in-flight guard), then bail — no badge, no bell, no idle
+          // transition, no transcript refresh. The user never saw this turn,
+          // so none of those may fire. Non-silent runs fall through to the
+          // existing complete handling unchanged below.
+          if (msg.silent) {
+            onSilentRunCompleted?.(sid, msg.success !== false);
+            break;
+          }
+
           // Flush any remaining streaming state
           if (streamTimerRef.current) {
             clearTimeout(streamTimerRef.current);
@@ -308,6 +343,13 @@ export function useChatRealtimeHandlers({
 
           const terminalStatus = msg.success === false ? 'failed' : 'completed';
           onSessionCompleted?.(sid, terminalStatus);
+
+          // REQ-030: normal-run completion also arms the auto-rename trigger
+          // (fires a silent rename request only when the viewed session
+          // crosses the 10-turn threshold and is still untitled). The badge
+          // above already flipped on `onSessionCompleted`; this is an
+          // additional, narrower signal that must NOT fire for silent runs.
+          onNormalRunCompleted?.(sid, terminalStatus === 'completed');
 
           // REQ-042: 任务完成系统通知（仅失焦时打扰）
           if (sid && terminalStatus === 'completed'
@@ -456,6 +498,8 @@ export function useChatRealtimeHandlers({
     onSessionProcessing,
     onSessionIdle,
     onSessionCompleted,
+    onNormalRunCompleted,
+    onSilentRunCompleted,
     onWebSocketReconnect,
     sessionStore,
     flushBatch,

@@ -8,7 +8,13 @@
  * The hint is prepended to the outgoing user message (same prepend pattern as
  * /search) so the agent sees the current sessionId and the instruction in
  * one block.
+ *
+ * REQ-030: the literal hint head (`SILENT_RENAME_HINT_PREFIX`) is shared with
+ * the backend history filter via `shared/renameCommand` so the synthetic
+ * silent-rename user message can be detected identically on reload.
  */
+import { SILENT_RENAME_HINT_PREFIX } from '../../../../shared/renameCommand';
+
 export function parseRenameCommand(rawInput: string): { explicitTitle?: string } {
   const trimmed = rawInput.trim();
   const match = trimmed.match(/^\/rename(?:\s+(.*))?$/i);
@@ -20,8 +26,9 @@ export function parseRenameCommand(rawInput: string): { explicitTitle?: string }
 }
 
 export function formatRenameCommandHint(sessionId: string, explicitTitle?: string): string {
+  const head = `${SILENT_RENAME_HINT_PREFIX}${sessionId})] `;
   if (explicitTitle) {
-    return `[重命名当前会话 (id=${sessionId})] 请用标题"${explicitTitle}"调用 set_session_title 工具写入。`;
+    return `${head}请用标题"${explicitTitle}"调用 set_session_title 工具写入。`;
   }
-  return `[重命名当前会话 (id=${sessionId})] 请根据本次对话内容生成一个简短(5-15 字)的标题,并调用 set_session_title 工具写入。`;
+  return `${head}请根据本次对话内容生成一个简短(5-15 字)的标题,并调用 set_session_title 工具写入。`;
 }
