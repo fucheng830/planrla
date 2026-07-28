@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,7 @@ import CommandPalette from '../command-palette/CommandPalette';
 import { KanbanProvider } from '../kanban';
 import { MarkdownEditorProvider, useMarkdownEditor } from '../markdown-editor/context/MarkdownEditorContext';
 import { MarkdownEditorPanel } from '../markdown-editor/view/MarkdownEditorPanel';
+import { BackgroundTasksPanel } from '../background-tasks/view/BackgroundTasksPanel';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/PaletteOpsContext';
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
@@ -71,6 +72,9 @@ function AppContentInner() {
   const { isMobile } = useDeviceSettings({ trackPWA: false });
   const { ws, sendMessage, subscribe } = useWebSocket();
   const openMarkdownEditor = useOpenMarkdownEditor();
+  // REQ-046 — 后台任务面板 open 状态(受控,Sidebar 入口按钮触发)。
+  const [showBackgroundTasks, setShowBackgroundTasks] = useState(false);
+  const handleOpenBackgroundTasks = useCallback(() => setShowBackgroundTasks(true), []);
 
   const {
     processingSessions,
@@ -235,7 +239,7 @@ function AppContentInner() {
     <div className="fixed inset-0 flex bg-background" style={{ top: 'env(titlebar-area-height, 0px)', bottom: 'var(--keyboard-height, 0px)' }}>
       {!isMobile ? (
         <div className="h-full flex-shrink-0 border-r border-border/50">
-          <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} />
+          <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} onOpenBackgroundTasks={handleOpenBackgroundTasks} />
         </div>
       ) : (
         <div
@@ -261,7 +265,7 @@ function AppContentInner() {
             onClick={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
           >
-            <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} />
+            <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} onOpenBackgroundTasks={handleOpenBackgroundTasks} />
           </div>
         </div>
       )}
@@ -306,6 +310,12 @@ function AppContentInner() {
 
       {/* REQ-047 — Markdown 编辑器面板(portal,自管 open 状态) */}
       <MarkdownEditorPanel />
+
+      {/* REQ-046 — 后台任务面板(受控,Sidebar 入口触发) */}
+      <BackgroundTasksPanel
+        isOpen={showBackgroundTasks}
+        onClose={() => setShowBackgroundTasks(false)}
+      />
     </div>
   );
 }
