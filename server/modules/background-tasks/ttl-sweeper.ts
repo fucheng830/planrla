@@ -42,8 +42,14 @@ export function runSweep(deps: SweeperDeps): void {
       }
       return;
     }
-    if (idleFor > STUCK_TIMEOUT_MS) {
-      // 10min 无活动 → failed(stuck),无论之前 running/idle。不重置 lastActivityAt。
+    // REQ-046 §6:挂死超时(idle/stuck)只对 kanban/bash。chat/a2a 不进 sweeper
+    // 的 idle/stuck —— 它们 lastActivityAt 只在 start/complete 更新(chat 跑中
+    // stream_delta 不调 upsertChat),用 10min 超时会误杀跑中的长对话。
+    // chat/a2a 由各自完成机制转态(chat-run-registry completeRun → idle;
+    // a2a task state → completed/failed)。
+    const subjectToHangTimeout = task.type === 'kanban' || task.type === 'bash';
+    if (idleFor > STUCK_TIMEOUT_MS && subjectToHangTimeout) {
+      // 10min 无活动 → failed(stuck)。不重置 lastActivityAt。
       const failed: BackgroundTask = {
         ...task,
         status: 'failed' as BackgroundTaskStatus,
@@ -54,7 +60,7 @@ export function runSweep(deps: SweeperDeps): void {
       deps.emit(failed, id);
       return;
     }
-    if (idleFor > IDLE_THRESHOLD_MS && task.status === 'running') {
+    if (idleFor > IDLE_THRESHOLD_MS && task.status === 'running' && subjectToHangTimeout) {
       // 5min 无活动 + running → idle(橙色"无活动")。不重置 lastActivityAt。
       const idled: BackgroundTask = { ...task, status: 'idle' as BackgroundTaskStatus };
       deps.tasks.set(id, idled);
