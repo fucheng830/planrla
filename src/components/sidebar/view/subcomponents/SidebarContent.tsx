@@ -157,6 +157,8 @@ type SidebarContentProps = {
   currentVersion: string;
   onShowVersionModal: () => void;
   onShowSettings: () => void;
+  // REQ-047 — 打开 Markdown 编辑器入口(可选,无则不渲染按钮)。
+  onOpenMarkdownEditor?: () => void;
   projectListProps: SidebarProjectListProps;
   completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
@@ -197,6 +199,7 @@ export default function SidebarContent({
   currentVersion,
   onShowVersionModal,
   onShowSettings,
+  onOpenMarkdownEditor,
   projectListProps,
   completedSessions,
   t,
@@ -250,6 +253,7 @@ export default function SidebarContent({
         isRefreshing={isRefreshing}
         onCreateProject={onCreateProject}
         onCollapseSidebar={onCollapseSidebar}
+        onOpenMarkdownEditor={onOpenMarkdownEditor}
         t={t}
       />
 

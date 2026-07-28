@@ -59,6 +59,8 @@ export type SidebarProps = {
   settingsInitialTab: string;
   onCloseSettings: () => void;
   isMobile: boolean;
+  // REQ-047 — 侧边栏"打开 Markdown 编辑器"入口回调。可选,不传则不渲染入口按钮。
+  onOpenMarkdownEditor?: () => void;
 };
 
 export type SessionViewModel = {

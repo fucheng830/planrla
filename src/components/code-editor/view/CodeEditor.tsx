@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { unifiedMergeView } from '@codemirror/merge';
 import type { Extension } from '@codemirror/state';
-import { useMemo, useState } from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePaletteOps } from '../../../contexts/PaletteOpsContext';
 import { useCodeEditorDocument } from '../hooks/useCodeEditorDocument';
@@ -17,6 +17,23 @@ import CodeEditorLoadingState from './subcomponents/CodeEditorLoadingState';
 import CodeEditorSurface from './subcomponents/CodeEditorSurface';
 import CodeEditorBinaryFile from './subcomponents/CodeEditorBinaryFile';
 
+// REQ-047 — AI 选段改插槽(可选)。仅 MarkdownEditorPanel 传入 enableAiEdit=true,
+// 其余 caller 不传,行为完全不变。slot 由 useAiSelectionEdit 提供。
+export type AiEditSlot = {
+  onSelectionChange: (selectedText: string, range: { from: number; to: number } | null) => void;
+  trigger: () => void;
+  submitPrompt: (instruction: string) => void;
+  cancelInstruction: () => void;
+  cancelRun: () => void;
+  accept: () => void;
+  reject: () => void;
+  status: 'idle' | 'running' | 'success' | 'error';
+  hasSelection: boolean;
+  hasAiDiff: boolean;
+  awaitingInstruction: boolean;
+  message: string | null;
+};
+
 type CodeEditorProps = {
   file: CodeEditorFile;
   onClose: () => void;
@@ -25,17 +42,41 @@ type CodeEditorProps = {
   isExpanded?: boolean;
   onToggleExpand?: (() => void) | null;
   onPopOut?: (() => void) | null;
+  // REQ-047 — 启用 AI 选段改(默认 false,现有 caller 零影响)。
+  enableAiEdit?: boolean;
+  aiEditSlot?: AiEditSlot | null;
+  // REQ-047 — 当 AI diff 拒绝时,父组件用此还原编辑器内容到 old_full。
+  onRevertContent?: (content: string) => void;
+  // REQ-047 — 工具栏右侧自定义渲染位(放 AiEditControls)。
+  toolbarExtra?: React.ReactNode;
+  // REQ-047 — AI 接受后清 diffInfo 但保留 content(避免重新读盘覆盖 AI 改后的文本)。
+  retainContentOnDiffClear?: boolean;
 };
 
-export default function CodeEditor({
-  file,
-  onClose,
-  projectPath,
-  isSidebar = false,
-  isExpanded = false,
-  onToggleExpand = null,
-  onPopOut = null,
-}: CodeEditorProps) {
+// REQ-047 — 命令式句柄。MarkdownEditorPanel 用 ref 操作编辑器内容(AI 接受/拒绝)。
+// 现有 caller 不用 ref(默认导出仍是 forwardRef 组件,ref 可选)。
+export type CodeEditorHandle = {
+  getContent: () => string;
+  setContent: (content: string) => void;
+};
+
+const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
+  {
+    file,
+    onClose,
+    projectPath,
+    isSidebar = false,
+    isExpanded = false,
+    onToggleExpand = null,
+    onPopOut = null,
+    enableAiEdit = false,
+    aiEditSlot = null,
+    onRevertContent = null,
+    toolbarExtra = null,
+    retainContentOnDiffClear = false,
+  },
+  ref,
+) {
   const { t } = useTranslation('codeEditor');
   const paletteOps = usePaletteOps();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -63,7 +104,17 @@ export default function CodeEditor({
   } = useCodeEditorDocument({
     file,
     projectPath,
+    retainContentOnDiffClear,
   });
+
+  // REQ-047 — 暴露命令式句柄给 MarkdownEditorPanel(AI 接受/拒绝操作 content)。
+  // contentRef 让回调始终读最新 content(避免闭包陷阱)。
+  const contentRef = useRef(content);
+  contentRef.current = content;
+  useImperativeHandle(ref, () => ({
+    getContent: () => contentRef.current,
+    setContent: (next: string) => setContent(next),
+  }), [setContent]);
 
   const isMarkdownFile = useMemo(() => {
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -111,11 +162,36 @@ export default function CodeEditor({
     [file, isExpanded, isSidebar, onPopOut, onToggleExpand, showDiff, t],
   );
 
+  // REQ-047 — AI 选段改:监听 CodeMirror 选区变化,通知 useAiSelectionEdit。
+  // 仅 enableAiEdit 时构造;updateListener 是稳定的 extension(API),ref 持有 slot。
+  const aiSlotRef = useRef(aiEditSlot);
+  aiSlotRef.current = aiEditSlot;
+  const aiSelectionExtension = useMemo<Extension | null>(() => {
+    if (!enableAiEdit) return null;
+    return EditorView.updateListener.of((viewUpdate) => {
+      const slot = aiSlotRef.current;
+      if (!slot) return;
+      // 只在选区变化时上报,避免每个 doc 变更都触发。
+      if (!viewUpdate.selectionSet && !viewUpdate.docChanged) return;
+      const { from, to } = viewUpdate.state.selection.main;
+      if (from === to) {
+        slot.onSelectionChange('', null);
+        return;
+      }
+      const selectedText = viewUpdate.state.sliceDoc(from, to);
+      slot.onSelectionChange(selectedText, { from, to });
+    });
+  }, [enableAiEdit]);
+
   const extensions = useMemo(() => {
     const allExtensions: Extension[] = [
       ...getLanguageExtensions(file.name),
       ...toolbarPanelExtension,
     ];
+
+    if (aiSelectionExtension) {
+      allExtensions.push(aiSelectionExtension);
+    }
 
     if (file.diffInfo && showDiff && file.diffInfo.old_string !== undefined) {
       allExtensions.push(
@@ -137,6 +213,7 @@ export default function CodeEditor({
 
     return allExtensions;
   }, [
+    aiSelectionExtension,
     file.diffInfo,
     file.name,
     minimapExtension,
@@ -221,6 +298,12 @@ export default function CodeEditor({
             }}
           />
 
+          {(enableAiEdit || toolbarExtra) && (
+            <div className="flex items-center gap-2 border-b border-border bg-card/40 px-3 py-1.5">
+              {toolbarExtra}
+            </div>
+          )}
+
           {saveError && (
             <div className="border-b border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
               {saveError}
@@ -250,4 +333,6 @@ export default function CodeEditor({
       </div>
     </>
   );
-}
+});
+
+export default CodeEditor;

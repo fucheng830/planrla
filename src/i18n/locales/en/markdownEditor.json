@@ -1,0 +1,29 @@
+{
+  "title": "Markdown 编辑器",
+  "open": "编辑 Markdown 文档",
+  "openTooltip": "打开 Markdown 编辑器(手动 + AI 选段改)",
+  "close": "关闭",
+  "refresh": "刷新",
+  "loading": "加载中…",
+  "empty": "当前项目没有 Markdown 文件",
+  "loadError": "加载失败",
+  "files": "文件",
+  "preview": "预览",
+  "edit": "编辑",
+  "ai": {
+    "trigger": "AI 改",
+    "triggerTooltip": "选中文本后让 AI 改写选段",
+    "promptLabel": "改写指令",
+    "promptPlaceholder": "润色,保持 md 格式,不超原文长度(留空用默认)",
+    "submit": "改写",
+    "cancel": "取消",
+    "running": "AI 改写中…",
+    "success": "已生成改写,请审阅",
+    "error": "AI 改写失败,请重试",
+    "accept": "接受",
+    "reject": "拒绝",
+    "selectFirst": "请先选中文本",
+    "diffHint": "以下是 AI 改写预览,接受会替换选段"
+  },
+  "dirtyHint": "未保存"
+}
