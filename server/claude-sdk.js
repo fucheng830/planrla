@@ -30,6 +30,7 @@ import { sessionsService } from './modules/providers/index.js';
 import { providerAuthService } from './modules/providers/index.js';
 import { createCompleteMessage, createNormalizedMessage } from './shared/utils.js';
 import { createKanbanClaudeHooks } from './modules/kanban/index.js';
+import { setBashKillDeps, backgroundTaskRegistry, parseBashTaskEvent } from './modules/background-tasks/index.js';
 
 const activeSessions = new Map();
 const pendingToolApprovals = new Map();
@@ -271,6 +272,21 @@ function removeSession(sessionId) {
 function getSession(sessionId) {
   return activeSessions.get(sessionId);
 }
+
+// REQ-046 §13 ③ — bash kill 调度器:把 (appSessionId, bashTaskId) → SDK stopTask。
+// 方案 C 精简版:不扫进程、不 abort 整个 run,直接调 queryInstance.stopTask。
+// sessionManager(addSession/getSession)已存 queryInstance 句柄(L247)。
+setBashKillDeps({
+  resolveQueryInstance: (appSessionId) => {
+    const session = getSession(appSessionId);
+    // SDK queryInstance 提供 stopTask(taskId): Promise<void>(sdk.d.ts:2403-2408)
+    const instance = session?.instance;
+    if (instance && typeof instance.stopTask === 'function') {
+      return { stopTask: (taskId) => instance.stopTask(taskId) };
+    }
+    return undefined;
+  },
+});
 
 /**
  * Gets all active session IDs
@@ -751,6 +767,36 @@ async function queryClaudeSDK(command, options = {}, ws) {
 
       // Use adapter to normalize SDK events into NormalizedMessage[]
       const normalized = sessionsService.normalizeMessage('claude', transformedMessage, sid);
+
+      // REQ-046 §13 ⑤ — background bash 解析(parser 纯函数 + registry.apply)。
+      // provider 的 normalizeMessage 对 `type:'system'` 的 task_* 消息**不产出归一化项**
+      // (只识别 content_block_delta / role:user|assistant / tool_use 等),所以 task_*
+      // 会在归一化时被丢。这里为 task_* system 消息合成一个伪 NormalizedMessage(带
+      // subtype + task_id + patch + status)再喂 parser。parser 识别这些字段产出 op。
+      try {
+        const ctx = { priorTaskIds: backgroundTaskRegistry.bashTaskIdsForSession(sid || '') };
+        const rawType = transformedMessage?.type || transformedMessage?.message?.type;
+        const rawSubtype = transformedMessage?.subtype;
+        if (rawType === 'system' && typeof rawSubtype === 'string' &&
+            (rawSubtype === 'task_started' || rawSubtype === 'task_updated' || rawSubtype === 'task_notification')) {
+          const synth = createNormalizedMessage({
+            kind: 'task_notification',
+            sessionId: sid,
+            provider: 'claude',
+            ...transformedMessage, // 透传 task_id / tool_use_id / patch / status
+          });
+          const op = parseBashTaskEvent(synth, ctx);
+          if (op && op.kind !== 'noop') backgroundTaskRegistry.apply(op);
+        }
+        for (const msg of normalized) {
+          const op = parseBashTaskEvent(msg, ctx);
+          if (op && op.kind !== 'noop') backgroundTaskRegistry.apply(op);
+        }
+      } catch (bgErr) {
+        // 单坏 event 不崩主循环
+        console.warn('[bg-task] bash parse failed:', bgErr?.message || bgErr);
+      }
+
       for (const msg of normalized) {
         // Preserve parentToolUseId from SDK wrapper for subagent tool grouping
         if (transformedMessage.parentToolUseId && !msg.parentToolUseId) {

@@ -15,6 +15,7 @@ import { createWorktreeGit } from '@/modules/kanban/git-worktree.js';
 import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 import { resolveToolApproval } from '@/claude-sdk.js';
 import type { Task } from '@/modules/kanban/types.js';
+import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -30,12 +31,33 @@ export function getKanban() {
 // no-ops (route-driven mutations already broadcast themselves).
 let taskBroadcaster: ((rootId: string, task: Task) => void) | null = null;
 
+// REQ-046:templateStore 引用,emitTaskChanged 推 registry 时查 stageTotal。
+// buildKanban() 里赋值;在此之前为 undefined(emitTaskChanged 容错跳过)。
+let templateStoreRef: ReturnType<typeof createTemplateStore> | null = null;
+
 function emitTaskChanged(task: Task): void {
   if (!taskBroadcaster) return;
   try {
     taskBroadcaster(task.rootId, task);
   } catch {
     // Broadcast must never break the runner.
+  }
+  // REQ-046 §13 ② — 顺带把 kanban task 推给统一后台任务 registry(REQ-034 aux 实时)。
+  // best-effort:registry 内部容错,失败不影响 kanban。
+  try {
+    const tpl = templateStoreRef?.getTaskTemplate(task.taskTemplateId);
+    const stageTotal = tpl?.stages?.length;
+    backgroundTaskRegistry.upsertKanban({
+      taskId: task.id,
+      rootId: task.rootId,
+      title: task.taskTemplateName || `Task #${task.taskNumber}`,
+      status: task.status,
+      stage: task.currentStageIndex + 1,
+      stageTotal,
+      aux: task.auxFlags,
+    });
+  } catch {
+    /* registry 容错 */
   }
 }
 
@@ -46,6 +68,7 @@ function buildKanban() {
   // 自动创建 kanban-templates 子目录(见 TPL_SUBDIR)
   const templateDir = path.join(os.homedir(), '.planrla');
   const templateStore = createTemplateStore({ dir: templateDir });
+  templateStoreRef = templateStore;
   const resolveRootPath = (rootId: string): string | null => projectsDb.getProjectPathById(rootId);
   // W4: worktree setup. mcpBaseUrl mirrors index.js SERVER_PORT default (env contract).
   const serverPort = process.env.SERVER_PORT || '3001';

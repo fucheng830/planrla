@@ -30,14 +30,15 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { spawnFns } from '../providers/spawn-fns.js';
-import { sessionsDb } from '../database/index.js';
-import { sessionsService } from '../providers/services/sessions.service.js';
-import { chatRunRegistry } from '../websocket/services/chat-run-registry.service.js';
+import { spawnFns } from '@/modules/providers/index.js';
+import { sessionsDb } from '@/modules/database/index.js';
+import { sessionsService } from '@/modules/providers/index.js';
+import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { RealtimeClientConnection, LLMProvider } from '@/shared/types.js';
 import { A2AInboundWriter } from './a2a-inbound-writer.js';
 import { sanitizeInbound } from './inbound.security.js';
 import { filterOutbound } from './a2a-client.service.js';
+import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 
 /** Upper bound on a single inbound run. Mirrors a2a-client DEFAULT_TIMEOUT_MS. */
 const RESPONSE_TIMEOUT_MS = 120_000;
@@ -57,6 +58,30 @@ interface Task {
 
 /** In-memory task store. Sufficient for S2 (single-process loopback). */
 const tasks = new Map<string, Task>();
+
+/**
+ * REQ-046 §13 ④ — 把 a2a task 推给统一后台任务 registry。
+ * - S4 spawn 成功(provider 入参 + newSessionId 给出)→ 标 completed + spawnedAppSessionId,
+ *   后续执行归那个 session 的 chat task。
+ * - S2/S3 inbound(委派已有 session)→ 跟 a2a 协议 state,不传 spawnedAppSessionId。
+ * best-effort:registry 内部容错,失败不影响 a2a。
+ */
+function emitA2AToRegistry(
+  task: Task,
+  opts: { provider?: LLMProvider; spawnedAppSessionId?: string } = {},
+): void {
+  try {
+    backgroundTaskRegistry.upsertA2A({
+      taskId: task.id,
+      state: task.state,
+      provider: opts.provider,
+      text: task.text || task.error || 'a2a task',
+      spawnedAppSessionId: opts.spawnedAppSessionId,
+    });
+  } catch {
+    /* registry 容错 */
+  }
+}
 
 /**
  * No-op websocket stub. chatRunRegistry.startRun requires a
@@ -178,6 +203,7 @@ export async function handleTaskSend(
     const taskId = randomUUID();
     const task: Task = { id: taskId, state: 'working', text: '', createdAt: Date.now() };
     tasks.set(taskId, task);
+    emitA2AToRegistry(task, { provider });
 
     const writer = new A2AInboundWriter();
     try {
@@ -209,9 +235,13 @@ export async function handleTaskSend(
         task.state = 'completed';
         task.text = filterOutbound(result.text);
       }
+      // §13 ④:S4 spawn 成功 → completed + spawnedAppSessionId(后续归 chat task)。
+      // 即使 result.error,spawn 已交付 newSessionId,仍把执行权指给 chat。
+      emitA2AToRegistry(task, { provider, spawnedAppSessionId: newSessionId });
     } catch (e: unknown) {
       task.state = 'failed';
       task.error = e instanceof Error ? e.message : String(e);
+      emitA2AToRegistry(task, { provider, spawnedAppSessionId: newSessionId });
     } finally {
       // Same release path as the S3 delegation branch (completeRun, not run.end).
       chatRunRegistry.completeRun(newSessionId, { exitCode: task.state === 'failed' ? 1 : 0 });
@@ -258,6 +288,8 @@ export async function handleTaskSend(
   const taskId = randomUUID();
   const task: Task = { id: taskId, state: 'working', text: '', createdAt: Date.now() };
   tasks.set(taskId, task);
+  // §13 ④:S2/S3 inbound 委派已有 session → 跟 a2a state,不转 chat task。
+  emitA2AToRegistry(task, { provider: session.provider as LLMProvider | undefined });
 
   const writer = new A2AInboundWriter();
   try {
@@ -297,9 +329,11 @@ export async function handleTaskSend(
       task.state = 'completed';
       task.text = filterOutbound(result.text);
     }
+    emitA2AToRegistry(task, { provider: session.provider as LLMProvider | undefined });
   } catch (e: unknown) {
     task.state = 'failed';
     task.error = e instanceof Error ? e.message : String(e);
+    emitA2AToRegistry(task, { provider: session.provider as LLMProvider | undefined });
   } finally {
     // Release the shared lock. completeRun flips status to completed and emits
     // a synthetic terminal `complete` on the run's writer (dropped by our stub
@@ -320,5 +354,6 @@ export function cancelTask(taskId: string): boolean {
   const t = tasks.get(taskId);
   if (!t) return false;
   t.state = 'canceled';
+  emitA2AToRegistry(t);
   return true;
 }

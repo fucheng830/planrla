@@ -70,6 +70,14 @@ import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
+import { broadcastTaskUpdated } from './utils/kanban-websocket.js';
+import { broadcastBackgroundTaskChanged } from './utils/background-task-websocket.js';
+import {
+  backgroundTaskRegistry,
+  setBashKillDeps,
+  killBashTask,
+  backgroundTaskRoutes,
+} from './modules/background-tasks/index.js';
 import { createA2aMcpRouter } from './modules/a2a/mcp.route.js';
 import { createA2aInboundRouter } from './modules/a2a/inbound.route.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
@@ -170,6 +178,14 @@ app.locals.wss = wss;
 // REQ-034: runner/scheduler-driven kanban task changes (status transitions,
 // aux flags) broadcast over WS so the board updates in realtime.
 getKanban().setTaskBroadcaster((rootId, task) => broadcastTaskUpdated(wss, rootId, task));
+
+// REQ-046: 后台任务管理面板 — registry 广播器 + TTL sweeper(挂载点见下方 router mount)。
+// killBash 调度器:bash-kill.ts 的 killBashTask(它再调 claude-sdk.js 注入的 SDK stopTask)。
+backgroundTaskRegistry.setDeps({
+  broadcast: (task, taskId) => broadcastBackgroundTaskChanged(wss, task, taskId),
+  killBash: (appSessionId, bashTaskId) => killBashTask(appSessionId, bashTaskId),
+});
+backgroundTaskRegistry.startSweeper();
 
 app.use(cors({ exposedHeaders: ['X-Refreshed-Token'] }));
 app.use(express.json({
@@ -285,6 +301,9 @@ app.use('/api/projects', authenticateToken, projectModuleRoutes);
 
 // Kanban API Routes (protected) — assembled module sharing the central auth.db
 app.use('/api/tasks', authenticateToken, getKanban().router);
+
+// REQ-046 Background Tasks API (protected) — list + stop/dismiss
+app.use('/api/background-tasks', authenticateToken, backgroundTaskRoutes);
 
 // Git API Routes (protected)
 app.use('/api/git', authenticateToken, gitRoutes);

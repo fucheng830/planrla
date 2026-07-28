@@ -4,6 +4,7 @@ import { projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { generateDisplayName } from '@/modules/projects/index.js';
 import { ChatSessionWriter } from '@/modules/websocket/services/chat-session-writer.service.js';
 import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/services/websocket-state.service.js';
+import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 import type {
   LLMProvider,
   NormalizedMessage,
@@ -185,6 +186,19 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     run.status = 'completed';
     run.completedAt = Date.now();
     evictRunLater(run.appSessionId, run.silent);
+    // REQ-046 §13 ② — chat run 完成 → registry 转 idle(面板显示"无活动/已完成")。
+    // 非 silent 才进面板。TTL sweeper 会最终清掉。
+    if (!run.silent) {
+      try {
+        backgroundTaskRegistry.upsertChat({
+          appSessionId: run.appSessionId,
+          provider: run.provider,
+          running: false,
+        });
+      } catch {
+        /* registry 容错 */
+      }
+    }
   }
 
   run.events.push(outbound);
@@ -291,6 +305,19 @@ export const chatRunRegistry = {
     });
 
     runs.set(key, run);
+    // REQ-046 §13 ② — chat 类型 proxy(引用 run-registry,不重造 lock)。
+    // 非 silent 的 run 才进面板(silent = REQ-030 auto-rename,面板不可见)。
+    if (!run.silent) {
+      try {
+        backgroundTaskRegistry.upsertChat({
+          appSessionId: run.appSessionId,
+          provider: run.provider,
+          running: true,
+        });
+      } catch {
+        /* registry 容错 */
+      }
+    }
     return run;
   },
 
