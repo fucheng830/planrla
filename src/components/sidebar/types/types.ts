@@ -61,6 +61,8 @@ export type SidebarProps = {
   isMobile: boolean;
   // REQ-047 — 侧边栏"打开 Markdown 编辑器"入口回调。可选,不传则不渲染入口按钮。
   onOpenMarkdownEditor?: () => void;
+  // REQ-046 — 侧边栏"打开后台任务面板"入口回调。可选,不传则不渲染入口按钮。
+  onOpenBackgroundTasks?: () => void;
 };
 
 export type SessionViewModel = {

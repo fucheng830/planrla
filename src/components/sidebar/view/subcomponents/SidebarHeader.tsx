@@ -1,4 +1,4 @@
-import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText } from 'lucide-react';
+import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText, Activity } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +30,8 @@ type SidebarHeaderProps = {
   onCollapseSidebar: () => void;
   // REQ-047 — 打开 Markdown 编辑器(可选)。无则不渲染入口按钮。
   onOpenMarkdownEditor?: () => void;
+  // REQ-046 — 打开后台任务面板(可选)。无则不渲染入口按钮。
+  onOpenBackgroundTasks?: () => void;
   t: TFunction;
 };
 
@@ -52,6 +54,7 @@ export default function SidebarHeader({
   onCreateProject,
   onCollapseSidebar,
   onOpenMarkdownEditor,
+  onOpenBackgroundTasks,
   t,
 }: SidebarHeaderProps) {
   const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
@@ -118,6 +121,18 @@ export default function SidebarHeader({
                 aria-label={mdOpenLabel}
               >
                 <FileText className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {onOpenBackgroundTasks && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                onClick={onOpenBackgroundTasks}
+                title="后台任务"
+                aria-label="后台任务"
+              >
+                <Activity className="h-3.5 w-3.5" />
               </Button>
             )}
             <Button
