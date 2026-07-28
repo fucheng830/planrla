@@ -9,3 +9,5 @@
 
 export { createKanbanClaudeHooks, formatInjectedAnswers } from '@/modules/kanban/claude-hooks.js';
 export type { HookApprovalDecision, KanbanClaudeHooksDeps } from '@/modules/kanban/claude-hooks.js';
+// REQ-046 — background-tasks 模块需要 TaskAuxFlags 做 kanban 详情类型。
+export type { TaskAuxFlags, PendingAskUser, TaskStatus } from '@/modules/kanban/types.js';
