@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle, Button, Input } from '@/shared/view/ui';
 import { useKanban } from './KanbanContext';
@@ -10,9 +10,17 @@ export function CreateTaskDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('kanban');
   const { tasks, templates, createTask } = useKanban();
   const [tplId, setTplId] = useState(templates[0]?.id ?? '');
+  const defaultTplId = useMemo(() => templates[0]?.id ?? '', [templates]);
   const [input, setInput] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dependencies, setDependencies] = useState<string[]>([]);
+
+  // Templates load async and can be resynced after a failed create; if the
+  // current selection is no longer in the list, fall back to the first one so
+  // we never submit a stale template id.
+  useEffect(() => {
+    setTplId((prev) => (templates.some((tp) => tp.id === prev) ? prev : defaultTplId));
+  }, [templates, defaultTplId]);
 
   // Dependency candidates: live tasks only (terminal ones already satisfy a
   // dependency, so offering them would be noise).

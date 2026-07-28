@@ -149,9 +149,12 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
         setTasks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'createTask failed');
+        // A 404 here usually means the template was deleted server-side and our
+        // cached list is stale; resync so the dialog stops offering dead ids.
+        void reloadTemplates();
       }
     },
-    [rootId],
+    [rootId, reloadTemplates],
   );
 
   const moveTask = useCallback(

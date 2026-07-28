@@ -23,7 +23,10 @@ export const kanbanApi = {
     options?: { priority?: TaskPriority; dependencies?: string[] },
   ): Promise<Task> => {
     const res = await api.post('/tasks', { rootId, taskTemplateId, input, ...options });
-    if (!res.ok) throw new Error(`createTask failed: ${res.status}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `createTask failed: ${res.status}`);
+    }
     const data = (await res.json()) as TaskResponse;
     return data.task;
   },
