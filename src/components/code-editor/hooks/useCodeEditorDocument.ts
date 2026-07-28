@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../../utils/api';
 import type { CodeEditorFile } from '../types/types';
 import { isBinaryFile } from '../utils/binaryFile';
@@ -6,6 +6,10 @@ import { isBinaryFile } from '../utils/binaryFile';
 type UseCodeEditorDocumentParams = {
   file: CodeEditorFile;
   projectPath?: string;
+  // REQ-047 — AI 选段改接受后,父组件清 file.diffInfo 但要求保留当前编辑器内容
+  // (即 AI 改后的 new_full)。默认 false:清 diffInfo 触发重新读盘(旧行为)。
+  // true:diffInfo 从有变无时跳过 reload,保留 content。
+  retainContentOnDiffClear?: boolean;
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -16,13 +20,15 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
-export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocumentParams) => {
+export const useCodeEditorDocument = ({ file, projectPath, retainContentOnDiffClear = false }: UseCodeEditorDocumentParams) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isBinary, setIsBinary] = useState(false);
+  // REQ-047 — 追踪上一次 diffInfo 是否存在,以便在"从有变无 + retain"时跳过 reload。
+  const hadDiffRef = useRef(Boolean(file.diffInfo && file.diffInfo.old_string !== undefined && file.diffInfo.new_string !== undefined));
   // `fileProjectId` is the DB primary key passed down from the editor sidebar;
   // the fallback to `projectPath` preserves older callers that didn't yet
   // propagate the identifier.
@@ -31,9 +37,17 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
   const fileName = file.name;
   const fileDiffNewString = file.diffInfo?.new_string;
   const fileDiffOldString = file.diffInfo?.old_string;
+  const hasDiffNow = Boolean(file.diffInfo && fileDiffNewString !== undefined && fileDiffOldString !== undefined);
 
   useEffect(() => {
     const loadFileContent = async () => {
+      // REQ-047 — AI 选段改"接受"路径:父组件把 file.diffInfo 清空,但要求保留
+      // 当前编辑器内容(AI 改后的 new_full)。此时跳过整个 load,避免读盘覆盖。
+      if (retainContentOnDiffClear && hadDiffRef.current && !hasDiffNow) {
+        hadDiffRef.current = hasDiffNow;
+        return;
+      }
+      hadDiffRef.current = hasDiffNow;
       try {
         setLoading(true);
         setIsBinary(false);
@@ -46,8 +60,8 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
         }
 
         // Diff payload may already include full old/new snapshots, so avoid disk read.
-        if (file.diffInfo && fileDiffNewString !== undefined && fileDiffOldString !== undefined) {
-          setContent(fileDiffNewString);
+        if (hasDiffNow) {
+          setContent(fileDiffNewString as string);
           setLoading(false);
           return;
         }
@@ -73,7 +87,7 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
     };
 
     loadFileContent();
-  }, [file.diffInfo, file.name, fileDiffNewString, fileDiffOldString, fileName, filePath, fileProjectId]);
+  }, [file.diffInfo, file.name, fileDiffNewString, fileDiffOldString, fileName, filePath, fileProjectId, hasDiffNow, retainContentOnDiffClear]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);

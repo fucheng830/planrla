@@ -765,6 +765,34 @@ app.get('/api/projects/:projectId/files', authenticateToken, async (req, res) =>
     }
 });
 
+// REQ-047 — Markdown 文件树(递归,白名单 .md/.markdown/.txt)。
+// 给侧边栏 Markdown 编辑面板浏览用。与 /files(单层,全类型)互补。
+app.get('/api/projects/:projectId/markdown-files', authenticateToken, async (req, res) => {
+    try {
+        const projectRoot = await projectsDb.getProjectPathById(req.params.projectId);
+        if (!projectRoot) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        try {
+            await fsPromises.access(projectRoot);
+        } catch {
+            return res.status(404).json({ error: `Project path not found: ${projectRoot}` });
+        }
+
+        // realpath 防符号链接越界:解析后必须仍在项目根 realpath 内。
+        const realRoot = await fsPromises.realpath(projectRoot);
+        const tree = await scanMarkdownTree(realRoot, realRoot, 0);
+        res.json(tree);
+    } catch (error) {
+        console.error('[ERROR] markdown-files scan:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// REQ-047 递归扫描 .md/.markdown/.txt 文件树(实现见 server/utils/markdownTree.js)。
+import { scanMarkdownTree } from './utils/markdownTree.js';
+
 // ============================================================================
 // FILE OPERATIONS API ENDPOINTS
 // ============================================================================

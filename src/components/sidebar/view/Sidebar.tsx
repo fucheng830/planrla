@@ -35,6 +35,7 @@ function Sidebar({
   settingsInitialTab,
   onCloseSettings,
   isMobile,
+  onOpenMarkdownEditor,
 }: SidebarProps) {
   const { t } = useTranslation(['sidebar', 'common']);
   const { isPWA } = useDeviceSettings({ trackMobile: false });
@@ -296,6 +297,7 @@ function Sidebar({
             currentVersion={currentVersion}
             onShowVersionModal={() => setShowVersionModal(true)}
             onShowSettings={onShowSettings}
+            onOpenMarkdownEditor={onOpenMarkdownEditor}
             projectListProps={projectListProps}
             completedSessions={completedSessions}
             t={t}

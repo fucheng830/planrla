@@ -23,6 +23,8 @@ import enChat from './locales/en/chat.json';
 import enCodeEditor from './locales/en/codeEditor.json';
 // eslint-disable-next-line import-x/order
 import enKanban from './locales/en/kanban.json';
+// REQ-047 — Markdown 编辑器 namespace(其他语言 fallback en)
+import enMarkdownEditor from './locales/en/markdownEditor.json';
 
 import koCommon from './locales/ko/common.json';
 import koSettings from './locales/ko/settings.json';
@@ -40,6 +42,7 @@ import zhChat from './locales/zh-CN/chat.json';
 import zhCodeEditor from './locales/zh-CN/codeEditor.json';
 // eslint-disable-next-line import-x/order
 import zhKanban from './locales/zh-CN/kanban.json';
+import zhMarkdownEditor from './locales/zh-CN/markdownEditor.json';
 
 import jaCommon from './locales/ja/common.json';
 import jaSettings from './locales/ja/settings.json';
@@ -126,6 +129,7 @@ i18n
         chat: enChat,
         codeEditor: enCodeEditor,
         kanban: enKanban,
+        markdownEditor: enMarkdownEditor,
       },
       ko: {
         common: koCommon,
@@ -143,6 +147,7 @@ i18n
         chat: zhChat,
         codeEditor: zhCodeEditor,
         kanban: zhKanban,
+        markdownEditor: zhMarkdownEditor,
       },
       ja: {
         common: jaCommon,
@@ -215,7 +220,7 @@ i18n
     debug: false,
 
     // Namespaces - load only what's needed
-    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'kanban'],
+    ns: ['common', 'settings', 'auth', 'sidebar', 'chat', 'codeEditor', 'kanban', 'markdownEditor'],
     defaultNS: 'common',
 
     // Key separator for nested keys (default: '.')

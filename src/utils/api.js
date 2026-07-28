@@ -139,6 +139,9 @@ export const api = {
     }),
   readFile: (projectId, filePath) =>
     authenticatedFetch(`/api/projects/${projectId}/file?filePath=${encodeURIComponent(filePath)}`),
+  // REQ-047 — 递归 .md/.markdown/.txt 文件树(给侧边栏 Markdown 编辑面板)。
+  getMarkdownFiles: (projectId) =>
+    authenticatedFetch(`/api/projects/${projectId}/markdown-files`),
   readFileBlob: (projectId, filePath) =>
     authenticatedFetch(`/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`),
   saveFile: (projectId, filePath, content) =>

@@ -1,5 +1,6 @@
-import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
+import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText } from 'lucide-react';
 import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 import { Button, Input, Tooltip } from '../../../../shared/view/ui';
 import { IS_PLATFORM } from '../../../../constants/config';
@@ -27,6 +28,8 @@ type SidebarHeaderProps = {
   isRefreshing: boolean;
   onCreateProject: () => void;
   onCollapseSidebar: () => void;
+  // REQ-047 — 打开 Markdown 编辑器(可选)。无则不渲染入口按钮。
+  onOpenMarkdownEditor?: () => void;
   t: TFunction;
 };
 
@@ -48,9 +51,14 @@ export default function SidebarHeader({
   isRefreshing,
   onCreateProject,
   onCollapseSidebar,
+  onOpenMarkdownEditor,
   t,
 }: SidebarHeaderProps) {
   const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
+  // REQ-047 — Markdown 编辑器入口文案(独立 namespace)。
+  const { t: tMd } = useTranslation('markdownEditor');
+  const mdTooltip = onOpenMarkdownEditor ? tMd('openTooltip') : '';
+  const mdOpenLabel = tMd('open');
   const searchPlaceholder = searchMode === 'sessions'
     ? t('search.sessionsPlaceholder')
     : searchMode === 'archived'
@@ -100,6 +108,18 @@ export default function SidebarHeader({
                 }`}
               />
             </Button>
+            {onOpenMarkdownEditor && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                onClick={onOpenMarkdownEditor}
+                title={mdTooltip}
+                aria-label={mdOpenLabel}
+              >
+                <FileText className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

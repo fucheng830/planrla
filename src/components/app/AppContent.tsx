@@ -6,6 +6,8 @@ import Sidebar from '../sidebar/view/Sidebar';
 import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
 import { KanbanProvider } from '../kanban';
+import { MarkdownEditorProvider, useMarkdownEditor } from '../markdown-editor/context/MarkdownEditorContext';
+import { MarkdownEditorPanel } from '../markdown-editor/view/MarkdownEditorPanel';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/PaletteOpsContext';
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
@@ -45,9 +47,21 @@ const parseStartedAt = (value: unknown): number | undefined => {
 export default function AppContent() {
   return (
     <PaletteOpsProvider>
-      <AppContentInner />
+      <MarkdownEditorProvider>
+        <AppContentInner />
+      </MarkdownEditorProvider>
     </PaletteOpsProvider>
   );
+}
+
+// REQ-047 — 暴露打开 Markdown 编辑器的 callback(给 Sidebar 入口按钮用)。
+// 独立组件以使用 useMarkdownEditor(必须在 Provider 内)。
+function useOpenMarkdownEditor() {
+  const { open } = useMarkdownEditor();
+  return (projectId: string | null | undefined, fullPath: string | undefined) => {
+    if (!projectId || !fullPath) return;
+    open(projectId, fullPath);
+  };
 }
 
 function AppContentInner() {
@@ -56,6 +70,7 @@ function AppContentInner() {
   const { t } = useTranslation('common');
   const { isMobile } = useDeviceSettings({ trackPWA: false });
   const { ws, sendMessage, subscribe } = useWebSocket();
+  const openMarkdownEditor = useOpenMarkdownEditor();
 
   const {
     processingSessions,
@@ -153,6 +168,11 @@ function AppContentInner() {
     refreshProjects: refreshProjectsSilently,
   });
 
+  // REQ-047 — Sidebar 入口:打开当前选中项目的 Markdown 编辑器。
+  const handleOpenMarkdownEditor = useCallback(() => {
+    openMarkdownEditor(selectedProject?.projectId, selectedProject?.fullPath);
+  }, [openMarkdownEditor, selectedProject?.projectId, selectedProject?.fullPath]);
+
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
       return undefined;
@@ -215,7 +235,7 @@ function AppContentInner() {
     <div className="fixed inset-0 flex bg-background" style={{ top: 'env(titlebar-area-height, 0px)', bottom: 'var(--keyboard-height, 0px)' }}>
       {!isMobile ? (
         <div className="h-full flex-shrink-0 border-r border-border/50">
-          <Sidebar {...sidebarSharedProps} />
+          <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} />
         </div>
       ) : (
         <div
@@ -241,7 +261,7 @@ function AppContentInner() {
             onClick={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
           >
-            <Sidebar {...sidebarSharedProps} />
+            <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} />
           </div>
         </div>
       )}
@@ -283,6 +303,9 @@ function AppContentInner() {
         onOpenSettings={() => openSettings()}
         onShowTab={setActiveTab}
       />
+
+      {/* REQ-047 — Markdown 编辑器面板(portal,自管 open 状态) */}
+      <MarkdownEditorPanel />
     </div>
   );
 }
