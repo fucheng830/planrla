@@ -20,6 +20,13 @@ type CreateAppSessionResult = {
   projectPath: string;
 };
 
+type ForkSessionResult = {
+  sessionId: string;
+  provider: LLMProvider;
+  projectPath: string;
+  jsonlPath: string;
+};
+
 type ArchivedSessionListItem = {
   sessionId: string;
   provider: LLMProvider;
@@ -78,6 +85,63 @@ function resolveProjectDisplayName(
  * class, keeping normalization/history call sites decoupled from implementation
  * file layout.
  */
+
+type SessionRowLike = {
+  session_id: string;
+  provider: string;
+  provider_session_id: string | null;
+  project_path: string | null;
+  jsonl_path: string | null;
+};
+
+/**
+ * REQ-049 fork: reads a copied transcript snapshot directly from disk for a
+ * session that has no provider_session_id yet (brand-new fork). Provider
+ * readers expose an optional `fetchHistoryByJsonlPath`; providers that do not
+ * implement it simply return an empty history (fork still opens, history blank).
+ * Silent rename turns (REQ-030) are stripped so a forked snapshot never surfaces
+ * them either.
+ */
+async function readForkHistory(
+  session: SessionRowLike,
+  options: Pick<FetchHistoryOptions, 'limit' | 'offset'>,
+): Promise<FetchHistoryResult> {
+  const empty: FetchHistoryResult = {
+    messages: [],
+    total: 0,
+    hasMore: false,
+    offset: options.offset ?? 0,
+    limit: options.limit ?? null,
+  };
+  if (!session.jsonl_path) {
+    return empty;
+  }
+
+  const provider = session.provider as LLMProvider;
+  const reader = providerRegistry.resolveProvider(provider).sessions;
+  if (typeof reader.fetchHistoryByJsonlPath !== 'function') {
+    return empty;
+  }
+
+  try {
+    const result = await reader.fetchHistoryByJsonlPath(session.jsonl_path, {
+      limit: options.limit ?? null,
+      offset: options.offset ?? 0,
+    });
+    return {
+      ...result,
+      messages: filterSilentRenameTurns(result.messages).map((message) => ({
+        ...message,
+        sessionId: session.session_id,
+      })),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[sessionsService] fork history read failed for ${session.session_id}:`, message);
+    return empty;
+  }
+}
+
 export const sessionsService = {
   /**
    * Lists provider ids that can load session history and normalize live messages.
@@ -141,6 +205,72 @@ export const sessionsService = {
   },
 
   /**
+   * REQ-049 fork: copies a conversation's full transcript into a brand-new app
+   * session so the user can branch off without touching the original.
+   *
+   * The new row keeps the same provider and project_path, starts with
+   * provider_session_id = NULL (the first message after fork spawns a fresh
+   * provider-native session — Codex-faithful semantics), and points
+   * jsonl_path at the streamed copy of the source transcript. The original
+   * session row and transcript file are never mutated.
+   */
+  async forkSession(sourceSessionId: string): Promise<ForkSessionResult> {
+    const source = sessionsDb.getSessionById(sourceSessionId);
+    if (!source) {
+      throw new AppError(`Session "${sourceSessionId}" was not found.`, {
+        code: 'SESSION_NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+
+    // Sessions whose transcript has not been written to disk yet (e.g. a
+    // brand-new chat whose first message is still streaming) have nothing to
+    // fork — refusing here keeps the forked conversation from opening empty.
+    if (!source.jsonl_path) {
+      throw new AppError(
+        `Session "${sourceSessionId}" has no transcript yet and cannot be forked.`,
+        { code: 'SESSION_NOT_FORKABLE', statusCode: 409 },
+      );
+    }
+
+    const provider = source.provider as LLMProvider;
+    const projectPath = source.project_path ?? '';
+    const newSessionId = randomUUID();
+
+    // createAppSession inserts the row (provider_session_id=NULL, jsonl_path=NULL)
+    // and ensures the project path exists, mirroring the brand-new chat path.
+    sessionsDb.createAppSession(newSessionId, provider, projectPath);
+
+    // Stream-copy the transcript (libuv thread, does not load the file into
+    // memory — safe for large conversations) into the same project directory
+    // so the provider's session-synchronizer/watcher ignores it (it only
+    // scans known provider file-name shapes).
+    const forkedJsonlPath = path.join(path.dirname(source.jsonl_path), `${newSessionId}.jsonl`);
+    try {
+      await fsp.copyFile(source.jsonl_path, forkedJsonlPath);
+    } catch (error) {
+      // Roll back the optimistic DB row so a failed copy never leaves an empty
+      // session behind.
+      sessionsDb.deleteSessionById(newSessionId);
+      throw error;
+    }
+
+    sessionsDb.updateSessionJsonlPath(newSessionId, forkedJsonlPath);
+
+    const sourceName = source.custom_name?.trim();
+    if (sourceName) {
+      sessionsDb.updateSessionCustomName(newSessionId, `${sourceName} · fork`);
+    }
+
+    return {
+      sessionId: newSessionId,
+      provider,
+      projectPath,
+      jsonlPath: forkedJsonlPath,
+    };
+  },
+
+  /**
    * Fetches persisted history by app session id.
    *
    * Provider and provider-specific lookup hints are resolved from the indexed
@@ -164,6 +294,12 @@ export const sessionsService = {
     // App-created sessions that never produced a provider transcript yet
     // (e.g. first message still streaming) simply have no history.
     if (!session.provider_session_id) {
+      // REQ-049 fork: an app session with provider_session_id IS NULL but a
+      // jsonl_path set is a forked conversation whose history is the copied
+      // transcript snapshot. Read it directly (no provider id to filter on).
+      if (session.jsonl_path) {
+        return readForkHistory(session, options);
+      }
       return {
         messages: [],
         total: 0,

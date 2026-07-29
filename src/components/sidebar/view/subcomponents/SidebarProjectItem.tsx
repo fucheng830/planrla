@@ -38,6 +38,8 @@ type SidebarProjectItemProps = {
     sessionTitle: string,
     provider: LLMProvider,
   ) => void;
+  // REQ-049 fork — optional, plumbed down to SidebarSessionItem.
+  onForkSession?: (sessionId: string) => void;
   onLoadMoreSessions: (projectId: string) => void;
   activeSessions: SessionActivityMap;
   completedSessions: CompletedSessionNotificationMap;
@@ -79,6 +81,7 @@ export default function SidebarProjectItem({
   onDeleteProject,
   onSessionSelect,
   onDeleteSession,
+  onForkSession,
   onLoadMoreSessions,
   activeSessions,
   completedSessions,
@@ -415,6 +418,7 @@ export default function SidebarProjectItem({
         onProjectSelect={onProjectSelect}
         onSessionSelect={onSessionSelect}
         onDeleteSession={onDeleteSession}
+        onForkSession={onForkSession}
         onLoadMoreSessions={onLoadMoreSessions}
         onNewSession={onNewSession}
         t={t}

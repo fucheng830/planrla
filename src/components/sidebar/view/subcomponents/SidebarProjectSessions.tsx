@@ -33,6 +33,8 @@ type SidebarProjectSessionsProps = {
     sessionTitle: string,
     provider: LLMProvider,
   ) => void;
+  // REQ-049 fork — optional; when absent the fork button is not rendered.
+  onForkSession?: (sessionId: string) => void;
   onLoadMoreSessions: (projectId: string) => void;
   onNewSession: (project: Project) => void;
   t: TFunction;
@@ -76,6 +78,7 @@ export default function SidebarProjectSessions({
   onProjectSelect,
   onSessionSelect,
   onDeleteSession,
+  onForkSession,
   onLoadMoreSessions,
   onNewSession,
   t,
@@ -141,6 +144,7 @@ export default function SidebarProjectSessions({
                 onProjectSelect={onProjectSelect}
                 onSessionSelect={onSessionSelect}
                 onDeleteSession={onDeleteSession}
+                onForkSession={onForkSession}
                 t={t}
               />
             );

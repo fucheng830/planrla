@@ -289,6 +289,104 @@ function stripAnsiFormatting(text: string): string {
   return text.replace(/\u001B\[[0-9;?]*[ -/]*[@-~]/g, '');
 }
 
+/**
+ * REQ-049 fork: streams a copied transcript snapshot line-by-line without the
+ * provider-session-id filter that `getSessionMessages` applies. The fork copy
+ * is an app-owned whole-file snapshot, so every record belongs to the forked
+ * conversation.
+ */
+async function readJsonlFileRaw(filePath: string): Promise<AnyRecord[]> {
+  const records: AnyRecord[] = [];
+  const fileStream = fs.createReadStream(filePath);
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    if (!line.trim()) {
+      continue;
+    }
+    try {
+      records.push(JSON.parse(line) as AnyRecord);
+    } catch {
+      // Skip malformed JSONL lines that can happen during concurrent writes.
+    }
+  }
+
+  return records;
+}
+
+/**
+ * Shared normalization + pagination for `fetchHistory` and the fork snapshot
+ * reader. Accepts a bound `normalizeMessage` so both paths produce identical
+ * frontend-facing message shapes for the same raw transcript.
+ */
+async function normalizeClaudeRawMessages(
+  rawMessages: AnyRecord[],
+  sessionId: string,
+  limit: number | null,
+  offset: number,
+  normalizeMessage: (rawMessage: unknown, sessionId: string | null) => NormalizedMessage[],
+): Promise<FetchHistoryResult> {
+  const toolResultMap = new Map<string, ClaudeToolResult>();
+  for (const raw of rawMessages) {
+    if (raw.message?.role === 'user' && Array.isArray(raw.message?.content)) {
+      for (const part of raw.message.content) {
+        if (part.type === 'tool_result' && part.tool_use_id) {
+          toolResultMap.set(part.tool_use_id, {
+            content: part.content,
+            isError: Boolean(part.is_error),
+            subagentTools: raw.subagentTools,
+            toolUseResult: raw.toolUseResult,
+          });
+        }
+      }
+    }
+  }
+
+  const normalized: NormalizedMessage[] = [];
+  for (const raw of rawMessages) {
+    normalized.push(...normalizeMessage(raw, sessionId));
+  }
+
+  for (const msg of normalized) {
+    if (msg.kind === 'tool_use' && msg.toolId && toolResultMap.has(msg.toolId)) {
+      const toolResult = toolResultMap.get(msg.toolId);
+      if (!toolResult) {
+        continue;
+      }
+
+      msg.toolResult = {
+        content: typeof toolResult.content === 'string'
+          ? toolResult.content
+          : JSON.stringify(toolResult.content),
+        isError: toolResult.isError,
+        toolUseResult: toolResult.toolUseResult,
+      };
+      msg.subagentTools = toolResult.subagentTools;
+    }
+  }
+
+  let total = 0;
+  for (const msg of normalized) {
+    if (msg.kind !== 'tool_result') {
+      total += 1;
+    }
+  }
+  const normalizedOffset = Math.max(0, offset);
+  const normalizedLimit = limit === null ? null : Math.max(0, limit);
+  const { page, hasMore } = sliceTailPage(normalized, normalizedLimit, normalizedOffset);
+
+  return {
+    messages: page,
+    total,
+    hasMore,
+    offset: normalizedOffset,
+    limit: normalizedLimit,
+  };
+}
+
 export class ClaudeSessionsProvider implements IProviderSessions {
   /**
    * Normalizes one Claude JSONL entry or live SDK stream event into the shared
@@ -570,62 +668,31 @@ export class ClaudeSessionsProvider implements IProviderSessions {
     }
 
     const rawMessages = Array.isArray(result) ? result : (result.messages || []);
+    return normalizeClaudeRawMessages(rawMessages, sessionId, limit, offset, this.normalizeMessage.bind(this));
+  }
 
-    const toolResultMap = new Map<string, ClaudeToolResult>();
-    for (const raw of rawMessages) {
-      if (raw.message?.role === 'user' && Array.isArray(raw.message?.content)) {
-        for (const part of raw.message.content) {
-          if (part.type === 'tool_result' && part.tool_use_id) {
-            toolResultMap.set(part.tool_use_id, {
-              content: part.content,
-              isError: Boolean(part.is_error),
-              subagentTools: raw.subagentTools,
-              toolUseResult: raw.toolUseResult,
-            });
-          }
-        }
-      }
+  /**
+   * REQ-049 fork: reads a copied transcript snapshot straight from disk (no
+   * provider_session_id filter — the copy is an app-controlled whole-file
+   * snapshot). Shares normalization with `fetchHistory` so the forked view is
+   * byte-for-byte identical to the original conversation.
+   */
+  async fetchHistoryByJsonlPath(
+    jsonlPath: string,
+    options: Pick<FetchHistoryOptions, 'limit' | 'offset'> = {},
+  ): Promise<FetchHistoryResult> {
+    const { limit = null, offset = 0 } = options;
+    const forkSessionId = path.basename(jsonlPath, '.jsonl');
+
+    let rawMessages: AnyRecord[] = [];
+    try {
+      rawMessages = await readJsonlFileRaw(jsonlPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[ClaudeProvider] Failed to load fork snapshot ${jsonlPath}:`, message);
+      return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
     }
 
-    const normalized: NormalizedMessage[] = [];
-    for (const raw of rawMessages) {
-      normalized.push(...this.normalizeMessage(raw, sessionId));
-    }
-
-    for (const msg of normalized) {
-      if (msg.kind === 'tool_use' && msg.toolId && toolResultMap.has(msg.toolId)) {
-        const toolResult = toolResultMap.get(msg.toolId);
-        if (!toolResult) {
-          continue;
-        }
-
-        msg.toolResult = {
-          content: typeof toolResult.content === 'string'
-            ? toolResult.content
-            : JSON.stringify(toolResult.content),
-          isError: toolResult.isError,
-          toolUseResult: toolResult.toolUseResult,
-        };
-        msg.subagentTools = toolResult.subagentTools;
-      }
-    }
-
-    let total = 0;
-    for (const msg of normalized) {
-      if (msg.kind !== 'tool_result') {
-        total += 1;
-      }
-    }
-    const normalizedOffset = Math.max(0, offset);
-    const normalizedLimit = limit === null ? null : Math.max(0, limit);
-    const { page, hasMore } = sliceTailPage(normalized, normalizedLimit, normalizedOffset);
-
-    return {
-      messages: page,
-      total,
-      hasMore,
-      offset: normalizedOffset,
-      limit: normalizedLimit,
-    };
+    return normalizeClaudeRawMessages(rawMessages, forkSessionId, limit, offset, this.normalizeMessage.bind(this));
   }
 }

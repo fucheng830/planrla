@@ -47,6 +47,8 @@ export type SidebarProps = {
   onSessionSelect: (session: ProjectSession) => void;
   onNewSession: (project: Project) => void;
   onSessionDelete?: (sessionId: string) => void;
+  // REQ-049 fork — copies the session into a new conversation and navigates to it.
+  onSessionFork?: (sessionId: string) => void;
   onLoadMoreSessions?: (projectId: string) => Promise<void> | void;
   // `projectId` is the DB identifier; the sidebar hands it back to the parent
   // when the delete flow completes.

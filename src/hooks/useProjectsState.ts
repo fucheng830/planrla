@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
-import { api } from '../utils/api';
+import { api, authenticatedFetch } from '../utils/api';
 import type { ServerEvent } from '../contexts/WebSocketContext';
 import type {
   AppTab,
@@ -832,6 +832,42 @@ export function useProjectsState({
     }
   }, [projects, selectedProject, selectedSession]);
 
+  /**
+   * REQ-049 fork: copies a conversation into a brand-new app session and
+   * navigates to it. The server streams the source transcript to a copy on
+   * disk, inserts a new DB row (provider_session_id=NULL, jsonl_path=copy),
+   * and returns the new id. We refresh the sidebar so the forked conversation
+   * shows up in the list, then navigate. The original conversation is never
+   * touched server-side, so no local state cleanup is needed.
+   */
+  const handleSessionFork = useCallback(
+    async (sourceSessionId: string) => {
+      try {
+        const response = await authenticatedFetch(
+          `/api/providers/sessions/${encodeURIComponent(sourceSessionId)}/fork`,
+          { method: 'POST' },
+        );
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.error('[Sidebar] fork failed:', response.status, errorText);
+          return;
+        }
+        const body = (await response.json()) as { data?: { sessionId?: string } };
+        const newSessionId = body?.data?.sessionId;
+        if (!newSessionId) {
+          console.error('[Sidebar] fork returned no sessionId');
+          return;
+        }
+
+        await handleSidebarRefresh();
+        navigate(`/session/${newSessionId}`);
+      } catch (error) {
+        console.error('[Sidebar] fork error:', error);
+      }
+    },
+    [handleSidebarRefresh, navigate],
+  );
+
   const loadMoreProjectSessions = useCallback(async (projectId: string) => {
     const project = projects.find((candidate) => candidate.projectId === projectId);
     if (!project) {
@@ -907,6 +943,7 @@ export function useProjectsState({
       onSessionSelect: handleSessionSelect,
       onNewSession: handleNewSession,
       onSessionDelete: handleSessionDelete,
+      onSessionFork: handleSessionFork,
       onLoadMoreSessions: loadMoreProjectSessions,
       onProjectDelete: handleProjectDelete,
       isLoading: isLoadingProjects,
@@ -923,6 +960,7 @@ export function useProjectsState({
       handleProjectDelete,
       handleProjectSelect,
       handleSessionDelete,
+      handleSessionFork,
       loadMoreProjectSessions,
       handleSessionSelect,
       handleSidebarRefresh,
