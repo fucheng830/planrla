@@ -44,6 +44,7 @@
     "addToFavorites": "添加到收藏",
     "removeFromFavorites": "从收藏移除",
     "editSessionName": "手动编辑会话名称",
+    "forkSession": "分支新对话（保留原对话）",
     "deleteSession": "永久删除此会话",
     "a2aDelegate": "允许 A2A 委托",
     "a2aDelegateEnabled": "已允许 A2A 委托 — 点击关闭",

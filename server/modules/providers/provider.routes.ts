@@ -550,6 +550,19 @@ router.put(
   }),
 );
 
+// REQ-049 fork: copies the source transcript into a brand-new app session.
+// The new session keeps provider/project, starts with provider_session_id=NULL
+// (first message after fork spawns a fresh provider-native session), and reads
+// the copied snapshot back as read-only history.
+router.post(
+  '/sessions/:sessionId/fork',
+  asyncHandler(async (req: Request, res: Response) => {
+    const sessionId = parseSessionId(req.params.sessionId);
+    const result = await sessionsService.forkSession(sessionId);
+    res.status(201).json(createApiSuccessResponse(result));
+  }),
+);
+
 router.get(
   '/sessions/:sessionId/messages',
   asyncHandler(async (req: Request, res: Response) => {

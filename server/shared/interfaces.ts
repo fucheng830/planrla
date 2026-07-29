@@ -141,6 +141,12 @@ export interface IProviderMcp {
 export interface IProviderSessions {
   normalizeMessage(raw: unknown, sessionId: string | null): NormalizedMessage[];
   fetchHistory(sessionId: string, options?: FetchHistoryOptions): Promise<FetchHistoryResult>;
+  /**
+   * REQ-049 fork专用:按 jsonl_path 直读 transcript 快照,不过滤 provider
+   * session id(fork 副本是 app-controlled 整文件快照)。可选,未实现的
+   * provider 返空历史(fork 仍可打开新对话,只是历史视图空)。
+   */
+  fetchHistoryByJsonlPath?(jsonlPath: string, options?: Pick<FetchHistoryOptions, 'limit' | 'offset'>): Promise<FetchHistoryResult>;
 }
 
 // ---------------------------

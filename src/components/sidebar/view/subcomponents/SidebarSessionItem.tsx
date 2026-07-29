@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { Check, Edit2, Network, Trash2, X } from 'lucide-react';
+import { Check, Edit2, GitBranch, Network, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Badge, Button } from '../../../../shared/view/ui';
@@ -34,6 +34,8 @@ type SidebarSessionItemProps = {
     sessionTitle: string,
     provider: LLMProvider,
   ) => void;
+  // REQ-049 fork — optional; when absent the fork button is not rendered.
+  onForkSession?: (sessionId: string) => void;
   t: TFunction;
 };
 
@@ -81,6 +83,7 @@ export default function SidebarSessionItem({
   onProjectSelect,
   onSessionSelect,
   onDeleteSession,
+  onForkSession,
   t,
 }: SidebarSessionItemProps) {
   const sessionView = createSessionViewModel(session, currentTime, t);
@@ -138,6 +141,13 @@ export default function SidebarSessionItem({
     onDeleteSession(project.projectId, session.id, sessionView.sessionName, session.__provider);
   };
 
+  // REQ-049 fork — copies the conversation into a new session. Disabled while
+  // a run is in progress (isProcessing) to avoid copying a half-written
+  // transcript; the parent refreshes the sidebar + navigates to the fork.
+  const requestForkSession = () => {
+    onForkSession?.(session.id);
+  };
+
   return (
     <div className="group relative">
       <div className="md:hidden">
@@ -192,6 +202,19 @@ export default function SidebarSessionItem({
                 >
                   <Network className={cn('h-2.5 w-2.5', a2aExposed && 'fill-current')} />
                 </button>
+                {onForkSession && (
+                  <button
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-md bg-muted/50 text-muted-foreground transition-transform active:scale-95"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      requestForkSession();
+                    }}
+                    title={t('tooltips.forkSession', 'Fork conversation')}
+                    aria-label={t('tooltips.forkSession', 'Fork conversation')}
+                  >
+                    <GitBranch className="h-2.5 w-2.5" />
+                  </button>
+                )}
                 <button
                   className="ml-1 flex h-5 w-5 items-center justify-center rounded-md bg-red-50 opacity-70 transition-transform active:scale-95 dark:bg-red-900/20"
                   onClick={(event) => {
@@ -310,6 +333,19 @@ export default function SidebarSessionItem({
                 >
                   <Network className={cn('h-3 w-3', a2aExposed && 'fill-current')} />
                 </button>
+                {onForkSession && !isProcessing && (
+                  <button
+                    className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      requestForkSession();
+                    }}
+                    title={t('tooltips.forkSession', 'Fork conversation')}
+                    aria-label={t('tooltips.forkSession', 'Fork conversation')}
+                  >
+                    <GitBranch className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                  </button>
+                )}
                 <button
                   className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
                   onClick={(event) => {

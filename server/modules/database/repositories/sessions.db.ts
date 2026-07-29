@@ -221,6 +221,21 @@ export const sessionsDb = {
     ).run(customName, sessionId);
   },
 
+  /**
+   * REQ-049 fork: points an app-allocated session row at the copied transcript
+   * snapshot. The row is created with jsonl_path = NULL by `createAppSession`;
+   * this records the forked copy so `fetchHistory` can read it back as a
+   * read-only history snapshot.
+   */
+  updateSessionJsonlPath(sessionId: string, jsonlPath: string): void {
+    const db = getConnection();
+    db.prepare(
+      `UPDATE sessions
+       SET jsonl_path = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE session_id = ?`
+    ).run(jsonlPath, sessionId);
+  },
+
   getSessionById(sessionId: string): SessionRow | null {
     const db = getConnection();
     const row = db
