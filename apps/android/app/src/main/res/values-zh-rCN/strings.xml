@@ -151,9 +151,11 @@
     <string name="chat_new_session_title">新会话</string>
     <string name="chat_connecting_session">正在连接会话…</string>
     <string name="chat_choose_assistant">选择您的智能助手</string>
-    <string name="chat_no_messages">暂无消息</string>
+    <string name="chat_no_messages">继续您的对话</string>
     <string name="chat_select_provider">选择一个服务以开始新对话</string>
-    <string name="chat_start_conversation">在下方输入内容开始对话。</string>
+    <string name="chat_start_conversation">询问有关代码的问题、请求更改或获取开发任务的帮助。</string>
+    <string name="chat_ready_prompt">准备好使用 %1$s。请在下方开始输入您的消息。</string>
+    <string name="chat_press_to_search">按 Ctrl+K 搜索会话、文件和提交</string>
     <string name="chat_working">Claude 正在处理…</string>
     <string name="chat_model_claude_default">Claude · 默认（推荐）</string>
     <string name="chat_model_claude_sonnet">Claude · Sonnet</string>
@@ -173,7 +175,7 @@
     <string name="chat_shell">🖥️ 终端</string>
     <string name="chat_all_projects">←  全部项目</string>
     <string name="chat_new_chat">+  新建会话</string>
-    <string name="chat_input_placeholder">输入 / 使用命令，输入 @ 选择文件，或直接询问 %1$s…</string>
+    <string name="chat_input_placeholder">输入 / 调用命令，@ 选择文件，或向 %1$s 提问…</string>
     <string name="permission_mode_default">默认</string>
     <string name="permission_mode_plan">计划</string>
     <string name="permission_mode_auto_edit">自动编辑</string>

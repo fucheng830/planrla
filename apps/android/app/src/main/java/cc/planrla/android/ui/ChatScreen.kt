@@ -1006,8 +1006,6 @@ fun ChatScreen(
                 if (items.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            ProviderAvatarHeader(48, currentProvider)
-                            Spacer(Modifier.height(16.dp))
                             Text(
                                 if (sessionId == "new") stringResource(R.string.chat_choose_assistant) else stringResource(R.string.chat_no_messages),
                                 style = MaterialTheme.typography.titleMedium,
@@ -1092,6 +1090,20 @@ fun ChatScreen(
                                         confirmButton = { TextButton(onClick = { showModelPicker = false }) { Text(stringResource(R.string.settings_cancel)) } },
                                     )
                                 }
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    stringResource(R.string.chat_ready_prompt, providerDisplayName(currentProvider)),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    stringResource(R.string.chat_press_to_search),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
                             }
                         }
                     }

@@ -151,9 +151,11 @@
     <string name="chat_new_session_title">New Session</string>
     <string name="chat_connecting_session">Connecting to session…</string>
     <string name="chat_choose_assistant">Choose Your AI Assistant</string>
-    <string name="chat_no_messages">No messages yet</string>
+    <string name="chat_no_messages">Continue your conversation</string>
     <string name="chat_select_provider">Select a provider to start a new conversation</string>
-    <string name="chat_start_conversation">Start a conversation by typing below.</string>
+    <string name="chat_start_conversation">Ask questions about your code, request changes, or get help with development tasks.</string>
+    <string name="chat_ready_prompt">Ready to use %1$s. Start typing your message below.</string>
+    <string name="chat_press_to_search">Press Ctrl+K to search sessions, files, and commits</string>
     <string name="chat_working">Claude is working…</string>
     <string name="chat_model_claude_default">Claude · Default (recommended)</string>
     <string name="chat_model_claude_sonnet">Claude · Sonnet</string>
