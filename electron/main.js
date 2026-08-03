@@ -5,7 +5,7 @@
 // electron 拦截返回 API)。ESM named import 拿不到 API —— 用 createRequire 走 CJS require。
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell, Notification } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell, Notification, nativeTheme } = require('electron');
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -165,9 +165,11 @@ function createWindow() {
   // Drop the default menu bar (File/Edit/View/Window/Help) for a cleaner chrome.
   Menu.setApplicationMenu(null);
 
-  // 启动期主题色（消除闪屏）：读上次 effectiveDark 缓存；无则暗色（历史默认）
+  // 启动期主题色（消除闪屏）：优先读上次 effectiveDark 缓存；无缓存时跟随系统主题，
+  // 与渲染端 ThemeContext 的 themeMode='system' 默认值对齐，避免外壳暗色而内页亮色
+  // 造成窗口四周出现深色"黑边"。
   const cache = readThemeCache(app.getPath('userData'));
-  const effectiveDark = cache ? cache.effectiveDark : true;
+  const effectiveDark = cache ? cache.effectiveDark : nativeTheme.shouldUseDarkColors;
   const titlebarBg = effectiveDark ? '#0b1120' : '#ffffff';
   const symbolColor = effectiveDark ? '#e5e7eb' : '#374151';
   const titleBarStyle = process.platform === 'darwin' ? 'hiddenInset' : 'hidden';
