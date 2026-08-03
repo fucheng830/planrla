@@ -3,6 +3,21 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.11.0](https://github.com/fucheng830/planrla/compare/v0.10.0...v0.11.0) (2026-08-03)
+
+### New Features
+
+* **background-tasks:** 后台任务管理面板 — 四类聚合(kanban/a2a/chat/agent Bash)+ 真 kill(SDK stopTask)+ 启发式完成态 (REQ-046) ([3109aaf](https://github.com/fucheng830/planrla/commit/3109aaf))
+* **md-editor:** 侧边栏 Markdown 编辑器 — 手动编辑(源码/预览)+ AI 选段改(silent agent ≤5s),对标 Codex (REQ-047) ([48e1818](https://github.com/fucheng830/planrla/commit/48e1818))
+* **sessions:** 对话 fork — 从当前对话分支新对话,流式复制 jsonl,原对话零变化,对标 Codex /fork (REQ-049) ([a5e526e](https://github.com/fucheng830/planrla/commit/a5e526e))
+* **android:** 聊天空状态文案优化(去大头像 header + Ready/Ctrl+K 搜索提示) ([9792079](https://github.com/fucheng830/planrla/commit/9792079))
+
+### Bug Fixes
+
+* **background-tasks:** sweeper 挂死超时只对 kanban/bash,不误杀 chat/a2a 长对话 (REQ-046) ([b225236](https://github.com/fucheng830/planrla/commit/b225236))
+* **sidebar:** 补后台任务面板 UI 入口按钮(原实施漏接) (REQ-046) ([947059f](https://github.com/fucheng830/planrla/commit/947059f))
+* **kanban:** 创建任务 404 错误处理 + 模板同步(REQ-048) ([77abec7](https://github.com/fucheng830/planrla/commit/77abec7))
+
 ## [0.8.1](https://github.com/fucheng830/planrla/compare/v0.8.0...v0.8.1) (2026-07-09)
 
 ### Bug Fixes
