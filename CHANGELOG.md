@@ -3,6 +3,13 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.11.1](https://github.com/fucheng830/planrla/compare/v0.11.0...v0.11.1) (2026-08-05)
+
+### Bug Fixes
+
+* **desktop:** 启动主题跟随系统,消除外壳暗色导致的窗口黑边 ([5c78bef](https://github.com/fucheng830/planrla/commit/5c78beff1706a80f89bfbdfb3688c7661d4dd74a))
+* **titlebar:** 分隔线移至 overlay 下方,贯通整行不再被系统按钮遮挡 ([513cc25](https://github.com/fucheng830/planrla/commit/513cc25afdd0f4775136bccf75a5cacce642aa2f))
+
 ## [0.11.0](https://github.com/fucheng830/planrla/compare/v0.10.0...v0.11.0) (2026-08-03)
 
 ### New Features
