@@ -78,8 +78,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Check for updates in background (silent — only shows dialog if newer version found)
-        checkForUpdates()
+        // Check for updates in background (silent — only shows dialog if newer version found).
+        // Skip in debug builds so local迭代 doesn't get interrupted by release installers.
+        if (!cc.planrla.android.BuildConfig.DEBUG) checkForUpdates()
     }
 
     private fun checkForUpdates() {
