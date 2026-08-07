@@ -289,7 +289,11 @@ fun ConnectScreen(
         Modifier.fillMaxSize().imePadding(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Column(
                 Modifier
                     .fillMaxWidth()
