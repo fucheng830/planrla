@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
@@ -473,6 +475,10 @@ fun Sidebar(
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
             )
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
@@ -484,28 +490,42 @@ fun Sidebar(
                         }
                         matched.sortedByDescending { it.isStarred == true }
                     }
-                    if (items.isEmpty() && loading) CircularProgressIndicator(
-                        Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary
-                    )
-                    err?.let {
-                        Text(stringResource(R.string.files_error, it), Modifier.align(Alignment.Center).padding(16.dp), color = MaterialTheme.colorScheme.error)
-                    }
-                    LazyColumn(
-                        Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(filtered) { p ->
-                            ProjectCard(
-                                p,
-                                onToggleStar = vm::toggleStar,
-                                onNewSession = { onNewSession(p.projectId, p.fullPath ?: p.path) },
-                                onSession = { pid, cwd, session -> onSession(pid, cwd, session) },
-                                onRename = vm::startRename,
-                                onDelete = vm::requestDelete,
-                                onRenameProject = vm::startRenameProject,
-                                onDeleteProject = vm::requestDeleteProject,
-                            )
+                    when {
+                        items.isEmpty() && loading -> CircularProgressIndicator(
+                            Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary
+                        )
+                        err != null -> Text(
+                            stringResource(R.string.files_error, err.orEmpty()),
+                            Modifier.align(Alignment.Center).padding(16.dp),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        filtered.isEmpty() && query.isNotBlank() -> EmptyState(
+                            icon = Icons.Default.Search,
+                            title = stringResource(R.string.projects_no_matching_projects),
+                            subtitle = stringResource(R.string.projects_try_different_search),
+                        )
+                        items.isEmpty() -> EmptyState(
+                            icon = Icons.Default.Folder,
+                            title = stringResource(R.string.projects_no_projects_title),
+                            subtitle = stringResource(R.string.projects_no_projects_subtitle),
+                        )
+                        else -> LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(filtered) { p ->
+                                ProjectCard(
+                                    p,
+                                    onToggleStar = vm::toggleStar,
+                                    onNewSession = { onNewSession(p.projectId, p.fullPath ?: p.path) },
+                                    onSession = { pid, cwd, session -> onSession(pid, cwd, session) },
+                                    onRename = vm::startRename,
+                                    onDelete = vm::requestDelete,
+                                    onRenameProject = vm::startRenameProject,
+                                    onDeleteProject = vm::requestDeleteProject,
+                                )
+                            }
                         }
                     }
                 }
@@ -524,16 +544,16 @@ fun Sidebar(
                     }
                     val q = query.trim()
                     val showingSearch = q.isNotEmpty()
-                    if (showingSearch) {
-                        if (searching && search.isEmpty()) CircularProgressIndicator(
+                    when {
+                        showingSearch && searching && search.isEmpty() -> CircularProgressIndicator(
                             Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary,
                         )
-                        if (!searching && search.isEmpty()) Text(
-                            stringResource(R.string.projects_no_matches, q),
-                            Modifier.align(Alignment.Center).padding(16.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        showingSearch && search.isEmpty() -> EmptyState(
+                            icon = Icons.Default.Search,
+                            title = stringResource(R.string.projects_no_matching_conversations),
+                            subtitle = stringResource(R.string.projects_try_different_search),
                         )
-                        LazyColumn(
+                        showingSearch -> LazyColumn(
                             Modifier.fillMaxSize(),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -545,11 +565,12 @@ fun Sidebar(
                                 }
                             }
                         }
-                    } else {
-                        if (flat.isEmpty()) Text(
-                            stringResource(R.string.projects_no_conversations), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
+                        flat.isEmpty() -> EmptyState(
+                            icon = Icons.AutoMirrored.Filled.Message,
+                            title = stringResource(R.string.projects_no_conversations_title),
+                            subtitle = stringResource(R.string.projects_no_conversations_subtitle),
                         )
-                        LazyColumn(
+                        else -> LazyColumn(
                             Modifier.fillMaxSize(),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -565,16 +586,21 @@ fun Sidebar(
                     }
                 }
                 else -> {
-                    if (archived.isEmpty()) Text(
-                        stringResource(R.string.projects_no_archived_sessions), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    LazyColumn(
-                        Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(archived, key = { it.id }) { s ->
-                            ArchivedRow(s) { vm.restoreSession(s.id) }
+                    if (archived.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.Default.Archive,
+                            title = stringResource(R.string.projects_no_archived_title),
+                            subtitle = stringResource(R.string.projects_no_archived_subtitle),
+                        )
+                    } else {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(archived, key = { it.id }) { s ->
+                                ArchivedRow(s) { vm.restoreSession(s.id) }
+                            }
                         }
                     }
                 }
@@ -621,6 +647,37 @@ private fun FooterRow(icon: ImageVector, label: String, color: Color, onClick: (
             Spacer(Modifier.width(12.dp))
             Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = color)
         }
+    }
+}
+
+@Composable
+private fun EmptyState(icon: ImageVector, title: String, subtitle: String) {
+    Column(
+        Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
@@ -827,6 +884,7 @@ private fun ProjectCard(
     onRenameProject: (Project) -> Unit,
     onDeleteProject: (Project) -> Unit,
 ) {
+    var expanded by rememberSaveable(p.projectId) { mutableStateOf(true) }
     val sessions = p.sessions.orEmpty()
     val starColor = if (p.isStarred == true) StarYellow else MaterialTheme.colorScheme.onSurfaceVariant
     val starBorder = if (p.isStarred == true) StarYellow.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
@@ -837,7 +895,10 @@ private fun ProjectCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
     ) {
         Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 // Folder icon — rounded square with primary bg (matches web w-8 h-8 rounded-lg)
                 Box(
                     Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
@@ -891,8 +952,16 @@ private fun ProjectCard(
                     onClick = { onDeleteProject(p) },
                     contentDescription = stringResource(R.string.settings_delete),
                 )
+                Spacer(Modifier.width(4.dp))
+                // Expand/collapse chevron
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = stringResource(if (expanded) R.string.projects_collapse_project else R.string.projects_expand_project),
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            if (sessions.isNotEmpty()) {
+            if (expanded && sessions.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 sessions.forEachIndexed { index, s ->
                     if (index > 0) Spacer(Modifier.height(4.dp))
