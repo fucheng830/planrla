@@ -218,9 +218,12 @@
     <string name="files_saved_to_downloads">Saved to Downloads: %1$s</string>
     <string name="files_download_failed">Download failed: %1$s</string>
     <string name="projects_untitled_provider_session">Untitled %1$s Session</string>
-    <string name="projects_tab_projects">📁 Projects</string>
-    <string name="projects_tab_conversations">💬 Conversations</string>
-    <string name="projects_tab_archive">🗃 Archive</string>
+    <string name="projects_tab_projects">Projects</string>
+    <string name="projects_tab_conversations">Conversations</string>
+    <string name="projects_tab_archive">Archive</string>
+    <string name="projects_refresh">Refresh</string>
+    <string name="projects_close">Close</string>
+    <string name="projects_clear_search">Clear search</string>
     <string name="projects_search_projects">Search projects…</string>
     <string name="projects_search_conversations">Search conversations…</string>
     <string name="projects_no_matches">No matches for “%1$s”</string>

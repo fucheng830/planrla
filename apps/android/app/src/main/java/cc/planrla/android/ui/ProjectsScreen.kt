@@ -22,10 +22,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -47,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -381,7 +397,7 @@ fun Sidebar(
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     .clickable { vm.load() },
                 contentAlignment = Alignment.Center,
-            ) { Text("↻", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+            ) { Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.projects_refresh), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) }
             Spacer(Modifier.width(4.dp))
             // Close button
             Box(
@@ -389,7 +405,7 @@ fun Sidebar(
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     .clickable(onClick = onClose),
                 contentAlignment = Alignment.Center,
-            ) { Text("✕", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+            ) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.projects_close), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) }
         }
         // Segmented tab control — matches web's flex rounded-lg bg-muted/50 p-0.5
         Row(
@@ -400,9 +416,9 @@ fun Sidebar(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 .padding(2.dp),
         ) {
-            SidebarTab(stringResource(R.string.projects_tab_projects), tab == 0, Modifier.weight(1f)) { tab = 0 }
-            SidebarTab(stringResource(R.string.projects_tab_conversations), tab == 1, Modifier.weight(1f)) { tab = 1 }
-            SidebarTab(stringResource(R.string.projects_tab_archive), tab == 2, Modifier.weight(1f)) { tab = 2 }
+            SidebarTab(Icons.Default.Folder, stringResource(R.string.projects_tab_projects), tab == 0, Modifier.weight(1f)) { tab = 0 }
+            SidebarTab(Icons.AutoMirrored.Filled.Message, stringResource(R.string.projects_tab_conversations), tab == 1, Modifier.weight(1f)) { tab = 1 }
+            SidebarTab(Icons.Default.Archive, stringResource(R.string.projects_tab_archive), tab == 2, Modifier.weight(1f)) { tab = 2 }
         }
         Spacer(Modifier.height(6.dp))
         if (tab == 0 || tab == 1) {
@@ -416,7 +432,14 @@ fun Sidebar(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     )
                 },
-                leadingIcon = { Text("🔍", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).clickable { vm.setQuery("") }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.projects_clear_search), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else null,
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
@@ -526,13 +549,13 @@ fun Sidebar(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             Spacer(Modifier.height(8.dp))
             // Report Issue (link)
-            FooterRow("🐛", stringResource(R.string.projects_report_issue), MaterialTheme.colorScheme.onSurface) {}
+            FooterRow(Icons.Default.BugReport, stringResource(R.string.projects_report_issue), MaterialTheme.colorScheme.onSurface) {}
             Spacer(Modifier.height(4.dp))
             // Join Community (link)
-            FooterRow("💬", stringResource(R.string.projects_join_community), MaterialTheme.colorScheme.onSurface) {}
+            FooterRow(Icons.Default.Forum, stringResource(R.string.projects_join_community), MaterialTheme.colorScheme.onSurface) {}
             Spacer(Modifier.height(4.dp))
             // Settings
-            FooterRow("⚙️", stringResource(R.string.settings_title), MaterialTheme.colorScheme.onSurface, onClick = onOpenSettings)
+            FooterRow(Icons.Default.Settings, stringResource(R.string.settings_title), MaterialTheme.colorScheme.onSurface, onClick = onOpenSettings)
             Spacer(Modifier.height(8.dp))
             // Version brand line
             Text(
@@ -547,7 +570,7 @@ fun Sidebar(
 }
 
 @Composable
-private fun FooterRow(icon: String, label: String, color: Color, onClick: (() -> Unit)? = null) {
+private fun FooterRow(icon: ImageVector, label: String, color: Color, onClick: (() -> Unit)? = null) {
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .let { m -> if (onClick != null) m.clickable(onClick = onClick) else m },
@@ -558,7 +581,7 @@ private fun FooterRow(icon: String, label: String, color: Color, onClick: (() ->
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(icon, style = MaterialTheme.typography.bodyMedium)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = color)
             Spacer(Modifier.width(12.dp))
             Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = color)
         }
@@ -566,21 +589,27 @@ private fun FooterRow(icon: String, label: String, color: Color, onClick: (() ->
 }
 
 @Composable
-private fun SidebarTab(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Text(
-        label,
+private fun SidebarTab(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
         modifier
             .clip(RoundedCornerShape(6.dp))
             .background(if (selected) MaterialTheme.colorScheme.surface else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
-        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(4.dp))
+        Text(
+            label,
+            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @Composable
@@ -641,11 +670,7 @@ private fun SearchResultRow(s: SessionInfo, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(8.dp))
         ProviderBadge(s.provider)
-        Text(
-            "🔎",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -703,7 +728,7 @@ private fun ProjectCard(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("📁", style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
@@ -727,7 +752,12 @@ private fun ProjectCard(
                         .clickable { onToggleStar(p) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (p.isStarred == true) "★" else "☆", color = starColor, style = MaterialTheme.typography.bodyMedium)
+                    Icon(
+                        if (p.isStarred == true) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = starColor,
+                    )
                 }
                 Spacer(Modifier.width(4.dp))
                 // Edit button
@@ -737,7 +767,7 @@ private fun ProjectCard(
                         .clickable { onRenameProject(p) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("✎", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.files_rename), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.width(4.dp))
                 // Delete button
@@ -747,7 +777,7 @@ private fun ProjectCard(
                         .clickable { onDeleteProject(p) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("🗑", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.settings_delete), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                 }
             }
             if (sessions.isNotEmpty()) {
@@ -786,8 +816,8 @@ private fun SessionRow(
         revealWidth = 140.dp,
         onClick = onClick,
         actions = {
-            ActionButton(stringResource(R.string.files_rename), "✎", MaterialTheme.colorScheme.primary, onRename)
-            ActionButton(stringResource(R.string.settings_delete), "🗑", MaterialTheme.colorScheme.error, onDelete)
+            ActionButton(stringResource(R.string.files_rename), Icons.Default.Edit, MaterialTheme.colorScheme.primary, onRename)
+            ActionButton(stringResource(R.string.settings_delete), Icons.Default.Delete, MaterialTheme.colorScheme.error, onDelete)
         },
     ) {
         Row(
@@ -868,7 +898,7 @@ private fun SwipeToReveal(
 @Composable
 private fun RowScope.ActionButton(
     label: String,
-    icon: String,
+    icon: ImageVector,
     color: Color,
     onClick: () -> Unit,
 ) {
@@ -877,7 +907,7 @@ private fun RowScope.ActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(icon, color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp), tint = Color.White)
         Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
     }
 }

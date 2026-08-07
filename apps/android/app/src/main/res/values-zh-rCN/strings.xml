@@ -218,9 +218,12 @@
     <string name="files_saved_to_downloads">已保存到下载目录：%1$s</string>
     <string name="files_download_failed">下载失败：%1$s</string>
     <string name="projects_untitled_provider_session">未命名 %1$s 会话</string>
-    <string name="projects_tab_projects">📁 项目</string>
-    <string name="projects_tab_conversations">💬 会话</string>
-    <string name="projects_tab_archive">🗃 归档</string>
+    <string name="projects_tab_projects">项目</string>
+    <string name="projects_tab_conversations">会话</string>
+    <string name="projects_tab_archive">归档</string>
+    <string name="projects_refresh">刷新</string>
+    <string name="projects_close">关闭</string>
+    <string name="projects_clear_search">清空搜索</string>
     <string name="projects_search_projects">搜索项目…</string>
     <string name="projects_search_conversations">搜索会话…</string>
     <string name="projects_no_matches">没有匹配“%1$s”的结果</string>
