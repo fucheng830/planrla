@@ -1,5 +1,6 @@
 package cc.planrla.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -91,6 +93,7 @@ import kotlin.math.roundToInt
 
 private val ClaudeCoral = Color(0xFFD97757)
 private val StarYellow = Color(0xFFCA8A04) // yellow-600 (web text-yellow-600)
+private val RestoreGreen = Color(0xFF059669) // emerald-600
 
 class ProjectsViewModel : ViewModel() {
     private val _items = MutableStateFlow<List<Project>>(emptyList())
@@ -284,6 +287,17 @@ private fun localizeProjectLoadError(message: String?): String {
 private fun parseEpoch(iso: String?): Long = iso?.let {
     runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull()
 } ?: 0L
+
+/** Compact relative time for sidebar rows: <1m, Xm, Xhr, Xd. */
+private fun formatCompactAge(epochMs: Long): String {
+    if (epochMs <= 0L) return ""
+    val diffMin = ((System.currentTimeMillis() - epochMs) / (1000 * 60)).toInt()
+    if (diffMin < 1) return "<1m"
+    if (diffMin < 60) return "${diffMin}m"
+    val diffHr = diffMin / 60
+    if (diffHr < 24) return "${diffHr}hr"
+    return "${diffHr / 24}d"
+}
 
 @Composable
 fun Sidebar(
@@ -509,7 +523,11 @@ fun Sidebar(
                             Modifier.align(Alignment.Center).padding(16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             items(search, key = { it.id }) { s ->
                                 val (pid, cwd) = sessionIndex[s.id] ?: ("" to null)
                                 SearchResultRow(s) {
@@ -521,7 +539,11 @@ fun Sidebar(
                         if (flat.isEmpty()) Text(
                             stringResource(R.string.projects_no_conversations), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             items(flat, key = { it.second.id }) { (p, s) ->
                                 ConversationRow(
                                     s, p.displayName ?: p.path ?: p.projectId,
@@ -536,7 +558,11 @@ fun Sidebar(
                     if (archived.isEmpty()) Text(
                         stringResource(R.string.projects_no_archived_sessions), Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    LazyColumn(Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         items(archived, key = { it.id }) { s ->
                             ArchivedRow(s) { vm.restoreSession(s.id) }
                         }
@@ -614,88 +640,169 @@ private fun SidebarTab(icon: ImageVector, label: String, selected: Boolean, modi
 
 @Composable
 private fun ConversationRow(s: SessionInfo, project: String, selected: Boolean, unread: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val age = formatCompactAge(parseEpoch(s.lastActivity))
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+    val bgColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surface
+    Surface(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = bgColor,
+        border = BorderStroke(1.dp, borderColor),
     ) {
-        ProviderAvatar(s.provider, 24)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                s.summary?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
-                style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                project, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        ProviderBadge(s.provider)
-        if (unread) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(
-                Modifier.size(8.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(MaterialTheme.colorScheme.error)
-            )
+                Modifier.size(20.dp).clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                ProviderAvatar(s.provider, 14)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        s.summary?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (age.isNotEmpty()) {
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            age,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
+                    if (unread) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier.size(8.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.error)
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        project,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (s.provider?.lowercase() != "claude") {
+                        Spacer(Modifier.width(4.dp))
+                        ProviderBadge(s.provider)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun SearchResultRow(s: SessionInfo, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
     ) {
-        ProviderAvatar(s.provider, 24)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                s.summary?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
-                style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                s.id,
-                style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(20.dp).clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                ProviderAvatar(s.provider, 14)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    s.summary?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    s.id,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Spacer(Modifier.width(8.dp))
-        ProviderBadge(s.provider)
-        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun ArchivedRow(s: SessionInfo, onRestore: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val age = formatCompactAge(parseEpoch(s.lastActivity))
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                s.summary?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
-                style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                s.lastActivity ?: "—",
-                style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(20.dp).clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                ProviderAvatar(s.provider, 14)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    s.summary?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    age.takeIf { it.isNotEmpty() } ?: (s.lastActivity ?: "—"),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                Modifier.size(28.dp).clickable(onClick = onRestore),
+                shape = RoundedCornerShape(8.dp),
+                color = RestoreGreen.copy(alpha = 0.1f),
+                border = BorderStroke(1.dp, RestoreGreen.copy(alpha = 0.25f)),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.projects_restore), modifier = Modifier.size(16.dp), tint = RestoreGreen)
+                }
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        ProviderBadge(s.provider)
-        TextButton(onClick = onRestore) { Text(stringResource(R.string.projects_restore)) }
     }
 }
 
@@ -711,14 +818,13 @@ private fun ProjectCard(
     onDeleteProject: (Project) -> Unit,
 ) {
     val sessions = p.sessions.orEmpty()
-    // Star button — circular icon button with yellow/gray bg (matches web w-8 h-8 rounded-lg)
-    val starBg = if (p.isStarred == true) StarYellow.copy(alpha = 0.1f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
     val starColor = if (p.isStarred == true) StarYellow else MaterialTheme.colorScheme.onSurfaceVariant
+    val starBorder = if (p.isStarred == true) StarYellow.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
     Surface(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -746,43 +852,40 @@ private fun ProjectCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                // Star button — circular with bg (matches web bg-yellow-500/10 / bg-gray-500/10)
-                Box(
-                    Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(starBg)
-                        .clickable { onToggleStar(p) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (p.isStarred == true) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = starColor,
-                    )
-                }
+                Spacer(Modifier.width(6.dp))
+                // Star button — ghost style with subtle border
+                ProjectActionButton(
+                    icon = if (p.isStarred == true) Icons.Default.Star else Icons.Default.StarBorder,
+                    bg = starColor.copy(alpha = 0.1f),
+                    border = starBorder,
+                    tint = starColor,
+                    onClick = { onToggleStar(p) },
+                )
                 Spacer(Modifier.width(4.dp))
-                // Edit button
-                Box(
-                    Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                        .clickable { onRenameProject(p) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.files_rename), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                // Edit button — ghost primary
+                ProjectActionButton(
+                    icon = Icons.Default.Edit,
+                    bg = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    border = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = { onRenameProject(p) },
+                    contentDescription = stringResource(R.string.files_rename),
+                )
                 Spacer(Modifier.width(4.dp))
-                // Delete button
-                Box(
-                    Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
-                        .clickable { onDeleteProject(p) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.settings_delete), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                }
+                // Delete button — ghost error
+                ProjectActionButton(
+                    icon = Icons.Default.Delete,
+                    bg = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                    border = MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
+                    tint = MaterialTheme.colorScheme.error,
+                    onClick = { onDeleteProject(p) },
+                    contentDescription = stringResource(R.string.settings_delete),
+                )
             }
             if (sessions.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                sessions.forEach { s ->
+                sessions.forEachIndexed { index, s ->
+                    if (index > 0) Spacer(Modifier.height(4.dp))
                     SessionRow(
                         s,
                         onClick = { onSession(p.projectId, p.fullPath ?: p.path, s) },
@@ -805,12 +908,34 @@ private fun ProjectCard(
 }
 
 @Composable
+private fun ProjectActionButton(
+    icon: ImageVector,
+    bg: Color,
+    border: Color,
+    tint: Color,
+    onClick: () -> Unit,
+    contentDescription: String? = null,
+) {
+    Surface(
+        Modifier.size(32.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = bg,
+        border = BorderStroke(1.dp, border),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(16.dp), tint = tint)
+        }
+    }
+}
+
+@Composable
 private fun SessionRow(
     s: SessionInfo,
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val age = formatCompactAge(parseEpoch(s.lastActivity))
     SwipeToReveal(
         modifier = Modifier.fillMaxWidth(),
         revealWidth = 140.dp,
@@ -820,32 +945,51 @@ private fun SessionRow(
             ActionButton(stringResource(R.string.settings_delete), Icons.Default.Delete, MaterialTheme.colorScheme.error, onDelete)
         },
     ) {
-        Row(
-            Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 6.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
         ) {
-            ProviderAvatar(s.provider, 24)
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        s.summary?.takeIf { it.isNotBlank() }
-                            ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    ProviderBadge(s.provider)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(20.dp).clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ProviderAvatar(s.provider, 14)
                 }
-                Text(
-                    stringResource(R.string.projects_message_count, s.messageCount ?: 0),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s.summary?.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.projects_untitled_provider_session, providerDisplay(s.provider)),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (age.isNotEmpty()) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                age,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.projects_message_count, s.messageCount ?: 0),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
