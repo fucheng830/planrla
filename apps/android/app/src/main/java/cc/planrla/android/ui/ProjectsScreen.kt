@@ -43,6 +43,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -405,21 +406,30 @@ fun Sidebar(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.weight(1f))
-            // Refresh button (matches web refresh icon in sidebar header)
-            Box(
-                Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .clickable { vm.load() },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.projects_refresh), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) }
-            Spacer(Modifier.width(4.dp))
+            // Refresh button — ghost icon button like web sidebar header
+            IconButton(
+                onClick = { vm.load() },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = stringResource(R.string.projects_refresh),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             // Close button
-            Box(
-                Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .clickable(onClick = onClose),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.projects_close), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) }
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.projects_close),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         // Segmented tab control — matches web's flex rounded-lg bg-muted/50 p-0.5
         Row(
@@ -1008,7 +1018,7 @@ private fun SwipeToReveal(
     val wPx = with(LocalDensity.current) { revealWidth.toPx() }
     val scope = rememberCoroutineScope()
     val offset = remember { androidx.compose.animation.core.Animatable(0f) }
-    Box(modifier.clipToBounds()) {
+    Box(modifier.clipToBounds().clip(RoundedCornerShape(8.dp))) {
         Row(
             Modifier.matchParentSize(),
             horizontalArrangement = Arrangement.End,
@@ -1217,13 +1227,16 @@ private fun ProviderAvatar(provider: String?, sizeDp: Int = 24) {
         "codex" -> cc.planrla.android.R.drawable.ic_codex
         "cursor" -> cc.planrla.android.R.drawable.ic_cursor
         "gemini" -> cc.planrla.android.R.drawable.ic_gemini
+        "kimi" -> cc.planrla.android.R.drawable.ic_kimi
         "opencode" -> cc.planrla.android.R.drawable.ic_opencode
+        "zcode" -> cc.planrla.android.R.drawable.ic_zcode
         else -> cc.planrla.android.R.drawable.ic_claude
     }
     val bgColor = when (provider?.lowercase()) {
         "codex" -> Color(0xFF1A1A2E)
         "cursor" -> Color(0xFF000000)
         "gemini" -> Color.White
+        "kimi", "zcode" -> Color(0xFF0F172A)
         "opencode" -> Color(0xFFF97316)
         else -> Color.Transparent
     }
