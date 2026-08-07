@@ -12,7 +12,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -67,7 +69,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // safeContent = safeDrawing ∪ ime: bottom inset = max(navBar, ime) — keeps
                     // content above the nav bar normally, and flush against the keyboard (no gap) when IME open.
-                    Box(Modifier.windowInsetsPadding(WindowInsets.safeContent)) {
+                    // Vertical only: on devices reporting horizontal displayCutout insets (waterfall /
+                    // aggressively curved screen edges, or the "waterfall cutout" simulator in developer
+                    // options), applying them app-wide pads both sides and squashes every screen's width.
+                    Box(Modifier.windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Vertical))) {
                         NomadNav()
                     }
                 }
