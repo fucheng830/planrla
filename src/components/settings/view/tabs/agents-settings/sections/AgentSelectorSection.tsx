@@ -10,6 +10,7 @@ const AGENT_NAMES: Record<AgentProvider, string> = {
   gemini: 'Gemini',
   opencode: 'OpenCode',
   kimi: 'Kimi Code',
+  zcode: 'ZCode',
 };
 
 export default function AgentSelectorSection({

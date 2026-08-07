@@ -5,6 +5,7 @@ import CursorLogo from './CursorLogo';
 import GeminiLogo from './GeminiLogo';
 import OpenCodeLogo from './OpenCodeLogo';
 import KimiLogo from './KimiLogo';
+import ZcodeLogo from './ZcodeLogo';
 
 type SessionProviderLogoProps = {
   provider?: LLMProvider | string | null;
@@ -33,6 +34,10 @@ export default function SessionProviderLogo({
 
   if (provider === 'kimi') {
     return <KimiLogo className={className} />;
+  }
+
+  if (provider === 'zcode') {
+    return <ZcodeLogo className={className} />;
   }
 
   return <ClaudeLogo className={className} />;

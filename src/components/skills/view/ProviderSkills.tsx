@@ -63,6 +63,7 @@ const PROVIDER_NAMES: Record<SkillsProvider, string> = {
   gemini: 'Gemini',
   opencode: 'OpenCode',
   kimi: 'Kimi Code',
+  zcode: 'ZCode',
 };
 
 const PROVIDER_SKILL_PATHS: Record<Exclude<SkillsProvider, 'opencode'>, string> = {
@@ -71,6 +72,7 @@ const PROVIDER_SKILL_PATHS: Record<Exclude<SkillsProvider, 'opencode'>, string> 
   cursor: '~/.cursor/skills/<skill-name>/SKILL.md',
   gemini: '~/.gemini/skills/<skill-name>/SKILL.md',
   kimi: '~/.kimi-code/skills/<skill-name>/SKILL.md',
+  zcode: '~/.zcode/cli/skills/<skill-name>/SKILL.md',
 };
 
 const SCOPE_LABELS: Record<SkillsScope, string> = {

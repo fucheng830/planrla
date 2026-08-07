@@ -91,6 +91,19 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     // no kimi branch yet.
     supportsTokenUsage: false,
   },
+  zcode: {
+    provider: 'zcode',
+    // ZCode app-server runs with its own configured permission mode (build by
+    // default); permission prompts are auto-denied in headless mode, so no mode
+    // is switchable from the composer.
+    permissionModes: ['default'],
+    defaultPermissionMode: 'default',
+    supportsImages: false,
+    supportsAbort: true,
+    supportsPermissionRequests: false,
+    // Telemetry usage.delta events exist; token-usage endpoint has no zcode branch yet.
+    supportsTokenUsage: false,
+  },
 };
 
 /**

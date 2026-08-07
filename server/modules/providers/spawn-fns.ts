@@ -17,6 +17,7 @@ import { spawnCursor } from '@/cursor-cli.js';
 import { spawnGemini } from '@/gemini-cli.js';
 import { spawnKimi } from '@/kimi-cli.js';
 import { spawnOpenCode } from '@/opencode-cli.js';
+import { spawnZcode } from '@/zcode-cli.js';
 
 /**
  * Writer contract every spawnFn expects (see RunnerWriter for the runner-side
@@ -37,4 +38,5 @@ export const spawnFns: Record<string, SpawnFn> = {
   gemini: spawnGemini,
   opencode: spawnOpenCode,
   kimi: spawnKimi,
+  zcode: spawnZcode,
 };

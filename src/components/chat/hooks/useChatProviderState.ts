@@ -18,6 +18,7 @@ const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   gemini: 'gemini-3.1-pro-preview',
   opencode: 'anthropic/claude-sonnet-4-5',
   kimi: 'kimi-code/kimi-for-coding',
+  zcode: 'builtin:bigmodel-coding-plan/GLM-5.2',
 };
 
 /**
@@ -33,6 +34,7 @@ const FALLBACK_PERMISSION_MODES: Record<LLMProvider, PermissionMode[]> = {
   gemini: ['default', 'yolo'],
   opencode: ['default'],
   kimi: ['default'],
+  zcode: ['default'],
 };
 
 type ProviderCapabilities = {

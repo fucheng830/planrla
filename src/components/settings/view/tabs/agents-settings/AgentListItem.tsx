@@ -40,6 +40,10 @@ const agentConfig: Record<AgentProvider, AgentConfig> = {
     name: 'Kimi Code',
     color: 'zinc',
   },
+  zcode: {
+    name: 'ZCode',
+    color: 'zinc',
+  },
 };
 
 const colorClasses = {

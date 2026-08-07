@@ -29,6 +29,7 @@ const PROVIDER_META: { id: LLMProvider; name: string }[] = [
   { id: "cursor", name: "Cursor" },
   { id: "opencode", name: "OpenCode" },
   { id: "kimi", name: "Moonshot AI" },
+  { id: "zcode", name: "Z.AI ZCode" },
 ];
 
 const MOD_KEY =
@@ -93,6 +94,7 @@ function getProviderDisplayName(p: LLMProvider) {
   if (p === "codex") return "Codex";
   if (p === "opencode") return "OpenCode";
   if (p === "kimi") return "Kimi Code";
+  if (p === "zcode") return "ZCode";
   return "Gemini";
 }
 
@@ -313,6 +315,9 @@ export default function ProviderSelectionEmptyState({
                 }),
                 kimi: t("providerSelection.readyPrompt.kimi", {
                   model: kimiModel,
+                }),
+                zcode: t("providerSelection.readyPrompt.zcode", {
+                  model: "builtin:bigmodel-coding-plan/GLM-5.2",
                 }),
               }[provider]
             }

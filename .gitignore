@@ -3,6 +3,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# ZCode IDE workspace artifacts
+.zcode/
 pnpm-debug.log*
 lerna-debug.log*
 
