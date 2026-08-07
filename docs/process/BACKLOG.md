@@ -98,6 +98,7 @@
 ## Released / Superseded
 | ID | 标题 | 版本 | spec | 备注 |
 |----|------|------|------|------|
+| REQ-050 | ZCode (Z.AI) provider(第 8 个 provider) | v0.12.0 | _(追溯录,无 spec)_ | zcode-cli.js 桥 + 7 个 provider 模块(list/zcode/)+ ZcodeLogo;session-query/a2a MCP 跳过(ZCode 不允许外部改配置)。ZCode 实现在 v0.11.1 tag 之后,语义 minor 故发 v0.12.0 |
 | REQ-043 | kanban goal-stop-hook(stage 级 /goal 式自主) | v0.9.0 | [spec](../superpowers/specs/2026-07-22-req043-kanban-goal-stop-hook-design.md) · [plan](../superpowers/plans/2026-07-22-req043-kanban-goal-stop-hook.md) | Stop hook 顶层 `{decision:'block'}` + task_complete MCP + maxTurns(默认 300)兜底;catch-all matcher(spike 证 glob 不命中 MCP 全名);`2fc2021` 合 main;typecheck + 208/208 + final review 可合并 |
 | REQ-041 | 聊天列表迁移 virtua 消除翻页抖动 | v0.8.6 | [spec](../superpowers/specs/2026-07-17-req041-virtua-migration-design.md) · [plan](../superpowers/plans/2026-07-17-req041-virtua-migration.md) | 根因 react-virtual 异步 measureElement 两次 commit,补偿层(RAF/RO/批次)全证伪;改 virtua VList 同帧补偿。Archie electron 已验。**取代 REQ-029/031/032** |
 | REQ-029 | loadEarlier 翻页 scroll RAF 补偿 | v0.8.3 | _(plan `2026-07-10-req029-scroll-raf.md`)_ | ⚰️ **superseded**:方案(RAF 补偿)被 REQ-041 证伪取代 |

@@ -3,6 +3,13 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.12.0](https://github.com/fucheng830/planrla/compare/v0.11.1...v0.12.0) (2026-08-07)
+
+### New Features
+
+* **providers:** 新增 ZCode (Z.AI) provider — 第 8 个 provider(Z.AI GLM 系,独立 zcode-cli.js 桥)(REQ-050) ([3028f84](https://github.com/fucheng830/planrla/commit/3028f84))
+* **providers:** ZCode 注册接线 + 前端 UI 补全(logo / provider 列表 / skills) ([cfb6601](https://github.com/fucheng830/planrla/commit/cfb6601))
+
 ## [0.11.1](https://github.com/fucheng830/planrla/compare/v0.11.0...v0.11.1) (2026-08-05)
 
 ### Bug Fixes
