@@ -373,33 +373,12 @@ fun Sidebar(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // planrla logo — blue rounded square with chat icon (matches web LogoBlock)
-            Box(
-                Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF3B82F6)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(Modifier.size(18.dp)) {
-                    val w = this.size.width
-                    val h = this.size.height
-                    val bubble = Path().apply {
-                        moveTo(w * 0.11f, 0f)
-                        lineTo(w * 0.89f, 0f)
-                        cubicTo(w, 0f, w, h * 0.78f * 0.11f, w, h * 0.78f * 0.22f)
-                        lineTo(w, h * 0.78f * 0.78f)
-                        cubicTo(w, h * 0.78f * 0.89f, w, h * 0.78f, w * 0.89f, h * 0.78f)
-                        lineTo(w * 0.48f, h * 0.78f)
-                        lineTo(w * 0.28f, h * 0.74f)
-                        lineTo(w * 0.28f, h * 0.78f)
-                        lineTo(w * 0.11f, h * 0.78f)
-                        cubicTo(0f, h * 0.78f, 0f, h * 0.78f * 0.89f, 0f, h * 0.78f * 0.78f)
-                        lineTo(0f, h * 0.78f * 0.22f)
-                        cubicTo(0f, h * 0.78f * 0.11f, 0f, 0f, w * 0.11f, 0f)
-                        close()
-                    }
-                    drawPath(bubble, Color.White)
-                }
-            }
+            // planrla logo — matches web /logo.svg gradient mark
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(cc.planrla.android.R.drawable.ic_logo),
+                contentDescription = "planrla",
+                modifier = Modifier.size(28.dp),
+            )
             Spacer(Modifier.width(10.dp))
             Text(
                 "planrla",
