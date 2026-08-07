@@ -18,7 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -377,9 +381,14 @@ fun Sidebar(
         )
     }
 
+    val statusBarHeightDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        .coerceAtLeast(48.dp)
+
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(top = statusBarHeightDp + 14.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // planrla logo — matches web /logo.svg gradient mark
