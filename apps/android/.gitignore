@@ -17,6 +17,7 @@ local.properties
 *.png
 !app/src/main/res/mipmap-*/ic_launcher.png
 !app/src/main/res/mipmap-*/ic_launcher_round.png
+!app/src/main/res/drawable-*/ic_logo.png
 ui.xml
 u.xml
 xhs-matrix.log

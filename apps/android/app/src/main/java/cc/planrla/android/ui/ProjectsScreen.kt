@@ -2,6 +2,7 @@ package cc.planrla.android.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -18,11 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -70,19 +67,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -381,18 +371,19 @@ fun Sidebar(
         )
     }
 
-    val statusBarHeightDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        .coerceAtLeast(48.dp)
-
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(top = statusBarHeightDp + 14.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
+                .padding(top = 64.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // planrla logo — matches web /logo.svg gradient mark
-            PlanrlaLogo(Modifier.size(28.dp))
+            Image(
+                painter = painterResource(id = R.drawable.ic_logo),
+                contentDescription = "planrla",
+                modifier = Modifier.size(28.dp),
+            )
             Spacer(Modifier.width(10.dp))
             Text(
                 "planrla",
@@ -1278,59 +1269,6 @@ private fun ClaudeAvatarSmall(sizeDp: Int = 24) {
                 close()
             }
             drawPath(path, Color.White)
-        }
-    }
-}
-
-/** planrla brand mark: matches web /logo.svg (gradient rounded square + white P-stroke + curve). */
-@Composable
-private fun PlanrlaLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        scale(size.width / 32f) {
-            // Gradient background
-            drawRoundRect(
-                brush = Brush.linearGradient(
-                    0f to Color(0xFF0F172A),
-                    0.52f to Color(0xFF2563EB),
-                    1f to Color(0xFF14B8A6),
-                    start = Offset(3.84f, 2.56f),
-                    end = Offset(29.44f, 30.4f),
-                ),
-                topLeft = Offset.Zero,
-                size = Size(32f, 32f),
-                cornerRadius = CornerRadius(7f, 7f),
-            )
-
-            // White P-stroke
-            val pPath = Path().apply {
-                moveTo(10f, 24f)
-                lineTo(10f, 8f)
-                lineTo(17f, 8f)
-                arcTo(
-                    rect = Rect(6f, 8f, 17f, 19f),
-                    startAngleDegrees = -45f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(10f, 19f)
-            }
-            drawPath(
-                path = pPath,
-                color = Color.White,
-                style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-            )
-
-            // Subtle white curve above the P
-            val curvePath = Path().apply {
-                moveTo(9.6f, 8f)
-                cubicTo(13.44f, 4.16f, 18.56f, 4.16f, 22.4f, 8f)
-            }
-            drawPath(
-                path = curvePath,
-                color = Color.White,
-                alpha = 0.68f,
-                style = Stroke(width = 2f, cap = StrokeCap.Round),
-            )
         }
     }
 }
