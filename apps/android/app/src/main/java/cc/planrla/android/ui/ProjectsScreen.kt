@@ -380,16 +380,16 @@ fun Sidebar(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(top = statusBarHeightDp + 8.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
+                .padding(top = statusBarHeightDp, start = 16.dp, end = 16.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // planrla logo — matches web /logo.svg gradient mark
             Image(
                 painter = painterResource(id = R.drawable.ic_logo),
                 contentDescription = "planrla",
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(24.dp),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 "planrla",
                 style = MaterialTheme.typography.titleMedium,
