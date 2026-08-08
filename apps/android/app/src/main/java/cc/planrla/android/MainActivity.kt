@@ -133,6 +133,17 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Decode a Navigation argument that may still contain `+` for spaces.
+ *  Navigation percent-decodes `%XX` but leaves `+` untouched, so we still need
+ *  URLDecoder for the plus signs. Titles containing a literal `%` would crash
+ *  URLDecoder; in that case fall back to just replacing `+` with spaces. */
+private fun safeUrlDecode(value: String): String =
+    try {
+        URLDecoder.decode(value, "UTF-8")
+    } catch (_: IllegalArgumentException) {
+        value.replace('+', ' ')
+    }
+
 @Composable
 fun NomadNav() {
     val nav = rememberNavController()
@@ -144,15 +155,9 @@ fun NomadNav() {
         }
         composable("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { back ->
             val sid = back.arguments?.getString("sid") ?: return@composable
-            val cwd = back.arguments?.getString("cwd")
-                ?.let { URLDecoder.decode(it, "UTF-8") }
-                ?.takeIf { it.isNotBlank() }
-            val title = back.arguments?.getString("title")
-                ?.let { URLDecoder.decode(it, "UTF-8") }
-                ?.takeIf { it.isNotBlank() }
-            val pid = back.arguments?.getString("pid")
-                ?.let { URLDecoder.decode(it, "UTF-8") }
-                ?.takeIf { it.isNotBlank() }
+            val cwd = back.arguments?.getString("cwd")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
+            val title = back.arguments?.getString("title")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
+            val pid = back.arguments?.getString("pid")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
             ChatScreen(
                 sessionId = sid, cwd = cwd, title = title, projectId = pid,
                 onSelectSession = { p, c, session ->
