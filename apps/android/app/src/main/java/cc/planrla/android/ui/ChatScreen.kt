@@ -20,6 +20,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1189,8 +1190,20 @@ private fun MessageList(
     modifier: Modifier = Modifier,
 ) {
     val state = rememberLazyListState()
+    var previousItems by remember { mutableStateOf(items) }
     LaunchedEffect(items.size) {
-        if (App.settings.autoScroll && items.isNotEmpty()) state.animateScrollToItem(items.size - 1)
+        if (items.isEmpty()) return@LaunchedEffect
+        val prev = previousItems
+        val appended = prev.size + 1 == items.size && prev.lastOrNull() === items.getOrNull(items.size - 2)
+        if (appended && App.settings.autoScroll) {
+            // New single message appended while already in the conversation — smooth scroll.
+            state.animateScrollToItem(items.lastIndex)
+        } else {
+            // Session switch or bulk load: jump directly to the bottom without traversing items.
+            state.scrollToItem(items.lastIndex)
+            state.scrollBy(1_000_000f)
+        }
+        previousItems = items
     }
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
