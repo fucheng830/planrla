@@ -56,6 +56,7 @@
     <string name="device_switcher_lan">direct %1$s</string>
     <string name="device_switcher_add">+ Add Desktop</string>
     <string name="device_switcher_refresh">↻ Refresh device list</string>
+    <string name="device_switcher_action">Switch</string>
     <string name="add_device_title">Add Desktop</string>
     <string name="add_device_name_label">Name (for example: Home)</string>
     <string name="add_device_token_label">Relay device token (optional)</string>

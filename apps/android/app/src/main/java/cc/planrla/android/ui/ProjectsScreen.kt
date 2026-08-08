@@ -309,10 +309,13 @@ private fun formatCompactAge(epochMs: Long): String {
 fun Sidebar(
     vm: ProjectsViewModel,
     currentSessionId: String?,
+    devices: List<cc.planrla.android.data.Device> = emptyList(),
+    currentDeviceId: String? = null,
     onSession: (projectId: String, cwd: String?, session: SessionInfo) -> Unit,
     onNewSession: (projectId: String, cwd: String?) -> Unit,
     onClose: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenDeviceSwitcher: () -> Unit = {},
 ) {
     val items by vm.items.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
@@ -594,6 +597,19 @@ fun Sidebar(
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             Spacer(Modifier.height(8.dp))
+
+            // Current desktop device switcher (migrated from top app bar)
+            val currentDevice = devices.firstOrNull { it.id == currentDeviceId }
+            if (currentDevice != null) {
+                DeviceSwitcherRow(
+                    device = currentDevice,
+                    onClick = onOpenDeviceSwitcher,
+                )
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                Spacer(Modifier.height(8.dp))
+            }
+
             // Report Issue (link)
             FooterRow(Icons.Default.BugReport, stringResource(R.string.projects_report_issue), MaterialTheme.colorScheme.onSurface) {}
             Spacer(Modifier.height(4.dp))
@@ -630,6 +646,48 @@ private fun FooterRow(icon: ImageVector, label: String, color: Color, onClick: (
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = color)
             Spacer(Modifier.width(12.dp))
             Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = color)
+        }
+    }
+}
+
+/** Compact desktop device switcher row placed at the bottom of the sidebar (position 5). */
+@Composable
+private fun DeviceSwitcherRow(
+    device: cc.planrla.android.data.Device,
+    onClick: () -> Unit,
+) {
+    Surface(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("🖥", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    device.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                stringResource(R.string.device_switcher_action) + " ▾",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

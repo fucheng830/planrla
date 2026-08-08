@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>侧边栏设备卡片位置方案</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 { font-size: 18px; margin: 0; }
+    .subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .section-title span { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+    .section-desc {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Phone frame */
+    .phone {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      max-width: 360px;
+      margin: 0 auto;
+      position: relative;
+      min-height: 580px;
+      display: flex;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .project-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .project-row .back { color: var(--text-muted); font-size: 18px; }
+
+    .device-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+      border: 1px solid var(--primary);
+      cursor: pointer;
+      margin: 12px 0 0;
+    }
+    .device-card-outline {
+      background: transparent;
+      border-color: var(--border);
+    }
+    .device-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .device-info { flex: 1; min-width: 0; }
+    .device-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .device-meta { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .device-arrow { color: var(--text-muted); }
+
+    .section-label {
+      padding: 12px 16px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .session-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .session-item.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .sidebar-actions {
+      margin-top: auto;
+      padding: 8px 0;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-action {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .sessions-scroll {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Variations */
+    .pos-top .device-card { margin: 0 16px 12px; }
+    .pos-between .sidebar-header { border-bottom: none; padding-bottom: 4px; }
+    .pos-between .device-card { margin: 0 16px 12px; }
+    .pos-bottom .device-card { margin: 12px 16px; }
+    .pos-sticky .device-card { margin: 0 16px 12px; position: sticky; top: 0; z-index: 2; background: var(--surface); border-color: var(--border); }
+    .pos-sticky .device-card .device-icon { background: var(--surface-2); color: var(--primary); }
+    .pos-sticky .device-name { color: var(--text); }
+
+    .mini-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      margin: 12px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .mini-card-left { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+    .mini-card-left strong { color: var(--text); }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="page">
+    <header>
+      <div>
+        <h1>侧边栏设备卡片位置方案</h1>
+        <div class="subtitle">5 种放置位置，看哪种最符合交互习惯</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+    </header>
+
+    <!-- Position 1: Top of sidebar -->
+    <section class="section">
+      <h2 class="section-title">位置 1 <span>· 侧边栏最顶部</span></h2>
+      <p class="section-desc">设备卡片放在项目名/返回行的上方，第一眼就能看到。适合桌面端切换是非常高频的操作。</p>
+      <div class="phone pos-top">
+        <div class="sidebar">
+          <div class="device-card" style="margin:16px 16px 12px;border-radius:var(--radius-sm)">
+            <div class="device-icon">🖥</div>
+            <div class="device-info">
+              <div class="device-name">主力工作机</div>
+              <div class="device-meta">192.168.0.9:3002 · 已连接</div>
+            </div>
+            <span class="device-arrow">▾</span>
+          </div>
+          <div class="sidebar-header" style="border-top:1px solid var(--border);padding-top:12px">
+            <div class="project-row"><span class="back">‹</span><span>workspace</span></div>
+          </div>
+          <div class="section-label">会话</div>
+          <div class="sessions-scroll">
+            <div class="session-item active">SK海力士操作</div>
+            <div class="session-item">安卓侧边栏 logo 修复</div>
+            <div class="session-item">planrla 功能开发</div>
+            <div class="session-item">家庭数据中心规划</div>
+          </div>
+          <div class="sidebar-actions">
+            <div class="sidebar-action">⚙ 设置</div>
+            <div class="sidebar-action">❓ 反馈问题</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Position 2: Between project and sessions -->
+    <section class="section">
+      <h2 class="section-title">位置 2 <span>· 项目名与会话列表之间</span></h2>
+      <p class="section-desc">设备卡片放在项目信息下方、会话列表上方，作为「当前项目 ↔ 当前设备」之间的上下文桥梁。视觉层次更清晰。</p>
+      <div class="phone pos-between">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div class="project-row"><span class="back">‹</span><span>workspace</span></div>
+          </div>
+          <div class="device-card">
+            <div class="device-icon">🖥</div>
+            <div class="device-info">
+              <div class="device-name">主力工作机</div>
+              <div class="device-meta">192.168.0.9:3002 · 已连接</div>
+            </div>
+            <span class="device-arrow">▾</span>
+          </div>
+          <div class="section-label">会话</div>
+          <div class="sessions-scroll">
+            <div class="session-item active">SK海力士操作</div>
+            <div class="session-item">安卓侧边栏 logo 修复</div>
+            <div class="session-item">planrla 功能开发</div>
+            <div class="session-item">家庭数据中心规划</div>
+          </div>
+          <div class="sidebar-actions">
+            <div class="sidebar-action">⚙ 设置</div>
+            <div class="sidebar-action">❓ 反馈问题</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Position 3: Above actions at bottom -->
+    <section class="section">
+      <h2 class="section-title">位置 3 <span>· 会话列表底部、设置上方</span></h2>
+      <p class="section-desc">设备卡片放在会话列表下方、设置操作上方。不会抢占顶部空间，但切换时要多滑一下。适合切换频率不高的场景。</p>
+      <div class="phone pos-bottom">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div class="project-row"><span class="back">‹</span><span>workspace</span></div>
+          </div>
+          <div class="section-label">会话</div>
+          <div class="sessions-scroll">
+            <div class="session-item active">SK海力士操作</div>
+            <div class="session-item">安卓侧边栏 logo 修复</div>
+            <div class="session-item">planrla 功能开发</div>
+            <div class="session-item">家庭数据中心规划</div>
+            <div class="session-item">公众号文章创作</div>
+            <div class="session-item">13900F 主力工作机</div>
+          </div>
+          <div class="device-card">
+            <div class="device-icon">🖥</div>
+            <div class="device-info">
+              <div class="device-name">主力工作机</div>
+              <div class="device-meta">192.168.0.9:3002 · 已连接</div>
+            </div>
+            <span class="device-arrow">▾</span>
+          </div>
+          <div class="sidebar-actions">
+            <div class="sidebar-action">⚙ 设置</div>
+            <div class="sidebar-action">❓ 反馈问题</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Position 4: Sticky at top of sessions -->
+    <section class="section">
+      <h2 class="section-title">位置 4 <span>· 会话列表顶部 sticky</span></h2>
+      <p class="section-desc">设备卡片放在会话列表顶部，跟随会话列表一起滚动但 sticky 固定。既有上下文关系，又不会一直占用顶部空间。</p>
+      <div class="phone pos-sticky">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div class="project-row"><span class="back">‹</span><span>workspace</span></div>
+          </div>
+          <div class="section-label">当前桌面端</div>
+          <div class="sessions-scroll">
+            <div class="device-card">
+              <div class="device-icon">🖥</div>
+              <div class="device-info">
+                <div class="device-name">主力工作机</div>
+                <div class="device-meta">192.168.0.9:3002 · 已连接</div>
+              </div>
+              <span class="device-arrow">▾</span>
+            </div>
+            <div class="session-item active">SK海力士操作</div>
+            <div class="session-item">安卓侧边栏 logo 修复</div>
+            <div class="session-item">planrla 功能开发</div>
+            <div class="session-item">家庭数据中心规划</div>
+            <div class="session-item">公众号文章创作</div>
+            <div class="session-item">13900F 主力工作机</div>
+            <div class="session-item">映泰 TB360 主板</div>
+            <div class="session-item">芝华仕头等舱</div>
+          </div>
+          <div class="sidebar-actions">
+            <div class="sidebar-action">⚙ 设置</div>
+            <div class="sidebar-action">❓ 反馈问题</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Position 5: Mini row at bottom with actions -->
+    <section class="section">
+      <h2 class="section-title">位置 5 <span>· 底部操作区一行</span></h2>
+      <p class="section-desc">把设备信息压缩成底部操作区的一行，和设置、反馈并列。最节省空间，但信息展示最弱。</p>
+      <div class="phone">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div class="project-row"><span class="back">‹</span><span>workspace</span></div>
+          </div>
+          <div class="section-label">会话</div>
+          <div class="sessions-scroll">
+            <div class="session-item active">SK海力士操作</div>
+            <div class="session-item">安卓侧边栏 logo 修复</div>
+            <div class="session-item">planrla 功能开发</div>
+            <div class="session-item">家庭数据中心规划</div>
+          </div>
+          <div class="sidebar-actions">
+            <div class="mini-card">
+              <div class="mini-card-left"><span>🖥</span><span><strong>主力工作机</strong></span></div>
+              <span style="color:var(--primary)">切换 ▾</span>
+            </div>
+            <div class="sidebar-action">⚙ 设置</div>
+            <div class="sidebar-action">❓ 反馈问题</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>请挑选一个位置，我会把它同步到安卓端实现。</footer>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+  </script>
+</body>
+</html>

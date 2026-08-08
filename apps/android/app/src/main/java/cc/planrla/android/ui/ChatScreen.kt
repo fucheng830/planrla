@@ -776,7 +776,6 @@ fun ChatScreen(
     LaunchedEffect(sessionId) { viewMode = 0 }
     val devices by App.tokenStore.devices.collectAsStateWithLifecycle(initialValue = emptyList())
     val currentDeviceId by App.tokenStore.currentDeviceId.collectAsStateWithLifecycle(initialValue = null)
-    val currentDevice = devices.firstOrNull { it.id == currentDeviceId }
     var showDeviceSheet by remember { mutableStateOf(false) }
     var showAddDevice by remember { mutableStateOf(false) }
     var editDeviceId by remember { mutableStateOf<String?>(null) }
@@ -922,10 +921,13 @@ fun ChatScreen(
             Sidebar(
                 vm = projectsVm,
                 currentSessionId = sessionId,
+                devices = devices,
+                currentDeviceId = currentDeviceId,
                 onSession = { pid, c, s -> scope.launch { drawerState.close() }; App.markRead(s.id); onSelectSession(pid, c, s) },
                 onNewSession = { pid, c -> scope.launch { drawerState.close() }; onNewSession(pid, c) },
                 onClose = { scope.launch { drawerState.close() } },
                 onOpenSettings = { scope.launch { drawerState.close() }; showSettings = true },
+                onOpenDeviceSwitcher = { scope.launch { drawerState.close() }; showDeviceSheet = true },
             )
         },
     ) {
@@ -953,30 +955,11 @@ fun ChatScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                             )
-                            if (currentDevice != null) {
-                                Row(
-                                    Modifier.clip(RoundedCornerShape(6.dp))
-                                        .clickable { showDeviceSheet = true }
-                                        .padding(vertical = 1.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text("🖥", style = MaterialTheme.typography.labelSmall)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        currentDevice.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1,
-                                    )
-                                    Text(" ▾", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                }
-                            } else {
-                                Text(
-                                    projectName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            Text(
+                                projectName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 },

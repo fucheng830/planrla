@@ -56,6 +56,7 @@
     <string name="device_switcher_lan">直连 %1$s</string>
     <string name="device_switcher_add">+ 添加桌面端</string>
     <string name="device_switcher_refresh">↻ 刷新桌面端列表</string>
+    <string name="device_switcher_action">切换</string>
     <string name="add_device_title">添加桌面端</string>
     <string name="add_device_name_label">名称（例如：家里）</string>
     <string name="add_device_token_label">中转令牌（可选）</string>

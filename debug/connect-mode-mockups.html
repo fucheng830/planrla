@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>桌面端连接页 UI 备选方案</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 { font-size: 18px; margin: 0; }
+    .subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .section-title span { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+    .section-desc {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Common phone frame */
+    .phone {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px 16px;
+      box-shadow: var(--shadow);
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      width: 56px;
+      height: 56px;
+      background: var(--primary);
+      border-radius: 14px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+    }
+    .brand svg { width: 28px; height: 28px; color: #fff; }
+
+    .title { text-align: center; font-size: 18px; font-weight: 700; margin: 0 0 6px; }
+    .desc { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0 0 22px; }
+
+    .field {
+      margin-bottom: 12px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    .field input::placeholder { color: var(--text-muted); }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .disclaimer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+
+    .host-item {
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--bg);
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .host-item .url { font-size: 13px; font-weight: 500; }
+    .host-item .meta { font-size: 11px; color: var(--text-secondary); }
+
+    /* Scheme A: Top tabs + card */
+    .scheme-a .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .scheme-a .tab {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .scheme-a .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .scheme-a .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .scheme-a .card-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    /* Scheme B: Expandable list */
+    .scheme-b .option {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+    .scheme-b .option.active { border-color: var(--primary); }
+    .scheme-b .option-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+    }
+    .scheme-b .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+    }
+    .scheme-b .option.active .radio { border-color: var(--primary); }
+    .scheme-b .option.active .radio::after {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+    .scheme-b .option-title { font-size: 14px; font-weight: 600; }
+    .scheme-b .option-sub { font-size: 12px; color: var(--text-secondary); }
+    .scheme-b .option-body {
+      padding: 0 14px 14px 44px;
+      display: none;
+    }
+    .scheme-b .option.active .option-body { display: block; }
+
+    /* Scheme C: Dropdown selector */
+    .scheme-c .selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+    .scheme-c .selector-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .scheme-c .selector-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+    .scheme-c .selector-title { font-size: 14px; font-weight: 600; }
+    .scheme-c .selector-sub { font-size: 12px; color: var(--text-secondary); }
+    .scheme-c .sheet {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 50;
+    }
+    .scheme-c .sheet.open { display: flex; }
+    .scheme-c .sheet-content {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+    }
+    .scheme-c .sheet-item {
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .scheme-c .sheet-item:hover { background: var(--bg); }
+    .scheme-c .sheet-item.active { background: var(--primary-light); }
+
+    /* Scheme D: Stacked cards */
+    .scheme-d .mode-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .scheme-d .mode-card.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .scheme-d .mode-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .scheme-d .mode-card-title { font-size: 14px; font-weight: 600; }
+    .scheme-d .mode-card-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .scheme-d .check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .scheme-d .mode-card.active .check {
+      border-color: var(--primary);
+      background: var(--primary);
+      display: grid;
+      place-items: center;
+    }
+    .scheme-d .mode-card.active .check::after {
+      content: "✓";
+      color: #fff;
+      font-size: 12px;
+    }
+    .scheme-d .mode-card-body {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+    .scheme-d .mode-card.active .mode-card-body { display: block; }
+
+    .hidden { display: none !important; }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="page">
+    <header>
+      <div>
+        <h1>桌面端连接页 UI 备选方案</h1>
+        <div class="subtitle">3 套切换交互，点击切换 remote/direct 状态</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+    </header>
+
+    <!-- Scheme A: Top tabs -->
+    <section class="section scheme-a">
+      <h2 class="section-title">方案 A <span>· 顶部 Tabs + 下方卡片</span></h2>
+      <p class="section-desc">把切换放在顶部，像常见 App 的登录/注册切换。选中态用下划线，内容统一在下方卡片里。适合用户明确知道两种连接方式、需要频繁切换的场景。</p>
+      <div class="phone">
+        <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="title">连接你的桌面端</div>
+        <div class="desc">远程访问或直接连接正在运行的 Planrla 桌面端。</div>
+
+        <div class="tabs">
+          <div class="tab active" data-tab="remote" onclick="switchA(this)">远程访问</div>
+          <div class="tab" data-tab="direct" onclick="switchA(this)">直接连接</div>
+        </div>
+
+        <div class="panel" data-panel="remote">
+          <div class="card-title">远程访问</div>
+          <div class="card-sub">登录 api.planrla.com，查找已注册的桌面端。</div>
+          <div class="field"><label>邮箱</label><input placeholder="输入邮箱"></div>
+          <div class="field"><label>密码</label><input type="password" placeholder="输入密码"></div>
+          <button class="btn">登录并查找桌面端</button>
+        </div>
+        <div class="panel hidden" data-panel="direct">
+          <div class="card-title">直接连接</div>
+          <div class="card-sub">输入桌面端地址和账号密码。</div>
+          <button class="btn" style="background: var(--surface); color: var(--primary); border: 1px solid var(--border);">扫描局域网</button>
+          <div class="field" style="margin-top:12px"><label>桌面端地址</label><input placeholder="http://192.168.1.20:3001"></div>
+          <div class="field"><label>用户名</label><input placeholder="admin"></div>
+          <div class="field"><label>密码</label><input type="password" placeholder=""></div>
+          <button class="btn">连接</button>
+        </div>
+
+        <div class="disclaimer">你的桌面端需要在线，并接入远程访问中转服务。</div>
+      </div>
+    </section>
+
+    <!-- Scheme B: Expandable list -->
+    <section class="section scheme-b">
+      <h2 class="section-title">方案 B <span>· 展开式列表</span></h2>
+      <p class="section-desc">两个选项垂直排列，选中项展开显示表单。未选中项保持折叠，减少视觉干扰。适合两种模式内容差异大、用户一次只关注一种的场景。</p>
+      <div class="phone">
+        <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="title">连接你的桌面端</div>
+        <div class="desc">选择一种方式连接到桌面端。</div>
+
+        <div class="option active" onclick="switchB(this, 'remote')">
+          <div class="option-head">
+            <div class="radio"></div>
+            <div>
+              <div class="option-title">远程访问</div>
+              <div class="option-sub">通过 api.planrla.com</div>
+            </div>
+          </div>
+          <div class="option-body">
+            <div class="field"><label>邮箱</label><input placeholder="输入邮箱"></div>
+            <div class="field"><label>密码</label><input type="password" placeholder="输入密码"></div>
+            <button class="btn">登录并查找桌面端</button>
+          </div>
+        </div>
+
+        <div class="option" onclick="switchB(this, 'direct')">
+          <div class="option-head">
+            <div class="radio"></div>
+            <div>
+              <div class="option-title">直接连接</div>
+              <div class="option-sub">输入桌面端地址</div>
+            </div>
+          </div>
+          <div class="option-body">
+            <button class="btn" style="background: var(--surface); color: var(--primary); border: 1px solid var(--border);">扫描局域网</button>
+            <div class="field" style="margin-top:12px"><label>桌面端地址</label><input placeholder="http://192.168.1.20:3001"></div>
+            <div class="field"><label>用户名</label><input placeholder="admin"></div>
+            <div class="field"><label>密码</label><input type="password" placeholder=""></div>
+            <button class="btn">连接</button>
+          </div>
+        </div>
+
+        <div class="disclaimer">你的桌面端需要在线，并接入远程访问中转服务。</div>
+      </div>
+    </section>
+
+    <!-- Scheme C: Dropdown selector -->
+    <section class="section scheme-c">
+      <h2 class="section-title">方案 C <span>· 下拉选择器</span></h2>
+      <p class="section-desc">页面重点放在表单内容上，切换方式弱化成一个顶部选择器。适合大多数用户只使用一种方式、切换频率很低的场景。</p>
+      <div class="phone">
+        <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="title">连接你的桌面端</div>
+        <div class="desc">选择连接方式并填写信息。</div>
+
+        <div class="selector" onclick="openSheet()">
+          <div class="selector-left">
+            <div class="selector-icon">🌐</div>
+            <div>
+              <div class="selector-title">远程访问</div>
+              <div class="selector-sub">通过 api.planrla.com</div>
+            </div>
+          </div>
+          <span style="color:var(--text-muted)">▾</span>
+        </div>
+
+        <div class="panel-c" data-mode="remote">
+          <div class="field"><label>邮箱</label><input placeholder="输入邮箱"></div>
+          <div class="field"><label>密码</label><input type="password" placeholder="输入密码"></div>
+          <button class="btn">登录并查找桌面端</button>
+        </div>
+        <div class="panel-c hidden" data-mode="direct">
+          <button class="btn" style="background: var(--surface); color: var(--primary); border: 1px solid var(--border);">扫描局域网</button>
+          <div class="field" style="margin-top:12px"><label>桌面端地址</label><input placeholder="http://192.168.1.20:3001"></div>
+          <div class="field"><label>用户名</label><input placeholder="admin"></div>
+          <div class="field"><label>密码</label><input type="password" placeholder=""></div>
+          <button class="btn">连接</button>
+        </div>
+
+        <div class="disclaimer">你的桌面端需要在线，并接入远程访问中转服务。</div>
+      </div>
+    </section>
+
+    <footer>请挑选一个方案，我会把它同步到安卓连接页。</footer>
+  </div>
+
+  <!-- Sheet for Scheme C -->
+  <div class="scheme-c sheet" id="sheet" onclick="closeSheet(event)">
+    <div class="sheet-content">
+      <div style="font-weight:600;margin-bottom:12px;">选择连接方式</div>
+      <div class="sheet-item active" data-mode="remote" onclick="selectMode('remote')">
+        <div style="font-weight:500;">远程访问</div>
+        <div style="font-size:12px;color:var(--text-secondary)">通过 api.planrla.com</div>
+      </div>
+      <div class="sheet-item" data-mode="direct" onclick="selectMode('direct')">
+        <div style="font-weight:500;">直接连接</div>
+        <div style="font-size:12px;color:var(--text-secondary)">输入桌面端地址</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+
+    // Scheme A
+    function switchA(tab) {
+      const parent = tab.closest('.scheme-a');
+      parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const mode = tab.dataset.tab;
+      parent.querySelectorAll('.panel').forEach(p => {
+        p.classList.toggle('hidden', p.dataset.panel !== mode);
+      });
+    }
+
+    // Scheme B
+    function switchB(option, mode) {
+      const parent = option.closest('.scheme-b');
+      parent.querySelectorAll('.option').forEach(o => o.classList.remove('active'));
+      option.classList.add('active');
+    }
+
+    // Scheme C
+    function openSheet() { document.getElementById('sheet').classList.add('open'); }
+    function closeSheet(e) {
+      if (e.target.id === 'sheet') document.getElementById('sheet').classList.remove('open');
+    }
+    function selectMode(mode) {
+      const parent = document.querySelector('.scheme-c .phone');
+      parent.querySelectorAll('.panel-c').forEach(p => {
+        p.classList.toggle('hidden', p.dataset.mode !== mode);
+      });
+      const selectorTitle = parent.querySelector('.selector-title');
+      const selectorSub = parent.querySelector('.selector-sub');
+      const selectorIcon = parent.querySelector('.selector-icon');
+      if (mode === 'remote') {
+        selectorTitle.textContent = '远程访问';
+        selectorSub.textContent = '通过 api.planrla.com';
+        selectorIcon.textContent = '🌐';
+      } else {
+        selectorTitle.textContent = '直接连接';
+        selectorSub.textContent = '输入桌面端地址';
+        selectorIcon.textContent = '💻';
+      }
+      document.querySelectorAll('#sheet .sheet-item').forEach(i => {
+        i.classList.toggle('active', i.dataset.mode === mode);
+      });
+      document.getElementById('sheet').classList.remove('open');
+    }
+  </script>
+</body>
+</html>

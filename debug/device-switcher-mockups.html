@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>桌面端切换入口 UI 备选方案</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --shadow-sheet: 0 -4px 20px rgba(0, 0, 0, 0.1);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --shadow-sheet: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 { font-size: 18px; margin: 0; }
+    .subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .section-title span { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+    .section-desc {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Phone frame */
+    .phone {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      max-width: 360px;
+      margin: 0 auto;
+      position: relative;
+      min-height: 620px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* App bar */
+    .appbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      min-height: 56px;
+    }
+    .appbar-menu {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--text-secondary);
+    }
+    .appbar-title {
+      flex: 1;
+      min-width: 0;
+    }
+    .appbar-title-main {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .appbar-title-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .appbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .appbar-btn {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .appbar-btn svg { width: 20px; height: 20px; }
+
+    /* Device chip in appbar */
+    .device-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      max-width: 140px;
+    }
+    .device-chip.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .device-chip-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Content */
+    .content {
+      padding: 16px;
+      min-height: 300px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-state h3 { margin: 0 0 6px; color: var(--text); font-size: 16px; }
+    .empty-state p { margin: 0; font-size: 13px; }
+
+    /* Status strip */
+    .status-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      margin: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .status-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+    }
+    .status-strip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+    .status-strip-btn {
+      color: var(--primary);
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Sidebar */
+    .sidebar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      z-index: 30;
+    }
+    .sidebar-overlay.open { display: block; }
+    .sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      z-index: 31;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-device {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      margin: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+      border: 1px solid var(--primary);
+      cursor: pointer;
+    }
+    .sidebar-device-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+    }
+    .sidebar-device-info { flex: 1; min-width: 0; }
+    .sidebar-device-name { font-weight: 600; font-size: 14px; }
+    .sidebar-device-meta { font-size: 11px; color: var(--text-secondary); }
+
+    /* Bottom sheet */
+    .sheet-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 40;
+    }
+    .sheet-overlay.open { display: flex; }
+    .sheet {
+      width: 100%;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 16px 0 24px;
+      box-shadow: var(--shadow-sheet);
+      max-height: 80%;
+      overflow-y: auto;
+    }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      margin: 0 auto 12px;
+    }
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 600;
+      padding: 0 16px 12px;
+    }
+    .sheet-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+    .sheet-item:hover { background: var(--surface-2); }
+    .sheet-item.active { background: var(--primary-light); }
+    .sheet-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+    }
+    .sheet-item.active .sheet-item-icon { background: var(--primary); color: #fff; }
+    .sheet-item-info { flex: 1; min-width: 0; }
+    .sheet-item-name { font-weight: 500; font-size: 14px; }
+    .sheet-item-meta { font-size: 12px; color: var(--text-secondary); }
+    .sheet-item-check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sheet-item.active .sheet-item-check {
+      border-color: var(--primary);
+      background: var(--primary);
+      display: grid;
+      place-items: center;
+    }
+    .sheet-item.active .sheet-item-check::after {
+      content: "✓";
+      color: #fff;
+      font-size: 12px;
+    }
+    .sheet-action {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .sheet-action:hover { background: var(--surface-2); }
+
+    .hidden { display: none !important; }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="page">
+    <header>
+      <div>
+        <h1>桌面端切换入口 UI 备选方案</h1>
+        <div class="subtitle">4 套入口位置与交互，点击设备区域查看 sheet</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+    </header>
+
+    <!-- Scheme A: Appbar icon button -->
+    <section class="section">
+      <h2 class="section-title">方案 A <span>· 顶部标题栏右侧图标按钮</span></h2>
+      <p class="section-desc">标题栏只保留标题，切换桌面端变成右上角一个电脑图标按钮。避免 IP 地址挤占标题空间，点击后弹出底部 sheet。</p>
+      <div class="phone">
+        <div class="status-bar"><span>12:30</span><span>🔋100%</span></div>
+        <div class="appbar">
+          <div class="appbar-menu">☰</div>
+          <div class="appbar-title">
+            <div class="appbar-title-main">新会话</div>
+          </div>
+          <div class="appbar-actions">
+            <div class="appbar-btn">💬</div>
+            <div class="appbar-btn" style="color:var(--primary)" onclick="openSheet('a')">🖥</div>
+            <div class="appbar-btn">⎘</div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="empty-state">
+            <h3>选择您的智能助手</h3>
+            <p>选择一个服务以开始新对话</p>
+          </div>
+        </div>
+
+        <div class="sheet-overlay" id="sheet-a" onclick="closeSheet(event, 'a')">
+          <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">切换桌面端</div>
+            <div class="sheet-item active">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">主力工作机</div><div class="sheet-item-meta">直连 192.168.0.9:3002</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-item">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">备用机</div><div class="sheet-item-meta">远程访问 · token ···8f2a</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-action">+ 添加桌面端</div>
+            <div class="sheet-action">↻ 刷新桌面端列表</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scheme B: Compact chip in appbar -->
+    <section class="section">
+      <h2 class="section-title">方案 B <span>· 标题栏内紧凑 Chip</span></h2>
+      <p class="section-desc">在标题栏放一个圆角 chip，显示当前设备名（而不是 IP），状态用颜色区分。技术细节只在 sheet 里展示，标题栏更清爽。</p>
+      <div class="phone">
+        <div class="status-bar"><span>12:30</span><span>🔋100%</span></div>
+        <div class="appbar">
+          <div class="appbar-menu">☰</div>
+          <div class="appbar-title">
+            <div class="appbar-title-main">新会话</div>
+            <div class="appbar-title-sub" style="display:flex;gap:6px;align-items:center">
+              <span class="device-chip active" onclick="openSheet('b')">
+                <span>🖥</span>
+                <span class="device-chip-text">主力工作机</span>
+                <span>▾</span>
+              </span>
+              <span style="color:var(--text-muted)">已连接</span>
+            </div>
+          </div>
+          <div class="appbar-actions">
+            <div class="appbar-btn">💬</div>
+            <div class="appbar-btn">⎘</div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="empty-state">
+            <h3>选择您的智能助手</h3>
+            <p>选择一个服务以开始新对话</p>
+          </div>
+        </div>
+
+        <div class="sheet-overlay" id="sheet-b" onclick="closeSheet(event, 'b')">
+          <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">切换桌面端</div>
+            <div class="sheet-item active">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">主力工作机</div><div class="sheet-item-meta">直连 192.168.0.9:3002</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-item">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">备用机</div><div class="sheet-item-meta">远程访问 · token ···8f2a</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-action">+ 添加桌面端</div>
+            <div class="sheet-action">↻ 刷新桌面端列表</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scheme C: Sidebar entry -->
+    <section class="section">
+      <h2 class="section-title">方案 C <span>· 迁移到侧边栏</span></h2>
+      <p class="section-desc">把桌面端切换从标题栏完全移除，放到侧边栏顶部作为一个独立卡片。标题栏最干净，切换入口和会话列表在同一层级。</p>
+      <div class="phone">
+        <div class="status-bar"><span>12:30</span><span>🔋100%</span></div>
+        <div class="appbar">
+          <div class="appbar-menu" onclick="toggleSidebar('c')">☰</div>
+          <div class="appbar-title"><div class="appbar-title-main">新会话</div></div>
+          <div class="appbar-actions">
+            <div class="appbar-btn">💬</div>
+            <div class="appbar-btn">⎘</div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="empty-state">
+            <h3>选择您的智能助手</h3>
+            <p>选择一个服务以开始新对话</p>
+          </div>
+        </div>
+
+        <div class="sidebar-overlay" id="overlay-c" onclick="toggleSidebar('c')"></div>
+        <div class="sidebar" id="sidebar-c">
+          <div class="sidebar-header">
+            <div style="font-weight:600;margin-bottom:4px">当前桌面端</div>
+            <div style="font-size:12px;color:var(--text-secondary)">切换后需要重新连接</div>
+          </div>
+          <div class="sidebar-device" onclick="openSheet('c')">
+            <div class="sidebar-device-icon">🖥</div>
+            <div class="sidebar-device-info">
+              <div class="sidebar-device-name">主力工作机</div>
+              <div class="sidebar-device-meta">192.168.0.9:3002 · 已连接</div>
+            </div>
+            <span>▾</span>
+          </div>
+          <div style="padding:12px 16px;font-size:13px;color:var(--text-secondary)">会话列表...</div>
+        </div>
+
+        <div class="sheet-overlay" id="sheet-c" onclick="closeSheet(event, 'c')">
+          <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">切换桌面端</div>
+            <div class="sheet-item active">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">主力工作机</div><div class="sheet-item-meta">直连 192.168.0.9:3002</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-item">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">备用机</div><div class="sheet-item-meta">远程访问 · token ···8f2a</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-action">+ 添加桌面端</div>
+            <div class="sheet-action">↻ 刷新桌面端列表</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scheme D: Status strip above content -->
+    <section class="section">
+      <h2 class="section-title">方案 D <span>· 内容区上方状态条</span></h2>
+      <p class="section-desc">在标题栏下方、内容区上方增加一条常驻状态条，显示当前连接设备和切换入口。标题栏完全不受影响，状态条点击后弹出 sheet。</p>
+      <div class="phone">
+        <div class="status-bar"><span>12:30</span><span>🔋100%</span></div>
+        <div class="appbar">
+          <div class="appbar-menu">☰</div>
+          <div class="appbar-title"><div class="appbar-title-main">新会话</div></div>
+          <div class="appbar-actions">
+            <div class="appbar-btn">💬</div>
+            <div class="appbar-btn">⎘</div>
+          </div>
+        </div>
+        <div class="status-strip" onclick="openSheet('d')">
+          <div class="status-strip-left">
+            <div class="status-strip-dot"></div>
+            <span>🖥 主力工作机 · 192.168.0.9:3002</span>
+          </div>
+          <span class="status-strip-btn">切换 ▾</span>
+        </div>
+        <div class="content">
+          <div class="empty-state">
+            <h3>选择您的智能助手</h3>
+            <p>选择一个服务以开始新对话</p>
+          </div>
+        </div>
+
+        <div class="sheet-overlay" id="sheet-d" onclick="closeSheet(event, 'd')">
+          <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">切换桌面端</div>
+            <div class="sheet-item active">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">主力工作机</div><div class="sheet-item-meta">直连 192.168.0.9:3002</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-item">
+              <div class="sheet-item-icon">🖥</div>
+              <div class="sheet-item-info"><div class="sheet-item-name">备用机</div><div class="sheet-item-meta">远程访问 · token ···8f2a</div></div>
+              <div class="sheet-item-check"></div>
+            </div>
+            <div class="sheet-action">+ 添加桌面端</div>
+            <div class="sheet-action">↻ 刷新桌面端列表</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>请挑选一个方案，我会把它同步到安卓端 ChatScreen。</footer>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+    function openSheet(id) {
+      document.getElementById('sheet-' + id).classList.add('open');
+    }
+    function closeSheet(e, id) {
+      if (e.target.id === 'sheet-' + id) document.getElementById('sheet-' + id).classList.remove('open');
+    }
+    function toggleSidebar(id) {
+      document.getElementById('sidebar-' + id).classList.toggle('open');
+      document.getElementById('overlay-' + id).classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
