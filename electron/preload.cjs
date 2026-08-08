@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (effectiveDark) => ipcRenderer.send('theme-cache:set', effectiveDark),
   },
   platform: process.platform,
+  // REQ-051 session context menu: open a path in the OS file explorer.
+  openPath: (targetPath) => ipcRenderer.invoke('shell:open-path', targetPath),
 });
 
 // Auto-updater bridge (REQ-011). Renderer useAutoUpdater hook reads state via

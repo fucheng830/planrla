@@ -34,6 +34,7 @@ function Sidebar({
   onShowSettings,
   showSettings,
   settingsInitialTab,
+  settingsInitialProvider,
   onCloseSettings,
   isMobile,
   onOpenMarkdownEditor,
@@ -194,9 +195,10 @@ function Sidebar({
     <A2aDelegateProvider value={a2aDelegateValue}>
         <SidebarModals
           projects={projects}
-        showSettings={showSettings}
-        settingsInitialTab={settingsInitialTab}
-        onCloseSettings={onCloseSettings}
+          showSettings={showSettings}
+          settingsInitialTab={settingsInitialTab}
+          settingsInitialProvider={settingsInitialProvider}
+          onCloseSettings={onCloseSettings}
         showNewProject={showNewProject}
         onCloseNewProject={() => setShowNewProject(false)}
         onProjectCreated={handleProjectCreated}

@@ -17,6 +17,10 @@ type SessionSummary = {
   // REQ-020 S3: surfaces the A2A delegation opt-in flag so the sidebar can
   // render the "Allow A2A delegation" toggle in its current state.
   a2a_exposed?: boolean;
+  // REQ-051 session context menu: surfaces the pin flag and transcript path so
+  // the sidebar can sort pinned sessions first and offer "copy log path".
+  isPinned?: boolean;
+  jsonlPath?: string | null;
 };
 
 type SessionRepositoryRow = {
@@ -26,6 +30,8 @@ type SessionRepositoryRow = {
   updated_at?: string | null;
   created_at?: string | null;
   a2a_exposed?: number | null;
+  isPinned?: number | null;
+  jsonl_path?: string | null;
 };
 
 export type ProjectListItem = {
@@ -130,6 +136,8 @@ function mapSessionRowToSummary(row: SessionRepositoryRow): SessionSummary {
     messageCount: 0,
     lastActivity: row.updated_at ?? row.created_at ?? new Date().toISOString(),
     a2a_exposed: Boolean(row.a2a_exposed),
+    isPinned: Boolean(row.isPinned),
+    jsonlPath: row.jsonl_path ?? null,
   };
 }
 

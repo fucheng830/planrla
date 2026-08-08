@@ -29,6 +29,9 @@ export type AgentsSettingsTabProps = {
   geminiPermissionMode: GeminiPermissionMode;
   onGeminiPermissionModeChange: (value: GeminiPermissionMode) => void;
   projects: SettingsProject[];
+  // REQ-051 session context menu: pre-select this agent when opening settings
+  // via "go to configuration". Falls back to 'claude' when unset.
+  initialSelectedAgent?: AgentProvider;
 };
 
 export type AgentCategoryTabsSectionProps = {

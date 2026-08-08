@@ -35,6 +35,8 @@ export type MainContentProps = {
    *  "search all" mode. Undefined degrades the picker to current-project
    *  filtering only. Built by AppContent from the full projects array. */
   allPickerSessions?: PickerCandidateSession[];
+  /** Message-level fork: branches a new conversation from a specific message. */
+  onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
 };
 
 export type MainContentHeaderProps = {

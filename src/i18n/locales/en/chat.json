@@ -11,6 +11,9 @@
     "copyAsMarkdown": "Copy as markdown",
     "copyAsText": "Copy as text"
   },
+  "messageActions": {
+    "forkFromHere": "Fork from here"
+  },
   "messageTypes": {
     "user": "U",
     "error": "Error",

@@ -103,6 +103,12 @@ export const api = {
     authenticatedFetch(`/api/providers/sessions/${sessionId}/restore`, {
       method: 'POST',
     }),
+  // REQ-051 session context menu: toggle the pin flag. Pinned sessions sort
+  // before unpinned ones in the sidebar.
+  toggleSessionPin: (sessionId) =>
+    authenticatedFetch(`/api/providers/sessions/${sessionId}/toggle-pin`, {
+      method: 'POST',
+    }),
   renameSession: (sessionId, summary) =>
     authenticatedFetch(`/api/providers/sessions/${sessionId}`, {
       method: 'PUT',

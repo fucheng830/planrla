@@ -100,6 +100,25 @@ ipcMain.on('show-notification', (_event, { type, title, body, sessionId, request
   n.show();
 });
 
+// REQ-051 session context menu: open a path in the OS file explorer.
+// shell.openPath opens the folder in Explorer/Finder; returns '' on success.
+ipcMain.handle('shell:open-path', async (_e, targetPath) => {
+  if (typeof targetPath !== 'string' || !targetPath.trim()) {
+    console.error('[shell:open-path] invalid path:', targetPath);
+    return '';
+  }
+  try {
+    const errorMsg = await shell.openPath(targetPath);
+    if (errorMsg) {
+      console.error(`[shell:open-path] failed for "${targetPath}": ${errorMsg}`);
+    }
+    return errorMsg;
+  } catch (err) {
+    console.error(`[shell:open-path] exception for "${targetPath}":`, err);
+    return String(err?.message || err);
+  }
+});
+
 function findFreePort() {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();

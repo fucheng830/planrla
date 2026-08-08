@@ -59,6 +59,8 @@ export type SidebarProps = {
   onShowSettings: () => void;
   showSettings: boolean;
   settingsInitialTab: string;
+  // REQ-051 session context menu: pins the agents tab to a provider on open.
+  settingsInitialProvider?: LLMProvider | null;
   onCloseSettings: () => void;
   isMobile: boolean;
   // REQ-047 — 侧边栏"打开 Markdown 编辑器"入口回调。可选,不传则不渲染入口按钮。

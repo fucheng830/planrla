@@ -19,8 +19,12 @@ export default function AgentsSettingsTab({
   geminiPermissionMode,
   onGeminiPermissionModeChange,
   projects,
+  initialSelectedAgent,
 }: AgentsSettingsTabProps) {
-  const [selectedAgent, setSelectedAgent] = useState<AgentProvider>('claude');
+  const KNOWN_AGENTS: AgentProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi', 'zcode'];
+  const [selectedAgent, setSelectedAgent] = useState<AgentProvider>(
+    initialSelectedAgent && KNOWN_AGENTS.includes(initialSelectedAgent) ? initialSelectedAgent : 'claude',
+  );
   const [selectedCategory, setSelectedCategory] = useState<AgentCategory>('account');
   const visibleCategories = useMemo<AgentCategory[]>(() => (
     selectedAgent === 'opencode'

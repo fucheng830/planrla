@@ -140,4 +140,6 @@ export interface ChatInterfaceProps {
   /** Cross-project sessions for the SessionReferencePicker's "search all"
    *  mode. Built by AppContent from the full projects array. */
   allPickerSessions?: PickerCandidateSession[];
+  /** Message-level fork: branches a new conversation from a specific message. */
+  onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
 }

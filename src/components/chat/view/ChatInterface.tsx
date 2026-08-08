@@ -51,6 +51,7 @@ function ChatInterface({
   externalMessageUpdate,
   newSessionTrigger,
   allPickerSessions,
+  onForkAtMessage,
 }: ChatInterfaceProps) {
   const { subscribe } = useWebSocket();
   const { t } = useTranslation('chat');
@@ -484,6 +485,7 @@ function ChatInterface({
           showRawParameters={showRawParameters}
           showThinking={showThinking}
           selectedProject={selectedProject}
+          onForkAtMessage={onForkAtMessage}
         />
 
         <ChatComposer

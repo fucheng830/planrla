@@ -39,6 +39,7 @@ function MainContent({
   externalMessageUpdate,
   newSessionTrigger,
   allPickerSessions,
+  onForkAtMessage,
 }: MainContentProps) {
   const { preferences } = useUiPreferences();
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
@@ -137,6 +138,7 @@ function MainContent({
                 externalMessageUpdate={externalMessageUpdate}
                 newSessionTrigger={newSessionTrigger}
                 allPickerSessions={allPickerSessions}
+                onForkAtMessage={onForkAtMessage}
               />
             </ErrorBoundary>
           </div>

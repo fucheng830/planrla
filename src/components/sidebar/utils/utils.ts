@@ -100,9 +100,18 @@ export const getAllSessions = (project: Project): SessionWithProvider[] => {
   return (project.sessions || []).map((session) => ({
     ...session,
     __provider: getSessionProvider(session),
-  })).sort(
-    (a, b) => getSessionDate(b).getTime() - getSessionDate(a).getTime(),
-  );
+  })).sort((a, b) => {
+    // Pinned sessions sort before unpinned ones, then by most recent activity.
+    const aPinned = Boolean(a.isPinned);
+    const bPinned = Boolean(b.isPinned);
+    if (aPinned && !bPinned) {
+      return -1;
+    }
+    if (!aPinned && bPinned) {
+      return 1;
+    }
+    return getSessionDate(b).getTime() - getSessionDate(a).getTime();
+  });
 };
 
 

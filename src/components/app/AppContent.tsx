@@ -103,6 +103,7 @@ function AppContentInner() {
     registerOptimisticSession,
     sidebarSharedProps,
     handleNewSession,
+    handleForkAtMessage,
   } = useProjectsState({
     sessionId,
     navigate,
@@ -300,6 +301,7 @@ function AppContentInner() {
             externalMessageUpdate={externalMessageUpdate}
             newSessionTrigger={newSessionTrigger}
             allPickerSessions={allPickerSessions}
+            onForkAtMessage={handleForkAtMessage}
           />
         </KanbanProvider>
       </div>

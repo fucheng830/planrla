@@ -11,6 +11,7 @@ import {
   readObjectRecord,
   readOptionalString,
   sliceTailPage,
+  truncateJsonlByTimestamp,
 } from '@/shared/utils.js';
 
 const PROVIDER = 'kimi';
@@ -350,5 +351,23 @@ export class KimiSessionsProvider implements IProviderSessions {
     }
 
     return { normalized, tokenUsage: buildTokenUsage(tokenTotals) };
+  }
+
+  /**
+   * Message-level fork: truncate the Kimi wire.jsonl event stream at the record
+   * whose `time` reaches upToTimestamp. wire.jsonl is append-only with strict
+   * time ordering, so line-level truncation preserves turn boundaries.
+   */
+  async forkJsonlByMessage(
+    sourceJsonlPath: string,
+    targetPath: string,
+    upToTimestamp: number | string,
+  ): Promise<void> {
+    await truncateJsonlByTimestamp(sourceJsonlPath, targetPath, upToTimestamp, (line) => {
+      const ts = line.time ?? line.timestamp;
+      if (typeof ts !== 'string' && typeof ts !== 'number') return null;
+      const ms = typeof ts === 'number' ? (ts < 1_000_000_000_000 ? ts * 1000 : ts) : Date.parse(ts);
+      return Number.isFinite(ms) ? ms : null;
+    });
   }
 }

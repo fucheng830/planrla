@@ -11,6 +11,9 @@
     "copyAsMarkdown": "复制为 Markdown",
     "copyAsText": "复制为纯文本"
   },
+  "messageActions": {
+    "forkFromHere": "从此处分支新对话"
+  },
   "messageTypes": {
     "user": "U",
     "error": "错误",

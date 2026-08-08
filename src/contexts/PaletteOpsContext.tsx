@@ -1,9 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject, ReactNode } from 'react';
+import type { LLMProvider } from '../types/app';
 
 export type PaletteOps = {
   openFile: (path: string) => void;
-  openSettings: (tab?: string) => void;
+  // REQ-051 session context menu: optional provider pins the agents tab to a
+  // specific agent (used by "go to configuration" from a session's provider).
+  openSettings: (tab?: string, provider?: LLMProvider) => void;
   refreshProjects: () => Promise<void> | void;
 };
 
@@ -27,7 +30,7 @@ export function usePaletteOps(): PaletteOps {
   return useMemo<PaletteOps>(
     () => ({
       openFile: (path) => (ref?.current.openFile ?? defaultOps.openFile)(path),
-      openSettings: (tab) => (ref?.current.openSettings ?? defaultOps.openSettings)(tab),
+      openSettings: (tab, provider) => (ref?.current.openSettings ?? defaultOps.openSettings)(tab, provider),
       refreshProjects: () => (ref?.current.refreshProjects ?? defaultOps.refreshProjects)(),
     }),
     [ref],

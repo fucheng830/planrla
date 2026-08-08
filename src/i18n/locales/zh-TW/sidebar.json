@@ -48,7 +48,20 @@
     "save": "儲存",
     "cancel": "取消",
     "clearSearch": "清除搜尋",
-    "openCommandPalette": "開啟指令面板"
+    "openCommandPalette": "開啟指令面板",
+    "pinnedSession": "已釘選",
+    "deleteSessionOptions": "封存或永久刪除此工作階段"
+  },
+  "contextMenu": {
+    "pinSession": "釘選",
+    "unpinSession": "取消釘選",
+    "archiveSession": "封存",
+    "copySessionId": "複製工作階段 ID",
+    "copyPath": "複製路徑",
+    "copyLogPath": "複製日誌路徑",
+    "copied": "已複製!",
+    "openInExplorer": "在檔案總管中開啟",
+    "goToConfig": "前往設定"
   },
   "navigation": {
     "chat": "聊天",

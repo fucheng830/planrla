@@ -11,6 +11,7 @@ declare global {
         set: (effectiveDark: boolean) => void;
       };
       platform?: NodeJS.Platform;
+      openPath?: (targetPath: string) => Promise<string>;
     };
   }
 }

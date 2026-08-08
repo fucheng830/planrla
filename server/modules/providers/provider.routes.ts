@@ -559,8 +559,26 @@ router.post(
   '/sessions/:sessionId/fork',
   asyncHandler(async (req: Request, res: Response) => {
     const sessionId = parseSessionId(req.params.sessionId);
-    const result = await sessionsService.forkSession(sessionId);
+    // Optional message-level fork: when upToTimestamp is present, fork truncates
+    // the transcript at the message whose timestamp matches (inclusive).
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const upToTimestampRaw = body.upToTimestamp;
+    const upToTimestamp = upToTimestampRaw === undefined
+      ? undefined
+      : (typeof upToTimestampRaw === 'number' ? upToTimestampRaw : String(upToTimestampRaw));
+    const result = await sessionsService.forkSession(sessionId, upToTimestamp);
     res.status(201).json(createApiSuccessResponse(result));
+  }),
+);
+
+// REQ-051 session context menu: toggle the pin flag. Pinned sessions sort
+// before unpinned ones in the sidebar.
+router.post(
+  '/sessions/:sessionId/toggle-pin',
+  asyncHandler(async (req: Request, res: Response) => {
+    const sessionId = parseSessionId(req.params.sessionId);
+    const result = sessionsService.toggleSessionPin(sessionId);
+    res.json(createApiSuccessResponse(result));
   }),
 );
 

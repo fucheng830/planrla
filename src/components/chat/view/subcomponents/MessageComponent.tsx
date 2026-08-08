@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { GitBranch } from 'lucide-react';
 
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import type {
@@ -36,6 +37,10 @@ type MessageComponentProps = {
   showThinking?: boolean;
   selectedProject?: Project | null;
   provider: Provider | string;
+  /** Whether message-level fork is available for this message's provider. */
+  canForkAtMessage?: boolean;
+  /** Handler invoked when the user clicks "fork from here" on this message. */
+  onForkAtMessage?: () => void;
 };
 
 type InteractiveOption = {
@@ -46,7 +51,7 @@ type InteractiveOption = {
 
 const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
 
-const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider }: MessageComponentProps) => {
+const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider, canForkAtMessage, onForkAtMessage }: MessageComponentProps) => {
   const { t } = useTranslation('chat');
   const isGrouped = prevMessage && prevMessage.type === message.type &&
     ((prevMessage.type === 'assistant') ||
@@ -110,7 +115,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
     <div
       ref={messageRef}
       data-message-timestamp={message.timestamp || undefined}
-      className={`chat-message ${message.type} ${isGrouped ? 'grouped' : ''} ${message.type === 'user' ? 'flex justify-end px-3 sm:px-0' : 'px-3 sm:px-0'}`}
+      className={`group/msg chat-message ${message.type} ${isGrouped ? 'grouped' : ''} ${message.type === 'user' ? 'flex justify-end px-3 sm:px-0' : 'px-3 sm:px-0'}`}
     >
       {message.type === 'user' ? (
         /* User message bubble on the right */
@@ -131,9 +136,21 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
               </div>
             )}
             <div className="mt-1 flex items-center justify-end gap-1 text-xs text-blue-100">
-              {shouldShowUserCopyControl && (
-                <MessageCopyControl content={userCopyContent} messageType="user" />
-              )}
+              <span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
+                {shouldShowUserCopyControl && (
+                  <MessageCopyControl content={userCopyContent} messageType="user" />
+                )}
+                {canForkAtMessage && onForkAtMessage && (
+                  <button
+                    type="button"
+                    onClick={onForkAtMessage}
+                    title={t('messageActions.forkFromHere', { defaultValue: 'Fork from here' })}
+                    className="flex items-center rounded px-1 py-0.5 hover:text-white"
+                  >
+                    <GitBranch className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
               <span>{formattedTime}</span>
             </div>
           </div>
@@ -416,12 +433,24 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
 
             {(shouldShowAssistantCopyControl || !isGrouped) && (
               <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
-                {shouldShowAssistantCopyControl && (
-                  <MessageCopyControl content={assistantCopyContent} messageType="assistant" />
-                )}
-                {shouldShowAssistantCopyControl && (
-                  <MessageSpeakControl content={assistantCopyContent} />
-                )}
+                <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover/msg:opacity-100">
+                  {shouldShowAssistantCopyControl && (
+                    <MessageCopyControl content={assistantCopyContent} messageType="assistant" />
+                  )}
+                  {shouldShowAssistantCopyControl && (
+                    <MessageSpeakControl content={assistantCopyContent} />
+                  )}
+                  {canForkAtMessage && onForkAtMessage && (
+                    <button
+                      type="button"
+                      onClick={onForkAtMessage}
+                      title={t('messageActions.forkFromHere', { defaultValue: 'Fork from here' })}
+                      className="flex items-center gap-1 rounded px-1 py-0.5 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <GitBranch className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
                 {!isGrouped && <span>{formattedTime}</span>}
               </div>
             )}

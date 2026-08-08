@@ -64,6 +64,8 @@ export type SettingsProps = {
   onClose: () => void;
   projects?: SettingsProject[];
   initialTab?: string;
+  // REQ-051 session context menu: pins the agents tab to this provider on open.
+  initialProvider?: string | null;
 };
 
 export type SetState<T> = Dispatch<SetStateAction<T>>;

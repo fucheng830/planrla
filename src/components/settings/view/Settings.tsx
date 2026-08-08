@@ -16,9 +16,11 @@ import PluginSettingsTab from '../../plugins/view/PluginSettingsTab';
 import AboutTab from '../view/tabs/AboutTab';
 import { useSettingsController } from '../hooks/useSettingsController';
 import { useWebPush } from '../../../hooks/useWebPush';
-import type { SettingsProps } from '../types/types';
+import type { AgentProvider, SettingsProps } from '../types/types';
 
-function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: SettingsProps) {
+const KNOWN_AGENTS: AgentProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi', 'zcode'];
+
+function Settings({ isOpen, onClose, projects = [], initialTab = 'agents', initialProvider = null }: SettingsProps) {
   const { t } = useTranslation('settings');
   const {
     activeTab,
@@ -137,6 +139,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
                   geminiPermissionMode={geminiPermissionMode}
                   onGeminiPermissionModeChange={setGeminiPermissionMode}
                   projects={projects}
+                  initialSelectedAgent={
+                    initialProvider && KNOWN_AGENTS.includes(initialProvider as AgentProvider)
+                      ? (initialProvider as AgentProvider)
+                      : undefined
+                  }
                 />
               )}
 

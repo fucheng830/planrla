@@ -214,7 +214,7 @@ export const sessionsService = {
    * jsonl_path at the streamed copy of the source transcript. The original
    * session row and transcript file are never mutated.
    */
-  async forkSession(sourceSessionId: string): Promise<ForkSessionResult> {
+  async forkSession(sourceSessionId: string, upToTimestamp?: number | string): Promise<ForkSessionResult> {
     const source = sessionsDb.getSessionById(sourceSessionId);
     if (!source) {
       throw new AppError(`Session "${sourceSessionId}" was not found.`, {
@@ -241,13 +241,28 @@ export const sessionsService = {
     // and ensures the project path exists, mirroring the brand-new chat path.
     sessionsDb.createAppSession(newSessionId, provider, projectPath);
 
-    // Stream-copy the transcript (libuv thread, does not load the file into
-    // memory — safe for large conversations) into the same project directory
-    // so the provider's session-synchronizer/watcher ignores it (it only
-    // scans known provider file-name shapes).
+    // Copy the transcript into the same project directory so the provider's
+    // session-synchronizer/watcher ignores it (it only scans known provider
+    // file-name shapes). When upToTimestamp is set, delegate to the provider's
+    // forkJsonlByMessage to truncate at the matching message; otherwise stream-
+    // copy the whole file (libuv thread, does not load into memory).
     const forkedJsonlPath = path.join(path.dirname(source.jsonl_path), `${newSessionId}.jsonl`);
     try {
-      await fsp.copyFile(source.jsonl_path, forkedJsonlPath);
+      if (upToTimestamp !== undefined) {
+        const reader = providerRegistry.resolveProvider(provider).sessions;
+        if (typeof reader.forkJsonlByMessage === 'function') {
+          await reader.forkJsonlByMessage(source.jsonl_path, forkedJsonlPath, upToTimestamp);
+        } else {
+          // Provider has no message-level truncation: fall back to whole-file
+          // copy so fork still works (history will be the full conversation).
+          console.warn(
+            `[sessionsService] provider "${provider}" has no forkJsonlByMessage; falling back to full copy for ${sourceSessionId}`,
+          );
+          await fsp.copyFile(source.jsonl_path, forkedJsonlPath);
+        }
+      } else {
+        await fsp.copyFile(source.jsonl_path, forkedJsonlPath);
+      }
     } catch (error) {
       // Roll back the optimistic DB row so a failed copy never leaves an empty
       // session behind.
@@ -446,5 +461,24 @@ export const sessionsService = {
 
     sessionsDb.updateSessionCustomName(sessionId, summary);
     return { sessionId, summary };
+  },
+
+  /**
+   * Flips `sessions.isPinned` for one session and returns the new state.
+   * Pinned sessions sort before unpinned ones in the sidebar.
+   */
+  toggleSessionPin(sessionId: string): { sessionId: string; isPinned: boolean } {
+    const session = sessionsDb.getSessionById(sessionId);
+    if (!session) {
+      throw new AppError(`Session "${sessionId}" was not found.`, {
+        code: 'SESSION_NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+
+    const nextPinnedState = !Boolean(session.isPinned);
+    sessionsDb.updateSessionIsPinned(sessionId, nextPinnedState);
+
+    return { sessionId, isPinned: nextPinnedState };
   },
 };

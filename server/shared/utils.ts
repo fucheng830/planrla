@@ -1239,3 +1239,64 @@ export async function extractFirstValidJsonlData<T>(
   return null;
 }
 
+/**
+ * Message-level fork helper: streams a source NDJSON/JSONL file line by line
+ * into targetPath, stopping after writing the line whose timestamp reaches
+ * (equals or exceeds) upToTimestamp. Inclusive truncation — the target line
+ * and everything before it are copied; lines after are dropped.
+ *
+ * `extractTimestamp` derives a comparable numeric epoch-millis from each parsed
+ * line (provider-specific field). Lines whose timestamp cannot be parsed are
+ * treated as "before" (always copied), so metadata/title rows are preserved.
+ * Lines that fail JSON.parse are passed through verbatim to keep the copy
+ * byte-faithful for non-JSON trailing content.
+ *
+ * Returns true if a matching line was found and truncation applied; false if
+ * the whole file was copied because no line matched (safe fallback).
+ */
+export async function truncateJsonlByTimestamp(
+  sourcePath: string,
+  targetPath: string,
+  upToTimestamp: number | string,
+  extractTimestamp: (parsedLine: AnyRecord) => number | null,
+): Promise<boolean> {
+  const targetEpoch = typeof upToTimestamp === 'number'
+    ? (upToTimestamp < 1_000_000_000_000 ? upToTimestamp * 1000 : upToTimestamp)
+    : Date.parse(upToTimestamp);
+
+  const fileStream = fs.createReadStream(sourcePath);
+  const lineReader = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  const writeStream = fs.createWriteStream(targetPath);
+
+  let matched = false;
+  try {
+    for await (const line of lineReader) {
+      // Preserve the original line ending semantics by writing the raw line + LF.
+      writeStream.write(line);
+      writeStream.write('\n');
+
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      let parsed: AnyRecord | null = null;
+      try { parsed = JSON.parse(trimmed) as AnyRecord; } catch { continue; }
+
+      const lineEpoch = extractTimestamp(parsed);
+      if (lineEpoch !== null && Number.isFinite(lineEpoch) && lineEpoch >= targetEpoch) {
+        matched = true;
+        break;
+      }
+    }
+  } finally {
+    lineReader.close();
+    fileStream.close();
+    await new Promise<void>((resolve, reject) => {
+      writeStream.on('finish', () => resolve());
+      writeStream.on('error', (e: unknown) => reject(e instanceof Error ? e : new Error(String(e))));
+      writeStream.end();
+    });
+  }
+
+  return matched;
+}
+
