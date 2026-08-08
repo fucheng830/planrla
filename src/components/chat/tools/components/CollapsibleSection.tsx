@@ -11,10 +11,11 @@ interface CollapsibleSectionProps {
   onTitleClick?: () => void;
   children: React.ReactNode;
   className?: string;
+  dotColor?: string;
 }
 
 /**
- * Reusable collapsible section with consistent styling
+ * Reusable collapsible section with a terminal-style card header
  */
 export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   title,
@@ -25,12 +26,23 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   onTitleClick,
   children,
   className = '',
+  dotColor,
 }) => {
+  const headerBase =
+    'flex select-none items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs transition-colors';
+  const dot = dotColor ? (
+    <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+  ) : null;
+
   return (
-    <Collapsible defaultOpen={open} className={cn('group/section', className)}>
+    <Collapsible
+      defaultOpen={open}
+      className={cn('group/section overflow-hidden rounded-lg border border-border bg-card shadow-sm', className)}
+    >
       {/* When there's a clickable title (Edit/Write), only the chevron toggles collapse */}
       {onTitleClick ? (
-        <div className="flex cursor-default select-none items-center gap-1.5 py-0.5 text-xs group-data-[state=open]/section:sticky group-data-[state=open]/section:top-0 group-data-[state=open]/section:z-10 group-data-[state=open]/section:-mx-1 group-data-[state=open]/section:bg-background group-data-[state=open]/section:px-1">
+        <div className={`${headerBase} hover:bg-muted`}>
+          {dot}
           <CollapsibleTrigger className="flex flex-shrink-0 items-center p-0.5 text-muted-foreground hover:text-foreground">
             <svg
               className="h-3 w-3 transition-transform duration-150 group-data-[state=open]/section:rotate-90"
@@ -57,15 +69,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           {action && <span className="ml-1 flex-shrink-0">{action}</span>}
         </div>
       ) : (
-        <CollapsibleTrigger className="flex w-full select-none items-center gap-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground group-data-[state=open]/section:sticky group-data-[state=open]/section:top-0 group-data-[state=open]/section:z-10 group-data-[state=open]/section:-mx-1 group-data-[state=open]/section:bg-background group-data-[state=open]/section:px-1">
-          <svg
-            className="h-3 w-3 flex-shrink-0 transition-transform duration-150 group-data-[state=open]/section:rotate-90"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+        <CollapsibleTrigger className={`${headerBase} w-full hover:bg-muted hover:text-foreground`}>
+          {dot}
           {toolName && (
             <span className="flex-shrink-0 font-medium">{toolName}</span>
           )}
@@ -75,11 +80,19 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           <span className="flex-1 truncate text-left">{title}</span>
           {badge && <span className="ml-auto flex-shrink-0">{badge}</span>}
           {action && <span className="ml-1 flex-shrink-0">{action}</span>}
+          <svg
+            className="h-3 w-3 flex-shrink-0 text-muted-foreground transition-transform duration-150 group-data-[state=open]/section:rotate-90"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </CollapsibleTrigger>
       )}
 
       <CollapsibleContent>
-        <div className="mt-1.5 pl-[18px]">
+        <div className="px-3 py-2">
           {children}
         </div>
       </CollapsibleContent>

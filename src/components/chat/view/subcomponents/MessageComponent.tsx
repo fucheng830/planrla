@@ -155,7 +155,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
         /* Claude/Error/Tool messages on the left */
         <div className="w-full">
           {!isGrouped && (
-            <div className="mb-2 flex items-center space-x-3">
+            <div className="mb-1 flex items-center">
               {message.type === 'error' ? (
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-sm text-white">
                   !
@@ -169,23 +169,6 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
                   <SessionProviderLogo provider={provider} className="h-full w-full" />
                 </div>
               )}
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {message.type === 'error'
-                  ? t('messageTypes.error')
-                  : message.type === 'tool'
-                    ? t('messageTypes.tool')
-                    : (provider === 'cursor'
-                        ? t('messageTypes.cursor')
-                        : provider === 'codex'
-                          ? t('messageTypes.codex')
-                          : provider === 'gemini'
-                            ? t('messageTypes.gemini')
-                            : provider === 'opencode'
-                              ? t('messageTypes.opencode', { defaultValue: 'OpenCode' })
-                              : provider === 'kimi'
-                                ? t('messageTypes.kimi', { defaultValue: 'Kimi Code' })
-                                : t('messageTypes.claude'))}
-              </div>
             </div>
           )}
 

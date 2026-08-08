@@ -27,7 +27,39 @@ interface OneLineDisplayProps {
   toolResult?: any;
   toolId?: string;
   status?: ToolStatus;
+  category?: string;
 }
+
+const dotColorMap: Record<string, string> = {
+  edit: 'bg-amber-500 dark:bg-amber-400',
+  search: 'bg-slate-400 dark:bg-slate-500',
+  bash: 'bg-green-500 dark:bg-green-400',
+  todo: 'bg-violet-500 dark:bg-violet-400',
+  task: 'bg-violet-500 dark:bg-violet-400',
+  agent: 'bg-purple-500 dark:bg-purple-400',
+  plan: 'bg-indigo-500 dark:bg-indigo-400',
+  question: 'bg-blue-500 dark:bg-blue-400',
+  default: 'bg-border',
+};
+
+const CardShell: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`group my-2 overflow-hidden rounded-lg border border-border bg-card shadow-sm ${className}`}>
+    {children}
+  </div>
+);
+
+const CardHeader: React.FC<{ dotColor?: string; toolName: string; label?: string; children?: React.ReactNode }> = ({
+  dotColor,
+  toolName,
+  label,
+  children,
+}) => (
+  <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs">
+    {dotColor && <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />}
+    <span className="flex-shrink-0 font-medium text-muted-foreground">{label || toolName}</span>
+    {children}
+  </div>
+);
 
 /**
  * Unified one-line display for simple tool inputs and results
@@ -53,6 +85,7 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   toolResult,
   toolId,
   status,
+  category,
 }) => {
   const { t } = useTranslation('chat');
   const [copied, setCopied] = useState(false);
@@ -69,10 +102,12 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
     }
   };
 
+  const dotColor = dotColorMap[category || 'default'] || dotColorMap.default;
+
   const renderCopyButton = () => (
     <button
       onClick={handleAction}
-      className="ml-1 flex-shrink-0 text-muted-foreground/40 opacity-0 transition-all hover:text-muted-foreground group-hover:opacity-100"
+      className="ml-auto flex-shrink-0 text-muted-foreground transition-all hover:text-foreground"
       title={t('codeBlock.copy')}
       aria-label={t('codeBlock.copy')}
     >
@@ -88,34 +123,27 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
     </button>
   );
 
-  // Terminal style: dark pill around the command
+  // Terminal style: dark card with a command block
   if (isTerminal) {
     return (
-      <div className="group my-1">
-        <div className="flex items-start gap-2">
-          <div className="flex flex-shrink-0 items-center gap-1.5 pt-0.5">
-            <svg className="h-3 w-3 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+      <CardShell>
+        <CardHeader dotColor={dotColor} toolName={toolName} label={label}>
+          {status && <ToolStatusBadge status={status} className="ml-auto" />}
+          {action === 'copy' && renderCopyButton()}
+        </CardHeader>
+        <div className="px-3 py-2">
+          <div className="rounded bg-gray-900 px-3 py-2 dark:bg-black">
+            <code className={`block font-mono text-xs text-green-400 ${wrapText ? 'whitespace-pre-wrap break-all' : 'truncate'}`}>
+              <span className="select-none text-green-600 dark:text-green-500">$ </span>{value}
+            </code>
           </div>
-          <div className="flex min-w-0 flex-1 items-start gap-2">
-            <div className="min-w-0 flex-1 rounded bg-gray-900 px-2.5 py-1 dark:bg-black">
-              <code className={`font-mono text-xs text-green-400 ${wrapText ? 'whitespace-pre-wrap break-all' : 'block truncate'}`}>
-                <span className="select-none text-green-600 dark:text-green-500">$ </span>{value}
-              </code>
-            </div>
-            {status && <ToolStatusBadge status={status} className="mt-0.5" />}
-            {action === 'copy' && renderCopyButton()}
-          </div>
-        </div>
-        {secondary && (
-          <div className="ml-7 mt-1">
-            <span className="text-[11px] italic text-muted-foreground/60">
+          {secondary && (
+            <div className="mt-1.5 text-[11px] italic text-muted-foreground/60">
               {secondary}
-            </span>
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      </CardShell>
     );
   }
 
@@ -123,72 +151,81 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
   if (action === 'open-file') {
     const displayName = value.split('/').pop() || value;
     return (
-      <div className={`group flex items-center gap-1.5 border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-        <span className="text-[10px] text-muted-foreground/40">/</span>
-        <button
-          onClick={handleAction}
-          className="truncate font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
-          title={value}
-        >
-          {displayName}
-        </button>
-        {status && <ToolStatusBadge status={status} className="ml-auto" />}
-      </div>
+      <CardShell>
+        <div className="flex items-center gap-2 px-3 py-2 text-xs">
+          <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+          <span className="flex-shrink-0 font-medium text-muted-foreground">{label || toolName}</span>
+          <span className="text-[10px] text-muted-foreground/40">/</span>
+          <button
+            onClick={handleAction}
+            className="flex-1 truncate text-left font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
+            title={value}
+          >
+            {displayName}
+          </button>
+          {status && <ToolStatusBadge status={status} className="ml-auto" />}
+        </div>
+      </CardShell>
     );
   }
 
   // Search / jump-to-results style
   if (action === 'jump-to-results') {
     return (
-      <div className={`group flex items-center gap-1.5 border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-        <span className="text-[10px] text-muted-foreground/40">/</span>
-        <span className={`min-w-0 flex-1 truncate font-mono text-xs ${colorScheme.primary}`}>
-          {value}
-        </span>
-        {secondary && (
-          <span className="flex-shrink-0 text-[11px] italic text-muted-foreground/60">
-            {secondary}
+      <CardShell>
+        <div className="flex items-center gap-2 px-3 py-2 text-xs">
+          <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+          <span className="flex-shrink-0 font-medium text-muted-foreground">{label || toolName}</span>
+          <span className="text-[10px] text-muted-foreground/40">/</span>
+          <span className={`min-w-0 flex-1 truncate font-mono text-xs ${colorScheme.primary}`}>
+            {value}
           </span>
-        )}
-        {status && <ToolStatusBadge status={status} />}
-        {toolResult && (
-          <a
-            href={`#tool-result-${toolId}`}
-            className="flex flex-shrink-0 items-center gap-0.5 text-[11px] text-primary transition-colors hover:text-primary/80"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </a>
-        )}
-      </div>
+          {secondary && (
+            <span className="flex-shrink-0 text-[11px] italic text-muted-foreground/60">
+              {secondary}
+            </span>
+          )}
+          {status && <ToolStatusBadge status={status} className="ml-auto" />}
+          {toolResult && (
+            <a
+              href={`#tool-result-${toolId}`}
+              className="ml-1 flex flex-shrink-0 items-center gap-0.5 text-[11px] text-primary transition-colors hover:text-primary/80"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+          )}
+        </div>
+      </CardShell>
     );
   }
 
   // Default one-line style
   return (
-    <div className={`group flex items-center gap-1.5 ${colorScheme.background || ''} border-l-2 ${colorScheme.border} my-0.5 py-0.5 pl-3`}>
-      {icon && icon !== 'terminal' && (
-        <span className={`${colorScheme.icon} flex-shrink-0 text-xs`}>{icon}</span>
-      )}
-      {!icon && (label || toolName) && (
-        <span className="flex-shrink-0 text-xs text-muted-foreground">{label || toolName}</span>
-      )}
-      {(icon || label || toolName) && (
-        <span className="text-[10px] text-muted-foreground/40">/</span>
-      )}
-      <span className={`font-mono text-xs ${wrapText ? 'whitespace-pre-wrap break-all' : 'truncate'} min-w-0 flex-1 ${colorScheme.primary}`}>
-        {value}
-      </span>
-      {secondary && (
-        <span className={`text-[11px] ${colorScheme.secondary} flex-shrink-0 italic`}>
-          {secondary}
+    <CardShell>
+      <div className={`flex items-center gap-2 px-3 py-2 text-xs ${colorScheme.background || ''}`}>
+        <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+        {icon && icon !== 'terminal' && (
+          <span className={`${colorScheme.icon} flex-shrink-0 text-xs`}>{icon}</span>
+        )}
+        {!icon && (label || toolName) && (
+          <span className="flex-shrink-0 font-medium text-muted-foreground">{label || toolName}</span>
+        )}
+        {(icon || label || toolName) && (
+          <span className="text-[10px] text-muted-foreground/40">/</span>
+        )}
+        <span className={`font-mono text-xs ${wrapText ? 'whitespace-pre-wrap break-all' : 'truncate'} min-w-0 flex-1 ${colorScheme.primary}`}>
+          {value}
         </span>
-      )}
-      {status && <ToolStatusBadge status={status} />}
-      {action === 'copy' && renderCopyButton()}
-    </div>
+        {secondary && (
+          <span className={`flex-shrink-0 text-[11px] ${colorScheme.secondary} italic`}>
+            {secondary}
+          </span>
+        )}
+        {status && <ToolStatusBadge status={status} className="ml-auto" />}
+        {action === 'copy' && renderCopyButton()}
+      </div>
+    </CardShell>
   );
 };

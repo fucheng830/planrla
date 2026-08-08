@@ -136,10 +136,10 @@ const markdownComponents = {
   ),
   thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-gray-50 dark:bg-gray-800">{children}</thead>,
   th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="border border-gray-200 px-3 py-2 text-left text-sm font-semibold dark:border-gray-700">{children}</th>
+    <th className="break-words border border-gray-200 px-3 py-2 text-left text-sm font-semibold dark:border-gray-700">{children}</th>
   ),
   td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="border border-gray-200 px-3 py-2 align-top text-sm dark:border-gray-700">{children}</td>
+    <td className="break-words border border-gray-200 px-3 py-2 align-top text-sm dark:border-gray-700">{children}</td>
   ),
 };
 

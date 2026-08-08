@@ -147,6 +147,7 @@ export const ToolRenderer: React.FC<ToolRendererProps> = memo(({
         colorScheme={displayConfig.colorScheme}
         resultId={mode === 'input' ? `tool-result-${toolId}` : undefined}
         status={toolStatus !== 'completed' ? toolStatus : undefined}
+        category={getToolCategory(toolName)}
       />
     );
   }

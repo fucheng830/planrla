@@ -105,6 +105,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -165,7 +166,6 @@ import okhttp3.ResponseBody
 // planrla shadcn palette (hardcoded tailwind values from the web app)
 private val UserBubbleBlue = Color(0xFF2563EB)     // bg-blue-600 (user bubble / Sign In)
 private val ClaudeCoral = Color(0xFFD97757)         // Claude brand mark
-private val ToolAvatarGray = Color(0xFF6B7280)      // gray-600 (tool avatar, used in both themes)
 private val ErrorRedLight = Color(0xFFEF4444)
 private val UserTimestampBlue = Color(0xFFDBEAFE)   // blue-100 (user timestamp on blue bubble)
 // AssistantTextGray removed — now uses MaterialTheme.colorScheme.onSurfaceVariant (theme-aware)
@@ -1232,6 +1232,10 @@ private fun MessageList(
     }
 }
 
+/** Items that belong to the same assistant turn (text, thinking, tool cards). */
+private fun ChatItem?.isPartOfAssistantTurn(): Boolean =
+    this is ChatItem.Assistant || this is ChatItem.Thinking || this is ChatItem.ToolCard
+
 @Composable
 private fun ChatRow(item: ChatItem, prev: ChatItem?) {
     when (item) {
@@ -1239,7 +1243,13 @@ private fun ChatRow(item: ChatItem, prev: ChatItem?) {
         is ChatItem.Assistant -> {
             val text by item.text.collectAsStateWithLifecycle()
             val done by item.done.collectAsStateWithLifecycle()
-            if (text.isNotEmpty()) AssistantBlock(if (done) text else "$text▌", prev !is ChatItem.Assistant, item.time, done, item.provider)
+            if (text.isNotEmpty()) AssistantBlock(
+                text = if (done) text else "$text▌",
+                showHeader = !prev.isPartOfAssistantTurn(),
+                time = item.time,
+                done = done,
+                provider = item.provider,
+            )
         }
         is ChatItem.Thinking -> { if (App.settings.showThinking) ThinkingBlock(item.text) }
         is ChatItem.ToolCard -> ToolCardRow(item)
@@ -1255,7 +1265,7 @@ private fun ChatRow(item: ChatItem, prev: ChatItem?) {
 @Composable
 private fun UserBubble(text: String, time: Long) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.End
     ) {
         Surface(
@@ -1284,7 +1294,7 @@ private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long 
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .combinedClickable(
                 onClick = {},
@@ -1295,17 +1305,8 @@ private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long 
             )
     ) {
         if (showHeader) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProviderAvatarHeader(32, provider)
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    providerDisplayName(provider),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
+            ProviderAvatarHeader(32, provider)
+            Spacer(Modifier.height(4.dp))
         }
         MarkdownText(text, Modifier.fillMaxWidth())
         if (done) MessageMeta(time, text, alignEnd = false)
@@ -1403,53 +1404,83 @@ private fun ToolCardRow(card: ChatItem.ToolCard) {
     val result by card.result.collectAsStateWithLifecycle()
     val isError by card.isError.collectAsStateWithLifecycle()
     val catColor = toolCategoryColor(card.toolName)
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(32.dp).clip(CircleShape).background(ToolAvatarGray),
-                contentAlignment = Alignment.Center
-            ) { Text("🔧", color = Color.White) }
-            Spacer(Modifier.width(10.dp))
-            Text(card.toolName ?: "tool", fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(6.dp))
-            result?.let { ToolStatusBadge(isError) }
-        }
-        Spacer(Modifier.height(6.dp))
+    val isBash = card.toolName?.contains("bash", true) == true || card.toolName?.contains("exec", true) == true
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
         Card(
-            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             shape = RoundedCornerShape(10.dp),
         ) {
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                // Left color bar (2dp, category-colored, matches web border-l-2)
-                Box(Modifier.width(3.dp).fillMaxHeight().background(catColor))
-                Column(Modifier.weight(1f).padding(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            if (expanded) stringResource(R.string.chat_tool_hide) else stringResource(R.string.chat_tool_show),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(if (expanded) "▼" else "▶", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (expanded && card.input.isNotBlank()) {
-                        Text(
-                            card.input,
-                            Modifier.padding(top = 6.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            maxLines = 8,
-                        )
-                    }
-                    result?.let {
-                        Text(
-                            "↳ $it",
-                            Modifier.padding(top = 4.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 10,
-                        )
+            Column(Modifier.fillMaxWidth()) {
+                // Header: colored dot + tool name + badge + chevron (params stay hidden when collapsed)
+                Row(
+                    Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(catColor))
+                    Text(
+                        card.toolName ?: "tool",
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    result?.let { ToolStatusBadge(isError) }
+                    Text(if (expanded) "▼" else "▶", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                if (expanded) {
+                    Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+                        if (card.input.isNotBlank()) {
+                            if (isBash) {
+                                Surface(
+                                    Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFF111827),
+                                ) {
+                                    Text(
+                                        "$ ${card.input}",
+                                        Modifier.padding(12.dp).horizontalScroll(rememberScrollState()),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = Color(0xFF86EFAC),
+                                        lineHeight = 18.sp,
+                                    )
+                                }
+                            } else {
+                                Surface(
+                                    Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                ) {
+                                    Text(
+                                        card.input,
+                                        Modifier.padding(10.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        lineHeight = 18.sp,
+                                    )
+                                }
+                            }
+                        }
+                        result?.let {
+                            val resultText = it.toString()
+                            if (resultText.isNotBlank()) {
+                                if (isError) {
+                                    Text(
+                                        resultText,
+                                        Modifier.padding(top = 10.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        lineHeight = 20.sp,
+                                    )
+                                } else {
+                                    MarkdownText(resultText, Modifier.padding(top = 10.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1495,24 +1526,24 @@ private fun MarkdownText(content: String, modifier: Modifier = Modifier) {
                     content = part.content,
                     modifier = Modifier.fillMaxWidth(),
                     colors = markdownColor(
-                        text = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = MaterialTheme.colorScheme.onSurface,
                         codeText = MaterialTheme.colorScheme.onSurface,
                         codeBackground = Color(0xFF1E1E2E),
                     ),
                     typography = markdownTypography(
-                        text = MaterialTheme.typography.bodyMedium,
-                        code = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        h1 = MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
-                        h2 = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
-                        h3 = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-                        h4 = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-                        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                        quote = MaterialTheme.typography.bodyMedium,
-                        paragraph = MaterialTheme.typography.bodyMedium,
-                        ordered = MaterialTheme.typography.bodyMedium,
-                        bullet = MaterialTheme.typography.bodyMedium,
-                        list = MaterialTheme.typography.bodyMedium,
+                        text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        code = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 20.sp),
+                        h1 = MaterialTheme.typography.titleLarge.copy(fontSize = 26.sp, fontWeight = FontWeight.SemiBold, lineHeight = 32.sp),
+                        h2 = MaterialTheme.typography.titleMedium.copy(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, lineHeight = 28.sp),
+                        h3 = MaterialTheme.typography.titleSmall.copy(fontSize = 19.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp),
+                        h4 = MaterialTheme.typography.titleSmall.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp),
+                        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, lineHeight = 24.sp),
+                        h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold, lineHeight = 20.sp),
+                        quote = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        paragraph = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        ordered = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        bullet = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        list = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
                     ),
                 )
             }
@@ -1609,24 +1640,15 @@ private fun MarkdownTable(headers: List<String>, rows: List<List<String>>) {
     val border = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
     val headerBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     val cellBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f)
-    val widths = remember(headers) {
-        headers.mapIndexed { index, _ ->
-            when {
-                headers.size == 2 && index == 0 -> 156.dp
-                headers.size == 2 -> 560.dp
-                else -> 180.dp
-            }
-        }
-    }
     Column(
         Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .horizontalScroll(rememberScrollState())
+            .border(0.5.dp, border)
     ) {
-        MarkdownTableRow(headers, widths, headerBg, border, header = true)
+        MarkdownTableRow(headers, headerBg, border, header = true)
         rows.forEach { row ->
-            MarkdownTableRow(normalizeTableRow(row, headers.size), widths, cellBg, border, header = false)
+            MarkdownTableRow(normalizeTableRow(row, headers.size), cellBg, border, header = false)
         }
     }
 }
@@ -1634,18 +1656,17 @@ private fun MarkdownTable(headers: List<String>, rows: List<List<String>>) {
 @Composable
 private fun MarkdownTableRow(
     cells: List<String>,
-    widths: List<androidx.compose.ui.unit.Dp>,
     bg: Color,
     border: Color,
     header: Boolean,
 ) {
-    Row(Modifier.background(bg)) {
-        cells.forEachIndexed { index, cell ->
+    Row(Modifier.fillMaxWidth().background(bg)) {
+        cells.forEachIndexed { _, cell ->
             Box(
                 Modifier
-                    .width(widths.getOrElse(index) { 180.dp })
+                    .weight(1f)
                     .border(0.5.dp, border)
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 MarkdownInlineText(cell, header)
             }
@@ -1658,18 +1679,33 @@ private fun MarkdownInlineText(text: String, header: Boolean) {
     val codeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     val annotated = remember(text, codeBg) {
         buildAnnotatedString {
-            val regex = Regex("`([^`]+)`")
+            // Inline markdown: code `...`, bold **...**, italic *...*
+            val regex = Regex("""(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)""")
             var last = 0
             regex.findAll(text).forEach { match ->
                 append(text.substring(last, match.range.first))
-                withStyle(
-                    SpanStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.SemiBold,
-                        background = codeBg,
-                    )
-                ) {
-                    append(match.groupValues[1])
+                val raw = match.groupValues[0]
+                when {
+                    raw.startsWith("`") && raw.endsWith("`") -> withStyle(
+                        SpanStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.SemiBold,
+                            background = codeBg,
+                        )
+                    ) {
+                        append(raw.substring(1, raw.length - 1))
+                    }
+                    raw.startsWith("**") && raw.endsWith("**") -> withStyle(
+                        SpanStyle(fontWeight = FontWeight.Bold)
+                    ) {
+                        append(raw.substring(2, raw.length - 2))
+                    }
+                    raw.startsWith("*") && raw.endsWith("*") -> withStyle(
+                        SpanStyle(fontStyle = FontStyle.Italic)
+                    ) {
+                        append(raw.substring(1, raw.length - 1))
+                    }
+                    else -> append(raw)
                 }
                 last = match.range.last + 1
             }

@@ -19,10 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -374,13 +371,11 @@ fun Sidebar(
         )
     }
 
-    val statusBarHeightDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(top = statusBarHeightDp, start = 16.dp, end = 16.dp, bottom = 6.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // planrla logo — matches web /logo.svg gradient mark
@@ -754,10 +749,6 @@ private fun ConversationRow(s: SessionInfo, project: String, selected: Boolean, 
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (s.provider?.lowercase() != "claude") {
-                        Spacer(Modifier.width(4.dp))
-                        ProviderBadge(s.provider)
-                    }
                 }
             }
         }
@@ -1230,31 +1221,6 @@ private fun DeleteProjectDialog(
 private fun providerDisplay(provider: String?): String =
     provider?.trim()?.lowercase()?.replaceFirstChar { it.uppercase() }?.takeIf { it.isNotEmpty() }
         ?: "Claude"
-
-private fun providerColor(provider: String?): Color = when (provider?.trim()?.lowercase()) {
-    "codex" -> Color(0xFF10A37F)   // OpenAI green
-    "cursor" -> Color(0xFF6B7280)  // gray (cursor brand is UI-dependent; gray is safe)
-    "gemini" -> Color(0xFF1A73E8)  // Google blue
-    "opencode" -> Color(0xFF6B7280)
-    else -> ClaudeCoral            // claude / null / unknown
-}
-
-@Composable
-private fun ProviderBadge(provider: String?) {
-    val label = providerDisplay(provider)
-    val color = providerColor(provider)
-    Text(
-        label,
-        Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(color.copy(alpha = 0.15f))
-            .padding(horizontal = 5.dp, vertical = 1.dp),
-        color = color,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Medium,
-        maxLines = 1,
-    )
-}
 
 @Composable
 private fun ClaudeAvatarSmall(sizeDp: Int = 24) {
