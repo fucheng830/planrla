@@ -9,6 +9,7 @@ import {
   Palette,
   Plug,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
 
 import type {
@@ -36,6 +37,7 @@ export const SETTINGS_MAIN_TABS: SettingsMainTabMeta[] = [
   { id: 'browser', label: 'Browser', keywords: 'browser playwright chromium automation', icon: MonitorPlay },
   { id: 'notifications', label: 'Notifications', keywords: 'notifications alerts push', icon: Bell },
   { id: 'plugins', label: 'Plugins', keywords: 'plugins extensions integrations', icon: Plug },
+  { id: 'sync', label: 'Team Sync', keywords: 'team sync collaboration cloud share', icon: Users },
   { id: 'about', label: 'About', keywords: 'about version info', icon: Info },
 ];
 

@@ -8,19 +8,14 @@
 // returned team_id + instance token in sync_config → the background SyncEngine
 // picks them up and begins pushing/pulling.
 
-import express, { type Response as ExpressResponse } from 'express';
+import express from 'express';
+import os from 'node:os';
 
 import { getConnection } from '@/modules/database/index.js';
 import { createSyncConfigRepository } from './sync.db.js';
 import { getSyncEngine, startSyncScheduler } from './sync.client.js';
 
 const router = express.Router();
-
-/** True when the cloud responded with a 2xx status. (res is unused — kept for
- *  signature symmetry with a future streaming proxy.) */
-function proxyJson(_res: ExpressResponse, status: number): boolean {
-  return status >= 200 && status < 300;
-}
 
 /** GET /api/sync/config — current sync configuration + connection status. */
 router.get('/config', async (_req, res) => {
@@ -118,7 +113,7 @@ router.post('/instance/register', async (req, res) => {
     const r = await fetch(`${cloudUrl.replace(/\/+$/, '')}/api/teams/${teamId}/instances`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: jwt },
-      body: JSON.stringify({ name: name?.trim() || require('node:os').hostname() }),
+      body: JSON.stringify({ name: name?.trim() || os.hostname() }),
     });
     if (!r.ok) {
       const body = await r.text();
