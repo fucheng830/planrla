@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Copy, Download, FileText, FolderPlus, Pencil, RefreshCw, Trash2, type LucideIcon } from 'lucide-react';
 import { cn } from '../../../lib/utils';
@@ -260,7 +261,7 @@ export default function FileContextMenu({
         {children}
       </div>
 
-      {isMenuOpen && (
+      {isMenuOpen && createPortal(
         <div
           ref={menuRef}
           role="menu"
@@ -305,7 +306,8 @@ export default function FileContextMenu({
               </Fragment>
             ))
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

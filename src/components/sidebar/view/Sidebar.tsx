@@ -13,6 +13,7 @@ import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
 import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
+import type { Project } from '../../../types/app';
 import { A2aDelegateProvider } from '../contexts/A2aDelegateContext';
 
 function Sidebar({
@@ -163,6 +164,10 @@ function Sidebar({
     isProjectStarred,
     onEditingNameChange: setEditingName,
     onToggleProject: toggleProject,
+    onOpenFileTree: (project: Project) => {
+      handleProjectSelect(project);
+      setSearchMode('files');
+    },
     onProjectSelect: handleProjectSelect,
     onToggleStarProject: toggleStarProject,
     onStartEditingProject: startEditing,

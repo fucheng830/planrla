@@ -119,7 +119,7 @@ function MainContent({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
-          <div className={`h-full ${activeTab === 'chat' ? 'block' : 'hidden'}`}>
+          <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>
               <ChatInterface
                 selectedProject={selectedProject}

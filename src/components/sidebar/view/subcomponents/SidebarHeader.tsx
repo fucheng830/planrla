@@ -1,4 +1,4 @@
-import { Archive, Folder, FolderPlus, FolderTree, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText, Activity } from 'lucide-react';
+import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText, Activity } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
@@ -209,22 +209,6 @@ export default function SidebarHeader({
                   <Archive className="h-3 w-3" />
                 </button>
               </Tooltip>
-              <Tooltip content={t('search.modeFiles', { defaultValue: 'Files' })} position="top">
-                <button
-                  onClick={() => onSearchModeChange('files')}
-                  aria-pressed={searchMode === 'files'}
-                  aria-label={t('search.modeFiles', { defaultValue: 'Files' })}
-                  title={t('search.modeFiles', { defaultValue: 'Files' })}
-                  className={cn(
-                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
-                    searchMode === 'files'
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <FolderTree className="h-3 w-3" />
-                </button>
-              </Tooltip>
             </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
@@ -347,22 +331,6 @@ export default function SidebarHeader({
                   )}
                 >
                   <Archive className="h-3 w-3" />
-                </button>
-              </Tooltip>
-              <Tooltip content={t('search.modeFiles', { defaultValue: 'Files' })} position="top">
-                <button
-                  onClick={() => onSearchModeChange('files')}
-                  aria-pressed={searchMode === 'files'}
-                  aria-label={t('search.modeFiles', { defaultValue: 'Files' })}
-                  title={t('search.modeFiles', { defaultValue: 'Files' })}
-                  className={cn(
-                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
-                    searchMode === 'files'
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <FolderTree className="h-3 w-3" />
                 </button>
               </Tooltip>
             </div>

@@ -15,9 +15,9 @@ function getTabTitle(activeTab: AppTab, t: (key: string) => string, pluginDispla
     return pluginDisplayName;
   }
 
-  if (activeTab === 'files') {
-    return t('mainContent.projectFiles');
-  }
+  // 'files' is no longer a top-level tab (file tree moved to the sidebar).
+  // Fall through to the default title so the chat header stays consistent when
+  // the sidebar shows the file tree alongside the conversation.
 
   if (activeTab === 'git') {
     return t('tabs.git');

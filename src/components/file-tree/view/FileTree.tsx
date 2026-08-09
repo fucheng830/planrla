@@ -29,9 +29,12 @@ import ImageViewer from './ImageViewer';
 type FileTreeProps = {
   selectedProject: Project | null;
   onFileOpen?: (filePath: string) => void;
+  /** Compact layout for narrow containers (sidebar). Hides secondary toolbar
+   *  actions and the view-mode switcher; only refresh + search remain. */
+  compact?: boolean;
 };
 
-export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps) {
+export default function FileTree({ selectedProject, onFileOpen, compact }: FileTreeProps) {
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<FileTreeImageSelection | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -225,6 +228,7 @@ export default function FileTree({ selectedProject, onFileOpen }: FileTreeProps)
         operationLoading={operationLoading}
         isUploading={upload.uploadProgress?.status === 'uploading'}
         uploadProgress={upload.uploadProgress?.progress ?? null}
+        compact={compact}
       />
 
       <FileTreeUploadProgress upload={upload.uploadProgress} />
