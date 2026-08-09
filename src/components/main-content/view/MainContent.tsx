@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import ChatInterface from '../../chat/view/ChatInterface';
-import FileTree from '../../file-tree/view/FileTree';
 import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
 import GitPanel from '../../git-panel/view/GitPanel';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
@@ -50,12 +49,16 @@ function MainContent({
 
   const {
     editingFile,
+    openFiles,
+    activeFilePath,
     editorWidth,
     editorExpanded,
     hasManualWidth,
     resizeHandleRef,
     handleFileOpen,
     handleCloseEditor,
+    handleCloseFile,
+    handleSwitchFile,
     handleToggleEditorExpand,
     handleResizeStart,
   } = useEditorSidebar({
@@ -87,7 +90,9 @@ function MainContent({
 
   usePaletteOpsRegister({
     openFile: (filePath: string) => {
-      setActiveTab('files');
+      // Open in the right-side editor sidebar without switching tabs — the file
+      // tree now lives in the left sidebar, so the main area stays on the
+      // current tab (usually chat) while the file opens alongside it.
       handleFileOpen(filePath);
     },
   });
@@ -143,12 +148,6 @@ function MainContent({
             </ErrorBoundary>
           </div>
 
-          {activeTab === 'files' && (
-            <div className="h-full overflow-hidden">
-              <FileTree selectedProject={selectedProject} onFileOpen={handleFileOpen} />
-            </div>
-          )}
-
           {activeTab === 'shell' && (
             <div className="h-full w-full overflow-hidden">
               <StandaloneShell
@@ -187,6 +186,8 @@ function MainContent({
 
         <EditorSidebar
           editingFile={editingFile}
+          openFiles={openFiles}
+          activeFilePath={activeFilePath}
           isMobile={isMobile}
           editorExpanded={editorExpanded}
           editorWidth={editorWidth}
@@ -194,9 +195,11 @@ function MainContent({
           resizeHandleRef={resizeHandleRef}
           onResizeStart={handleResizeStart}
           onCloseEditor={handleCloseEditor}
+          onCloseFile={handleCloseFile}
+          onSwitchFile={handleSwitchFile}
           onToggleEditorExpand={handleToggleEditorExpand}
           projectPath={selectedProject.path}
-          fillSpace={activeTab === 'files'}
+          fillSpace={false}
         />
       </div>
     </div>

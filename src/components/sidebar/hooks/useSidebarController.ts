@@ -490,6 +490,20 @@ export function useSidebarController({
     });
   }, []);
 
+  // Which project's inline file tree is expanded. Single-select (only one
+  // project's file tree loads at a time), mirroring toggleProject semantics —
+  // avoids spinning up several FileTree data fetchers simultaneously.
+  const [fileTreeExpandedProjects, setFileTreeExpandedProjects] = useState<Set<string>>(new Set());
+  const toggleFileTree = useCallback((projectId: string) => {
+    setFileTreeExpandedProjects((prev) => {
+      const next = new Set<string>();
+      if (!prev.has(projectId)) {
+        next.add(projectId);
+      }
+      return next;
+    });
+  }, []);
+
   const handleSessionClick = useCallback(
     (session: SessionWithProvider, projectId: string) => {
       // Tag the session with its owning projectId so downstream handlers
@@ -1009,6 +1023,7 @@ export function useSidebarController({
   return {
     isSidebarCollapsed,
     expandedProjects,
+    fileTreeExpandedProjects,
     editingProject,
     showNewProject,
     editingName,
@@ -1031,6 +1046,7 @@ export function useSidebarController({
     archivedSessionsCount: archivedProjects.length + archivedSessions.length,
     isArchivedSessionsLoading,
     toggleProject,
+    toggleFileTree,
     handleSessionClick,
     toggleStarProject,
     isProjectStarred,

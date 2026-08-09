@@ -305,6 +305,7 @@ function Sidebar({
             onOpenMarkdownEditor={onOpenMarkdownEditor}
             onOpenBackgroundTasks={onOpenBackgroundTasks}
             projectListProps={projectListProps}
+            onOpenFile={paletteOps.openFile}
             completedSessions={completedSessions}
             t={t}
           />
