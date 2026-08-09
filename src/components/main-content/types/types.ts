@@ -47,6 +47,9 @@ export type MainContentHeaderProps = {
   /** When set, the shell tab toggles the bottom terminal panel instead of
    *  switching to a full-screen shell tab. */
   onToggleTerminalPanel?: () => void;
+  /** Toggle the right-side extension panel (Markdown/Review/Browser). */
+  onToggleExtension?: () => void;
+  isExtensionOpen?: boolean;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
   shouldShowBrowserTab: boolean;

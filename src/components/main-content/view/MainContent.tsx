@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PanelRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import ChatInterface from '../../chat/view/ChatInterface';
+import ExtensionPanel from '../../extension-panel/view/ExtensionPanel';
 import GitPanel from '../../git-panel/view/GitPanel';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
 import { BrowserUsePanel } from '../../browser-use';
@@ -40,10 +43,12 @@ function MainContent({
   onForkAtMessage,
   onToggleTerminalPanel,
 }: MainContentProps) {
+  const { t } = useTranslation();
   const { preferences } = useUiPreferences();
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
 
   const [browserUseEnabled, setBrowserUseEnabled] = useState(false);
+  const [isExtensionOpen, setIsExtensionOpen] = useState(false);
 
   const shouldShowBrowserTab = browserUseEnabled;
 
@@ -111,6 +116,8 @@ function MainContent({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onToggleTerminalPanel={onToggleTerminalPanel}
+        onToggleExtension={() => setIsExtensionOpen((v) => !v)}
+        isExtensionOpen={isExtensionOpen}
         selectedProject={selectedProject}
         selectedSession={selectedSession}
         shouldShowBrowserTab={shouldShowBrowserTab}
@@ -174,6 +181,15 @@ function MainContent({
             </div>
           )}
         </div>
+
+        {isExtensionOpen && selectedProject && (
+          <ExtensionPanel
+            selectedProject={selectedProject}
+            onFileOpen={handleFileOpen}
+            onOpenMarkdownEditor={() => onShowSettings?.()}
+            onClose={() => setIsExtensionOpen(false)}
+          />
+        )}
 
         <EditorSidebar
           editingFile={editingFile}
