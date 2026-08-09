@@ -620,6 +620,18 @@
       "claudeDescription": "Equivalent to --dangerously-skip-permissions flag",
       "cursorDescription": "Equivalent to -f flag in Cursor CLI"
     },
+    "autoContinue": {
+      "label": "Auto-continue on question timeout",
+      "description": "When enabled, unanswered agent questions auto-dismiss after the timeout so the agent proceeds on its own.",
+      "timeoutLabel": "Timeout",
+      "timeout": {
+        "1min": "1 minute",
+        "3min": "3 minutes",
+        "5min": "5 minutes",
+        "10min": "10 minutes",
+        "15min": "15 minutes"
+      }
+    },
     "allowedTools": {
       "title": "Allowed Tools",
       "description": "Tools that are automatically allowed without prompting for permission",

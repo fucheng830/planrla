@@ -333,6 +333,18 @@
       "claudeDescription": "等同於 --dangerously-skip-permissions 旗標",
       "cursorDescription": "等同於 Cursor CLI 中的 -f 旗標"
     },
+    "autoContinue": {
+      "label": "提問自動繼續",
+      "description": "開啟後，Agent 提問逾時未回答將自動繼續執行（Agent 會自行做決定）",
+      "timeoutLabel": "逾時時長",
+      "timeout": {
+        "1min": "1 分鐘",
+        "3min": "3 分鐘",
+        "5min": "5 分鐘",
+        "10min": "10 分鐘",
+        "15min": "15 分鐘"
+      }
+    },
     "allowedTools": {
       "title": "允許的工具",
       "description": "無需權限提示即可自動使用的工具",

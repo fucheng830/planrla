@@ -57,7 +57,19 @@ type ClaudePermissionsProps = {
   onAllowedToolsChange: (value: string[]) => void;
   disallowedTools: string[];
   onDisallowedToolsChange: (value: string[]) => void;
+  askUserQuestionAutoContinue?: boolean;
+  onAskUserQuestionAutoContinueChange?: (value: boolean) => void;
+  askUserQuestionAutoContinueTimeoutMs?: number;
+  onAskUserQuestionAutoContinueTimeoutMsChange?: (value: number) => void;
 };
+
+const AUTO_CONTINUE_TIMEOUT_OPTIONS = [
+  { value: 60000, labelKey: 'permissions.autoContinue.timeout.1min' },
+  { value: 180000, labelKey: 'permissions.autoContinue.timeout.3min' },
+  { value: 300000, labelKey: 'permissions.autoContinue.timeout.5min' },
+  { value: 600000, labelKey: 'permissions.autoContinue.timeout.10min' },
+  { value: 900000, labelKey: 'permissions.autoContinue.timeout.15min' },
+];
 
 function ClaudePermissions({
   skipPermissions,
@@ -66,6 +78,10 @@ function ClaudePermissions({
   onAllowedToolsChange,
   disallowedTools,
   onDisallowedToolsChange,
+  askUserQuestionAutoContinue = false,
+  onAskUserQuestionAutoContinueChange,
+  askUserQuestionAutoContinueTimeoutMs = 300000,
+  onAskUserQuestionAutoContinueTimeoutMsChange,
 }: Omit<ClaudePermissionsProps, 'agent'>) {
   const { t } = useTranslation('settings');
   const [newAllowedTool, setNewAllowedTool] = useState('');
@@ -116,6 +132,43 @@ function ClaudePermissions({
             </div>
           </label>
         </div>
+      </div>
+
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={askUserQuestionAutoContinue}
+            onChange={(event) => onAskUserQuestionAutoContinueChange?.(event.target.checked)}
+            className="h-4 w-4 rounded border-input bg-card text-primary focus:ring-2 focus:ring-primary"
+          />
+          <div>
+            <div className="font-medium text-blue-900 dark:text-blue-100">
+              {t('permissions.autoContinue.label')}
+            </div>
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              {t('permissions.autoContinue.description')}
+            </div>
+          </div>
+        </label>
+        {askUserQuestionAutoContinue && (
+          <div className="mt-3 flex items-center gap-2 pl-7">
+            <span className="text-sm text-blue-700 dark:text-blue-300">
+              {t('permissions.autoContinue.timeoutLabel')}
+            </span>
+            <select
+              value={askUserQuestionAutoContinueTimeoutMs}
+              onChange={(event) => onAskUserQuestionAutoContinueTimeoutMsChange?.(Number(event.target.value))}
+              className="h-8 rounded border border-input bg-card px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {AUTO_CONTINUE_TIMEOUT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

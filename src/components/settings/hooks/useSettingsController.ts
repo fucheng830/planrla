@@ -35,6 +35,10 @@ type ClaudeSettingsStorage = {
   disallowedTools?: string[];
   skipPermissions?: boolean;
   projectSortOrder?: ProjectSortOrder;
+  // Auto-continue: when enabled, an unanswered AskUserQuestion is auto-dismissed
+  // after the configured timeout so the agent makes a reasonable choice on its own.
+  askUserQuestionAutoContinue?: boolean;
+  askUserQuestionAutoContinueTimeoutMs?: number;
 };
 
 type CursorSettingsStorage = {
@@ -159,6 +163,9 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
   ));
   const [codexPermissionMode, setCodexPermissionMode] = useState<CodexPermissionMode>('default');
   const [geminiPermissionMode, setGeminiPermissionMode] = useState<GeminiPermissionMode>('default');
+  // Auto-continue on unanswered AskUserQuestion (stored in claude-settings).
+  const [askUserQuestionAutoContinue, setAskUserQuestionAutoContinue] = useState(false);
+  const [askUserQuestionAutoContinueTimeoutMs, setAskUserQuestionAutoContinueTimeoutMs] = useState(300000);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginProvider, setLoginProvider] = useState<ActiveLoginProvider>('');
@@ -180,6 +187,9 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
         skipPermissions: Boolean(savedClaudeSettings.skipPermissions),
       });
       setProjectSortOrder(savedClaudeSettings.projectSortOrder === 'date' ? 'date' : 'name');
+      setAskUserQuestionAutoContinue(savedClaudeSettings.askUserQuestionAutoContinue === true);
+      const timeoutMs = Number(savedClaudeSettings.askUserQuestionAutoContinueTimeoutMs);
+      setAskUserQuestionAutoContinueTimeoutMs(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 300000);
 
       const savedCursorSettings = parseJson<CursorSettingsStorage>(
         localStorage.getItem('cursor-tools-settings'),
@@ -260,6 +270,8 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
         disallowedTools: claudePermissions.disallowedTools,
         skipPermissions: claudePermissions.skipPermissions,
         projectSortOrder,
+        askUserQuestionAutoContinue,
+        askUserQuestionAutoContinueTimeoutMs,
         lastUpdated: now,
       }));
 
@@ -304,6 +316,8 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
     notificationPreferences,
     geminiPermissionMode,
     projectSortOrder,
+    askUserQuestionAutoContinue,
+    askUserQuestionAutoContinueTimeoutMs,
   ]);
 
   const updateCodeEditorSetting = useCallback(
@@ -411,6 +425,10 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
     providerAuthStatus,
     geminiPermissionMode,
     setGeminiPermissionMode,
+    askUserQuestionAutoContinue,
+    setAskUserQuestionAutoContinue,
+    askUserQuestionAutoContinueTimeoutMs,
+    setAskUserQuestionAutoContinueTimeoutMs,
     openLoginForProvider,
     showLoginModal,
     setShowLoginModal,

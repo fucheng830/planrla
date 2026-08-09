@@ -20,6 +20,10 @@ export default function AgentsSettingsTab({
   onGeminiPermissionModeChange,
   projects,
   initialSelectedAgent,
+  askUserQuestionAutoContinue,
+  onAskUserQuestionAutoContinueChange,
+  askUserQuestionAutoContinueTimeoutMs,
+  onAskUserQuestionAutoContinueTimeoutMsChange,
 }: AgentsSettingsTabProps) {
   const KNOWN_AGENTS: AgentProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi', 'zcode'];
   const [selectedAgent, setSelectedAgent] = useState<AgentProvider>(
@@ -112,6 +116,10 @@ export default function AgentsSettingsTab({
           geminiPermissionMode={geminiPermissionMode}
           onGeminiPermissionModeChange={onGeminiPermissionModeChange}
           projects={projects}
+          askUserQuestionAutoContinue={askUserQuestionAutoContinue}
+          onAskUserQuestionAutoContinueChange={onAskUserQuestionAutoContinueChange}
+          askUserQuestionAutoContinueTimeoutMs={askUserQuestionAutoContinueTimeoutMs}
+          onAskUserQuestionAutoContinueTimeoutMsChange={onAskUserQuestionAutoContinueTimeoutMsChange}
         />
       </div>
     </div>

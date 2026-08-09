@@ -20,6 +20,10 @@ export default function AgentCategoryContentSection({
   codexPermissionMode,
   onCodexPermissionModeChange,
   projects,
+  askUserQuestionAutoContinue,
+  onAskUserQuestionAutoContinueChange,
+  askUserQuestionAutoContinueTimeoutMs,
+  onAskUserQuestionAutoContinueTimeoutMsChange,
 }: AgentCategoryContentSectionProps) {
   return (
     <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-4">
@@ -46,6 +50,10 @@ export default function AgentCategoryContentSection({
           onDisallowedToolsChange={(value) => {
             onClaudePermissionsChange({ ...claudePermissions, disallowedTools: value });
           }}
+          askUserQuestionAutoContinue={askUserQuestionAutoContinue}
+          onAskUserQuestionAutoContinueChange={onAskUserQuestionAutoContinueChange}
+          askUserQuestionAutoContinueTimeoutMs={askUserQuestionAutoContinueTimeoutMs}
+          onAskUserQuestionAutoContinueTimeoutMsChange={onAskUserQuestionAutoContinueTimeoutMsChange}
         />
       )}
 

@@ -42,6 +42,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents', initi
     providerAuthStatus,
     geminiPermissionMode,
     setGeminiPermissionMode,
+    askUserQuestionAutoContinue,
+    setAskUserQuestionAutoContinue,
+    askUserQuestionAutoContinueTimeoutMs,
+    setAskUserQuestionAutoContinueTimeoutMs,
     openLoginForProvider,
     showLoginModal,
     setShowLoginModal,
@@ -140,6 +144,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents', initi
                   geminiPermissionMode={geminiPermissionMode}
                   onGeminiPermissionModeChange={setGeminiPermissionMode}
                   projects={projects}
+                  askUserQuestionAutoContinue={askUserQuestionAutoContinue}
+                  onAskUserQuestionAutoContinueChange={setAskUserQuestionAutoContinue}
+                  askUserQuestionAutoContinueTimeoutMs={askUserQuestionAutoContinueTimeoutMs}
+                  onAskUserQuestionAutoContinueTimeoutMsChange={setAskUserQuestionAutoContinueTimeoutMs}
                   initialSelectedAgent={
                     initialProvider && KNOWN_AGENTS.includes(initialProvider as AgentProvider)
                       ? (initialProvider as AgentProvider)

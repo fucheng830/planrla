@@ -593,6 +593,18 @@
       "claudeDescription": "等同于 --dangerously-skip-permissions 标志",
       "cursorDescription": "等同于 Cursor CLI 中的 -f 标志"
     },
+    "autoContinue": {
+      "label": "提问自动继续",
+      "description": "开启后，Agent 提问超时未回答将自动继续执行（Agent 会自行做决定）",
+      "timeoutLabel": "超时时长",
+      "timeout": {
+        "1min": "1 分钟",
+        "3min": "3 分钟",
+        "5min": "5 分钟",
+        "10min": "10 分钟",
+        "15min": "15 分钟"
+      }
+    },
     "allowedTools": {
       "title": "允许的工具",
       "description": "无需权限提示即可自动使用的工具",

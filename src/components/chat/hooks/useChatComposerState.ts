@@ -833,6 +833,8 @@ export function useChatComposerState({
           permissionMode: provider === 'codex' && permissionMode === 'plan' ? 'default' : permissionMode,
           toolsSettings,
           skipPermissions: toolsSettings?.skipPermissions || false,
+          askUserQuestionAutoContinue: toolsSettings?.askUserQuestionAutoContinue === true,
+          askUserQuestionAutoContinueTimeoutMs: toolsSettings?.askUserQuestionAutoContinueTimeoutMs,
           sessionSummary,
           images: uploadedImages,
         },
