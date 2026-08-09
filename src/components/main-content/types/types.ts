@@ -37,11 +37,16 @@ export type MainContentProps = {
   allPickerSessions?: PickerCandidateSession[];
   /** Message-level fork: branches a new conversation from a specific message. */
   onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
+  /** Toggle the bottom terminal panel (shell tab is now a panel toggle). */
+  onToggleTerminalPanel?: () => void;
 };
 
 export type MainContentHeaderProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  /** When set, the shell tab toggles the bottom terminal panel instead of
+   *  switching to a full-screen shell tab. */
+  onToggleTerminalPanel?: () => void;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
   shouldShowBrowserTab: boolean;

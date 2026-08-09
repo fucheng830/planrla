@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import ChatInterface from '../../chat/view/ChatInterface';
-import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
 import GitPanel from '../../git-panel/view/GitPanel';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
 import { BrowserUsePanel } from '../../browser-use';
@@ -39,6 +38,7 @@ function MainContent({
   newSessionTrigger,
   allPickerSessions,
   onForkAtMessage,
+  onToggleTerminalPanel,
 }: MainContentProps) {
   const { preferences } = useUiPreferences();
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
@@ -110,6 +110,7 @@ function MainContent({
       <MainContentHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onToggleTerminalPanel={onToggleTerminalPanel}
         selectedProject={selectedProject}
         selectedSession={selectedSession}
         shouldShowBrowserTab={shouldShowBrowserTab}
@@ -148,16 +149,6 @@ function MainContent({
             </ErrorBoundary>
           </div>
 
-          {activeTab === 'shell' && (
-            <div className="h-full w-full overflow-hidden">
-              <StandaloneShell
-                project={selectedProject}
-                session={selectedSession}
-                showHeader={false}
-                isActive={activeTab === 'shell'}
-              />
-            </div>
-          )}
 
           {activeTab === 'git' && (
             <div className="h-full overflow-hidden">

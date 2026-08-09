@@ -7,6 +7,7 @@ import MainContentTitle from './MainContentTitle';
 export default function MainContentHeader({
   activeTab,
   setActiveTab,
+  onToggleTerminalPanel,
   selectedProject,
   selectedSession,
   shouldShowBrowserTab,
@@ -58,6 +59,7 @@ export default function MainContentHeader({
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               shouldShowBrowserTab={shouldShowBrowserTab}
+              onToggleTerminalPanel={onToggleTerminalPanel}
             />
           </div>
           {canScrollRight && (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ChangeEvent } from 'react';
 import { ChevronDown, Eye, FileText, FolderPlus, List, Loader2, MoreHorizontal, RefreshCw, Search, TableProperties, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +28,9 @@ type FileTreeHeaderProps = {
    *  the secondary toolbar actions (upload / new file / new folder / collapse)
    *  and the view-mode switcher — only refresh + search remain. */
   compact?: boolean;
+  /** Optional leading content rendered at the start of the compact toolbar
+   *  row (e.g. a back button + project name from the sidebar). */
+  headerPrefix?: ReactNode;
 };
 
 export default function FileTreeHeader({
@@ -45,6 +48,7 @@ export default function FileTreeHeader({
   isUploading,
   uploadProgress,
   compact,
+  headerPrefix,
 }: FileTreeHeaderProps) {
   const { t } = useTranslation();
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +76,7 @@ export default function FileTreeHeader({
     return (
       <div className="space-y-1.5 border-b border-border px-2 pb-2 pt-2">
         <div className="flex items-center gap-0.5">
+          {headerPrefix}
           {onNewFile && (
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onNewFile}
               title={t('fileTree.newFile', 'New File (Cmd+N)')} aria-label={t('fileTree.newFile', 'New File (Cmd+N)')} disabled={operationLoading}>

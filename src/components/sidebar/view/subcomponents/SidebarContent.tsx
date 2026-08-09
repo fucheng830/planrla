@@ -267,25 +267,30 @@ export default function SidebarContent({
       <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
         {searchMode === 'files' ? (
           <div className="flex h-full flex-col">
-            {/* File-tree view header: back button + project name. Mirrors a push
-                navigation — clicking back returns to the project list. */}
-            <div className="flex items-center gap-2 border-b border-border/40 px-3 py-2">
-              <button
-                type="button"
-                onClick={() => onSearchModeChange('projects')}
-                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                aria-label={t('files.backToProjects', { defaultValue: 'Back to projects' })}
-                title={t('files.backToProjects', { defaultValue: 'Back to projects' })}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="truncate text-sm font-medium text-foreground">
-                {projectListProps.selectedProject?.displayName ?? t('files.title', { defaultValue: 'Files' })}
-              </span>
-            </div>
             <div className="min-h-0 flex-1">
               {projectListProps.selectedProject ? (
-                <FileTree selectedProject={projectListProps.selectedProject} onFileOpen={onOpenFile} compact />
+                <FileTree
+                  selectedProject={projectListProps.selectedProject}
+                  onFileOpen={onOpenFile}
+                  compact
+                  headerPrefix={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onSearchModeChange('projects')}
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        aria-label={t('files.backToProjects', { defaultValue: 'Back to projects' })}
+                        title={t('files.backToProjects', { defaultValue: 'Back to projects' })}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="mx-1 truncate text-sm font-medium text-foreground">
+                        {projectListProps.selectedProject.displayName}
+                      </span>
+                      <div className="mx-1 h-4 w-px flex-shrink-0 bg-border" />
+                    </>
+                  }
+                />
               ) : (
                 <div className="px-4 py-12 text-center md:py-8">
                   <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">

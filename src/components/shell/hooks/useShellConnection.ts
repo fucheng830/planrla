@@ -150,7 +150,11 @@ export function useShellConnection({
             sendSocketMessage(socket, {
               type: 'init',
               projectPath: currentProject.fullPath || currentProject.path || '',
-              sessionId: isPlainShellRef.current ? null : selectedSessionRef.current?.id || null,
+              // Always send the session id so the backend's ptySessionKey
+              // (projectPath_sessionId) stays unique per terminal tab — even
+              // for plain shells. Without this, multiple plain-shell tabs share
+              // the same "_default" key and crosstalk.
+              sessionId: selectedSessionRef.current?.id || null,
               hasSession: isPlainShellRef.current ? false : Boolean(selectedSessionRef.current),
               provider: isPlainShellRef.current ? 'plain-shell' : (selectedSessionRef.current?.__provider || localStorage.getItem('selected-provider') || 'claude'),
               cols: currentTerminal.cols,

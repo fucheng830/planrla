@@ -1,4 +1,4 @@
-import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, FileText, Activity } from 'lucide-react';
+import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, Activity } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
@@ -58,10 +58,6 @@ export default function SidebarHeader({
   t,
 }: SidebarHeaderProps) {
   const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
-  // REQ-047 — Markdown 编辑器入口文案(独立 namespace)。
-  const { t: tMd } = useTranslation('markdownEditor');
-  const mdTooltip = onOpenMarkdownEditor ? tMd('openTooltip') : '';
-  const mdOpenLabel = tMd('open');
   const searchPlaceholder = searchMode === 'sessions'
     ? t('search.sessionsPlaceholder')
     : searchMode === 'archived'
@@ -111,18 +107,6 @@ export default function SidebarHeader({
                 }`}
               />
             </Button>
-            {onOpenMarkdownEditor && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                onClick={onOpenMarkdownEditor}
-                title={mdTooltip}
-                aria-label={mdOpenLabel}
-              >
-                <FileText className="h-3.5 w-3.5" />
-              </Button>
-            )}
             {onOpenBackgroundTasks && (
               <Button
                 variant="ghost"

@@ -70,6 +70,7 @@ export default function StandaloneShell({
           onProcessComplete={handleProcessComplete}
           minimal={minimal}
           autoConnect={minimal ? true : autoConnect}
+          showShellHeader={showHeader && !minimal}
         />
       </div>
     </div>

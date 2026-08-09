@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, X, Loader2, Folder, Upload } from 'lucide-react';
 
@@ -32,9 +32,11 @@ type FileTreeProps = {
   /** Compact layout for narrow containers (sidebar). Hides secondary toolbar
    *  actions and the view-mode switcher; only refresh + search remain. */
   compact?: boolean;
+  /** Leading content rendered at the start of the compact toolbar row. */
+  headerPrefix?: ReactNode;
 };
 
-export default function FileTree({ selectedProject, onFileOpen, compact }: FileTreeProps) {
+export default function FileTree({ selectedProject, onFileOpen, compact, headerPrefix }: FileTreeProps) {
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<FileTreeImageSelection | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -229,6 +231,7 @@ export default function FileTree({ selectedProject, onFileOpen, compact }: FileT
         isUploading={upload.uploadProgress?.status === 'uploading'}
         uploadProgress={upload.uploadProgress?.progress ?? null}
         compact={compact}
+        headerPrefix={headerPrefix}
       />
 
       <FileTreeUploadProgress upload={upload.uploadProgress} />

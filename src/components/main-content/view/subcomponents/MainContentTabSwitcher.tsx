@@ -11,6 +11,8 @@ type MainContentTabSwitcherProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
   shouldShowBrowserTab: boolean;
+  /** When set, clicking the shell tab toggles the bottom terminal panel. */
+  onToggleTerminalPanel?: () => void;
 };
 
 type BuiltInTab = {
@@ -54,6 +56,7 @@ export default function MainContentTabSwitcher({
   activeTab,
   setActiveTab,
   shouldShowBrowserTab,
+  onToggleTerminalPanel,
 }: MainContentTabSwitcherProps) {
   const { t } = useTranslation();
   const { plugins } = usePlugins();
@@ -86,7 +89,15 @@ export default function MainContentTabSwitcher({
           <Tooltip key={tab.id} content={displayLabel} position="bottom">
             <Pill
               isActive={isActive}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                // Shell tab toggles the bottom terminal panel (when wired up)
+                // instead of switching to a full-screen shell tab.
+                if (tab.id === 'shell' && onToggleTerminalPanel) {
+                  onToggleTerminalPanel();
+                  return;
+                }
+                setActiveTab(tab.id);
+              }}
               className="px-2.5 py-[5px]"
             >
               {tab.kind === 'builtin' ? (

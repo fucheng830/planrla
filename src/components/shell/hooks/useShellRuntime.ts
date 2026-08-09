@@ -152,6 +152,7 @@ export function useShellRuntime({
   return {
     terminalContainerRef,
     terminalRef,
+    fitAddonRef,
     wsRef,
     isConnected,
     isInitialized,
