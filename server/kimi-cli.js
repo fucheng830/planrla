@@ -46,6 +46,53 @@ async function spawnKimi(command, options = {}, ws) {
     // Unified lifecycle contract: exactly one terminal `complete` per run
     // (close and error handlers can both fire for spawn failures).
     let completeSent = false;
+    // kimi `-p --output-format stream-json` emits the full assistant reply as
+    // one JSON line, so the UI never sees a real stream. Break the complete
+    // content into small chunks and emit them as timed stream_delta frames so
+    // mobile and web clients render the reply progressively.
+    const deltaQueue = [];
+    let isFlushingDeltas = false;
+    const flushWaiters = new Set();
+
+    const flushDeltaQueue = async () => {
+      if (isFlushingDeltas) return;
+      isFlushingDeltas = true;
+      while (deltaQueue.length > 0) {
+        const { content, targetSessionId } = deltaQueue.shift();
+        const chars = Array.from(content);
+        const chunkSize = 12;
+        const delayMs = 16;
+        for (let i = 0; i < chars.length; i += chunkSize) {
+          const chunk = chars.slice(i, i + chunkSize).join('');
+          ws.send(createNormalizedMessage({
+            kind: 'stream_delta',
+            content: chunk,
+            sessionId: targetSessionId,
+            provider: 'kimi',
+          }));
+          if (i + chunkSize < chars.length) {
+            await new Promise((resolve) => { setTimeout(resolve, delayMs); });
+          }
+        }
+      }
+      isFlushingDeltas = false;
+      for (const waiter of flushWaiters) {
+        waiter();
+      }
+      flushWaiters.clear();
+    };
+
+    const enqueueStreamDelta = (content, targetSessionId) => {
+      deltaQueue.push({ content, targetSessionId });
+      if (!isFlushingDeltas) flushDeltaQueue();
+    };
+
+    const waitForDeltaFlush = async () => {
+      while (isFlushingDeltas || deltaQueue.length > 0) {
+        if (!isFlushingDeltas) flushDeltaQueue();
+        await new Promise((resolve) => { flushWaiters.add(resolve); });
+      }
+    };
 
     const rememberStderr = (text) => {
       for (const line of text.split(/\r?\n/)) {
@@ -142,7 +189,11 @@ async function spawnKimi(command, options = {}, ws) {
           capturedSessionId || sessionId || null,
         );
         for (const msg of normalized) {
-          ws.send(msg);
+          if (msg.kind === 'stream_delta' && typeof msg.content === 'string' && msg.content.length > 0) {
+            enqueueStreamDelta(msg.content, msg.sessionId || capturedSessionId || sessionId || null);
+          } else {
+            ws.send(msg);
+          }
         }
       } catch (error) {
         const errorContent = error instanceof Error ? error.message : String(error);
@@ -201,6 +252,11 @@ async function spawnKimi(command, options = {}, ws) {
           stdoutLineBuffer = '';
         }
 
+        // Wait for any staged stream_delta chunks to leave the wire before
+        // sending the terminal complete, otherwise clients mark the run done
+        // while text is still typing out.
+        await waitForDeltaFlush();
+
         if (code !== 0 && code !== null) {
           const stderrText = readStderrTail();
           if (stderrText) {
@@ -249,6 +305,8 @@ async function spawnKimi(command, options = {}, ws) {
 
         const installed = await providerAuthService.isProviderInstalled('kimi');
         const errorContent = !installed ? KIMI_INSTALL_HINT : error.message;
+
+        await waitForDeltaFlush();
 
         ws.send(createNormalizedMessage({
           kind: 'error',
