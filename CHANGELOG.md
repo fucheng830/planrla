@@ -3,6 +3,23 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.13.0](https://github.com/fucheng830/planrla/compare/v0.12.0...v0.13.0) (2026-08-10)
+
+### New Features
+
+* 多标签页文件查看器 + 文件树迁移到侧边栏 + UI 优化 ([d8ac6cd](https://github.com/fucheng830/planrla/commit/d8ac6cd19c0e4cd99cefb675ab3e156ca6b3645b))
+* 扩展面板(Markdown/代码审查/Browser tabs) + 浏览器开箱即用 + 终端样式优化 ([ef88ac4](https://github.com/fucheng830/planrla/commit/ef88ac4919db5f6b5f0b18128862dc8eb90ea6e1))
+* 消息级 fork + 侧边栏右键菜单/重命名弹窗 + 复制简化 + 团队同步 ([68a2f27](https://github.com/fucheng830/planrla/commit/68a2f27e42183dbdcf5888389ca421680cbfd257))
+* **editor:** 多 tab 编辑器 + 文件树移入 sidebar ([e9070a8](https://github.com/fucheng830/planrla/commit/e9070a85251f46b71303b06b4df23b0c152a2296))
+* Electron WebContentsView 内嵌浏览器 + 扩展面板下拉新建 tab ([d15951b](https://github.com/fucheng830/planrla/commit/d15951b56f7c76170d65313207beccd459d41138))
+* **settings:** 提问自动继续 — AskUserQuestion 超时自动软拒绝 ([a590847](https://github.com/fucheng830/planrla/commit/a5908470b6d5e2f58c2eacd71de6a317c902070f))
+* **sync:** 团队同步 Settings UI + sync routes 修复 ([e5ca61d](https://github.com/fucheng830/planrla/commit/e5ca61d7e35bf166214fff252cc8180cd89269a5))
+* VS Code 风格底部终端面板 + 多 tabs ([09eb5b1](https://github.com/fucheng830/planrla/commit/09eb5b15569020a262a637d87f34c93d0516cc59))
+
+### Refactoring
+
+* **sidebar:** footer 布局优化 — 去掉版本号,设置/报告/社区一行平铺 ([2929d4a](https://github.com/fucheng830/planrla/commit/2929d4a8fc9d52a1ae19edba91a8bd8823d03d9a))
+
 ## [0.12.0](https://github.com/fucheng830/planrla/compare/v0.11.1...v0.12.0) (2026-08-07)
 
 ### New Features
