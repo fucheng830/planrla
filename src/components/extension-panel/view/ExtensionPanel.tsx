@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, GitBranch, Globe, X } from 'lucide-react';
+import { FileText, GitBranch, Globe, Plus, X } from 'lucide-react';
 
 import GitPanel from '../../git-panel/view/GitPanel';
-import { BrowserUsePanel } from '../../browser-use';
+import EmbeddedBrowser from './subcomponents/EmbeddedBrowser';
 import type { Project } from '../../../types/app';
 
 type ExtensionTabId = 'markdown' | 'review' | 'browser';
@@ -38,7 +38,20 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
   const [activeTabId, setActiveTabId] = useState<ExtensionTabId | null>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0); // 0 = use 50% via flex-basis
   const [isResizing, setIsResizing] = useState(false);
+  const [newTabMenuOpen, setNewTabMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const newTabMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!newTabMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (newTabMenuRef.current && !newTabMenuRef.current.contains(e.target as Node)) {
+        setNewTabMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [newTabMenuOpen]);
 
   const openTab = (id: ExtensionTabId) => {
     setOpenTabs((prev) => (prev.some((tab) => tab.id === id) ? prev : [...prev, { id, label: TAB_META[id].label }]));
@@ -128,10 +141,40 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
               </div>
             );
           })}
+          {/* New tab dropdown — click + to see menu of available panels */}
+          <div className="relative flex items-center" ref={newTabMenuRef}>
+            <button
+              type="button"
+              onClick={() => setNewTabMenuOpen((v) => !v)}
+              className="flex h-full items-center justify-center px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+              aria-label="New tab"
+              title="New tab"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            {newTabMenuOpen && (
+              <div className="absolute right-0 top-full z-30 mt-1 min-w-36 rounded-md border border-border bg-popover p-1 shadow-lg">
+                {(Object.keys(TAB_META) as ExtensionTabId[]).map((id) => {
+                  const meta = TAB_META[id];
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => { openTab(id); setNewTabMenuOpen(false); }}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <meta.icon className="h-3 w-3" />
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto flex items-center justify-center px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="ml-auto flex h-full items-center justify-center px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close panel"
           >
             <X className="h-4 w-4" />
@@ -171,7 +214,7 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
           <GitPanel selectedProject={selectedProject} isMobile={false} onFileOpen={onFileOpen} />
         )}
         {activeTabId === 'browser' && (
-          <BrowserUsePanel isVisible={activeTabId === 'browser'} />
+          <EmbeddedBrowser overlayActive={newTabMenuOpen} />
         )}
       </div>
     </div>

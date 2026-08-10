@@ -47,3 +47,23 @@ contextBridge.exposeInMainWorld('systemNotify', {
     return () => ipcRenderer.removeListener('notification-callback', handler);
   },
 });
+
+// Embedded browser panel bridge (WebContentsView). The renderer creates the
+// view, loads URLs, pushes bounds (screen-relative → main converts), and
+// receives navigation updates to sync the address bar.
+contextBridge.exposeInMainWorld('browserView', {
+  create: (bounds) => ipcRenderer.invoke('browserview:create', bounds),
+  loadURL: (url) => ipcRenderer.invoke('browserview:load-url', url),
+  setBounds: (bounds) => ipcRenderer.send('browserview:set-bounds', bounds),
+  goBack: () => ipcRenderer.send('browserview:go-back'),
+  goForward: () => ipcRenderer.send('browserview:go-forward'),
+  reload: () => ipcRenderer.send('browserview:reload'),
+  hide: () => ipcRenderer.send('browserview:hide'),
+  show: (bounds) => ipcRenderer.send('browserview:show', bounds),
+  destroy: () => ipcRenderer.send('browserview:destroy'),
+  onNavChange: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('browserview:nav-change', handler);
+    return () => ipcRenderer.removeListener('browserview:nav-change', handler);
+  },
+});

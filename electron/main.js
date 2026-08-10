@@ -14,6 +14,7 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { readThemeCache, writeThemeCache } from './themeCache.cjs';
 import { initAutoUpdater } from './updater.js';
+import { initBrowserView, destroyBrowserView } from './browserview.js';
 import { isAllowedUrl, isSelfOrigin } from './links.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -237,6 +238,8 @@ app.whenReady().then(async () => {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
     createWindow();
     if (!process.env.ELECTRON_DEV_URL) initAutoUpdater(mainWindow, ipcMain);
+    // Embedded browser panel (WebContentsView) — works in both dev and prod.
+    initBrowserView(mainWindow, ipcMain);
   } catch (e) {
     console.error('[desktop] failed to start:', e);
     app.quit();
@@ -247,6 +250,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  destroyBrowserView();
   if (process.platform !== 'darwin') app.quit();
 });
 
