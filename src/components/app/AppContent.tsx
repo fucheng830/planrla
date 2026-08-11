@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from '../sidebar/view/Sidebar';
 import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
+import { useTerminalTabs } from '../terminal-panel/hooks/useTerminalTabs';
+import TerminalPanel from '../terminal-panel/view/TerminalPanel';
 import { KanbanProvider } from '../kanban';
 import { MarkdownEditorProvider, useMarkdownEditor } from '../markdown-editor/context/MarkdownEditorContext';
 import { MarkdownEditorPanel } from '../markdown-editor/view/MarkdownEditorPanel';
@@ -103,6 +105,7 @@ function AppContentInner() {
     registerOptimisticSession,
     sidebarSharedProps,
     handleNewSession,
+    handleForkAtMessage,
   } = useProjectsState({
     sessionId,
     navigate,
@@ -112,6 +115,19 @@ function AppContentInner() {
     completedSessions,
     onCompletedSessionSeen: clearSessionCompleted,
   });
+
+  const {
+    terminals,
+    activeTerminalId,
+    isPanelOpen: isTerminalPanelOpen,
+    panelHeight: terminalPanelHeight,
+    resizeHandleRef: terminalResizeHandleRef,
+    openTerminal,
+    switchTerminal,
+    closeTerminal,
+    togglePanel: toggleTerminalPanel,
+    handlePanelResizeStart: handleTerminalPanelResizeStart,
+  } = useTerminalTabs({ selectedProject, isMobile });
 
   // Flatten every project's sessions into a single picker candidate list so the
   // SessionReferencePicker's "search all" mode can surface cross-project results.
@@ -300,8 +316,24 @@ function AppContentInner() {
             externalMessageUpdate={externalMessageUpdate}
             newSessionTrigger={newSessionTrigger}
             allPickerSessions={allPickerSessions}
+            onForkAtMessage={handleForkAtMessage}
+            onToggleTerminalPanel={toggleTerminalPanel}
           />
         </KanbanProvider>
+
+        {isTerminalPanelOpen && (
+          <TerminalPanel
+            terminals={terminals}
+            activeTerminalId={activeTerminalId}
+            panelHeight={terminalPanelHeight}
+            resizeHandleRef={terminalResizeHandleRef}
+            onResizeStart={handleTerminalPanelResizeStart}
+            onSwitch={switchTerminal}
+            onClose={closeTerminal}
+            onNew={() => openTerminal(selectedProject)}
+            onCollapse={toggleTerminalPanel}
+          />
+        )}
       </div>
 
       <CommandPalette

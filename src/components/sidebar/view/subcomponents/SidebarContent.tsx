@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Archive, ChevronLeft, Folder, FolderTree, MessageSquare, RotateCcw, Search, Trash2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ScrollArea } from '../../../../shared/view/ui';
@@ -14,6 +14,7 @@ import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo'
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 
 import SidebarFooter from './SidebarFooter';
+import FileTree from '../../../file-tree/view/FileTree';
 import SidebarHeader from './SidebarHeader';
 import SidebarProjectList, { type SidebarProjectListProps } from './SidebarProjectList';
 
@@ -136,6 +137,7 @@ type SidebarContentProps = {
   onClearSearchFilter: () => void;
   searchMode: SidebarSearchMode;
   onSearchModeChange: (mode: SidebarSearchMode) => void;
+  onOpenFile: (filePath: string) => void;
   conversationResults: ConversationSearchResults | null;
   isSearching: boolean;
   searchProgress: SearchProgress | null;
@@ -182,6 +184,7 @@ export default function SidebarContent({
   onClearSearchFilter,
   searchMode,
   onSearchModeChange,
+  onOpenFile,
   conversationResults,
   isSearching,
   searchProgress,
@@ -262,7 +265,48 @@ export default function SidebarContent({
       />
 
       <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
-        {showConversationSearch ? (
+        {searchMode === 'files' ? (
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1">
+              {projectListProps.selectedProject ? (
+                <FileTree
+                  selectedProject={projectListProps.selectedProject}
+                  onFileOpen={onOpenFile}
+                  compact
+                  headerPrefix={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onSearchModeChange('projects')}
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        aria-label={t('files.backToProjects', { defaultValue: 'Back to projects' })}
+                        title={t('files.backToProjects', { defaultValue: 'Back to projects' })}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="mx-1 truncate text-sm font-medium text-foreground">
+                        {projectListProps.selectedProject.displayName}
+                      </span>
+                      <div className="mx-1 h-4 w-px flex-shrink-0 bg-border" />
+                    </>
+                  }
+                />
+              ) : (
+                <div className="px-4 py-12 text-center md:py-8">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">
+                    <FolderTree className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="mb-2 text-base font-medium text-foreground md:mb-1">
+                    {t('files.noProjectSelected', { defaultValue: 'Select a project' })}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t('files.noProjectSelectedHint', { defaultValue: 'Choose a project to browse its files.' })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : showConversationSearch ? (
           isSearching && !hasPartialResults ? (
             <div className="px-4 py-12 text-center md:py-8">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
+import { PanelRight } from 'lucide-react';
 import type { MainContentHeaderProps } from '../../types/types';
 import MobileMenuButton from './MobileMenuButton';
 import MainContentTabSwitcher from './MainContentTabSwitcher';
@@ -7,6 +8,9 @@ import MainContentTitle from './MainContentTitle';
 export default function MainContentHeader({
   activeTab,
   setActiveTab,
+  onToggleTerminalPanel,
+  onToggleExtension,
+  isExtensionOpen,
   selectedProject,
   selectedSession,
   shouldShowBrowserTab,
@@ -58,12 +62,25 @@ export default function MainContentHeader({
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               shouldShowBrowserTab={shouldShowBrowserTab}
+              onToggleTerminalPanel={onToggleTerminalPanel}
             />
           </div>
           {canScrollRight && (
             <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
           )}
         </div>
+
+        {onToggleExtension && (
+          <button
+            type="button"
+            onClick={onToggleExtension}
+            className={`flex flex-shrink-0 items-center justify-center rounded p-1.5 transition-colors ${isExtensionOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+            title="Extension panel"
+            aria-label="Extension panel"
+          >
+            <PanelRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );

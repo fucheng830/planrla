@@ -11,12 +11,13 @@ type SessionRow = {
   custom_name: string | null;
   isArchived: number;
   a2a_exposed: number;
+  isPinned: number;
   created_at: string;
   updated_at: string;
 };
 
 const SESSION_ROW_COLUMNS =
-  'session_id, provider, provider_session_id, project_path, jsonl_path, custom_name, isArchived, a2a_exposed, created_at, updated_at';
+  'session_id, provider, provider_session_id, project_path, jsonl_path, custom_name, isArchived, a2a_exposed, isPinned, created_at, updated_at';
 
 const SQLITE_UTC_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
 
@@ -334,7 +335,7 @@ export const sessionsDb = {
         `SELECT ${SESSION_ROW_COLUMNS}
          FROM sessions
          WHERE isArchived = 1
-         ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC`
+         ORDER BY isPinned DESC, datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC`
       )
       .all() as SessionRow[];
 
@@ -383,7 +384,7 @@ export const sessionsDb = {
          FROM sessions
          WHERE project_path = ?
            AND isArchived = 0
-         ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC
+         ORDER BY isPinned DESC, datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC
          LIMIT ? OFFSET ?`
       )
       .all(normalizedProjectPath, limit, offset) as SessionRow[];
@@ -409,10 +410,10 @@ export const sessionsDb = {
     const rows = db
       .prepare(
         `WITH ranked AS (
-           SELECT ${SESSION_ROW_COLUMNS},
+             SELECT ${SESSION_ROW_COLUMNS},
                   ROW_NUMBER() OVER (
                     PARTITION BY project_path
-                    ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC
+                    ORDER BY isPinned DESC, datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC
                   ) AS rn,
                   COUNT(*) OVER (PARTITION BY project_path) AS total
            FROM sessions
@@ -484,6 +485,20 @@ export const sessionsDb = {
     ).run(isArchived ? 1 : 0, sessionId);
   },
 
+  /**
+   * Toggles the pin flag on one session. Pinned sessions sort before unpinned
+   * ones in the sidebar (see ORDER BY isPinned DESC in the list queries and the
+   * frontend `getAllSessions` comparator).
+   */
+  updateSessionIsPinned(sessionId: string, isPinned: boolean): void {
+    const db = getConnection();
+    db.prepare(
+      `UPDATE sessions
+       SET isPinned = ?
+       WHERE session_id = ?`
+    ).run(isPinned ? 1 : 0, sessionId);
+  },
+
   deleteSessionById(sessionId: string): boolean {
     const db = getConnection();
     return db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId).changes > 0;
@@ -503,7 +518,7 @@ export const sessionsDb = {
          FROM sessions
          WHERE a2a_exposed = 1
            AND COALESCE(isArchived, 0) = 0
-         ORDER BY datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC`
+         ORDER BY isPinned DESC, datetime(COALESCE(updated_at, created_at)) DESC, session_id DESC`
       )
       .all() as SessionRow[];
 

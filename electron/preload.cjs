@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (effectiveDark) => ipcRenderer.send('theme-cache:set', effectiveDark),
   },
   platform: process.platform,
+  // REQ-051 session context menu: open a path in the OS file explorer.
+  openPath: (targetPath) => ipcRenderer.invoke('shell:open-path', targetPath),
 });
 
 // Auto-updater bridge (REQ-011). Renderer useAutoUpdater hook reads state via
@@ -43,5 +45,25 @@ contextBridge.exposeInMainWorld('systemNotify', {
     const handler = (_event, data) => cb(data);
     ipcRenderer.on('notification-callback', handler);
     return () => ipcRenderer.removeListener('notification-callback', handler);
+  },
+});
+
+// Embedded browser panel bridge (WebContentsView). The renderer creates the
+// view, loads URLs, pushes bounds (screen-relative → main converts), and
+// receives navigation updates to sync the address bar.
+contextBridge.exposeInMainWorld('browserView', {
+  create: (bounds) => ipcRenderer.invoke('browserview:create', bounds),
+  loadURL: (url) => ipcRenderer.invoke('browserview:load-url', url),
+  setBounds: (bounds) => ipcRenderer.send('browserview:set-bounds', bounds),
+  goBack: () => ipcRenderer.send('browserview:go-back'),
+  goForward: () => ipcRenderer.send('browserview:go-forward'),
+  reload: () => ipcRenderer.send('browserview:reload'),
+  hide: () => ipcRenderer.send('browserview:hide'),
+  show: (bounds) => ipcRenderer.send('browserview:show', bounds),
+  destroy: () => ipcRenderer.send('browserview:destroy'),
+  onNavChange: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('browserview:nav-change', handler);
+    return () => ipcRenderer.removeListener('browserview:nav-change', handler);
   },
 });

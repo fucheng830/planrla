@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Edit3, Star, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Edit3, FolderTree, Star, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { cn } from '../../../../lib/utils';
@@ -25,6 +25,7 @@ type SidebarProjectItemProps = {
   editingSessionName: string;
   onEditingNameChange: (name: string) => void;
   onToggleProject: (projectName: string) => void;
+  onOpenFileTree: (project: Project) => void;
   onProjectSelect: (project: Project) => void;
   onToggleStarProject: (projectName: string) => void;
   onStartEditingProject: (project: Project) => void;
@@ -73,6 +74,7 @@ export default function SidebarProjectItem({
   editingSessionName,
   onEditingNameChange,
   onToggleProject,
+  onOpenFileTree,
   onProjectSelect,
   onToggleStarProject,
   onStartEditingProject,
@@ -363,6 +365,18 @@ export default function SidebarProjectItem({
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  aria-label={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
+                  className="touch:opacity-100 focus-within:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-accent group-hover:opacity-100"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenFileTree(project);
+                  }}
+                  title={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
+                >
+                  <FolderTree className="h-3 w-3" />
+                </button>
                 <button
                   type="button"
                   aria-label={t('tooltips.renameProject')}

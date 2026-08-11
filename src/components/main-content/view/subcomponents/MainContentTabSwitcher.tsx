@@ -1,4 +1,4 @@
-import { MessageSquare, Terminal, Folder, GitBranch, MonitorPlay, KanbanSquare, type LucideIcon } from 'lucide-react';
+import { MessageSquare, Terminal, GitBranch, MonitorPlay, KanbanSquare, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +11,8 @@ type MainContentTabSwitcherProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
   shouldShowBrowserTab: boolean;
+  /** When set, clicking the shell tab toggles the bottom terminal panel. */
+  onToggleTerminalPanel?: () => void;
 };
 
 type BuiltInTab = {
@@ -33,7 +35,6 @@ type TabDefinition = BuiltInTab | PluginTab;
 const BASE_TABS: BuiltInTab[] = [
   { kind: 'builtin', id: 'chat',  labelKey: 'tabs.chat',  icon: MessageSquare },
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
-  { kind: 'builtin', id: 'files', labelKey: 'tabs.files', icon: Folder },
   { kind: 'builtin', id: 'git',   labelKey: 'tabs.git',   icon: GitBranch },
 ];
 
@@ -55,6 +56,7 @@ export default function MainContentTabSwitcher({
   activeTab,
   setActiveTab,
   shouldShowBrowserTab,
+  onToggleTerminalPanel,
 }: MainContentTabSwitcherProps) {
   const { t } = useTranslation();
   const { plugins } = usePlugins();
@@ -87,7 +89,15 @@ export default function MainContentTabSwitcher({
           <Tooltip key={tab.id} content={displayLabel} position="bottom">
             <Pill
               isActive={isActive}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                // Shell tab toggles the bottom terminal panel (when wired up)
+                // instead of switching to a full-screen shell tab.
+                if (tab.id === 'shell' && onToggleTerminalPanel) {
+                  onToggleTerminalPanel();
+                  return;
+                }
+                setActiveTab(tab.id);
+              }}
               className="px-2.5 py-[5px]"
             >
               {tab.kind === 'builtin' ? (

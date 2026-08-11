@@ -72,6 +72,8 @@ import geminiRoutes from './routes/gemini.js';
 import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
+import syncRoutes from './modules/sync/sync.routes.js';
+import { startSyncScheduler } from './modules/sync/sync.client.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
 import { broadcastTaskUpdated } from './utils/kanban-websocket.js';
@@ -343,6 +345,7 @@ app.use('/api/providers', authenticateToken, providerRoutes);
 
 // Full-text session search (protected)
 app.use('/api/search', authenticateToken, searchRoutes);
+app.use('/api/sync', authenticateToken, syncRoutes);
 
 // Agent API Routes (uses API key authentication)
 app.use('/api/agent', agentRoutes);
@@ -1987,6 +1990,9 @@ async function startServer() {
 
             // Start watching the projects folder for changes
             await initializeSessionsWatcher();
+
+            // Start the team-sync background loop (no-op if not configured yet).
+            startSyncScheduler();
 
             // Start server-side plugin processes for enabled plugins
             startEnabledPluginServers().catch(err => {

@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { LLMProvider } from '../../../types/app';
 import type { ProviderAuthStatus } from '../../provider-auth/types';
 
-export type SettingsMainTab = 'agents' | 'appearance' | 'git' | 'api' | 'license' | 'voice' | 'browser' | 'notifications' | 'plugins' | 'about';
+export type SettingsMainTab = 'agents' | 'appearance' | 'git' | 'api' | 'license' | 'voice' | 'browser' | 'notifications' | 'plugins' | 'sync' | 'about';
 export type AgentProvider = LLMProvider;
 export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills' | 'defaults' | 'a2a';
 export type ProjectSortOrder = 'name' | 'date';
@@ -64,6 +64,8 @@ export type SettingsProps = {
   onClose: () => void;
   projects?: SettingsProject[];
   initialTab?: string;
+  // REQ-051 session context menu: pins the agents tab to this provider on open.
+  initialProvider?: string | null;
 };
 
 export type SetState<T> = Dispatch<SetStateAction<T>>;

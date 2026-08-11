@@ -3,9 +3,12 @@ import type { MouseEvent, MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CodeEditorFile } from '../types/types';
 import CodeEditor from './CodeEditor';
+import EditorTabs from './subcomponents/EditorTabs';
 
 type EditorSidebarProps = {
   editingFile: CodeEditorFile | null;
+  openFiles: CodeEditorFile[];
+  activeFilePath: string | null;
   isMobile: boolean;
   editorExpanded: boolean;
   editorWidth: number;
@@ -13,6 +16,8 @@ type EditorSidebarProps = {
   resizeHandleRef: MutableRefObject<HTMLDivElement | null>;
   onResizeStart: (event: MouseEvent<HTMLDivElement>) => void;
   onCloseEditor: () => void;
+  onCloseFile: (filePath: string) => void;
+  onSwitchFile: (filePath: string) => void;
   onToggleEditorExpand: () => void;
   projectPath?: string;
   fillSpace?: boolean;
@@ -25,6 +30,8 @@ const MIN_EDITOR_WIDTH = 280;
 
 export default function EditorSidebar({
   editingFile,
+  openFiles,
+  activeFilePath,
   isMobile,
   editorExpanded,
   editorWidth,
@@ -32,6 +39,8 @@ export default function EditorSidebar({
   resizeHandleRef,
   onResizeStart,
   onCloseEditor,
+  onCloseFile,
+  onSwitchFile,
   onToggleEditorExpand,
   projectPath,
   fillSpace,
@@ -43,7 +52,7 @@ export default function EditorSidebar({
 
   // Adjust editor width when container size changes to ensure buttons are always visible
   useEffect(() => {
-    if (!editingFile || isMobile || poppedOut) return;
+    if (openFiles.length === 0 || isMobile || poppedOut) return;
 
     const updateWidth = () => {
       if (!containerRef.current) return;
@@ -80,23 +89,35 @@ export default function EditorSidebar({
       window.removeEventListener('resize', updateWidth);
       resizeObserver.disconnect();
     };
-  }, [editingFile, isMobile, poppedOut, editorWidth]);
+  }, [openFiles.length, isMobile, poppedOut, editorWidth]);
 
-  if (!editingFile) {
+  if (openFiles.length === 0) {
     return null;
   }
 
+  const tabsBar = (
+    <EditorTabs
+      openFiles={openFiles}
+      activeFilePath={activeFilePath}
+      onSwitch={onSwitchFile}
+      onClose={onCloseFile}
+    />
+  );
+
   if (isMobile || poppedOut) {
     return (
-      <CodeEditor
-        file={editingFile}
-        onClose={() => {
-          setPoppedOut(false);
-          onCloseEditor();
-        }}
-        projectPath={projectPath}
-        isSidebar={false}
-      />
+      <div className="flex h-full flex-col">
+        {tabsBar}
+        <CodeEditor
+          file={editingFile ?? openFiles[0]}
+          onClose={() => {
+            setPoppedOut(false);
+            onCloseEditor();
+          }}
+          projectPath={projectPath}
+          isSidebar={false}
+        />
+      </div>
     );
   }
 
@@ -117,11 +138,12 @@ export default function EditorSidebar({
       )}
 
       <div
-        className={`h-full overflow-hidden border-l border-gray-200 dark:border-gray-700 ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
+        className={`flex h-full flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700 ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
         style={useFlexLayout ? undefined : { width: `${effectiveWidth}px`, minWidth: `${MIN_EDITOR_WIDTH}px` }}
       >
+        {tabsBar}
         <CodeEditor
-          file={editingFile}
+          file={editingFile ?? openFiles[0]}
           onClose={onCloseEditor}
           projectPath={projectPath}
           isSidebar

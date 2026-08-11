@@ -348,6 +348,9 @@ export function useProjectsState({
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState('agents');
+  // REQ-051 session context menu: pins the agents tab to a specific provider
+  // when settings is opened via "go to configuration".
+  const [settingsInitialProvider, setSettingsInitialProvider] = useState<LLMProvider | null>(null);
   const [externalMessageUpdate, setExternalMessageUpdate] = useState(0);
   /**
    * `newSessionTrigger` is an explicit, monotonic intent signal for user-driven
@@ -489,10 +492,15 @@ export function useProjectsState({
     ));
   }, []);
 
-  const openSettings = useCallback((tab = 'tools') => {
+  const openSettings = useCallback((tab = 'tools', provider = null) => {
     setSettingsInitialTab(tab);
+    setSettingsInitialProvider(provider);
     setShowSettings(true);
   }, []);
+  // REQ-051 session context menu: openSettings accepts an optional provider
+  // to pin the agents tab. Typed as a superset so callers via PaletteOps can
+  // pass an LLMProvider while the default param stays null.
+  const openSettingsTyped = openSettings as (tab?: string, provider?: LLMProvider | null) => void;
 
   useEffect(() => {
     void fetchProjects();
@@ -868,6 +876,44 @@ export function useProjectsState({
     [handleSidebarRefresh, navigate],
   );
 
+  /**
+   * Message-level fork: branches a new conversation from a specific message
+   * (identified by its timestamp). The server truncates the source transcript
+   * at the matching message and copies the prefix into a new session. Falls
+   * back to whole-conversation fork if the backend cannot truncate.
+   */
+  const handleForkAtMessage = useCallback(
+    async (sourceSessionId: string, upToTimestamp: string | number) => {
+      try {
+        const response = await authenticatedFetch(
+          `/api/providers/sessions/${encodeURIComponent(sourceSessionId)}/fork`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ upToTimestamp }),
+          },
+        );
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.error('[Chat] fork-at-message failed:', response.status, errorText);
+          return;
+        }
+        const body = (await response.json()) as { data?: { sessionId?: string } };
+        const newSessionId = body?.data?.sessionId;
+        if (!newSessionId) {
+          console.error('[Chat] fork-at-message returned no sessionId');
+          return;
+        }
+
+        await handleSidebarRefresh();
+        navigate(`/session/${newSessionId}`);
+      } catch (error) {
+        console.error('[Chat] fork-at-message error:', error);
+      }
+    },
+    [handleSidebarRefresh, navigate],
+  );
+
   const loadMoreProjectSessions = useCallback(async (projectId: string) => {
     const project = projects.find((candidate) => candidate.projectId === projectId);
     if (!project) {
@@ -952,6 +998,7 @@ export function useProjectsState({
       onShowSettings: () => setShowSettings(true),
       showSettings,
       settingsInitialTab,
+      settingsInitialProvider,
       onCloseSettings: () => setShowSettings(false),
       isMobile,
     }),
@@ -971,6 +1018,7 @@ export function useProjectsState({
       activeSessions,
       projects,
       settingsInitialTab,
+      settingsInitialProvider,
       selectedProject,
       selectedSession,
       showSettings,
@@ -994,7 +1042,7 @@ export function useProjectsState({
     setSidebarOpen,
     setIsInputFocused,
     setShowSettings,
-    openSettings,
+    openSettings: openSettingsTyped,
     fetchProjects,
     refreshProjectsSilently,
     registerOptimisticSession,
@@ -1006,5 +1054,6 @@ export function useProjectsState({
     loadMoreProjectSessions,
     handleProjectDelete,
     handleSidebarRefresh,
+    handleForkAtMessage,
   };
 }

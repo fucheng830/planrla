@@ -15,6 +15,15 @@ import { getIntrinsicMessageKey } from '../../utils/messageKeys';
 import MessageComponent from './MessageComponent';
 import ProviderSelectionEmptyState from './ProviderSelectionEmptyState';
 
+/**
+ * Providers whose transcript format supports message-level fork truncation
+ * (NDJSON with a per-line timestamp). cursor (SQLite blob DAG) and opencode
+ * (shared SQLite, no jsonl_path) are excluded — their fork buttons stay hidden.
+ */
+const MESSAGE_FORKABLE_PROVIDERS: ReadonlySet<LLMProvider> = new Set([
+  'claude', 'codex', 'gemini', 'kimi', 'zcode',
+]);
+
 interface ChatMessagesPaneProps {
   scrollContainerRef: RefObject<HTMLDivElement>;
   virtuaRef: RefObject<VListHandle>;
@@ -64,6 +73,7 @@ interface ChatMessagesPaneProps {
   showRawParameters?: boolean;
   showThinking?: boolean;
   selectedProject: Project;
+  onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
 }
 
 export default function ChatMessagesPane({
@@ -114,6 +124,7 @@ export default function ChatMessagesPane({
   showRawParameters,
   showThinking,
   selectedProject,
+  onForkAtMessage,
 }: ChatMessagesPaneProps) {
   const { t } = useTranslation('chat');
   const messageKeyMapRef = useRef<WeakMap<ChatMessage, string>>(new WeakMap());
@@ -268,6 +279,8 @@ export default function ChatMessagesPane({
                     showThinking={showThinking}
                     selectedProject={selectedProject}
                     provider={provider}
+                    canForkAtMessage={Boolean(onForkAtMessage && currentSessionId && !isProcessing && MESSAGE_FORKABLE_PROVIDERS.has(provider))}
+                    onForkAtMessage={onForkAtMessage && currentSessionId ? () => onForkAtMessage(currentSessionId, message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp) : undefined}
                   />
                 </div>
               );

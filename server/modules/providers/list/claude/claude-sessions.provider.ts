@@ -5,7 +5,7 @@ import readline from 'node:readline';
 
 import type { IProviderSessions } from '@/shared/interfaces.js';
 import type { AnyRecord, FetchHistoryOptions, FetchHistoryResult, NormalizedMessage } from '@/shared/types.js';
-import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTailPage } from '@/shared/utils.js';
+import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTailPage, truncateJsonlByTimestamp } from '@/shared/utils.js';
 import { sessionsDb } from '@/modules/database/index.js';
 
 const PROVIDER = 'claude';
@@ -694,5 +694,25 @@ export class ClaudeSessionsProvider implements IProviderSessions {
     }
 
     return normalizeClaudeRawMessages(rawMessages, forkSessionId, limit, offset, this.normalizeMessage.bind(this));
+  }
+
+  /**
+   * Message-level fork: truncate the transcript at the record whose timestamp
+   * reaches upToTimestamp. Claude records carry an ISO `timestamp` field;
+   * metadata rows (mode/permission-mode/summary without timestamp) are treated
+   * as "before" and preserved up to the truncation point. Lines after the match
+   * (including trailing ai-title rows) are dropped — they belong to later turns.
+   */
+  async forkJsonlByMessage(
+    sourceJsonlPath: string,
+    targetPath: string,
+    upToTimestamp: number | string,
+  ): Promise<void> {
+    await truncateJsonlByTimestamp(sourceJsonlPath, targetPath, upToTimestamp, (line) => {
+      const ts = line.timestamp;
+      if (typeof ts !== 'string' && typeof ts !== 'number') return null;
+      const ms = typeof ts === 'number' ? (ts < 1_000_000_000_000 ? ts * 1000 : ts) : Date.parse(ts);
+      return Number.isFinite(ms) ? ms : null;
+    });
   }
 }

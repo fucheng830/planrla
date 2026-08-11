@@ -13,6 +13,7 @@ import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
 import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
+import type { Project } from '../../../types/app';
 import { A2aDelegateProvider } from '../contexts/A2aDelegateContext';
 
 function Sidebar({
@@ -34,6 +35,7 @@ function Sidebar({
   onShowSettings,
   showSettings,
   settingsInitialTab,
+  settingsInitialProvider,
   onCloseSettings,
   isMobile,
   onOpenMarkdownEditor,
@@ -162,6 +164,10 @@ function Sidebar({
     isProjectStarred,
     onEditingNameChange: setEditingName,
     onToggleProject: toggleProject,
+    onOpenFileTree: (project: Project) => {
+      handleProjectSelect(project);
+      setSearchMode('files');
+    },
     onProjectSelect: handleProjectSelect,
     onToggleStarProject: toggleStarProject,
     onStartEditingProject: startEditing,
@@ -194,9 +200,10 @@ function Sidebar({
     <A2aDelegateProvider value={a2aDelegateValue}>
         <SidebarModals
           projects={projects}
-        showSettings={showSettings}
-        settingsInitialTab={settingsInitialTab}
-        onCloseSettings={onCloseSettings}
+          showSettings={showSettings}
+          settingsInitialTab={settingsInitialTab}
+          settingsInitialProvider={settingsInitialProvider}
+          onCloseSettings={onCloseSettings}
         showNewProject={showNewProject}
         onCloseNewProject={() => setShowNewProject(false)}
         onProjectCreated={handleProjectCreated}
@@ -303,6 +310,7 @@ function Sidebar({
             onOpenMarkdownEditor={onOpenMarkdownEditor}
             onOpenBackgroundTasks={onOpenBackgroundTasks}
             projectListProps={projectListProps}
+            onOpenFile={paletteOps.openFile}
             completedSessions={completedSessions}
             t={t}
           />

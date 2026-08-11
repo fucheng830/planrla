@@ -13,12 +13,15 @@ import GitSettingsTab from '../view/tabs/git-settings/GitSettingsTab';
 import BrowserUseSettingsTab from '../view/tabs/browser-use-settings/BrowserUseSettingsTab';
 import NotificationsSettingsTab from '../view/tabs/NotificationsSettingsTab';
 import PluginSettingsTab from '../../plugins/view/PluginSettingsTab';
+import SyncSettingsTab from '../view/tabs/SyncSettingsTab';
 import AboutTab from '../view/tabs/AboutTab';
 import { useSettingsController } from '../hooks/useSettingsController';
 import { useWebPush } from '../../../hooks/useWebPush';
-import type { SettingsProps } from '../types/types';
+import type { AgentProvider, SettingsProps } from '../types/types';
 
-function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: SettingsProps) {
+const KNOWN_AGENTS: AgentProvider[] = ['claude', 'cursor', 'codex', 'gemini', 'opencode', 'kimi', 'zcode'];
+
+function Settings({ isOpen, onClose, projects = [], initialTab = 'agents', initialProvider = null }: SettingsProps) {
   const { t } = useTranslation('settings');
   const {
     activeTab,
@@ -39,6 +42,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
     providerAuthStatus,
     geminiPermissionMode,
     setGeminiPermissionMode,
+    askUserQuestionAutoContinue,
+    setAskUserQuestionAutoContinue,
+    askUserQuestionAutoContinueTimeoutMs,
+    setAskUserQuestionAutoContinueTimeoutMs,
     openLoginForProvider,
     showLoginModal,
     setShowLoginModal,
@@ -137,6 +144,15 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
                   geminiPermissionMode={geminiPermissionMode}
                   onGeminiPermissionModeChange={setGeminiPermissionMode}
                   projects={projects}
+                  askUserQuestionAutoContinue={askUserQuestionAutoContinue}
+                  onAskUserQuestionAutoContinueChange={setAskUserQuestionAutoContinue}
+                  askUserQuestionAutoContinueTimeoutMs={askUserQuestionAutoContinueTimeoutMs}
+                  onAskUserQuestionAutoContinueTimeoutMsChange={setAskUserQuestionAutoContinueTimeoutMs}
+                  initialSelectedAgent={
+                    initialProvider && KNOWN_AGENTS.includes(initialProvider as AgentProvider)
+                      ? (initialProvider as AgentProvider)
+                      : undefined
+                  }
                 />
               )}
 
@@ -161,6 +177,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
               {activeTab === 'voice' && <VoiceSettingsTab />}
 
               {activeTab === 'plugins' && <PluginSettingsTab />}
+
+              {activeTab === 'sync' && <SyncSettingsTab />}
 
               {activeTab === 'about' && <AboutTab />}
             </div>

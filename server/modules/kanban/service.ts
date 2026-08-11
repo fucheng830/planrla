@@ -11,10 +11,12 @@ export interface KanbanServiceDeps {
   templateStore: TemplateStore;
   /** Invoked when a task reaches a terminal status (success/fail/cancelled). Used by assembly to clean up the worktree. */
   onTerminal?: (task: Task) => void;
+  /** Invoked when a task is hard-deleted, so sync can record a tombstone. */
+  onDeleteTask?: (taskId: string, rootId: string) => void;
 }
 
 export function createKanbanService(deps: KanbanServiceDeps) {
-  const { taskStore, templateStore, onTerminal } = deps;
+  const { taskStore, templateStore, onTerminal, onDeleteTask } = deps;
 
   /** Append an audit event to task_events (best-effort — a logging failure
    * must never break a state transition). Powers the detail modal timeline. */
@@ -165,6 +167,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       cancel(rootId, taskId);
     }
     taskStore.deleteTask(taskId);
+    onDeleteTask?.(taskId, rootId);
   }
 
   function prev(rootId: string, taskId: string): Task {

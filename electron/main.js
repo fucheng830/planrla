@@ -14,6 +14,7 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { readThemeCache, writeThemeCache } from './themeCache.cjs';
 import { initAutoUpdater } from './updater.js';
+import { initBrowserView, destroyBrowserView } from './browserview.js';
 import { isAllowedUrl, isSelfOrigin } from './links.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -98,6 +99,25 @@ ipcMain.on('show-notification', (_event, { type, title, body, sessionId, request
     mainWindow?.webContents.send('notification-callback', { type: 'click', sessionId });
   });
   n.show();
+});
+
+// REQ-051 session context menu: open a path in the OS file explorer.
+// shell.openPath opens the folder in Explorer/Finder; returns '' on success.
+ipcMain.handle('shell:open-path', async (_e, targetPath) => {
+  if (typeof targetPath !== 'string' || !targetPath.trim()) {
+    console.error('[shell:open-path] invalid path:', targetPath);
+    return '';
+  }
+  try {
+    const errorMsg = await shell.openPath(targetPath);
+    if (errorMsg) {
+      console.error(`[shell:open-path] failed for "${targetPath}": ${errorMsg}`);
+    }
+    return errorMsg;
+  } catch (err) {
+    console.error(`[shell:open-path] exception for "${targetPath}":`, err);
+    return String(err?.message || err);
+  }
 });
 
 function findFreePort() {
@@ -218,6 +238,8 @@ app.whenReady().then(async () => {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
     createWindow();
     if (!process.env.ELECTRON_DEV_URL) initAutoUpdater(mainWindow, ipcMain);
+    // Embedded browser panel (WebContentsView) — works in both dev and prod.
+    initBrowserView(mainWindow, ipcMain);
   } catch (e) {
     console.error('[desktop] failed to start:', e);
     app.quit();
@@ -228,6 +250,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  destroyBrowserView();
   if (process.platform !== 'darwin') app.quit();
 });
 

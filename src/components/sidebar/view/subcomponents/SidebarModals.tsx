@@ -16,6 +16,7 @@ type SidebarModalsProps = {
   projects: Project[];
   showSettings: boolean;
   settingsInitialTab: string;
+  settingsInitialProvider?: string | null;
   onCloseSettings: () => void;
   showNewProject: boolean;
   onCloseNewProject: () => void;
@@ -40,6 +41,7 @@ type TypedSettingsProps = {
   onClose: () => void;
   projects: SettingsProject[];
   initialTab: string;
+  initialProvider?: string | null;
 };
 
 const SettingsComponent = Settings as (props: TypedSettingsProps) => JSX.Element;
@@ -52,6 +54,7 @@ export default function SidebarModals({
   projects,
   showSettings,
   settingsInitialTab,
+  settingsInitialProvider,
   onCloseSettings,
   showNewProject,
   onCloseNewProject,
@@ -94,6 +97,7 @@ export default function SidebarModals({
             onClose={onCloseSettings}
             projects={settingsProjects}
             initialTab={settingsInitialTab}
+            initialProvider={settingsInitialProvider}
           />,
           document.body,
         )}

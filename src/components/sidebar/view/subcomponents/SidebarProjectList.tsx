@@ -32,6 +32,7 @@ export type SidebarProjectListProps = {
   isProjectStarred: (projectName: string) => boolean;
   onEditingNameChange: (value: string) => void;
   onToggleProject: (projectName: string) => void;
+  onOpenFileTree: (project: Project) => void;
   onProjectSelect: (project: Project) => void;
   onToggleStarProject: (projectName: string) => void;
   onStartEditingProject: (project: Project) => void;
@@ -79,6 +80,7 @@ export default function SidebarProjectList({
   isProjectStarred,
   onEditingNameChange,
   onToggleProject,
+  onOpenFileTree,
   onProjectSelect,
   onToggleStarProject,
   onStartEditingProject,
@@ -141,6 +143,7 @@ export default function SidebarProjectList({
               editingSessionName={editingSessionName}
               onEditingNameChange={onEditingNameChange}
               onToggleProject={onToggleProject}
+              onOpenFileTree={onOpenFileTree}
               onProjectSelect={onProjectSelect}
               onToggleStarProject={onToggleStarProject}
               onStartEditingProject={onStartEditingProject}

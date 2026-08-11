@@ -366,8 +366,15 @@ export function handleShellConnection(
         const shellCommand = buildShellCommand(data, dependencies);
         const resumeSessionId = resolveResumeSessionId(data, dependencies);
         const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+        // When there is no command to run (plain interactive shell), launch the
+        // shell in interactive mode instead of `-Command ''` / `-c ''` (which
+        // makes the shell exit immediately with code 0).
         const shellArgs =
-          os.platform() === 'win32' ? ['-Command', shellCommand] : ['-c', shellCommand];
+          shellCommand.trim().length === 0
+            ? []
+            : os.platform() === 'win32'
+              ? ['-Command', shellCommand]
+              : ['-c', shellCommand];
         const termCols = readNumber(data.cols, 80);
         const termRows = readNumber(data.rows, 24);
         const prioritizedPath = prioritizeKimiCodeBin(prioritizeUserNpmGlobalBin(process.env));

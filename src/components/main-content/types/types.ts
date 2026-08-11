@@ -35,11 +35,21 @@ export type MainContentProps = {
    *  "search all" mode. Undefined degrades the picker to current-project
    *  filtering only. Built by AppContent from the full projects array. */
   allPickerSessions?: PickerCandidateSession[];
+  /** Message-level fork: branches a new conversation from a specific message. */
+  onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
+  /** Toggle the bottom terminal panel (shell tab is now a panel toggle). */
+  onToggleTerminalPanel?: () => void;
 };
 
 export type MainContentHeaderProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  /** When set, the shell tab toggles the bottom terminal panel instead of
+   *  switching to a full-screen shell tab. */
+  onToggleTerminalPanel?: () => void;
+  /** Toggle the right-side extension panel (Markdown/Review/Browser). */
+  onToggleExtension?: () => void;
+  isExtensionOpen?: boolean;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
   shouldShowBrowserTab: boolean;

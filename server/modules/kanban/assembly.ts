@@ -16,6 +16,7 @@ import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 import { resolveToolApproval } from '@/claude-sdk.js';
 import type { Task } from '@/modules/kanban/types.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
+import { recordTombstone } from '@/modules/sync/sync.db.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -86,6 +87,14 @@ function buildKanban() {
       // best-effort worktree cleanup; resolveRootPath mirrors the runner's cwd resolution
       void worktreeSetup.removeWorktree(task, resolveRootPath(task.rootId))
         .catch((e) => console.error('[kanban-worktree] terminal cleanup failed:', e));
+    },
+    onDeleteTask: (taskId, rootId) => {
+      // Record a tombstone so team sync propagates the deletion to teammates.
+      try {
+        recordTombstone(db, taskId, rootId);
+      } catch (e) {
+        console.error('[kanban-sync] tombstone record failed:', e);
+      }
     },
   });
   const auxBridge = createAuxBridge({

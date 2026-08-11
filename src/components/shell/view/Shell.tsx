@@ -32,6 +32,10 @@ type ShellProps = {
   minimal?: boolean;
   autoConnect?: boolean;
   isActive?: boolean;
+  /** Show the internal ShellHeader (connection status bar). Default true;
+   *  set false when the terminal is hosted in a panel that has its own tab bar
+   *  (e.g. the bottom terminal panel) to avoid duplicate headers. */
+  showShellHeader?: boolean;
 };
 
 export default function Shell({
@@ -43,6 +47,7 @@ export default function Shell({
   minimal = false,
   autoConnect = false,
   isActive = true,
+  showShellHeader = true,
 }: ShellProps) {
   const { t } = useTranslation('chat');
   const [isRestarting, setIsRestarting] = useState(false);
@@ -55,6 +60,7 @@ export default function Shell({
   const {
     terminalContainerRef,
     terminalRef,
+    fitAddonRef,
     wsRef,
     isConnected,
     isInitialized,
@@ -165,7 +171,26 @@ export default function Shell({
     }
 
     const focusTerminal = () => {
-      terminalRef.current?.focus();
+      // When this terminal becomes visible (e.g. switching tabs in the bottom
+      // panel), the xterm canvas may have been measured at 0 size while hidden.
+      // Re-fit to the now-visible container and notify the backend of the new
+      // cols/rows so the pty renders correctly.
+      const fitAddon = fitAddonRef.current;
+      const term = terminalRef.current;
+      if (fitAddon && term) {
+        try {
+          fitAddon.fit();
+          sendSocketMessage(wsRef.current, {
+            type: 'resize',
+            cols: term.cols,
+            rows: term.rows,
+          });
+        } catch {
+          // fit can throw if the container still has no layout; ignore — the
+          // ResizeObserver in useShellTerminal will retry on the next layout.
+        }
+      }
+      term?.focus();
     };
 
     const animationFrameId = window.requestAnimationFrame(focusTerminal);
@@ -175,7 +200,7 @@ export default function Shell({
       window.cancelAnimationFrame(animationFrameId);
       window.clearTimeout(timeoutId);
     };
-  }, [isActive, isConnected, isInitialized, terminalRef]);
+  }, [isActive, isConnected, isInitialized, terminalRef, fitAddonRef, wsRef]);
 
   const sendInput = useCallback(
     (data: string) => {
@@ -289,7 +314,7 @@ export default function Shell({
 
   return (
     <div className="flex h-full w-full flex-col bg-gray-900">
-      <ShellHeader
+      {showShellHeader && <ShellHeader
         isConnected={isConnected}
         isInitialized={isInitialized}
         isRestarting={isRestarting}
@@ -305,7 +330,7 @@ export default function Shell({
         restartLabel={t('shell.actions.restart')}
         restartTitle={t('shell.actions.restartTitle')}
         disableRestart={isRestarting || !isInitialized}
-      />
+      />}
 
       <div className="relative flex-1 overflow-hidden p-2">
         <div

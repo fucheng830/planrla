@@ -147,6 +147,16 @@ export interface IProviderSessions {
    * provider 返空历史(fork 仍可打开新对话,只是历史视图空)。
    */
   fetchHistoryByJsonlPath?(jsonlPath: string, options?: Pick<FetchHistoryOptions, 'limit' | 'offset'>): Promise<FetchHistoryResult>;
+
+  /**
+   * 消息级 fork:将源 transcript 截断到包含 upToTimestamp 的消息(含其之前
+   * 所有内容),写入 targetPath。截断语义:新会话历史 = 目标消息及之前。
+   *
+   * 定位用 timestamp(不用 message id),因为大多数 provider 磁盘行没有稳定
+   * 消息 id(normalize 时生成随机 id),而 timestamp 来自原始 jsonl 行、前后端
+   * 同源、不受分页/过滤影响。可选,未实现的 provider forkSession 回退整文件复制。
+   */
+  forkJsonlByMessage?(sourceJsonlPath: string, targetPath: string, upToTimestamp: number | string): Promise<void>;
 }
 
 // ---------------------------

@@ -52,7 +52,20 @@
     "save": "Save",
     "cancel": "Cancel",
     "clearSearch": "Clear search",
-    "openCommandPalette": "Open command palette"
+    "openCommandPalette": "Open command palette",
+    "pinnedSession": "Pinned",
+    "deleteSessionOptions": "Archive or permanently delete this session"
+  },
+  "contextMenu": {
+    "pinSession": "Pin",
+    "unpinSession": "Unpin",
+    "archiveSession": "Archive",
+    "copySessionId": "Copy session ID",
+    "copyPath": "Copy path",
+    "copyLogPath": "Copy log path",
+    "copied": "Copied!",
+    "openInExplorer": "Open in file explorer",
+    "goToConfig": "Go to configuration"
   },
   "navigation": {
     "chat": "Chat",
@@ -73,6 +86,11 @@
     "reportIssue": "Report Issue"
   },
   "branding": {},
+  "renameDialog": {
+    "title": "Rename conversation",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
   "status": {
     "active": "Active",
     "inactive": "Inactive",

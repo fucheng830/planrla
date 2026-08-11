@@ -57,6 +57,13 @@ export interface KanbanClaudeHooksDeps {
   goalCondition?: string;
   /** Seconds before the SDK kills a pending interactive hook. Default 24h — a user may answer much later. */
   interactiveHookTimeoutSec?: number;
+  /**
+   * Auto-continue on AskUserQuestion timeout (bypassPermissions / kanban path).
+   * When true, the hook waits `askUserQuestionAutoContinueTimeoutMs` instead of
+   * indefinitely; on timeout the model is told to proceed on its own.
+   */
+  askUserQuestionAutoContinue?: boolean;
+  askUserQuestionAutoContinueTimeoutMs?: number;
   log?: (msg: string) => void;
 }
 
@@ -108,6 +115,8 @@ export function createKanbanClaudeHooks(deps: KanbanClaudeHooksDeps): Record<str
     goalCondition,
     onActionRequired,
     interactiveHookTimeoutSec = 24 * 60 * 60,
+    askUserQuestionAutoContinue = false,
+    askUserQuestionAutoContinueTimeoutMs,
     log = () => {},
   } = deps;
 
@@ -135,7 +144,11 @@ export function createKanbanClaudeHooks(deps: KanbanClaudeHooksDeps): Record<str
     onActionRequired?.({ requestId, toolName: 'AskUserQuestion', sessionId });
 
     const decision = await waitForToolApproval(requestId, {
-      timeoutMs: 0, // interactive: wait until the user answers or the run aborts
+      // Auto-continue: wait the configured timeout, then dismiss so the model
+      // proceeds on its own. Default 0 = wait indefinitely (original behavior).
+      timeoutMs: askUserQuestionAutoContinue
+        ? (Number(askUserQuestionAutoContinueTimeoutMs) || 300000)
+        : 0,
       signal: options?.signal,
       metadata: {
         _sessionId: sessionId,

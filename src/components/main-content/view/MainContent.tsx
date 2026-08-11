@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PanelRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import ChatInterface from '../../chat/view/ChatInterface';
-import FileTree from '../../file-tree/view/FileTree';
-import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
+import ExtensionPanel from '../../extension-panel/view/ExtensionPanel';
 import GitPanel from '../../git-panel/view/GitPanel';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
 import { BrowserUsePanel } from '../../browser-use';
@@ -39,22 +40,30 @@ function MainContent({
   externalMessageUpdate,
   newSessionTrigger,
   allPickerSessions,
+  onForkAtMessage,
+  onToggleTerminalPanel,
 }: MainContentProps) {
+  const { t } = useTranslation();
   const { preferences } = useUiPreferences();
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
 
   const [browserUseEnabled, setBrowserUseEnabled] = useState(false);
+  const [isExtensionOpen, setIsExtensionOpen] = useState(false);
 
   const shouldShowBrowserTab = browserUseEnabled;
 
   const {
     editingFile,
+    openFiles,
+    activeFilePath,
     editorWidth,
     editorExpanded,
     hasManualWidth,
     resizeHandleRef,
     handleFileOpen,
     handleCloseEditor,
+    handleCloseFile,
+    handleSwitchFile,
     handleToggleEditorExpand,
     handleResizeStart,
   } = useEditorSidebar({
@@ -86,7 +95,9 @@ function MainContent({
 
   usePaletteOpsRegister({
     openFile: (filePath: string) => {
-      setActiveTab('files');
+      // Open in the right-side editor sidebar without switching tabs — the file
+      // tree now lives in the left sidebar, so the main area stays on the
+      // current tab (usually chat) while the file opens alongside it.
       handleFileOpen(filePath);
     },
   });
@@ -104,6 +115,9 @@ function MainContent({
       <MainContentHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onToggleTerminalPanel={onToggleTerminalPanel}
+        onToggleExtension={() => setIsExtensionOpen((v) => !v)}
+        isExtensionOpen={isExtensionOpen}
         selectedProject={selectedProject}
         selectedSession={selectedSession}
         shouldShowBrowserTab={shouldShowBrowserTab}
@@ -113,7 +127,7 @@ function MainContent({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
-          <div className={`h-full ${activeTab === 'chat' ? 'block' : 'hidden'}`}>
+          <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>
               <ChatInterface
                 selectedProject={selectedProject}
@@ -137,26 +151,11 @@ function MainContent({
                 externalMessageUpdate={externalMessageUpdate}
                 newSessionTrigger={newSessionTrigger}
                 allPickerSessions={allPickerSessions}
+                onForkAtMessage={onForkAtMessage}
               />
             </ErrorBoundary>
           </div>
 
-          {activeTab === 'files' && (
-            <div className="h-full overflow-hidden">
-              <FileTree selectedProject={selectedProject} onFileOpen={handleFileOpen} />
-            </div>
-          )}
-
-          {activeTab === 'shell' && (
-            <div className="h-full w-full overflow-hidden">
-              <StandaloneShell
-                project={selectedProject}
-                session={selectedSession}
-                showHeader={false}
-                isActive={activeTab === 'shell'}
-              />
-            </div>
-          )}
 
           {activeTab === 'git' && (
             <div className="h-full overflow-hidden">
@@ -183,8 +182,19 @@ function MainContent({
           )}
         </div>
 
+        {isExtensionOpen && selectedProject && (
+          <ExtensionPanel
+            selectedProject={selectedProject}
+            onFileOpen={handleFileOpen}
+            onOpenMarkdownEditor={() => onShowSettings?.()}
+            onClose={() => setIsExtensionOpen(false)}
+          />
+        )}
+
         <EditorSidebar
           editingFile={editingFile}
+          openFiles={openFiles}
+          activeFilePath={activeFilePath}
           isMobile={isMobile}
           editorExpanded={editorExpanded}
           editorWidth={editorWidth}
@@ -192,9 +202,11 @@ function MainContent({
           resizeHandleRef={resizeHandleRef}
           onResizeStart={handleResizeStart}
           onCloseEditor={handleCloseEditor}
+          onCloseFile={handleCloseFile}
+          onSwitchFile={handleSwitchFile}
           onToggleEditorExpand={handleToggleEditorExpand}
           projectPath={selectedProject.path}
-          fillSpace={activeTab === 'files'}
+          fillSpace={false}
         />
       </div>
     </div>

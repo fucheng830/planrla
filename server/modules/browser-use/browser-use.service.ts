@@ -75,7 +75,10 @@ let lastInstallMessage: string | null = null;
 let runtimeProbeCache: { value: RuntimeProbe; updatedAt: number } | null = null;
 
 const DEFAULT_SETTINGS: BrowserUseSettings = {
-  enabled: false,
+  // Browser use is enabled by default — playwright ships as a dependency and
+  // the system's Chromium browser (Edge/Chrome) is auto-detected, so no
+  // manual setup is required.
+  enabled: true,
 };
 const AGENT_OWNER_ID = 'agent';
 const PROFILE_ROOT = path.join(os.homedir(), '.planrla', 'browser-use', 'profiles');
@@ -207,6 +210,7 @@ function probeRuntime(): RuntimeProbe {
     return readiness;
   }
 
+  // 1. Try Playwright's bundled Chromium first.
   try {
     const executablePath = playwright.chromium.executablePath();
     readiness.chromiumExecutablePath = executablePath;
@@ -215,7 +219,48 @@ function probeRuntime(): RuntimeProbe {
     readiness.chromiumInstalled = false;
   }
 
+  // 2. If bundled Chromium is missing, look for a system-installed Chromium
+  //    browser (Edge / Chrome). This avoids requiring users to download
+  //    Playwright's Chromium — the system browser works as a drop-in.
+  if (!readiness.chromiumInstalled) {
+    const systemBrowserPath = findSystemChromiumBrowser();
+    if (systemBrowserPath) {
+      readiness.chromiumExecutablePath = systemBrowserPath;
+      readiness.chromiumInstalled = true;
+    }
+  }
+
   return readiness;
+}
+
+/**
+ * Searches well-known install locations for a system Chromium-based browser
+ * (Microsoft Edge / Google Chrome). Returns the executable path if found, or
+ * null. Used as a fallback when Playwright's bundled Chromium is not installed
+ * so users don't need to download it separately.
+ */
+function findSystemChromiumBrowser(): string | null {
+  const candidates: string[] = [];
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+    const localAppData = process.env['LOCALAPPDATA'] || '';
+    candidates.push(
+      path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    );
+  } else if (process.platform === 'darwin') {
+    candidates.push(
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    );
+  } else {
+    candidates.push('/usr/bin/microsoft-edge', '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium');
+  }
+  return candidates.find((p) => fs.existsSync(p)) || null;
 }
 
 function getRuntimeReadiness(options: { force?: boolean } = {}): RuntimeReadiness {
@@ -248,7 +293,9 @@ function runCommand(command: string, args: string[]): Promise<void> {
     const child = spawn(command, args, {
       cwd: process.cwd(),
       env: process.env,
-      shell: false,
+      // Windows needs shell:true for .cmd/.bat executables like npm.cmd;
+      // without it spawn throws EINVAL.
+      shell: process.platform === 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const output: string[] = [];
@@ -309,8 +356,16 @@ async function installRuntime(): Promise<{ success: boolean; message: string }> 
         await runCommand(npmCommand, ['exec', '--', 'playwright', 'install-deps', 'chromium']);
       }
 
-      lastInstallMessage = 'Installing Chromium runtime...';
-      await runCommand(npmCommand, ['exec', '--', 'playwright', 'install', 'chromium']);
+      // If a system Chromium browser (Edge / Chrome) is already installed,
+      // skip the large Chromium download — Playwright will use the system
+      // browser via executablePath. This saves ~300MB and several minutes.
+      const hasSystemBrowser = Boolean(findSystemChromiumBrowser());
+      if (!hasSystemBrowser) {
+        lastInstallMessage = 'Installing Chromium runtime...';
+        await runCommand(npmCommand, ['exec', '--', 'playwright', 'install', 'chromium']);
+      } else {
+        lastInstallMessage = 'Using system-installed browser (no Chromium download needed).';
+      }
 
       lastInstallMessage = 'Browser runtime installed.';
       return { success: true, message: lastInstallMessage };
@@ -541,9 +596,14 @@ export const browserUseService = {
     let browser: any | undefined;
     let context: any | undefined;
     let page: any;
-    const launchOptions = {
+    // If the detected browser is a system-installed browser (not Playwright's
+    // bundled Chromium), pass its executablePath so Playwright launches it
+    // instead of looking for the bundled one.
+    const systemBrowserPath = findSystemChromiumBrowser();
+    const launchOptions: { headless: boolean; args: string[]; executablePath?: string } = {
       headless: true,
       args: ['--disable-dev-shm-usage'],
+      ...(systemBrowserPath ? { executablePath: systemBrowserPath } : {}),
     };
     const contextOptions = {
       viewport: { width: 1440, height: 900 },

@@ -5,7 +5,7 @@ import readline from 'node:readline';
 import { sessionsDb } from '@/modules/database/index.js';
 import type { IProviderSessions } from '@/shared/interfaces.js';
 import type { AnyRecord, FetchHistoryOptions, FetchHistoryResult, NormalizedMessage } from '@/shared/types.js';
-import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTailPage } from '@/shared/utils.js';
+import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTailPage, truncateJsonlByTimestamp } from '@/shared/utils.js';
 
 const PROVIDER = 'gemini';
 
@@ -536,5 +536,24 @@ export class GeminiSessionsProvider implements IProviderSessions {
       limit: pageLimit,
       tokenUsage: result.tokenUsage,
     };
+  }
+
+  /**
+   * Message-level fork: truncate the Gemini transcript at the record whose
+   * `timestamp` reaches upToTimestamp. Handles the NDJSON format; the legacy
+   * single-JSON format falls through to a full copy (no line matches timestamp
+   * because the whole file is one JSON object on one line).
+   */
+  async forkJsonlByMessage(
+    sourceJsonlPath: string,
+    targetPath: string,
+    upToTimestamp: number | string,
+  ): Promise<void> {
+    await truncateJsonlByTimestamp(sourceJsonlPath, targetPath, upToTimestamp, (line) => {
+      const ts = line.timestamp;
+      if (typeof ts !== 'string' && typeof ts !== 'number') return null;
+      const ms = typeof ts === 'number' ? (ts < 1_000_000_000_000 ? ts * 1000 : ts) : Date.parse(ts);
+      return Number.isFinite(ms) ? ms : null;
+    });
   }
 }

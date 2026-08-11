@@ -34,6 +34,10 @@ export interface ProjectSession {
   // Tags the session with the owning project's DB `projectId` so UI handlers
   // (session switching, sidebar focus, etc.) can match against selectedProject.
   __projectId?: string;
+  // REQ-051 session context menu: surfaces the pin flag and transcript path so
+  // the sidebar can sort pinned sessions first and offer "copy log path".
+  isPinned?: boolean;
+  jsonlPath?: string | null;
   [key: string]: unknown;
 }
 

@@ -13,6 +13,7 @@ import {
   readObjectRecord,
   readOptionalString,
   sliceTailPage,
+  truncateJsonlByTimestamp,
 } from '@/shared/utils.js';
 
 const PROVIDER = 'zcode';
@@ -289,6 +290,29 @@ export class ZcodeSessionsProvider implements IProviderSessions {
     }
 
     return { normalized, tokenUsage: buildTokenUsage(totals) };
+  }
+
+  /**
+   * Message-level fork: truncate the rollout at the model_io turn whose
+   * completedAt reaches upToTimestamp. Each rollout line is a self-contained
+   * turn (user prompt + assistant response + usage), so line-level truncation
+   * never splits a message pair or a tool call.
+   */
+  async forkJsonlByMessage(
+    sourceJsonlPath: string,
+    targetPath: string,
+    upToTimestamp: number | string,
+  ): Promise<void> {
+    await truncateJsonlByTimestamp(sourceJsonlPath, targetPath, upToTimestamp, (line) => {
+      const completedAt = readOptionalString(line.completedAt);
+      const startedAt = readOptionalString(line.startedAt);
+      // Use the turn's completion time as the anchor (that is the assistant
+      // message timestamp the user sees); fall back to startedAt.
+      const anchor = completedAt ?? startedAt;
+      if (!anchor) return null;
+      const ms = Date.parse(anchor);
+      return Number.isFinite(ms) ? ms : null;
+    });
   }
 }
 

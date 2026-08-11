@@ -611,6 +611,8 @@ async function queryClaudeSDK(command, options = {}, ws) {
         getSessionId: () => capturedSessionId || sessionId || null,
         emitHookEvents: options.emitHookEvents === true,
         goalCondition: options.goalCondition,  // REQ-043
+        askUserQuestionAutoContinue: options.askUserQuestionAutoContinue === true,
+        askUserQuestionAutoContinueTimeoutMs: options.askUserQuestionAutoContinueTimeoutMs,
         onActionRequired: ({ requestId, toolName }) => {
           emitNotification(createNotificationEvent({
             provider: 'claude',
@@ -670,7 +672,11 @@ async function queryClaudeSDK(command, options = {}, ws) {
       }));
 
       const decision = await waitForToolApproval(requestId, {
-        timeoutMs: requiresInteraction ? 0 : undefined,
+        // AskUserQuestion respects the auto-continue timeout when enabled;
+        // ExitPlanMode and other interactive tools keep waiting indefinitely.
+        timeoutMs: requiresInteraction && toolName === 'AskUserQuestion' && options.askUserQuestionAutoContinue
+          ? (Number(options.askUserQuestionAutoContinueTimeoutMs) || 300000)
+          : (requiresInteraction ? 0 : undefined),
         signal: context?.signal,
         metadata: {
           _sessionId: capturedSessionId || sessionId || null,
@@ -683,7 +689,16 @@ async function queryClaudeSDK(command, options = {}, ws) {
         }
       });
       if (!decision) {
-        return { behavior: 'deny', message: 'Permission request timed out' };
+        // Timeout. For AskUserQuestion auto-continue, frame the denial so the
+        // model knows the user simply did not answer and should proceed with a
+        // reasonable default rather than treating it as a hard error.
+        const autoContinue = requiresInteraction && toolName === 'AskUserQuestion' && options.askUserQuestionAutoContinue;
+        return {
+          behavior: 'deny',
+          message: autoContinue
+            ? 'The user did not respond within the auto-continue timeout. Proceed with a reasonable default.'
+            : 'Permission request timed out',
+        };
       }
 
       if (decision.cancelled) {
