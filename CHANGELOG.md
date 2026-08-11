@@ -3,6 +3,20 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.14.0](https://github.com/fucheng830/planrla/compare/v0.13.0...v0.14.0) (2026-08-11)
+
+### New Features
+
+* **android:** 侧边栏全面对齐 web 卡片风格 — 图标 / 头部搜索 / 项目会话列表项 / 空状态 / logo(PNG 资源替换 Canvas)(REQ-051) ([b374a8d](https://github.com/fucheng830/planrla/commit/b374a8d))
+* **android:** 桌面端切换入口从标题栏迁移到侧边栏底部(方案 C/位置 5)+ Material Computer 图标替 emoji ([e2bec91](https://github.com/fucheng830/planrla/commit/e2bec91))
+* **android:** Kimi 完整回复切分为 stream_delta 流式发送(对齐原生流式 provider 体验) ([a472223](https://github.com/fucheng830/planrla/commit/a472223))
+
+### Bug Fixes
+
+* **android:** ConnectScreen 登录卡片填满宽度,消除窄留白(Archie 之前报的 UI 问题) ([d58e7e0](https://github.com/fucheng830/planrla/commit/d58e7e0))
+* **android:** windowSoftInputMode=adjustResize,消除键盘弹出时侧边栏底部空白 ([5380c3b](https://github.com/fucheng830/planrla/commit/5380c3b))
+* **android:** 会话标题含 % 切换崩溃 + 会话切换遍历滚动性能 + logo 位置/渐变/状态栏避让多个 fix
+
 ## [0.13.0](https://github.com/fucheng830/planrla/compare/v0.12.0...v0.13.0) (2026-08-10)
 
 ### New Features
