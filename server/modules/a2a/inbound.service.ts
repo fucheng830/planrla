@@ -31,7 +31,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { spawnFns } from '@/modules/providers/index.js';
-import { sessionsDb } from '@/modules/database/index.js';
+import { sessionsDb, projectsDb } from '@/modules/database/index.js';
 import { sessionsService } from '@/modules/providers/index.js';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { RealtimeClientConnection, LLMProvider } from '@/shared/types.js';
@@ -101,8 +101,24 @@ const STUB_CONNECTION: RealtimeClientConnection = {
  * Builds the Agent Card advertised at `/.well-known/agent-card.json`
  * (and GET /api/a2a). Capabilities are constrained to what the loopback
  * inbound path actually supports today.
+ *
+ * `delegation` is a planrla extension so remote callers can self-serve:
+ * exposedSessions feeds a2a_call's sessionId, spawnProjectPaths feeds
+ * spawn mode. Remote reads are gated by the shared-token middleware in
+ * inbound.route.ts, so this data only reaches authenticated LAN peers.
  */
 export function buildAgentCard(port: number, version: string) {
+  const exposedSessions = sessionsDb.listA2aExposed().map((s) => ({
+    id: s.session_id,
+    provider: s.provider,
+    summary: s.custom_name || '',
+    projectPath: s.project_path,
+  }));
+  const spawnProjectPaths = projectsDb
+    .getProjectPaths()
+    .map((p) => p.project_path)
+    .slice(0, 20);
+
   return {
     name: 'planrla',
     description: 'Planrla project AI workbench (A2A inbound, loopback only)',
@@ -123,6 +139,15 @@ export function buildAgentCard(port: number, version: string) {
         description: 'Delegate a task to a planrla session agent',
       },
     ],
+    delegation: {
+      mode: 'sessionId-or-spawn',
+      exposedSessions,
+      spawn: {
+        supported: true,
+        defaultProvider: 'claude',
+        projectPaths: spawnProjectPaths,
+      },
+    },
     authentication: {},
   };
 }
