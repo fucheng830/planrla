@@ -295,8 +295,9 @@ app.use('/api/a2a', createA2aInboundRouter(process.env.SERVER_PORT || 3001, () =
 
 // A2A configuration API (Settings panel): local endpoint + token + remote
 // agent management. Auth-protected (user JWT) — only the local user manages
-// the config; remote callers go through /api/a2a above.
-app.use('/api/a2a-cfg', createA2aConfigRouter());
+// the config; remote callers go through /api/a2a above. Must stay mounted
+// BEFORE the a2a inbound router's token scope: it shares no auth with it.
+app.use('/api/a2a-cfg', authenticateToken, createA2aConfigRouter());
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
