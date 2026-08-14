@@ -37,6 +37,7 @@ import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { RealtimeClientConnection, LLMProvider } from '@/shared/types.js';
 import { A2AInboundWriter } from './a2a-inbound-writer.js';
 import { sanitizeInbound } from './inbound.security.js';
+import { getShareAllSessions } from './trust.js';
 import { filterOutbound } from './a2a-client.service.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 
@@ -108,7 +109,19 @@ const STUB_CONNECTION: RealtimeClientConnection = {
  * inbound.route.ts, so this data only reaches authenticated LAN peers.
  */
 export function buildAgentCard(port: number, version: string) {
-  const exposedSessions = sessionsDb.listA2aExposed().map((s) => ({
+  const shareAll = getShareAllSessions();
+  // Share-all lists every active session (newest first, capped); otherwise
+  // only sessions explicitly opted into A2A exposure.
+  const sessionRows = shareAll
+    ? [...sessionsDb.getAllSessions()]
+        .sort(
+          (a, b) =>
+            Date.parse(b.updated_at ?? b.created_at ?? '') -
+            Date.parse(a.updated_at ?? a.created_at ?? '')
+        )
+        .slice(0, 50)
+    : sessionsDb.listA2aExposed();
+  const exposedSessions = sessionRows.map((s) => ({
     id: s.session_id,
     provider: s.provider,
     summary: s.custom_name || '',
@@ -141,6 +154,7 @@ export function buildAgentCard(port: number, version: string) {
     ],
     delegation: {
       mode: 'sessionId-or-spawn',
+      allSessionsShared: shareAll,
       exposedSessions,
       spawn: {
         supported: true,
@@ -291,9 +305,10 @@ export async function handleTaskSend(
     return { taskId: '', state: 'failed', text: '', error: 'session not found' };
   }
   // S3 whitelist: only sessions explicitly marked a2a_exposed may receive
-  // inbound delegations. Gate before acquiring the run lock so a rejected
-  // request never blocks the chat websocket path.
-  if (!session.a2a_exposed) {
+  // inbound delegations — unless the "share all sessions" trust setting is
+  // on, in which case every session is delegatable. Gate before acquiring
+  // the run lock so a rejected request never blocks the chat websocket path.
+  if (!session.a2a_exposed && !getShareAllSessions()) {
     return { taskId: '', state: 'failed', text: '', error: 'session not exposed for A2A delegation' };
   }
 

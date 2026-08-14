@@ -87,6 +87,7 @@ import {
 import { createA2aMcpRouter } from './modules/a2a/mcp.route.js';
 import { createA2aInboundRouter } from './modules/a2a/inbound.route.js';
 import { createA2aConfigRouter } from './modules/a2a/config.route.js';
+import { startA2aDiscovery } from './modules/a2a/discovery.service.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -2000,6 +2001,14 @@ async function startServer() {
 
             // Start the team-sync background loop (no-op if not configured yet).
             startSyncScheduler();
+
+            // A2A LAN peer auto-discovery (UDP broadcast). Listens always;
+            // announces itself only in LAN trust mode (Settings → A2A).
+            try {
+                startA2aDiscovery(SERVER_PORT, RUNNING_VERSION || '0.0.0');
+            } catch (err) {
+                console.warn(`[a2a-discovery] failed to start: ${err?.message || err}`);
+            }
 
             // Start server-side plugin processes for enabled plugins
             startEnabledPluginServers().catch(err => {

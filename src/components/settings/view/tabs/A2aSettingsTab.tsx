@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Copy, Loader2, Network, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Copy, Loader2, Network, Plus, RefreshCw, ShieldAlert, Trash2, Wifi } from 'lucide-react';
 
 import { authenticatedFetch } from '../../../../utils/api';
 
@@ -7,6 +7,9 @@ type A2aConfig = {
   endpoint: string;
   token: string | null;
   agents: Array<{ id: number; name: string; url: string; description: string | null; hasAuth: boolean }>;
+  trustMode?: 'token' | 'lan';
+  shareAllSessions?: boolean;
+  discoveredPeers?: Array<{ name: string; ip: string; port: number; version: string; lastSeen: number }>;
 };
 
 /**
@@ -84,6 +87,23 @@ export default function A2aSettingsTab() {
     }
   };
 
+  const updateSettings = async (patch: { trustMode?: 'token' | 'lan'; shareAllSessions?: boolean }) => {
+    setBusy(true); setError(null);
+    try {
+      const res = await authenticatedFetch('/api/a2a-cfg/settings', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await loadConfig();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -101,7 +121,8 @@ export default function A2aSettingsTab() {
           本机 A2A 接入点
         </h3>
         <p className="mb-3 text-xs text-muted-foreground">
-          把下面的地址和令牌告诉局域网里的其他机器(在它们的 A2A 设置里添加一次),它们就能向你派发任务。
+          令牌模式下：把下面的地址和令牌发给对方机器（在其 A2A 设置里添加一次）即可互连。
+          局域网信任模式下无需分发——节点自动发现、免令牌直连。
         </p>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -127,6 +148,61 @@ export default function A2aSettingsTab() {
             </button>
           </div>
           {copied && <p className="text-xs text-muted-foreground">已复制到剪贴板</p>}
+        </div>
+      </section>
+
+      {/* Trust mode + share-all-sessions */}
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h3 className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+          <ShieldAlert className="h-4 w-4" />
+          信任模式
+        </h3>
+        <div className="mt-3 space-y-2">
+          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-2.5 hover:bg-accent/40">
+            <input
+              type="radio"
+              name="a2a-trust-mode"
+              checked={config?.trustMode !== 'lan'}
+              disabled={busy}
+              onChange={() => void updateSettings({ trustMode: 'token' })}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="block text-xs font-medium text-foreground">令牌认证（默认）</span>
+              <span className="block text-[11px] text-muted-foreground">远程机器必须携带共享令牌才能访问，适合不受控网络。</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-2.5 hover:bg-accent/40">
+            <input
+              type="radio"
+              name="a2a-trust-mode"
+              checked={config?.trustMode === 'lan'}
+              disabled={busy}
+              onChange={() => void updateSettings({ trustMode: 'lan' })}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="block text-xs font-medium text-foreground">局域网信任（免配置互连）</span>
+              <span className="block text-[11px] text-muted-foreground">
+                同一局域网内的 planrla 节点通过 UDP 广播自动发现彼此，直接互通、无需令牌。
+                仅信任家庭/办公内网使用——同一网络里的任何设备都能访问你的 A2A 服务。
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-2.5 hover:bg-accent/40">
+            <input
+              type="checkbox"
+              checked={config?.shareAllSessions === true}
+              disabled={busy}
+              onChange={(e) => void updateSettings({ shareAllSessions: e.target.checked })}
+            />
+            <span>
+              <span className="block text-xs font-medium text-foreground">共享全部会话</span>
+              <span className="block text-[11px] text-muted-foreground">
+                对方可看到并委托本机全部对话（最多列出最近 50 条）；关闭时仅共享逐个开启过 A2A 暴露的会话。
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 
@@ -220,6 +296,46 @@ export default function A2aSettingsTab() {
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Discovered LAN peers */}
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Wifi className="h-4 w-4" />
+              发现的局域网节点
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              开启「局域网信任」后自动出现；对话里可直接用节点名派发任务（如"向 xxx 派发任务"）。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadConfig()}
+            className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="刷新"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {(config?.discoveredPeers?.length ?? 0) === 0 ? (
+          <p className="py-4 text-center text-xs text-muted-foreground">暂未发现局域网节点（对方需开启局域网信任模式）</p>
+        ) : (
+          <ul className="space-y-1">
+            {config?.discoveredPeers?.map((peer) => (
+              <li key={`${peer.name}@${peer.ip}`} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-accent/40">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">{peer.name}</span>
+                    <span className="rounded bg-blue-500/10 px-1 py-px text-[9px] text-blue-600">自动发现</span>
+                  </div>
+                  <p className="truncate text-[11px] text-muted-foreground">{peer.ip}:{peer.port} · v{peer.version || '?'}</p>
+                </div>
               </li>
             ))}
           </ul>

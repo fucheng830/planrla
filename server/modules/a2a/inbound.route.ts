@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 
 import { buildAgentCard, handleTaskSend, getTask, cancelTask } from './inbound.service.js';
 import { RateLimiter } from './inbound.security.js';
+import { getTrustMode, isPrivateLanIp } from './trust.js';
 import { appConfigDb } from '@/modules/database/repositories/app-config.js';
 
 const limiter = new RateLimiter(20, 60_000);
@@ -129,23 +130,24 @@ export function getLanHost(): string {
 export function createA2aInboundRouter(port: number, getUserId: () => number): Router {
   const router = Router();
 
-  // Security: loopback callers are always trusted (no token needed). Remote
-  // (LAN/WAN) callers must present a valid A2A shared token via the
-  // Authorization header ("Bearer <token>"). The token is auto-generated and
-  // stored in the planrla database on first run; remote machines obtain it via
-  // `a2a_list_sessions` (which now includes the token) or manual registration.
-  // Rate limit applies to all callers.
+  // Security: loopback callers are always trusted (no token needed). With the
+  // default 'token' trust mode, remote (LAN/WAN) callers must present the A2A
+  // shared token. With the 'lan' trust mode (Settings → A2A), callers from the
+  // same private LAN subnet are also trusted without a token; WAN sources
+  // still require it. Rate limit applies to all callers.
   router.use((req, res, next) => {
     const ip = req.ip || req.socket.remoteAddress || '';
     const isLoopback = LOOPBACK_IPS.has(ip);
 
     if (!isLoopback) {
-      // Remote caller — require a shared A2A token.
-      const auth = req.headers.authorization || '';
-      const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-      const expectedToken = getA2aToken();
-      if (!expectedToken || token !== expectedToken) {
-        return res.status(403).json({ error: 'invalid or missing A2A token' });
+      const lanTrusted = getTrustMode() === 'lan' && isPrivateLanIp(ip);
+      if (!lanTrusted) {
+        const auth = req.headers.authorization || '';
+        const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+        const expectedToken = getA2aToken();
+        if (!expectedToken || token !== expectedToken) {
+          return res.status(403).json({ error: 'invalid or missing A2A token' });
+        }
       }
     }
 

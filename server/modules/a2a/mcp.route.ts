@@ -3,6 +3,7 @@ import * as a2aClient from '@/modules/a2a/a2a-client.service.js';
 import { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';
 import { sessionsDb } from '@/modules/database/index.js';
 import { getA2aInboundToken, getLanHost } from './inbound.route.js';
+import { findPeerByName, getDiscoveredPeers } from './discovery.service.js';
 
 /**
  * In-process HTTP MCP server exposing A2A (Agent-to-Agent) tools to the
@@ -63,7 +64,7 @@ const TOOL_DEFS = [
   {
     name: 'a2a_list',
     description:
-      'List the A2A (Agent-to-Agent) remote agents registered for the current user. Returns name, url, description, and whether an auth token is configured. No secrets are returned.',
+      'List A2A agents available to call: manually registered remote agents (`registered`) plus auto-discovered LAN planrla nodes (`discovered`, by hostname, no setup needed when the target runs in LAN trust mode). Returns name, url, description, and whether an auth token is configured. No secrets are returned.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -154,10 +155,16 @@ function resolveTarget(userId: number, url?: string, name?: string): ResolvedTar
   }
   if (name) {
     const row = a2aAgentsDb.getAgentForCall(userId, name);
-    if (!row) {
-      throw new Error(`a2a agent not found for name: ${name}`);
+    if (row) {
+      return { url: row.url, authToken: row.authToken };
     }
-    return { url: row.url, authToken: row.authToken };
+    // Fall back to auto-discovered LAN peers (by hostname). Token stays null —
+    // whether the call succeeds is decided by the target's own trust mode.
+    const peer = findPeerByName(name);
+    if (peer) {
+      return { url: `http://${peer.ip}:${peer.port}/api/a2a`, authToken: null };
+    }
+    throw new Error(`a2a agent not found for name: ${name}`);
   }
   throw new Error('a2a tool requires url or name');
 }
@@ -221,7 +228,16 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
             description: a.description,
             has_auth: a.hasAuth,
           }));
-          return res.json(jsonRpc(id, textResponse(JSON.stringify(agents, null, 2))));
+          // Auto-discovered LAN peers (UDP broadcast) — usable by hostname when
+          // the target runs in LAN trust mode (no token needed over there).
+          const peers = getDiscoveredPeers().map((p) => ({
+            name: p.name,
+            url: `http://${p.ip}:${p.port}/api/a2a`,
+            description: `auto-discovered planrla node (v${p.version || '?'})`,
+            has_auth: false,
+            discovered: true,
+          }));
+          return res.json(jsonRpc(id, textResponse(JSON.stringify({ registered: agents, discovered: peers }, null, 2))));
         }
 
         if (name === 'a2a_list_sessions') {
