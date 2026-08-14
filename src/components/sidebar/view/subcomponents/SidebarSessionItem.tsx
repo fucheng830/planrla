@@ -4,6 +4,7 @@ import { Archive, Check, Copy, Edit2, FolderOpen, Network, Pin, PinOff, SlidersH
 import type { TFunction } from 'i18next';
 
 import { Badge, Button, Dialog, DialogContent, DialogTitle } from '../../../../shared/view/ui';
+import ContextMenu, { type ContextMenuAction } from '../../../../shared/view/ContextMenu';
 import { cn } from '../../../../lib/utils';
 import type { Project, ProjectSession, LLMProvider } from '../../../../types/app';
 import type { SessionTaskStatus } from '../../../../shared/taskStatus';
@@ -94,21 +95,8 @@ export default function SidebarSessionItem({
   const isEditing = editingSession === session.id;
   const compactSessionAge = formatCompactSessionAge(sessionView.sessionTime, currentTime);
   const editingContainerRef = useRef<HTMLDivElement>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const contextMenuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
-
-  const handleContextMenu = (event: ReactMouseEvent) => {
-    // Desktop right-click opens a context menu with session actions.
-    // (Mobile keeps its inline action buttons — no right-click there.)
-    if (isEditing) return;
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({ x: event.clientX, y: event.clientY });
-  };
-
-  const closeContextMenu = () => setContextMenu(null);
 
   // REQ-020 S3 — A2A delegation toggle state. The server-provided flag travels
   // on the session payload as `a2a_exposed`; the context layers an optimistic
@@ -137,10 +125,6 @@ export default function SidebarSessionItem({
   const flashCopied = (label: string) => {
     setCopiedLabel(label);
     window.setTimeout(() => setCopiedLabel((current) => (current === label ? null : current)), 1200);
-  };
-
-  const handleTogglePin = () => {
-    void api.toggleSessionPin(session.id);
   };
 
   const handleArchive = () => {
@@ -180,33 +164,6 @@ export default function SidebarSessionItem({
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isEditing, onCancelEditingSession]);
 
-  // Close the context menu on outside click / Escape / scroll. The mousedown
-  // handler must ignore presses inside the menu itself, otherwise it closes
-  // the menu before the item's onClick can fire (mousedown precedes click).
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!contextMenu) return;
-    const close = (event: MouseEvent) => {
-      if (contextMenuRef.current && event.target instanceof Node && contextMenuRef.current.contains(event.target)) {
-        return;
-      }
-      closeContextMenu();
-    };
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') closeContextMenu(); };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('scroll', closeContextMenu, true);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('scroll', closeContextMenu, true);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [contextMenu]);
-
-  useEffect(() => () => {
-    if (contextMenuTimerRef.current) clearTimeout(contextMenuTimerRef.current);
-  }, []);
-
   // Sessions are owned by a project identified by `projectId` (DB primary key)
   // after the projectName → projectId migration.
   const selectMobileSession = () => {
@@ -221,6 +178,78 @@ export default function SidebarSessionItem({
   const requestDeleteSession = () => {
     onDeleteSession(project.projectId, session.id, sessionView.sessionName, session.__provider);
   };
+
+  // Session context menu — same ContextMenu component/pattern as the project
+  // file tree (body-ported, viewport-safe, keyboard navigable, themed).
+  const sessionMenuActions: ContextMenuAction[] = [
+    {
+      key: 'a2a',
+      icon: Network,
+      label: a2aExposed ? t('tooltips.a2aDelegateEnabled') : t('tooltips.a2aDelegate'),
+      onSelect: () => void a2aDelegate.toggle(session.id, !a2aExposed),
+      isDisabled: a2aPending,
+    },
+    {
+      key: 'rename',
+      icon: Edit2,
+      label: t('tooltips.editSessionName'),
+      onSelect: () => {
+        setRenameValue(sessionView.sessionName);
+        setRenameOpen(true);
+      },
+    },
+    {
+      key: 'pin',
+      icon: isPinned ? PinOff : Pin,
+      label: isPinned ? t('contextMenu.unpinSession', 'Unpin') : t('contextMenu.pinSession', 'Pin'),
+      onSelect: () => void api.toggleSessionPin(session.id),
+      showDividerBefore: true,
+    },
+    {
+      key: 'archive',
+      icon: Archive,
+      label: t('contextMenu.archiveSession', 'Archive'),
+      onSelect: handleArchive,
+      isDanger: true,
+      showDividerBefore: true,
+    },
+    {
+      key: 'copyId',
+      icon: Copy,
+      label: copiedLabel === 'id' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copySessionId', 'Copy session ID'),
+      onSelect: () => void handleCopy(session.id, 'id'),
+      showDividerBefore: true,
+    },
+    {
+      key: 'copyPath',
+      icon: Copy,
+      label: copiedLabel === 'path' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyPath', 'Copy path'),
+      onSelect: () => void handleCopy(project.fullPath, 'path'),
+    },
+    ...(jsonlPath
+      ? [{
+          key: 'copyLog',
+          icon: Copy,
+          label: copiedLabel === 'log' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyLogPath', 'Copy log path'),
+          onSelect: () => void handleCopy(jsonlPath, 'log'),
+        } satisfies ContextMenuAction]
+      : []),
+    ...(isDesktop
+      ? [{
+          key: 'explorer',
+          icon: FolderOpen,
+          label: t('contextMenu.openInExplorer', 'Open in file explorer'),
+          onSelect: handleOpenInExplorer,
+        } satisfies ContextMenuAction]
+      : []),
+    {
+      key: 'config',
+      icon: SlidersHorizontal,
+      label: t('contextMenu.goToConfig', 'Go to configuration'),
+      onSelect: handleGoToConfig,
+      showDividerBefore: true,
+    },
+  ];
 
   return (
     <div className="group relative">
@@ -292,48 +321,49 @@ export default function SidebarSessionItem({
       </div>
 
       <div className="hidden md:block">
-        <Button
-          variant="ghost"
-          className={cn(
-            'h-auto w-full justify-start rounded-md border bg-card p-2 text-left font-normal transition-all duration-150',
-            isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30 hover:bg-accent/50',
-          )}
-          onClick={() => onSessionSelect(session, project.projectId)}
-          onContextMenu={handleContextMenu}
-        >
-          <div className="flex w-full min-w-0 items-center gap-2">
-            <div
-              className={cn(
-                'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md',
-                isSelected ? 'bg-primary/10' : 'bg-muted/50',
-              )}
-            >
-              <SessionProviderLogo provider={session.__provider} className="h-3 w-3" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
-                {compactSessionAge && (
-                  <span
-                    className={cn(
-                      'ml-auto flex-shrink-0 text-[11px] text-muted-foreground transition-opacity duration-200',
-                      isEditing ? 'opacity-0' : 'group-hover:opacity-0',
-                    )}
-                  >
-                    {compactSessionAge}
-                  </span>
+        <ContextMenu actions={sessionMenuActions} menuLabel={t('contextMenu.sessionMenuLabel', 'Session context menu')} isDisabled={isEditing}>
+          <Button
+            variant="ghost"
+            className={cn(
+              'h-auto w-full justify-start rounded-md border bg-card p-2 text-left font-normal transition-all duration-150',
+              isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30 hover:bg-accent/50',
+            )}
+            onClick={() => onSessionSelect(session, project.projectId)}
+          >
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <div
+                className={cn(
+                  'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md',
+                  isSelected ? 'bg-primary/10' : 'bg-muted/50',
                 )}
+              >
+                <SessionProviderLogo provider={session.__provider} className="h-3 w-3" />
               </div>
-              <div className="mt-0.5 flex items-center gap-1.5">
-                {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
-                <SessionTaskStatusBadge status={isProcessing ? 'running' : taskStatus} />
-                {isPinned && (
-                  <Pin className="ml-auto h-3 w-3 flex-shrink-0 fill-primary/20 text-primary" aria-label={t('tooltips.pinnedSession', 'Pinned')} />
-                )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
+                  {compactSessionAge && (
+                    <span
+                      className={cn(
+                        'ml-auto flex-shrink-0 text-[11px] text-muted-foreground transition-opacity duration-200',
+                        isEditing ? 'opacity-0' : 'group-hover:opacity-0',
+                      )}
+                    >
+                      {compactSessionAge}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
+                  <SessionTaskStatusBadge status={isProcessing ? 'running' : taskStatus} />
+                  {isPinned && (
+                    <Pin className="ml-auto h-3 w-3 flex-shrink-0 fill-primary/20 text-primary" aria-label={t('tooltips.pinnedSession', 'Pinned')} />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </Button>
+          </Button>
+        </ContextMenu>
 
         {isEditing ? (
           <div
@@ -390,130 +420,6 @@ export default function SidebarSessionItem({
               <Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
             </button>
           )
-        )}
-
-        {contextMenu && (
-          <div
-            ref={contextMenuRef}
-            className="fixed z-50 min-w-44 rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            onClick={(event) => event.stopPropagation()}
-            onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); }}
-          >
-            <button
-              type="button"
-              disabled={a2aPending}
-              onClick={() => {
-                closeContextMenu();
-                void a2aDelegate.toggle(session.id, !a2aExposed);
-              }}
-              className={cn(
-                'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors disabled:opacity-40',
-                a2aExposed
-                  ? 'text-primary hover:bg-primary/10 dark:hover:bg-primary/20'
-                  : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60',
-              )}
-            >
-              <Network className={cn('h-3.5 w-3.5', a2aExposed && 'fill-current')} />
-              <span>{a2aExposed ? t('tooltips.a2aDelegateEnabled') : t('tooltips.a2aDelegate')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                setRenameValue(sessionView.sessionName);
-                setRenameOpen(true);
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-              <span>{t('tooltips.editSessionName')}</span>
-            </button>
-            {/* REQ-051 session context menu — pin / archive / clipboard / explorer / config */}
-            <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                handleTogglePin();
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-              <span>{isPinned ? t('contextMenu.unpinSession', 'Unpin') : t('contextMenu.pinSession', 'Pin')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                handleArchive();
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              <Archive className="h-3.5 w-3.5" />
-              <span>{t('contextMenu.archiveSession', 'Archive')}</span>
-            </button>
-            <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                void handleCopy(session.id, 'id');
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              <span>{copiedLabel === 'id' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copySessionId', 'Copy session ID')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                void handleCopy(project.fullPath, 'path');
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              <span>{copiedLabel === 'path' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyPath', 'Copy path')}</span>
-            </button>
-            {jsonlPath && (
-              <button
-                type="button"
-                onClick={() => {
-                  closeContextMenu();
-                  void handleCopy(jsonlPath, 'log');
-                }}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                <span>{copiedLabel === 'log' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyLogPath', 'Copy log path')}</span>
-              </button>
-            )}
-            {isDesktop && (
-              <button
-                type="button"
-                onClick={() => {
-                  closeContextMenu();
-                  handleOpenInExplorer();
-                }}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-                <span>{t('contextMenu.openInExplorer', 'Open in file explorer')}</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                closeContextMenu();
-                handleGoToConfig();
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800/60"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>{t('contextMenu.goToConfig', 'Go to configuration')}</span>
-            </button>
-          </div>
         )}
 
         <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
