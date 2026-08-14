@@ -119,6 +119,27 @@ export const a2aAgentsDb = {
     return row ? mapRowWithToken(row) : null;
   },
 
+  /**
+   * Returns the active agent (including auth_token) whose url matches the
+   * given one (case-insensitive, trailing-slash-insensitive), or null.
+   * Used when an MCP caller passes a bare `url` — the stored token for that
+   * endpoint is attached automatically so remote planrla targets don't 403.
+   */
+  getAgentByUrl(userId: number, url: string): A2aAgentWithTokenRow | null {
+    const db = getConnection();
+    const rows = db
+      .prepare(
+        'SELECT id, user_id, name, url, description, auth_token, is_active, created_at FROM a2a_agents WHERE user_id = ? AND is_active = 1'
+      )
+      .all(userId) as Record<string, unknown>[];
+    const wanted = url.trim().toLowerCase().replace(/\/+$/, '');
+    for (const row of rows) {
+      const rowUrl = String(row.url ?? '').trim().toLowerCase().replace(/\/+$/, '');
+      if (rowUrl === wanted) return mapRowWithToken(row);
+    }
+    return null;
+  },
+
   /** Creates a new A2A agent and returns its id. */
   createAgent(
     userId: number,

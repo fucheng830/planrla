@@ -234,6 +234,12 @@ export interface A2aDiscoveryResult {
   version: string;
   skills: Array<{ name: string; description: string }>;
   capabilities: Record<string, unknown>;
+  /**
+   * planrla card extension: exposedSessions[] (feeds a2a_call sessionId) and
+   * spawn.projectPaths[] (feeds spawn mode). Passthrough — remote-authored,
+   * consumed verbatim by the calling agent.
+   */
+  delegation?: Record<string, unknown>;
 }
 
 /** Strips a trailing slash from a base URL (hermes url.rstrip('/')). */
@@ -266,6 +272,9 @@ export async function discover(
     version: String(card.version ?? ''),
     skills,
     capabilities: (card.capabilities as Record<string, unknown>) ?? {},
+    ...(card.delegation !== undefined
+      ? { delegation: card.delegation as Record<string, unknown> }
+      : {}),
   };
 
   audit('discover', { url: base, agent_name: result.agent_name });

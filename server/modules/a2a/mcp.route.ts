@@ -147,7 +147,10 @@ interface ResolvedTarget {
  */
 function resolveTarget(userId: number, url?: string, name?: string): ResolvedTarget {
   if (url) {
-    return { url, authToken: null };
+    // A bare url carries no credentials; when it matches a registered agent,
+    // reuse the stored token so authenticated remote targets don't 403.
+    const byUrl = a2aAgentsDb.getAgentByUrl(userId, url);
+    return { url, authToken: byUrl?.authToken ?? null };
   }
   if (name) {
     const row = a2aAgentsDb.getAgentForCall(userId, name);
