@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "Ses",
+    "sync": "Ekip Senkronizasyonu",
+    "a2a": "A2A",
     "label": "Ayarlar",
     "agents": "Ajanlar",
     "appearance": "Görünüm",

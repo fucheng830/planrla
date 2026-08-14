@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "음성",
+    "sync": "팀 동기화",
+    "a2a": "A2A",
     "label": "설정",
     "agents": "에이전트",
     "appearance": "외관",

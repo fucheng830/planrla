@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "Voix",
+    "sync": "Sync. déquipe",
+    "a2a": "A2A",
     "label": "Paramètres",
     "agents": "Agents",
     "appearance": "Apparence",

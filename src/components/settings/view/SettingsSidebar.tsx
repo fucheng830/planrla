@@ -1,4 +1,4 @@
-import { Bell, Bot, GitBranch, Info, Key, Mic, MonitorPlay, Palette, Puzzle, ShieldCheck } from 'lucide-react';
+import { Bell, Bot, GitBranch, Info, Key, Mic, MonitorPlay, Network, Palette, Plug, ShieldCheck, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '../../../lib/utils';
@@ -24,8 +24,10 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'license', labelKey: 'mainTabs.license', icon: ShieldCheck },
   { id: 'voice', labelKey: 'mainTabs.voice', icon: Mic },
   { id: 'browser', labelKey: 'mainTabs.browser', icon: MonitorPlay },
-  { id: 'plugins', labelKey: 'mainTabs.plugins', icon: Puzzle },
+  { id: 'plugins', labelKey: 'mainTabs.plugins', icon: Plug },
   { id: 'notifications', labelKey: 'mainTabs.notifications', icon: Bell },
+  { id: 'sync', labelKey: 'mainTabs.sync', icon: Users },
+  { id: 'a2a', labelKey: 'mainTabs.a2a', icon: Network },
   { id: 'about', labelKey: 'mainTabs.about', icon: Info },
 ];
 

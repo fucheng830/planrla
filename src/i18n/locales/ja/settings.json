@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "音声",
+    "sync": "チーム同期",
+    "a2a": "A2A",
     "label": "設定",
     "agents": "エージェント",
     "appearance": "外観",

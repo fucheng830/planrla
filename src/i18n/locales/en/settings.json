@@ -108,6 +108,8 @@
     }
   },
   "mainTabs": {
+    "sync": "Team Sync",
+    "a2a": "A2A",
     "label": "Settings",
     "agents": "Agents",
     "appearance": "Appearance",

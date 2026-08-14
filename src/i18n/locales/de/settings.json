@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "Sprachausgabe",
+    "sync": "Team-Sync",
+    "a2a": "A2A",
     "label": "Einstellungen",
     "agents": "Agenten",
     "appearance": "Darstellung",

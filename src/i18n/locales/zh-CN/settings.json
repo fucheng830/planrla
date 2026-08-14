@@ -91,6 +91,9 @@
     }
   },
   "mainTabs": {
+    "voice": "语音",
+    "sync": "团队同步",
+    "a2a": "A2A",
     "label": "设置",
     "agents": "智能体",
     "appearance": "外观",

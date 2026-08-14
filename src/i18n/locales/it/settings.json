@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "Voce",
+    "sync": "Sincronizzazione team",
+    "a2a": "A2A",
     "label": "Impostazioni",
     "agents": "Agenti",
     "appearance": "Aspetto",

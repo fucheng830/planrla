@@ -89,6 +89,9 @@
     }
   },
   "mainTabs": {
+    "voice": "語音",
+    "sync": "團隊同步",
+    "a2a": "A2A",
     "label": "設定",
     "agents": "智慧代理",
     "appearance": "外觀",
