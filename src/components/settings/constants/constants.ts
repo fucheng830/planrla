@@ -6,6 +6,7 @@ import {
   Info,
   KeyRound,
   MonitorPlay,
+  Network,
   Palette,
   Plug,
   ShieldCheck,
@@ -38,6 +39,7 @@ export const SETTINGS_MAIN_TABS: SettingsMainTabMeta[] = [
   { id: 'notifications', label: 'Notifications', keywords: 'notifications alerts push', icon: Bell },
   { id: 'plugins', label: 'Plugins', keywords: 'plugins extensions integrations', icon: Plug },
   { id: 'sync', label: 'Team Sync', keywords: 'team sync collaboration cloud share', icon: Users },
+  { id: 'a2a', label: 'A2A', keywords: 'a2a agent network delegation lan remote', icon: Network },
   { id: 'about', label: 'About', keywords: 'about version info', icon: Info },
 ];
 

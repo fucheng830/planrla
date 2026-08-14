@@ -86,6 +86,7 @@ import {
 } from './modules/background-tasks/index.js';
 import { createA2aMcpRouter } from './modules/a2a/mcp.route.js';
 import { createA2aInboundRouter } from './modules/a2a/inbound.route.js';
+import { createA2aConfigRouter } from './modules/a2a/config.route.js';
 import { isIndexEmpty, buildAllIndexes } from './modules/search/session-search-indexer.js';
 import voiceRoutes from './voice-proxy.js';
 import browserUseRoutes from './modules/browser-use/browser-use.routes.js';
@@ -291,6 +292,11 @@ app.use('/api/mcp/a2a', createA2aMcpRouter({ getUserId: () => userDb.getFirstUse
 // line ~1789) is still in the temporal dead zone when this module-level
 // app.use runs; the same `process.env.SERVER_PORT || 3001` fallback is used.
 app.use('/api/a2a', createA2aInboundRouter(process.env.SERVER_PORT || 3001, () => userDb.getFirstUser()?.id ?? 0));
+
+// A2A configuration API (Settings panel): local endpoint + token + remote
+// agent management. Auth-protected (user JWT) — only the local user manages
+// the config; remote callers go through /api/a2a above.
+app.use('/api/a2a-cfg', createA2aConfigRouter());
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);

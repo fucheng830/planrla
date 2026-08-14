@@ -74,14 +74,15 @@ export const a2aAgentsDb = {
    * `has_auth` is a boolean flag derived from `auth_token IS NOT NULL`.
    * Only active agents are returned (matches `getAgentForCall` visibility).
    */
-  getAgentsList(userId: number): Array<{ name: string; url: string; description: string | null; hasAuth: boolean }> {
+  getAgentsList(userId: number): Array<{ id: number; name: string; url: string; description: string | null; hasAuth: boolean }> {
     const db = getConnection();
     const rows = db
       .prepare(
-        'SELECT name, url, description, (auth_token IS NOT NULL AND auth_token != \'\') AS has_auth FROM a2a_agents WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC'
+        'SELECT id, name, url, description, (auth_token IS NOT NULL AND auth_token != \'\') AS has_auth FROM a2a_agents WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC'
       )
       .all(userId) as Record<string, unknown>[];
     return rows.map((row) => ({
+      id: Number(row.id),
       name: row.name as string,
       url: row.url as string,
       description: (row.description as string | null) ?? null,

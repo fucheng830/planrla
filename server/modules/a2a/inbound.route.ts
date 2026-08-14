@@ -29,12 +29,15 @@
 // and a2a MCP routes.
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildAgentCard, handleTaskSend, getTask, cancelTask } from './inbound.service.js';
 import { RateLimiter } from './inbound.security.js';
+import { appConfigDb } from '@/modules/database/repositories/app-config.js';
 
 const limiter = new RateLimiter(20, 60_000);
 
@@ -80,16 +83,72 @@ function taskEnvelope(taskId: string, state: string, text: string) {
   };
 }
 
+/**
+ * Returns (or lazily generates) the A2A shared token for remote callers.
+ * Stored in the planrla database so it persists across restarts. Loopback
+ * callers don't need it; remote (LAN/WAN) callers must send it as a Bearer
+ * token in the Authorization header.
+ */
+export function getA2aToken(): string | null {
+  try {
+    let token = appConfigDb.get('a2a_shared_token');
+    if (!token) {
+      token = randomUUID();
+      appConfigDb.set('a2a_shared_token', token);
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+/** Alias used by mcp.route.ts for `a2a_list_sessions`. */
+export const getA2aInboundToken = getA2aToken;
+
+/**
+ * Detects the machine's primary LAN IPv4 address (e.g. 192.168.x.x) so remote
+ * machines on the same network can reach the A2A endpoint. Falls back to
+ * 'localhost' when no private IPv4 is found (offline / loopback-only).
+ */
+export function getLanHost(): string {
+  const interfaces = os.networkInterfaces();
+  for (const addrs of Object.values(interfaces)) {
+    for (const addr of addrs ?? []) {
+      // IPv4 + internal (LAN) + private range — first match wins.
+      if (addr.family === 'IPv4' && !addr.internal) {
+        const ip = addr.address;
+        if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+          return ip;
+        }
+      }
+    }
+  }
+  return 'localhost';
+}
+
 export function createA2aInboundRouter(port: number, getUserId: () => number): Router {
   const router = Router();
 
-  // Loopback guard + per-IP rate limit. Mounted before any handler so a
-  // non-local caller or a flood never reaches the service layer.
+  // Security: loopback callers are always trusted (no token needed). Remote
+  // (LAN/WAN) callers must present a valid A2A shared token via the
+  // Authorization header ("Bearer <token>"). The token is auto-generated and
+  // stored in the planrla database on first run; remote machines obtain it via
+  // `a2a_list_sessions` (which now includes the token) or manual registration.
+  // Rate limit applies to all callers.
   router.use((req, res, next) => {
     const ip = req.ip || req.socket.remoteAddress || '';
-    if (!LOOPBACK_IPS.has(ip)) {
-      return res.status(403).json({ error: 'loopback only' });
+    const isLoopback = LOOPBACK_IPS.has(ip);
+
+    if (!isLoopback) {
+      // Remote caller — require a shared A2A token.
+      const auth = req.headers.authorization || '';
+      const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+      const expectedToken = getA2aToken();
+      if (!expectedToken || token !== expectedToken) {
+        return res.status(403).json({ error: 'invalid or missing A2A token' });
+      }
     }
+
     if (!limiter.allow(ip)) {
       return res.status(429).json({ error: 'rate limit' });
     }

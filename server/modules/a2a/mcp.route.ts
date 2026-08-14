@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as a2aClient from '@/modules/a2a/a2a-client.service.js';
 import { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';
 import { sessionsDb } from '@/modules/database/index.js';
+import { getA2aInboundToken, getLanHost } from './inbound.route.js';
 
 /**
  * In-process HTTP MCP server exposing A2A (Agent-to-Agent) tools to the
@@ -218,6 +219,9 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
         if (name === 'a2a_list_sessions') {
           const sessions = sessionsDb.listA2aExposed();
           const port = process.env.SERVER_PORT || 3001;
+          // Use the machine's LAN IP (not 127.0.0.1) so remote machines on
+          // the same network can reach this A2A endpoint for delegation.
+          const host = getLanHost();
           const payload = {
             sessions: sessions.map((s) => ({
               id: s.session_id,
@@ -226,7 +230,10 @@ export function createA2aMcpRouter(deps: A2aMcpDeps): Router {
               projectPath: s.project_path,
             })),
             count: sessions.length,
-            endpoint: `http://127.0.0.1:${port}/api/a2a`,
+            endpoint: `http://${host}:${port}/api/a2a`,
+            // Include the A2A shared token so remote machines on the LAN can
+            // authenticate. Loopback callers (same machine) don't need it.
+            authToken: getA2aInboundToken(),
           };
           return res.json(jsonRpc(id, textResponse(JSON.stringify(payload, null, 2))));
         }
