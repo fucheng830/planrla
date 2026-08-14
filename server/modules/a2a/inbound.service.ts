@@ -252,7 +252,13 @@ export async function handleTaskSend(
 
   const sessionId = params.metadata?.sessionId;
   if (!sessionId) {
-    return { taskId: '', state: 'failed', text: '', error: 'metadata.sessionId required' };
+    return {
+      taskId: '',
+      state: 'failed',
+      text: '',
+      error:
+        'metadata.sessionId required — pass the target session id (see a2a_list_sessions) or use spawn mode (metadata.spawn=true + projectPath)',
+    };
   }
 
   const session = sessionsDb.getSessionById(sessionId);
