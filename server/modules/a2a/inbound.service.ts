@@ -29,6 +29,7 @@
 // type; any residual send on it (the synthetic complete) is silently dropped.
 
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 
 import { spawnFns } from '@/modules/providers/index.js';
 import { sessionsDb, projectsDb } from '@/modules/database/index.js';
@@ -220,6 +221,17 @@ export async function handleTaskSend(
     if (!projectPath) {
       return { taskId: '', state: 'failed', text: '', error: 'projectPath required for spawn' };
     }
+    // Pre-flight the cwd: a non-existent directory makes the provider runtime's
+    // spawn fail with the SDK's cryptic "native binary … exists but failed to
+    // launch" (Windows ENOENT-on-cwd), which callers repeatedly misdiagnose.
+    if (!fs.existsSync(projectPath)) {
+      return {
+        taskId: '',
+        state: 'failed',
+        text: '',
+        error: `projectPath does not exist on this machine: ${projectPath}`,
+      };
+    }
     const spawnFn = spawnFns[provider];
     if (!spawnFn) {
       return { taskId: '', state: 'failed', text: '', error: `provider "${provider}" not supported` };
@@ -303,6 +315,17 @@ export async function handleTaskSend(
   const session = sessionsDb.getSessionById(sessionId);
   if (!session) {
     return { taskId: '', state: 'failed', text: '', error: 'session not found' };
+  }
+  // Same cwd pre-flight as the spawn branch — a session row can outlive the
+  // project directory it was created in (repo moved/deleted), which would
+  // otherwise surface as the SDK's cryptic launch error.
+  if (session.project_path && !fs.existsSync(session.project_path)) {
+    return {
+      taskId: '',
+      state: 'failed',
+      text: '',
+      error: `session project path no longer exists: ${session.project_path}`,
+    };
   }
   // S3 whitelist: only sessions explicitly marked a2a_exposed may receive
   // inbound delegations — unless the "share all sessions" trust setting is
