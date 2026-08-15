@@ -21,11 +21,13 @@
 //                      list including the assistant's text parts.
 
 import { spawn } from 'child_process';
+import fsSync from 'node:fs';
+import path from 'node:path';
 
 import { sessionsService } from './modules/providers/services/sessions.service.js';
 import { providerAuthService } from './modules/providers/services/provider-auth.service.js';
 import { providerModelsService } from './modules/providers/services/provider-models.service.js';
-import { resolveZcodeBinary } from './modules/providers/list/zcode/zcode-auth.provider.js';
+import { getZcodeCliHome, resolveZcodeBinary } from './modules/providers/list/zcode/zcode-auth.provider.js';
 import { notifyRunFailed, notifyRunStopped } from './services/notification-orchestrator.js';
 import { createCompleteMessage, createNormalizedMessage } from './shared/utils.js';
 
@@ -35,6 +37,111 @@ const PROVIDER = 'zcode';
 const activeZcodeProcesses = new Map();
 
 const ZCODE_INSTALL_HINT = 'ZCode CLI is not installed. Install ZCode from https://zcode.z.ai/';
+
+/**
+ * Parses a "providerId/modelId" catalog string into the app-server's modelRef
+ * shape ({providerId, modelId}). Splits on the FIRST slash — model ids may
+ * contain further segments but provider ids do not.
+ */
+function parseZcodeModelRef(model) {
+  const value = typeof model === 'string' ? model.trim() : '';
+  if (!value) return null;
+  const slash = value.indexOf('/');
+  if (slash <= 0 || slash === value.length - 1) return null;
+  return { providerId: value.slice(0, slash), modelId: value.slice(slash + 1) };
+}
+
+/**
+ * The app-server rejects session/send with code ZCODE_RUNTIME_MODEL_UNAVAILABLE
+ * when the session pins a model that is no longer in the workspace's catalog
+ * (the CLI localizes the message, so prefer the stable code and fall back to
+ * broad text matching).
+ */
+function isStaleModelError(error) {
+  const code = String(error?.data?.code ?? error?.code ?? '');
+  if (code) return code === 'ZCODE_RUNTIME_MODEL_UNAVAILABLE';
+  const message = String(error?.message ?? error ?? '');
+  return /已不可用|不可用|unavailable|no longer available|not available/i.test(message);
+}
+
+/**
+ * setModel rejects an unsupported model with a message that lists the
+ * workspace's available models — superseded by buildZcodeRuntimeModel (the
+ * catalog is read directly via workspace/readState).
+ */
+
+/**
+ * Reads a provider's connection config (kind/baseURL/apiKey) from
+ * ~/.zcode/cli/config.json's `provider` section. The runtimeModel pushed with
+ * session/send needs these; the workspace catalog only carries summaries.
+ */
+function readZcodeProviderConfig(providerId) {
+  try {
+    const configPath = path.join(getZcodeCliHome(), 'config.json');
+    if (!fsSync.existsSync(configPath)) return null;
+    const config = JSON.parse(fsSync.readFileSync(configPath, 'utf8'));
+    const entry = config?.provider?.[providerId];
+    if (!entry || typeof entry !== 'object') return null;
+    return {
+      kind: typeof entry.kind === 'string' ? entry.kind : 'anthropic',
+      label: typeof entry.name === 'string' ? entry.name : undefined,
+      baseURL: typeof entry.options?.baseURL === 'string' ? entry.options.baseURL : undefined,
+      apiKey: typeof entry.options?.apiKey === 'string' ? entry.options.apiKey : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Builds the runtimeModel payload that session/send accepts, from the
+ * workspace's CURRENT model catalog (workspace/readState) plus the provider
+ * connection config in ~/.zcode/cli/config.json. Applying a fresh runtimeModel
+ * on send is the app-server's supported way to rebind a session whose
+ * persisted model was delisted (it clears the resume restoreWarning).
+ *
+ * @param preferredModel  optional "providerId/modelId" string; used when it is
+ *                        present in the catalog, otherwise the first catalog
+ *                        entry wins.
+ * @returns null when no usable catalog entry/provider config exists.
+ */
+async function buildZcodeRuntimeModel(child, nextId, workspace, writer, preferredModel) {
+  const rs = await request(child, nextId(), 'workspace/readState', { workspace }, writer);
+  if (rs.error) return null;
+  const catalog = rs.result?.modelCatalog;
+  if (!catalog || !Array.isArray(catalog.available) || catalog.available.length === 0) return null;
+
+  const preferred = preferredModel ? parseZcodeModelRef(preferredModel) : null;
+  const entry =
+    (preferred && catalog.available.find((m) => {
+      const ref = m?.ref ?? {};
+      return ref.providerId === preferred.providerId && ref.modelId === preferred.modelId;
+    })) ??
+    catalog.available[0];
+  const modelRef = entry?.ref;
+  if (!modelRef?.providerId || !modelRef?.modelId) return null;
+
+  const catalogProvider = (catalog.providers ?? []).find((p) => p.providerId === modelRef.providerId);
+  const providerConfig = readZcodeProviderConfig(modelRef.providerId);
+  if (!providerConfig?.baseURL) return null;
+
+  return {
+    revision: String(catalog.revision ?? 0),
+    generatedAt: Date.now(),
+    model: { providerId: modelRef.providerId, modelId: modelRef.modelId },
+    provider: {
+      providerId: modelRef.providerId,
+      kind: providerConfig.kind,
+      ...(providerConfig.label ? { label: providerConfig.label } : {}),
+      source: 'workspace',
+      baseURL: providerConfig.baseURL,
+      ...(providerConfig.apiKey
+        ? { apiKey: { source: 'inline', value: providerConfig.apiKey } }
+        : {}),
+      ...(Array.isArray(catalogProvider?.models) ? { models: catalogProvider.models } : {}),
+    },
+  };
+}
 
 /**
  * Sends one framed NDJSON request and resolves with the matching response
@@ -294,15 +401,40 @@ export async function spawnZcode(command, options, writer) {
       throw new Error('ZCode did not return a sessionId');
     }
 
-    // 2. Resolve the model (best-effort; ZCode uses its configured default).
-    const modelTarget = providerModelsService.resolveResumeModel(PROVIDER, zcodeSessionId, opts.model);
+    // 2. Resolve the model. resolveResumeModel returns the model the user
+    // switched to in the planrla UI (per-session override) or an explicitly
+    // requested one. Must be awaited — it is async (a missing await here meant
+    // the override never reached the CLI, silently breaking model switching).
+    const resolvedModel = await providerModelsService.resolveResumeModel(PROVIDER, zcodeSessionId, opts.model);
+    const preferredModel = typeof resolvedModel === 'string' && resolvedModel ? resolvedModel : null;
 
     // 3. Send the prompt.
     const sendParams = { sessionId: zcodeSessionId, content: command };
-    if (modelTarget && modelTarget.model) {
-      sendParams.runtimeModel = modelTarget;
+    let sendRes = await request(child, ++msgId, 'session/send', sendParams, writer);
+    if (sendRes.error && isStaleModelError(sendRes.error)) {
+      // Self-heal: the session pins a model that is no longer in the
+      // workspace's catalog (e.g. GLM-5.3 sessions resumed against a CLI whose
+      // catalog only offers GLM-5.2). Re-send with a runtimeModel built from
+      // the CURRENT catalog — applying it on send is the app-server's
+      // supported rebind path and clears the resume restoreWarning.
+      let currentModel = preferredModel;
+      if (!currentModel) {
+        try {
+          currentModel = (await providerModelsService.getCurrentActiveModel(PROVIDER))?.model ?? null;
+        } catch { /* catalog fallback below picks an entry */ }
+      }
+      try {
+        const runtimeModel = await buildZcodeRuntimeModel(child, () => ++msgId, buildWorkspaceParams(cwd).workspace, writer, currentModel);
+        if (runtimeModel) {
+          sendRes = await request(child, ++msgId, 'session/send', {
+            ...sendParams,
+            runtimeModel,
+          }, writer);
+        }
+      } catch (healError) {
+        console.warn(`[zcode] stale-model heal failed: ${healError?.message ?? healError}`);
+      }
     }
-    const sendRes = await request(child, ++msgId, 'session/send', sendParams, writer);
     if (sendRes.error) {
       throw new Error(sendRes.error.message || 'session/send failed');
     }
