@@ -2,6 +2,7 @@ import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readFile, readdir } from 'node:fs/promises';
+import Database from 'better-sqlite3';
 
 import { sessionsDb } from '@/modules/database/index.js';
 import type { IProviderSessionSynchronizer } from '@/shared/interfaces.js';
@@ -70,6 +71,59 @@ export const __testing__ = {
   isInjectedTitle,
 };
 
+type ZcodeDbSessionRow = {
+  sessionId: string;
+  title: string | null;
+  titleSource: string | null;
+  directory: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+/**
+ * Reads the zcode CLI's own session index (~/.zcode/cli/db/db.sqlite). The
+ * CLI curates titles there (custom renames, generated summaries, first-input
+ * extracts) and stores the true per-session working directory — both better
+ * than deriving from rollout files. Opened readonly; WAL allows concurrent
+ * readers while the CLI is running.
+ */
+function readZcodeDbSessions(): Map<string, ZcodeDbSessionRow> {
+  const map = new Map<string, ZcodeDbSessionRow>();
+  const dbPath = path.join(getZcodeCliHome(), 'db', 'db.sqlite');
+  if (!fsSync.existsSync(dbPath)) return map;
+
+  let db: Database.Database | null = null;
+  try {
+    db = new Database(dbPath, { readonly: true });
+    const rows = db
+      .prepare(
+        'SELECT id, title, title_source, directory, time_created, time_updated FROM session'
+      )
+      .all() as Array<Record<string, unknown>>;
+    for (const row of rows) {
+      const sessionId = readOptionalString(row.id);
+      if (!sessionId) continue;
+      const toIso = (value: unknown): string | null => {
+        const ms = Number(value);
+        return Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null;
+      };
+      map.set(sessionId, {
+        sessionId,
+        title: readOptionalString(row.title) ?? null,
+        titleSource: readOptionalString(row.title_source) ?? null,
+        directory: readOptionalString(row.directory) ?? null,
+        createdAt: toIso(row.time_created),
+        updatedAt: toIso(row.time_updated),
+      });
+    }
+  } catch {
+    // Unreadable/locked/migrated schema — rollout-derived data still works.
+  } finally {
+    db?.close();
+  }
+  return map;
+}
+
 type ParsedSession = {
   sessionId: string;
   projectPath: string;
@@ -77,6 +131,8 @@ type ParsedSession = {
   createdAt?: string;
   updatedAt?: string;
   transcriptPath: string | null;
+  /** Title was renamed by the user inside zcode — it wins over planrla's. */
+  titleCurated?: boolean;
 };
 
 /**
@@ -95,39 +151,77 @@ export class ZcodeSessionSynchronizer implements IProviderSessionSynchronizer {
   }
 
   /**
-   * Full scan of the rollout directory. Used by the watcher's initial sync.
+   * Full sync. The zcode CLI's own sqlite index is authoritative (curated
+   * titles + true working directory; covers sessions whose rollout files were
+   * pruned). Rollout files supplement transcript paths and serve as fallback
+   * for sessions missing from the index.
    */
   async synchronize(since?: Date): Promise<number> {
+    const dbSessions = readZcodeDbSessions();
+    const seen = new Set<string>();
+    let processed = 0;
+
+    const emit = (parsed: ParsedSession) => {
+      if (seen.has(parsed.sessionId)) return;
+      seen.add(parsed.sessionId);
+      if (since && parsed.updatedAt) {
+        const updatedAt = Date.parse(parsed.updatedAt);
+        if (Number.isFinite(updatedAt) && updatedAt < since.getTime()) {
+          // Past the incremental watermark — still process when the stored row
+          // needs repair (fallback/injected title, or a session still bucketed
+          // under the home-dir fallback while the CLI DB knows the real cwd).
+          const existing = sessionsDb.getSessionByProviderSessionId(parsed.sessionId)
+            ?? sessionsDb.getSessionById(parsed.sessionId);
+          const name = existing?.custom_name;
+          const nameIsBad = !name || name === FALLBACK_TITLE || isInjectedTitle(name);
+          const pathIsWrong = Boolean(
+            parsed.projectPath !== os.homedir() && existing?.project_path !== parsed.projectPath
+          );
+          if (!nameIsBad && !pathIsWrong && !parsed.titleCurated) return;
+        }
+      }
+      this.upsertSession(parsed);
+      processed += 1;
+    };
+
+    // 1) zcode DB sessions (authoritative).
+    for (const row of dbSessions.values()) {
+      const transcriptPath = path.join(this.rolloutDir(), `model-io-${row.sessionId}.jsonl`);
+      emit({
+        sessionId: row.sessionId,
+        projectPath: row.directory?.trim() || os.homedir(),
+        sessionName: normalizeSessionName(
+          row.title ? stripInjectedBlocks(row.title) : undefined,
+          FALLBACK_TITLE
+        ),
+        createdAt: row.createdAt ?? undefined,
+        updatedAt: row.updatedAt ?? row.createdAt ?? undefined,
+        transcriptPath: fsSync.existsSync(transcriptPath) ? transcriptPath : null,
+        titleCurated: row.titleSource === 'custom',
+      });
+    }
+
+    // 2) Rollout-only sessions (not yet in the CLI index).
     let files: string[];
     try {
       files = await readdir(this.rolloutDir());
     } catch {
-      return 0;
+      return processed;
     }
-
-    let processed = 0;
     for (const file of files) {
       if (!file.startsWith('model-io-sess_') || !file.endsWith('.jsonl')) continue;
       const sessionId = file.replace(/^model-io-/, '').replace(/\.jsonl$/, '');
-      if (!sessionId) continue;
-
+      if (!sessionId || dbSessions.has(sessionId)) continue;
       const parsed = await this.parseFromRollout(sessionId);
-      if (!parsed) continue;
-
-      if (since && parsed.updatedAt) {
-        const updatedAt = Date.parse(parsed.updatedAt);
-        if (Number.isFinite(updatedAt) && updatedAt < since.getTime()) continue;
-      }
-
-      this.upsertSession(parsed);
-      processed += 1;
+      if (parsed) emit(parsed);
     }
     return processed;
   }
 
   /**
    * Handles watcher changes under ~/.zcode/cli/rollout. Only
-   * `model-io-sess_<id>.jsonl` files carry session facts.
+   * `model-io-sess_<id>.jsonl` files carry session facts; the CLI's DB row
+   * (when present) wins over rollout-derived title/path.
    */
   async synchronizeFile(filePath: string): Promise<string | null> {
     const basename = path.basename(filePath);
@@ -137,7 +231,21 @@ export class ZcodeSessionSynchronizer implements IProviderSessionSynchronizer {
     const sessionId = basename.replace(/^model-io-/, '').replace(/\.jsonl$/, '');
     if (!sessionId) return null;
 
-    const parsed = await this.parseFromRollout(sessionId);
+    const dbRow = readZcodeDbSessions().get(sessionId) ?? null;
+    const parsed = dbRow
+      ? {
+          sessionId,
+          projectPath: dbRow.directory?.trim() || os.homedir(),
+          sessionName: normalizeSessionName(
+            dbRow.title ? stripInjectedBlocks(dbRow.title) : undefined,
+            FALLBACK_TITLE
+          ),
+          createdAt: dbRow.createdAt ?? undefined,
+          updatedAt: dbRow.updatedAt ?? dbRow.createdAt ?? undefined,
+          transcriptPath: path.join(this.rolloutDir(), basename),
+          titleCurated: dbRow.titleSource === 'custom',
+        }
+      : await this.parseFromRollout(sessionId);
     if (!parsed) return null;
     return this.upsertSession(parsed);
   }
@@ -239,12 +347,15 @@ export class ZcodeSessionSynchronizer implements IProviderSessionSynchronizer {
     const existingSession = sessionsDb.getSessionByProviderSessionId(parsed.sessionId)
       ?? sessionsDb.getSessionById(parsed.sessionId);
     const existingName = existingSession?.custom_name;
-    // Keep user-renamed titles; replace fallbacks AND titles that were derived
-    // from injected preambles (<system-reminder>…) so old bad names repair on
-    // the next sync.
-    const nextName = existingName && existingName !== FALLBACK_TITLE && !isInjectedTitle(existingName)
-      ? existingName
-      : parsed.sessionName;
+    const existingIsBad = !existingName
+      || existingName === FALLBACK_TITLE
+      || isInjectedTitle(existingName);
+    // Title precedence: a rename made inside zcode (title_source=custom) always
+    // wins; otherwise keep planrla's name unless it is a fallback or was
+    // derived from injected preamble (repairable).
+    const nextName = parsed.titleCurated || existingIsBad
+      ? parsed.sessionName
+      : existingName!;
 
     return sessionsDb.createSession(
       parsed.sessionId,
