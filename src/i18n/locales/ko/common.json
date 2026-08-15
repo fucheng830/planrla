@@ -23,7 +23,8 @@
     "files": "파일",
     "git": "소스 관리",
     "browser": "Browser",
-    "kanban": "칸반"
+    "kanban": "칸반",
+    "cron": "정기"
   },
   "status": {
     "loading": "로딩 중...",

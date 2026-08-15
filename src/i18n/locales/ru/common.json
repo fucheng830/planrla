@@ -23,7 +23,8 @@
     "files": "Файлы",
     "git": "Система контроля версий",
     "browser": "Browser",
-    "kanban": "Канбан"
+    "kanban": "Канбан",
+    "cron": "Крон"
   },
   "status": {
     "loading": "Загрузка...",

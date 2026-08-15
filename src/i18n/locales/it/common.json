@@ -23,7 +23,8 @@
     "files": "File",
     "git": "Controllo Versione",
     "browser": "Browser",
-    "kanban": "Kanban"
+    "kanban": "Kanban",
+    "cron": "Cron"
   },
   "status": {
     "loading": "Caricamento...",

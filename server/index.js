@@ -318,6 +318,11 @@ app.use('/api/projects', authenticateToken, projectModuleRoutes);
 // Kanban API Routes (protected) — assembled module sharing the central auth.db
 app.use('/api/tasks', authenticateToken, getKanban().router);
 
+// 定时任务 (cron prompts, ZCode-Cron style) — protected CRUD + run-now.
+import { createCronPromptsRouter } from './modules/cron-prompts/cron-prompts.routes.js';
+import { cronPromptsDriver } from './modules/cron-prompts/cron-prompts.driver.js';
+app.use('/api/cron-prompts', authenticateToken, createCronPromptsRouter());
+
 // REQ-046 Background Tasks API (protected) — list + stop/dismiss
 app.use('/api/background-tasks', authenticateToken, backgroundTaskRoutes);
 
@@ -2008,6 +2013,13 @@ async function startServer() {
                 startA2aDiscovery(SERVER_PORT, RUNNING_VERSION || '0.0.0');
             } catch (err) {
                 console.warn(`[a2a-discovery] failed to start: ${err?.message || err}`);
+            }
+
+            // 定时任务 driver：载入已启用任务并注册 node-cron。
+            try {
+                cronPromptsDriver.start();
+            } catch (err) {
+                console.warn(`[cron-prompts] failed to start: ${err?.message || err}`);
             }
 
             // Start server-side plugin processes for enabled plugins

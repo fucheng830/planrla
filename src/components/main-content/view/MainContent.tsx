@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { PanelRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import ChatInterface from '../../chat/view/ChatInterface';
@@ -14,6 +13,7 @@ import { authenticatedFetch } from '../../../utils/api';
 import { useEditorSidebar } from '../../code-editor/hooks/useEditorSidebar';
 import EditorSidebar from '../../code-editor/view/EditorSidebar';
 import { KanbanPanel } from '../../kanban';
+import CronPromptsPanel from '../../cron-prompts/CronPromptsPanel';
 
 import MainContentHeader from './subcomponents/MainContentHeader';
 import MainContentStateView from './subcomponents/MainContentStateView';
@@ -164,6 +164,8 @@ function MainContent({
           )}
 
           <KanbanPanel isVisible={activeTab === 'kanban'} />
+
+          <CronPromptsPanel isVisible={activeTab === 'cron'} />
 
           {shouldShowBrowserTab && activeTab === 'browser' && (
             <div className="h-full overflow-hidden">

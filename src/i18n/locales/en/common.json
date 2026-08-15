@@ -23,7 +23,8 @@
     "files": "Files",
     "git": "Source Control",
     "browser": "Browser",
-    "kanban": "Kanban"
+    "kanban": "Kanban",
+    "cron": "Cron"
   },
   "status": {
     "loading": "Loading...",

@@ -22,7 +22,8 @@
     "shell": "Terminal",
     "files": "Fichiers",
     "git": "Contrôle de source",
-    "kanban": "Kanban"
+    "kanban": "Kanban",
+    "cron": "Cron"
   },
   "status": {
     "loading": "Chargement...",

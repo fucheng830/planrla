@@ -147,6 +147,23 @@ CREATE INDEX IF NOT EXISTS idx_a2a_agents_user_id ON a2a_agents(user_id);
 CREATE INDEX IF NOT EXISTS idx_a2a_agents_active ON a2a_agents(is_active);
 `;
 
+
+export const CRON_PROMPTS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS cron_prompts (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    cron_expression TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'claude',
+    project_path TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT 1,
+    last_run_at DATETIME,
+    last_session_id TEXT,
+    run_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`;
 export const INIT_SCHEMA_SQL = `
 -- Initialize authentication database
 PRAGMA foreign_keys = ON;

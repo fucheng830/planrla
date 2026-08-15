@@ -1,4 +1,4 @@
-import { MessageSquare, Terminal, GitBranch, MonitorPlay, KanbanSquare, type LucideIcon } from 'lucide-react';
+import { MessageSquare, Terminal, GitBranch, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -52,6 +52,13 @@ const KANBAN_TAB: BuiltInTab = {
   icon: KanbanSquare,
 };
 
+const CRON_TAB: BuiltInTab = {
+  kind: 'builtin',
+  id: 'cron',
+  labelKey: 'tabs.cron',
+  icon: CalendarClock,
+};
+
 export default function MainContentTabSwitcher({
   activeTab,
   setActiveTab,
@@ -64,6 +71,7 @@ export default function MainContentTabSwitcher({
   const builtInTabs: BuiltInTab[] = [
     ...BASE_TABS,
     KANBAN_TAB,
+    CRON_TAB,
     ...(shouldShowBrowserTab ? [BROWSER_TAB] : []),
   ];
 

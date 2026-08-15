@@ -282,6 +282,14 @@ export async function spawnZcode(command, options, writer) {
   });
 
   child.on('error', (error) => {
+    // Reject pending requests: on spawn failures (e.g. a non-existent cwd on
+    // Windows) the process never exits, so without this the awaited
+    // session/create promise hangs forever.
+    for (const { reject } of pending.values()) {
+      reject(new Error(`ZCode app-server failed to start: ${error?.message ?? error}`));
+    }
+    pending.clear();
+
     if (!completeSent) {
       const isNotFound = error && /ENOENT|spawn/.test(error.code || error.message || '');
       writer.send(createNormalizedMessage({
