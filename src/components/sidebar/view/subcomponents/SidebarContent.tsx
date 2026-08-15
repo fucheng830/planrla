@@ -1,20 +1,25 @@
-import { type ReactNode } from 'react';
-import { Archive, ChevronLeft, Folder, FolderTree, MessageSquare, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Archive, ChevronLeft, Copy, Edit2, Folder, FolderOpen, FolderTree, MessageSquare, Network, Pin, PinOff, RotateCcw, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { ScrollArea } from '../../../../shared/view/ui';
+import { Button, Dialog, DialogContent, DialogTitle, ScrollArea } from '../../../../shared/view/ui';
+import ContextMenu, { type ContextMenuAction } from '../../../../shared/view/ContextMenu';
+import { api } from '../../../../utils/api';
+import { copyTextToClipboard } from '../../../../utils/clipboard';
+import { useA2aDelegate } from '../../contexts/A2aDelegateContext';
+import { usePaletteOps } from '../../../../contexts/PaletteOpsContext';
+import type { LLMProvider, Project } from '../../../../types/app';
 import type { CompletedSessionNotificationMap } from '../../../../hooks/useSessionProtection';
 import type { SessionTaskStatus } from '../../../../shared/taskStatus';
 import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
-import type { Project } from '../../../../types/app';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 import type { ConversationSearchResults, SearchProgress } from '../../hooks/useSidebarController';
 import type { ArchivedProjectListItem, ArchivedSessionListItem, SidebarSearchMode } from '../../types/types';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
+import FileTree from '../../../file-tree/view/FileTree';
 
 import SidebarFooter from './SidebarFooter';
-import FileTree from '../../../file-tree/view/FileTree';
 import SidebarHeader from './SidebarHeader';
 import SidebarProjectList, { type SidebarProjectListProps } from './SidebarProjectList';
 
@@ -119,6 +124,216 @@ function formatCompactArchivedAge(dateString: string | null): string {
   }
 
   return `${Math.floor(diffInHours / 24)}d`;
+}
+
+type FlatSessionRowProps = {
+  project: Project;
+  session: ReturnType<typeof getAllSessions>[number];
+  sessionTitle: string;
+  age: string;
+  status: SessionTaskStatus;
+  isSelected: boolean;
+  onClick: () => void;
+  onDeleteSession: (projectId: string, sessionId: string, title: string, provider: LLMProvider) => void;
+  onSaveEditingSession: (projectId: string, sessionId: string, name: string, provider: LLMProvider) => void;
+  onRefresh: () => void;
+  t: TFunction;
+};
+
+/**
+ * 会话标签页(sessions-first 视图)的会话行 —— 与项目树里的 SidebarSessionItem
+ * 使用同一 ContextMenu 组件与同一组菜单项,保证两个视图的右键交互一致。
+ */
+function FlatSessionRow({
+  project,
+  session,
+  sessionTitle,
+  age,
+  status,
+  isSelected,
+  onClick,
+  onDeleteSession,
+  onSaveEditingSession,
+  onRefresh,
+  t,
+}: FlatSessionRowProps) {
+  const provider = session.__provider;
+  const a2aDelegate = useA2aDelegate();
+  const serverA2aExposed = Boolean((session as { a2a_exposed?: unknown }).a2a_exposed);
+  const a2aExposed = a2aDelegate.isExposed(session.id, serverA2aExposed);
+  const a2aPending = a2aDelegate.isPending(session.id);
+
+  const { openSettings } = usePaletteOps();
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+
+  const isPinned = Boolean((session as { isPinned?: unknown }).isPinned);
+  const jsonlPath = ((session as { jsonlPath?: unknown }).jsonlPath as string | null | undefined) ?? null;
+  const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI);
+
+  const flashCopied = (label: string) => {
+    setCopiedLabel(label);
+    window.setTimeout(() => setCopiedLabel((current) => (current === label ? null : current)), 1200);
+  };
+
+  const handleCopy = async (text: string | null | undefined, label: string) => {
+    if (!text) return;
+    if (await copyTextToClipboard(text)) flashCopied(label);
+  };
+
+  const actions: ContextMenuAction[] = [
+    {
+      key: 'a2a',
+      icon: Network,
+      label: a2aExposed ? t('tooltips.a2aDelegateEnabled') : t('tooltips.a2aDelegate'),
+      onSelect: () => void a2aDelegate.toggle(session.id, !a2aExposed),
+      isDisabled: a2aPending,
+    },
+    {
+      key: 'rename',
+      icon: Edit2,
+      label: t('tooltips.editSessionName'),
+      onSelect: () => {
+        setRenameValue(sessionTitle);
+        setRenameOpen(true);
+      },
+    },
+    {
+      key: 'pin',
+      icon: isPinned ? PinOff : Pin,
+      label: isPinned ? t('contextMenu.unpinSession', 'Unpin') : t('contextMenu.pinSession', 'Pin'),
+      onSelect: () => {
+        void api.toggleSessionPin(session.id).then(() => onRefresh());
+      },
+      showDividerBefore: true,
+    },
+    {
+      key: 'archive',
+      icon: Archive,
+      label: t('contextMenu.archiveSession', 'Archive'),
+      onSelect: () => onDeleteSession(project.projectId, session.id, sessionTitle, provider),
+      isDanger: true,
+      showDividerBefore: true,
+    },
+    {
+      key: 'copyId',
+      icon: Copy,
+      label: copiedLabel === 'id' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copySessionId', 'Copy session ID'),
+      onSelect: () => void handleCopy(session.id, 'id'),
+      showDividerBefore: true,
+    },
+    {
+      key: 'copyPath',
+      icon: Copy,
+      label: copiedLabel === 'path' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyPath', 'Copy path'),
+      onSelect: () => void handleCopy(project.fullPath, 'path'),
+    },
+    ...(jsonlPath
+      ? [{
+          key: 'copyLog',
+          icon: Copy,
+          label: copiedLabel === 'log' ? t('contextMenu.copied', 'Copied!') : t('contextMenu.copyLogPath', 'Copy log path'),
+          onSelect: () => void handleCopy(jsonlPath, 'log'),
+        } satisfies ContextMenuAction]
+      : []),
+    ...(isDesktop
+      ? [{
+          key: 'explorer',
+          icon: FolderOpen,
+          label: t('contextMenu.openInExplorer', 'Open in file explorer'),
+          onSelect: () => void window.electronAPI?.openPath?.(project.fullPath),
+        } satisfies ContextMenuAction]
+      : []),
+    {
+      key: 'config',
+      icon: SlidersHorizontal,
+      label: t('contextMenu.goToConfig', 'Go to configuration'),
+      onSelect: () => openSettings('agents', provider),
+      showDividerBefore: true,
+    },
+  ];
+
+  return (
+    <>
+      <ContextMenu actions={actions} menuLabel={t('contextMenu.sessionMenuLabel', 'Session context menu')}>
+        <button
+          className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+            isSelected
+              ? 'border-primary/25 bg-primary/5'
+              : 'border-transparent hover:border-border/60 hover:bg-accent/45'
+          }`}
+          onClick={onClick}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <SessionProviderLogo provider={provider} className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+              {sessionTitle}
+            </span>
+            <SessionTaskStatusBadge status={status} className="flex-shrink-0" />
+            {age && (
+              <span className="flex-shrink-0 text-[11px] text-muted-foreground">
+                {age}
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex min-w-0 items-center gap-2 pl-5">
+            <span className="truncate text-[11px] text-muted-foreground">
+              {project.displayName}
+            </span>
+            {provider !== 'claude' && (
+              <span className="flex-shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase text-muted-foreground">
+                {provider}
+              </span>
+            )}
+          </div>
+        </button>
+      </ContextMenu>
+
+      <Dialog
+        open={renameOpen}
+        onOpenChange={(next) => {
+          if (!next) setRenameValue('');
+          setRenameOpen(next);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl border-border/80 bg-popover p-5 shadow-2xl">
+          <DialogTitle className="text-base font-semibold text-foreground">
+            {t('renameDialog.title', { defaultValue: 'Rename conversation' })}
+          </DialogTitle>
+          <input
+            type="text"
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && renameValue.trim()) {
+                onSaveEditingSession(project.projectId, session.id, renameValue.trim(), provider);
+                setRenameOpen(false);
+              }
+            }}
+            className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            autoFocus
+            onFocus={(e) => e.target.select()}
+          />
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setRenameOpen(false)}>
+              {t('renameDialog.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              size="sm"
+              disabled={!renameValue.trim()}
+              onClick={() => {
+                onSaveEditingSession(project.projectId, session.id, renameValue.trim(), provider);
+                setRenameOpen(false);
+              }}
+            >
+              {t('renameDialog.save', { defaultValue: 'Save' })}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 type SidebarContentProps = {
@@ -447,38 +662,20 @@ export default function SidebarContent({
                 const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
 
                 return (
-                  <button
+                  <FlatSessionRow
                     key={`${project.projectId}-${session.id}`}
-                    className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
-                      isSelected
-                        ? 'border-primary/25 bg-primary/5'
-                        : 'border-transparent hover:border-border/60 hover:bg-accent/45'
-                    }`}
+                    project={project}
+                    session={session}
+                    sessionTitle={sessionTitle}
+                    age={age}
+                    status={status}
+                    isSelected={isSelected}
                     onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <SessionProviderLogo provider={session.__provider} className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                        {sessionTitle}
-                      </span>
-                      <SessionTaskStatusBadge status={status} className="flex-shrink-0" />
-                      {age && (
-                        <span className="flex-shrink-0 text-[11px] text-muted-foreground">
-                          {age}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex min-w-0 items-center gap-2 pl-5">
-                      <span className="truncate text-[11px] text-muted-foreground">
-                        {project.displayName}
-                      </span>
-                      {session.__provider !== 'claude' && (
-                        <span className="flex-shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase text-muted-foreground">
-                          {session.__provider}
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                    onDeleteSession={projectListProps.onDeleteSession}
+                    onSaveEditingSession={projectListProps.onSaveEditingSession}
+                    onRefresh={() => onRefresh()}
+                    t={t}
+                  />
                 );
               })}
             </div>
