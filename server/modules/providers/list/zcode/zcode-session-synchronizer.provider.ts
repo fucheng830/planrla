@@ -2,6 +2,7 @@ import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readFile, readdir } from 'node:fs/promises';
+
 import Database from 'better-sqlite3';
 
 import { sessionsDb } from '@/modules/database/index.js';
