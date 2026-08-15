@@ -4,8 +4,9 @@
 // 复用 A2A inbound 的 S4 spawn 模式(chatRunRegistry 锁 + 静默 writer)——
 // 会话会正常出现在侧边栏,产物落在 provider 自己的 transcript 里。
 
-import * as cron from 'node-cron';
 import { existsSync } from 'node:fs';
+
+import * as cron from 'node-cron';
 
 import { spawnFns, sessionsService } from '@/modules/providers/index.js';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
