@@ -2,8 +2,11 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
+import Database from 'better-sqlite3';
+
 import { sessionsDb } from '@/modules/database/index.js';
 import { getZcodeCliHome } from '@/modules/providers/list/zcode/zcode-auth.provider.js';
+import { stripInjectedBlocks } from '@/modules/providers/list/zcode/zcode-session-synchronizer.provider.js';
 import type { IProviderSessions } from '@/shared/interfaces.js';
 import type { AnyRecord, FetchHistoryOptions, FetchHistoryResult, NormalizedMessage } from '@/shared/types.js';
 import {
@@ -182,7 +185,112 @@ export class ZcodeSessionsProvider implements IProviderSessions {
     options: FetchHistoryOptions = {},
   ): Promise<FetchHistoryResult> {
     const { limit = null, offset = 0 } = options;
+    const normalizedOffset = Math.max(0, offset);
+    const normalizedLimit = limit === null ? null : Math.max(0, limit);
 
+    // Primary source: the CLI's own sqlite store. Rollout jsonl files are
+    // pruned by the CLI over time, so sessions with no rollout would otherwise
+    // show an empty history even though the full conversation still exists in
+    // the message/part tables.
+    const fromDb = this.readHistoryFromZcodeDb(sessionId);
+    const source = fromDb ?? await this.readHistoryFromRollout(sessionId);
+
+    if (!source || source.length === 0) {
+      return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
+    }
+
+    const { page, hasMore } = sliceTailPage(source, normalizedLimit, normalizedOffset);
+    let total = 0;
+    for (const msg of source) {
+      if (msg.kind !== 'tool_result') total += 1;
+    }
+    return {
+      messages: page,
+      total,
+      hasMore,
+      offset: normalizedOffset,
+      limit: normalizedLimit,
+    };
+  }
+
+  /**
+   * Reads the full conversation from ~/.zcode/cli/db/db.sqlite (message +
+   * part tables, readonly/WAL-safe). Returns null when the DB is missing,
+   * unreadable, or has no rows for the session (caller falls back to rollout).
+   */
+  private readHistoryFromZcodeDb(sessionId: string): NormalizedMessage[] | null {
+    const dbPath = path.join(getZcodeCliHome(), 'db', 'db.sqlite');
+    if (!fsSync.existsSync(dbPath)) return null;
+
+    let db: Database.Database | null = null;
+    try {
+      db = new Database(dbPath, { readonly: true });
+      const messageRows = db
+        .prepare('SELECT id, data FROM message WHERE session_id = ? ORDER BY sequence')
+        .all(sessionId) as Array<{ id: unknown; data: unknown }>;
+      if (messageRows.length === 0) return null;
+
+      const partStmt = db.prepare('SELECT data FROM part WHERE message_id = ? ORDER BY sequence');
+      const normalized: NormalizedMessage[] = [];
+
+      for (const row of messageRows) {
+        const messageId = readOptionalString(row.id) ?? generateMessageId(PROVIDER);
+        const data = (() => { try { return JSON.parse(String(row.data)); } catch { return null; } })();
+        const record = readObjectRecord(data);
+        if (!record) continue;
+        const role = readOptionalString(record.role);
+        if (role !== 'user' && role !== 'assistant') continue;
+
+        const createdMs = Number(readObjectRecord(record.time)?.created);
+        const timestamp = Number.isFinite(createdMs) && createdMs > 0
+          ? new Date(createdMs).toISOString()
+          : undefined;
+
+        const text = (partStmt.all(String(row.id)) as Array<{ data: unknown }>)
+          .map((part) => {
+            try {
+              const parsed = readObjectRecord(JSON.parse(String(part.data)));
+              return readOptionalString(parsed?.type) === 'text'
+                ? readOptionalString(parsed?.text) ?? ''
+                : '';
+            } catch {
+              return '';
+            }
+          })
+          .join('')
+          .trim();
+
+        // User-role messages can carry injected preambles (system-reminder
+        // context etc.); strip them so history shows the human text only.
+        const content = role === 'user' ? stripInjectedBlocks(text) : text;
+        if (!content) continue;
+
+        normalized.push(createNormalizedMessage({
+          id: messageId,
+          sessionId,
+          timestamp,
+          provider: PROVIDER,
+          kind: 'text',
+          role,
+          content,
+        }));
+      }
+
+      return normalized;
+    } catch {
+      return null;
+    } finally {
+      db?.close();
+    }
+  }
+
+  /**
+   * Legacy source: rollout jsonl (also the only source when the CLI DB has no
+   * rows for this session). Returns normalized messages plus token usage.
+   */
+  private async readHistoryFromRollout(
+    sessionId: string,
+  ): Promise<NormalizedMessage[] | null> {
     const sessionRow = sessionsDb.getSessionById(sessionId);
     const candidates = [
       sessionRow?.jsonl_path,
@@ -190,24 +298,15 @@ export class ZcodeSessionsProvider implements IProviderSessions {
     ].filter((p): p is string => Boolean(p));
 
     const filePath = candidates.find((p) => fsSync.existsSync(p));
-    if (!filePath) {
-      return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
-    }
+    if (!filePath) return null;
 
     try {
-      const { normalized, tokenUsage } = await this.parseRolloutFile(filePath, sessionId);
-      const normalizedOffset = Math.max(0, offset);
-      const normalizedLimit = limit === null ? null : Math.max(0, limit);
-      const { page, hasMore } = sliceTailPage(normalized, normalizedLimit, normalizedOffset);
-      let total = 0;
-      for (const msg of normalized) {
-        if (msg.kind !== 'tool_result') total += 1;
-      }
-      return { messages: page, total, hasMore, offset: normalizedOffset, limit: normalizedLimit, tokenUsage };
+      const { normalized } = await this.parseRolloutFile(filePath, sessionId);
+      return normalized;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[ZcodeProvider] Failed to load session ${sessionId}:`, message);
-      return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
+      return null;
     }
   }
 

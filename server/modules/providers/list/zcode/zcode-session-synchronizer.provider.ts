@@ -44,7 +44,7 @@ const INJECTED_LINE_PREFIXES = [
  * human text, or an empty string when the message is entirely injected
  * content (→ caller should try the next user message).
  */
-function stripInjectedBlocks(text: string): string {
+export function stripInjectedBlocks(text: string): string {
   let remaining = text;
   for (const { openTag, closeTag } of INJECTED_WRAPPERS) {
     const pattern = new RegExp(
