@@ -447,6 +447,56 @@ const ensureProjectsForSessionPaths = (db: Database): void => {
   `);
 };
 
+/**
+ * Windows paths are case-insensitive, but providers record cwds in arbitrary
+ * casing — one directory can end up as several project rows ("c:\ws" and
+ * "C:\WS") with its sessions split between them. For every case-insensitive
+ * duplicate group: move sessions onto the canonical row (most sessions, then
+ * earliest created), carry over star/archive state, and drop the empties.
+ * Idempotent: after a pass no duplicates remain.
+ */
+const mergeCaseDuplicateProjects = (db: Database): void => {
+  if (!tableExists(db, 'sessions') || !tableExists(db, 'projects')) {
+    return;
+  }
+
+  const groups = db.prepare(`
+    SELECT LOWER(project_path) AS key,
+           COUNT(*) AS variants
+    FROM projects
+    WHERE project_path LIKE '_:%\\%'
+       OR project_path LIKE '_:%/%'
+    GROUP BY LOWER(project_path)
+    HAVING COUNT(*) > 1
+  `).all() as Array<{ key: string; variants: number }>;
+
+  for (const group of groups) {
+    const rows = db.prepare(`
+      SELECT project_id, project_path,
+             (SELECT COUNT(*) FROM sessions WHERE sessions.project_path = projects.project_path) AS session_count
+      FROM projects
+      WHERE LOWER(project_path) = ?
+      ORDER BY session_count DESC, rowid ASC
+    `).all(group.key) as Array<{ project_id: string; project_path: string; session_count: number }>;
+
+    const canonical = rows[0];
+    if (!canonical) continue;
+
+    for (const dupe of rows.slice(1)) {
+      db.prepare('UPDATE sessions SET project_path = ? WHERE project_path = ?')
+        .run(canonical.project_path, dupe.project_path);
+      // Keep user-curated state from the dupe (star/name) if the canonical lacks it.
+      db.prepare(`
+        UPDATE projects
+        SET isStarred = MAX(isStarred, (SELECT isStarred FROM projects WHERE project_id = ?)),
+            custom_project_name = COALESCE(custom_project_name, (SELECT custom_project_name FROM projects WHERE project_id = ?))
+        WHERE project_id = ?
+      `).run(dupe.project_id, dupe.project_id, canonical.project_id);
+      db.prepare('DELETE FROM projects WHERE project_id = ?').run(dupe.project_id);
+    }
+  }
+};
+
 export const runMigrations = (db: Database) => {
   try {
     const usersTableInfo = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
@@ -478,6 +528,7 @@ export const runMigrations = (db: Database) => {
     addA2aExposedColumn(db);
     addSessionsIsPinnedColumn(db);
     ensureProjectsForSessionPaths(db);
+    mergeCaseDuplicateProjects(db);
 
     db.exec('CREATE INDEX IF NOT EXISTS idx_session_ids_lookup ON sessions(session_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_provider_session_id ON sessions(provider_session_id)');

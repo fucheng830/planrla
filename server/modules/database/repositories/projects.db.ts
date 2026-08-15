@@ -18,7 +18,25 @@ function normalizeProjectDisplayName(projectPath: string, customProjectName: str
 export const projectsDb = {
     createProjectPath(projectPath: string, customProjectName: string | null = null): CreateProjectPathResult {
         const db = getConnection();
-        const normalizedProjectPath = normalizeProjectPath(projectPath);
+        let normalizedProjectPath = normalizeProjectPath(projectPath);
+
+        // Windows paths are case-insensitive: providers record cwds in
+        // arbitrary casing ("c:\ws" vs "C:\WS"), which would otherwise split
+        // one project into two sidebar entries. Reuse the existing row's
+        // casing whenever it matches case-insensitively.
+        if (/^[a-zA-Z]:[\\/]/.test(normalizedProjectPath)) {
+            const canonical = db.prepare(`
+                SELECT project_path FROM projects
+                WHERE LOWER(project_path) = LOWER(?)
+                ORDER BY (SELECT COUNT(*) FROM sessions WHERE sessions.project_path = projects.project_path) DESC,
+                         created_at ASC
+                LIMIT 1
+            `).get(normalizedProjectPath) as { project_path: string } | undefined;
+            if (canonical?.project_path) {
+                normalizedProjectPath = canonical.project_path;
+            }
+        }
+
         const normalizedProjectName = normalizeProjectDisplayName(normalizedProjectPath, customProjectName);
         const attemptedId = randomUUID();
         const row = db.prepare(`

@@ -84,8 +84,11 @@ export const sessionsDb = {
     const normalizedProjectPath = normalizeProjectPathForProvider(provider, projectPath);
 
     // First, ensure the project path is recorded in the projects table,
-    // since it's a foreign key in the sessions table.
-    projectsDb.createProjectPath(normalizedProjectPath);
+    // since it's a foreign key in the sessions table. The returned row's
+    // path is canonical (existing casing on Windows) — use it so sessions
+    // never split across case-duplicate project rows.
+    const projectRecord = projectsDb.createProjectPath(normalizedProjectPath);
+    const canonicalProjectPath = projectRecord.project?.project_path ?? normalizedProjectPath;
 
     const existing = db
       .prepare(
@@ -108,7 +111,7 @@ export const sessionsDb = {
       ).run(
         provider,
         updatedAtValue,
-        normalizedProjectPath,
+        canonicalProjectPath,
         jsonlPath ?? null,
         customName ?? null,
         existing.session_id
@@ -136,7 +139,7 @@ export const sessionsDb = {
       provider,
       providerSessionId,
       customName ?? null,
-      normalizedProjectPath,
+      canonicalProjectPath,
       jsonlPath ?? null,
       createdAtValue,
       updatedAtValue
@@ -157,12 +160,13 @@ export const sessionsDb = {
     const db = getConnection();
     const normalizedProjectPath = normalizeProjectPathForProvider(provider, projectPath);
 
-    projectsDb.createProjectPath(normalizedProjectPath);
+    const projectRecord = projectsDb.createProjectPath(normalizedProjectPath);
+    const canonicalProjectPath = projectRecord.project?.project_path ?? normalizedProjectPath;
 
     db.prepare(
       `INSERT INTO sessions (session_id, provider, provider_session_id, custom_name, project_path, jsonl_path, isArchived, created_at, updated_at)
        VALUES (?, ?, NULL, NULL, ?, NULL, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-    ).run(sessionId, provider, normalizedProjectPath);
+    ).run(sessionId, provider, canonicalProjectPath);
 
     return sessionId;
   },
