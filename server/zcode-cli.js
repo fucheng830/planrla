@@ -206,6 +206,131 @@ function handleServerRequest(child, msg, writer) {
  * Build the workspace params for session/create. ZCode keys sessions by
  * workspace; we use the run's cwd so the session is discoverable per project.
  */
+// ---------------------------------------------------------------------------
+// Live echo suppressor
+//
+// While an agent turn streams, its assistant text can contain tool-invocation
+// echo blocks (🌐 header / blank / 输入 line / ```json params / ``` close, then
+// marker lines like *执行中…* / **输出：** / *_result_summary:*). History reads
+// strip these via stripInjectedBlocks; the live delta path needs the same
+// treatment or clients watch raw JSON walls grow in real time. This state
+// machine holds back text from the moment a 🌐 line completes until the block
+// closes, so partials never leak. A held "header" that turns out NOT to be
+// followed by a json fence is flushed verbatim (rare prose mention of 🌐).
+// ---------------------------------------------------------------------------
+
+const ECHO_INPUT_LINE_RE = /^\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}\s*$/;
+const ECHO_MARKER_PREFIXES = [
+  /^[ \t]*\*{0,2}(?:正在服务器上执行|服务器端执行中|执行中|Executing on server)/,
+  /^[ \t]*\*{0,2}(?:输出|Output)\s*[：:]/,
+  /^[ \t]*\*{0,2}[A-Za-z_.]*result_summary:?/,
+];
+
+class EchoSuppressor {
+  constructor() {
+    this.line = '';        // current partial line (unterminated)
+    this.held = '';        // held complete lines (candidate echo block)
+    this.json = null;      // { depth, inStr, escaped, open, close } while scanning params
+    this.awaitFence = false;
+  }
+
+  /** Feed text; return an array of clean pieces safe to emit now. */
+  push(text) {
+    let out = '';
+    for (const ch of text) {
+      if (ch === '\r') continue;
+      if (this.json) {
+        this.feedJson(ch);
+        continue;
+      }
+      if (ch === '\n') {
+        const flush = this.pushLine(this.line + '\n');
+        out += flush;
+        this.line = '';
+        continue;
+      }
+      this.line += ch;
+    }
+    return out ? [out] : [];
+  }
+
+  /** A complete line (with trailing \n) arrives. Returns text to emit. */
+  pushLine(line) {
+    // Inside a swallowed block: eat marker lines and the closing fence.
+    if (this.held !== '' || this.awaitFence) {
+      if (this.awaitFence && /^```/.test(line.trim())) {
+        this.awaitFence = false; // closing fence eaten; block done
+        this.held = '';
+        return '';
+      }
+      if (line.trim() === '' || ECHO_INPUT_LINE_RE.test(line) || ECHO_MARKER_PREFIXES.some(re => re.test(line))) {
+        return ''; // still part of the block envelope
+      }
+      if (/^```json\b/.test(line.trim())) {
+        this.startJson();
+        return '';
+      }
+      // Not an echo after all (prose after a 🌐 mention): flush the held text.
+      const flush = this.held + line;
+      this.held = '';
+      this.awaitFence = false;
+      return flush;
+    }
+
+    if (line.includes('🌐')) {
+      this.held = line; // hold the header line, decide on the next lines
+      return '';
+    }
+    if (ECHO_MARKER_PREFIXES.some(re => re.test(line)) && line.trim() !== '') {
+      return ''; // stray marker line without header (mid-stream artifact)
+    }
+    return line;
+  }
+
+  startJson() {
+    this.json = { depth: 0, inStr: false, escaped: false, started: false };
+  }
+
+  feedJson(ch) {
+    const j = this.json;
+    if (!j.started) {
+      if (ch === '{' || ch === '[') { j.started = true; j.open = ch; j.close = ch === '{' ? '}' : ']'; j.depth = 1; }
+      else if (!/\s/.test(ch)) { this.json = null; } // not JSON after all — give up holding (flush nothing; rare)
+      return;
+    }
+    if (j.inStr) {
+      if (j.escaped) j.escaped = false;
+      else if (ch === '\\') j.escaped = true;
+      else if (ch === '"') j.inStr = false;
+      return;
+    }
+    if (ch === '"') j.inStr = true;
+    else if (ch === j.open) j.depth++;
+    else if (ch === j.close) {
+      j.depth--;
+      if (j.depth === 0) {
+        this.json = null;
+        this.awaitFence = true; // swallow up to and including the next ``` line
+      }
+    }
+  }
+
+  /** End of stream: flush anything still held (unterminated echo). */
+  flush() {
+    if (this.json || this.awaitFence) { this.json = null; this.awaitFence = false; this.held = ''; return ''; }
+    const rest = this.held + this.line;
+    this.held = ''; this.line = '';
+    return rest;
+  }
+}
+
+const echoSuppressors = new Map();
+function getEchoSuppressor(rowId) {
+  let s = echoSuppressors.get(rowId);
+  if (!s) { s = new EchoSuppressor(); echoSuppressors.set(rowId, s); }
+  return s;
+}
+
 function buildWorkspaceParams(cwd) {
   const workspacePath = cwd || process.cwd();
   return { workspace: { workspacePath, workspaceKey: workspacePath } };
@@ -475,14 +600,24 @@ export async function spawnZcode(command, options, writer) {
           const kind = rowKinds.get(d.rowId);
           if (kind === 'assistantText') {
             streamedAssistantText = true;
-            writer.send(createNormalizedMessage({
-              id: `zcode-delta-${d.rowId}`,
-              sessionId: zcodeSessionId,
-              timestamp: new Date().toISOString(),
-              provider: PROVIDER,
-              kind: 'stream_delta',
-              content: d.append,
-            }));
+            // Echo suppressor: the agent's text may include tool-invocation
+            // echo blocks (🌐 header + ```json params). History filters them
+            // at read time, but the LIVE stream must suppress them too or
+            // clients watch raw JSON walls grow in real time. Feed deltas
+            // through a per-row state machine; only clean text is emitted.
+            const sup = getEchoSuppressor(d.rowId);
+            for (const piece of sup.push(d.append)) {
+              if (piece) {
+                writer.send(createNormalizedMessage({
+                  id: `zcode-delta-${d.rowId}`,
+                  sessionId: zcodeSessionId,
+                  timestamp: new Date().toISOString(),
+                  provider: PROVIDER,
+                  kind: 'stream_delta',
+                  content: piece,
+                }));
+              }
+            }
           } else if (kind === 'reasoning') {
             reasoningBuf.set(d.rowId, (reasoningBuf.get(d.rowId) ?? '') + d.append);
           }
@@ -605,6 +740,23 @@ export async function spawnZcode(command, options, writer) {
     }
 
     if (streamedAssistantText) {
+      // Turn over: flush any text the echo suppressor still holds (an echo
+      // block that never closed should not eat trailing prose forever).
+      for (const [rowId, sup] of echoSuppressors) {
+        const tail = sup.flush();
+        if (tail) {
+          writer.send(createNormalizedMessage({
+            id: `zcode-delta-${rowId}`,
+            sessionId: zcodeSessionId,
+            timestamp: new Date().toISOString(),
+            provider: PROVIDER,
+            kind: 'stream_delta',
+            content: tail,
+          }));
+        }
+      }
+      echoSuppressors.clear();
+
       // Finalize the streamed bubble (clients mark the last assistant done).
       writer.send(createNormalizedMessage({
         id: `zcode-stream-end-${Date.now()}`,
