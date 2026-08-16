@@ -544,7 +544,7 @@
       "defaultDeviceName": "Planrla Desktop",
       "unnamedDevice": "Unnamed Desktop",
       "deviceTokenSuffix": "token …{{suffix}}",
-      "relayStatusHint": "This version supports account sign-in and device registration; the full relay path still requires Desktop to stay running and connect to the relay service.",
+      "relayStatusHint": "Registering this desktop keeps an outbound relay to api.planrla.com — open the device link in a phone browser to take over from anywhere.",
       "dialogTitle": "Remote Access",
       "signInTitle": "Sign in for Remote Access",
       "createTitle": "Create Remote Access account",
@@ -561,6 +561,20 @@
         "failed": "Remote access sign-in failed",
         "devicesFailed": "Failed to load Desktop devices",
         "registerFailed": "Failed to register Desktop device"
+      },
+      "relay": {
+        "state": {
+          "online": "Online",
+          "connecting": "Connecting",
+          "reconnecting": "Reconnecting",
+          "stopped": "Stopped"
+        },
+        "turnOn": "Enable remote access",
+        "turnOff": "Stop relay",
+        "enableFailed": "Could not enable remote access: {{message}}",
+        "copyLink": "Copy phone access link",
+        "linkCopied": "Copied — open it in a phone browser to take over this machine",
+        "stats": "{{requests}} requests relayed · {{reconnects}} reconnects"
       }
     },
     "apiDocsLink": "API Documentation",

@@ -73,3 +73,12 @@ export async function cloudListDevices(token: string): Promise<CloudDevice[]> {
   const body = await cloudRequest<{ devices: CloudDevice[] }>('/api/devices', { method: 'GET', token });
   return body.devices ?? [];
 }
+
+/**
+ * Phone/browser URL that reaches this desktop through the cloud relay — the
+ * worker validates the device token and RelayDO proxies the entire web UI
+ * (HTTP + WS) to the home agent's outbound connection.
+ */
+export function cloudDeviceUrl(token: string): string {
+  return `${CLOUD_API_BASE}/?token=${encodeURIComponent(token)}`;
+}

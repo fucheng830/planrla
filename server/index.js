@@ -74,6 +74,7 @@ import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
 import { startSyncScheduler } from './modules/sync/sync.client.js';
+import { autostartRelay, relayRouter } from './modules/relay-client/index.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
 import { broadcastTaskUpdated } from './utils/kanban-websocket.js';
@@ -359,6 +360,9 @@ app.use('/api/providers', authenticateToken, providerRoutes);
 // Full-text session search (protected)
 app.use('/api/search', authenticateToken, searchRoutes);
 app.use('/api/sync', authenticateToken, syncRoutes);
+
+// Remote-access relay agent control (device token → outbound relay connection)
+app.use('/api/relay', authenticateToken, relayRouter);
 
 // Agent API Routes (uses API key authentication)
 app.use('/api/agent', agentRoutes);
@@ -2006,6 +2010,13 @@ async function startServer() {
 
             // Start the team-sync background loop (no-op if not configured yet).
             startSyncScheduler();
+
+            // Remote-access relay agent (no-op unless enabled in Settings → 远程访问).
+            try {
+                autostartRelay();
+            } catch (err) {
+                console.warn(`[relay] autostart failed: ${err?.message || err}`);
+            }
 
             // A2A LAN peer auto-discovery (UDP broadcast). Listens always;
             // announces itself only in LAN trust mode (Settings → A2A).

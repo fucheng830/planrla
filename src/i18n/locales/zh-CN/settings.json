@@ -524,7 +524,7 @@
       "defaultDeviceName": "Planrla 桌面端",
       "unnamedDevice": "未命名桌面端",
       "deviceTokenSuffix": "令牌 …{{suffix}}",
-      "relayStatusHint": "当前版本已完成账号登录和设备注册；完整中转链路还需要桌面端保持运行并接入中转服务。",
+      "relayStatusHint": "注册后本机会与 api.planrla.com 保持出站中继；在手机浏览器打开设备链接即可远程接管本机。",
       "dialogTitle": "远程访问",
       "signInTitle": "登录远程访问",
       "createTitle": "创建远程访问账号",
@@ -541,6 +541,20 @@
         "failed": "远程访问登录失败",
         "devicesFailed": "加载桌面端设备失败",
         "registerFailed": "注册桌面端设备失败"
+      },
+      "relay": {
+        "state": {
+          "online": "在线",
+          "connecting": "连接中",
+          "reconnecting": "重连中",
+          "stopped": "已停止"
+        },
+        "turnOn": "开启远程访问",
+        "turnOff": "停止中继",
+        "enableFailed": "开启远程访问失败：{{message}}",
+        "copyLink": "复制手机访问链接",
+        "linkCopied": "已复制，在手机浏览器打开即可接管本机",
+        "stats": "已中继 {{requests}} 个请求 · 重连 {{reconnects}} 次"
       }
     },
     "apiDocsLink": "API 文档",
