@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { cloudLogin as cloudLoginApi, cloudSignup as cloudSignupApi, cloudMe, type CloudUser } from '../../../utils/cloudApi';
+import { track } from '../../../utils/analytics';
 
 // Production (Electron): safeStorage via preload bridge. Dev (browser): localStorage fallback.
 const DEV_STORAGE_KEY = 'cloud-token';
@@ -81,8 +82,9 @@ export function CloudAccountProvider({ children }: { children: ReactNode }) {
       await saveCloudToken(tok);
       setToken(tok);
       setUser(u);
+      track('signup', { channel: 'cloud' });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'signup failed');
+      setError(e instanceof Error ? e.message : 'login failed');
       throw e;
     }
   }, []);

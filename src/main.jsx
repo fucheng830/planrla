@@ -3,10 +3,17 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import 'katex/dist/katex.min.css'
+
 import { measure } from './shared/perf/timing'
+import { isMobileViewport, isRelayOrigin, track } from './utils/analytics'
 
 // Initialize i18n
 import './i18n/config.js'
+
+// GTM T8 activation funnel denominator — counts every session start, including
+// phone browsers loaded through the relay (the W1 cohort).
+track('app_viewed', { mobile: isMobileViewport(), relay: isRelayOrigin() });
+if (isMobileViewport() || isRelayOrigin()) track('mobile_viewed', { relay: isRelayOrigin() });
 
 // Register service worker for PWA + Web Push support
 if ('serviceWorker' in navigator) {

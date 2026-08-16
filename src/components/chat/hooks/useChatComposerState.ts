@@ -23,6 +23,7 @@ import type {
 } from '../types/types';
 import type { Project, ProjectSession, LLMProvider, ProviderModelsCacheInfo } from '../../../types/app';
 import { escapeRegExp } from '../utils/chatFormatting';
+import { isMobileViewport, isRelayOrigin, track, trackRunStarted } from '../../../utils/analytics';
 
 import { useFileMentions } from './useFileMentions';
 import { useSessionReferences } from './useSessionReferences';
@@ -822,6 +823,7 @@ export function useChatComposerState({
       // One message shape for every provider. The backend resolves the
       // provider, project path, and provider-native resume id from the
       // session row; `options` only carries composer-level preferences.
+      trackRunStarted(provider, !targetSessionId);
       sendMessage({
         type: 'chat.send',
         sessionId: targetSessionId,
@@ -1085,6 +1087,11 @@ export function useChatComposerState({
       if (validIds.length === 0) {
         return;
       }
+
+      const fromMobile = isMobileViewport() || isRelayOrigin();
+      track(decision?.allow
+        ? (fromMobile ? 'approved_from_mobile' : 'approved')
+        : (fromMobile ? 'denied_from_mobile' : 'denied'), { relay: isRelayOrigin() });
 
       validIds.forEach((requestId) => {
         sendMessage({

@@ -10,6 +10,7 @@ import type { ProjectSession, LLMProvider } from '../../../types/app';
 import type { SessionStore, NormalizedMessage } from '../../../stores/useSessionStore';
 import { measure } from '../../../shared/perf/timing';
 import { batchBySession, type BatchEntry } from '../utils/batchBySession';
+import { isMobileViewport, isRelayOrigin, track } from '../../../utils/analytics';
 
 const isActionablePermissionRequest = (request: { toolName?: unknown } | null | undefined): boolean => {
   return request?.toolName !== 'ExitPlanMode' && request?.toolName !== 'exit_plan_mode';
@@ -387,6 +388,12 @@ export function useChatRealtimeHandlers({
           if (!msg.requestId) break;
           if (isActionablePermissionRequest({ toolName: msg.toolName })) {
             void playNotificationSound();
+            track('alert_triggered', {
+              toolName: typeof msg.toolName === 'string' ? msg.toolName : undefined,
+              provider: typeof msg.provider === 'string' ? msg.provider : undefined,
+              mobile: isMobileViewport(),
+              relay: isRelayOrigin(),
+            });
 
             // REQ-042: 权限请求系统通知（仅失焦时打扰，且通知带 reply/action 回调）
             if (typeof document !== 'undefined'
