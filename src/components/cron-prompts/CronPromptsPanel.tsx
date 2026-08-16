@@ -38,6 +38,59 @@ function describeCron(expr: string): string {
   return expr;
 }
 
+type ScheduleMode = 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
+
+const WEEKDAY_OPTIONS = [
+  { value: '1', label: '周一' },
+  { value: '2', label: '周二' },
+  { value: '3', label: '周三' },
+  { value: '4', label: '周四' },
+  { value: '5', label: '周五' },
+  { value: '6', label: '周六' },
+  { value: '0', label: '周日' },
+];
+
+/** 从 cron 表达式反解析出表单状态（无法识别时落入 custom）。 */
+function parseCron(expr: string): { mode: ScheduleMode; interval: string; minute: string; hour: string; weekday: string; dayOfMonth: string } {
+  const base = { mode: 'custom' as ScheduleMode, interval: '30', minute: '0', hour: '9', weekday: '1', dayOfMonth: '1' };
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return base;
+  const [min, hour, dom, mon, dow] = parts;
+  if (mon !== '*') return base;
+  let m;
+  if ((m = /^\*\/(\d+)$/.exec(min)) && hour === '*' && dom === '*' && dow === '*') {
+    return { ...base, mode: 'minutes', interval: m[1] };
+  }
+  if (/^\d+$/.test(min) && hour === '*' && dom === '*' && dow === '*') {
+    return { ...base, mode: 'hourly', minute: min };
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && dow === '*') {
+    return { ...base, mode: 'daily', minute: min, hour };
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && /^\d+(-\d+)?$/.test(dow)) {
+    return { ...base, mode: 'weekly', minute: min, hour, weekday: dow };
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && /^\d+$/.test(dom) && dow === '*') {
+    return { ...base, mode: 'monthly', minute: min, hour, dayOfMonth: dom };
+  }
+  return base;
+}
+
+/** 由表单状态生成 cron 表达式。 */
+function buildCron(state: { mode: ScheduleMode; interval: string; minute: string; hour: string; weekday: string; dayOfMonth: string }): string {
+  const pad = (v: string) => String(Math.max(0, Number(v) || 0));
+  switch (state.mode) {
+    case 'minutes': return `*/${pad(state.interval)} * * * *`;
+    case 'hourly': return `${pad(state.minute)} * * * *`;
+    case 'daily': return `${pad(state.minute)} ${pad(state.hour)} * * *`;
+    case 'weekly': return `${pad(state.minute)} ${pad(state.hour)} * * ${state.weekday}`;
+    case 'monthly': return `${pad(state.minute)} ${pad(state.hour)} ${pad(state.dayOfMonth)} * *`;
+    default: return state.interval; // custom: interval 字段复用为原始表达式载体
+  }
+}
+
+type ScheduleState = ReturnType<typeof parseCron>;
+
 function formatLastRun(iso: string | null): string {
   if (!iso) return '从未运行';
   const ms = Date.now() - Date.parse(iso);
@@ -50,6 +103,17 @@ function formatLastRun(iso: string | null): string {
   return `${Math.floor(hours / 24)} 天前`;
 }
 
+const MODE_LABELS: Record<ScheduleMode, string> = {
+  minutes: '每隔几分钟',
+  hourly: '每小时',
+  daily: '每天',
+  weekly: '每周',
+  monthly: '每月',
+  custom: '自定义 Cron',
+};
+
+const inputClass = 'h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary';
+
 export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
   const [tasks, setTasks] = useState<CronPromptTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +121,9 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<CronPromptTask | null>(null);
-  const [form, setForm] = useState({ name: '', cronExpression: '0 9 * * *', prompt: '', provider: 'claude', projectPath: '' });
+  const [form, setForm] = useState({ name: '', prompt: '', provider: 'claude', projectPath: '' });
+  const [schedule, setSchedule] = useState<ScheduleState>({ mode: 'daily', interval: '30', minute: '0', hour: '9', weekday: '1', dayOfMonth: '1' });
+  const [customCron, setCustomCron] = useState('0 9 * * *');
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -79,21 +145,22 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
 
   useEffect(() => { void load(); }, [load]);
 
+  const cronExpression = schedule.mode === 'custom' ? customCron : buildCron(schedule);
+
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', cronExpression: '0 9 * * *', prompt: '', provider: 'claude', projectPath: '' });
+    setForm({ name: '', prompt: '', provider: 'claude', projectPath: '' });
+    setSchedule({ mode: 'daily', interval: '30', minute: '0', hour: '9', weekday: '1', dayOfMonth: '1' });
+    setCustomCron('0 9 * * *');
     setEditorOpen(true);
   };
 
   const openEdit = (task: CronPromptTask) => {
     setEditing(task);
-    setForm({
-      name: task.name,
-      cronExpression: task.cronExpression,
-      prompt: task.prompt,
-      provider: task.provider,
-      projectPath: task.projectPath,
-    });
+    setForm({ name: task.name, prompt: task.prompt, provider: task.provider, projectPath: task.projectPath });
+    const parsed = parseCron(task.cronExpression);
+    setSchedule(parsed);
+    setCustomCron(task.cronExpression);
     setEditorOpen(true);
   };
 
@@ -103,7 +170,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
       const res = await authenticatedFetch(editing ? `/api/cron-prompts/${editing.id}` : '/api/cron-prompts', {
         method: editing ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, cronExpression }),
       });
       if (!res.ok) throw new Error(await res.text());
       setEditorOpen(false);
@@ -183,7 +250,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
             <Clock className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium text-foreground">还没有定时任务</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              按 cron 表达式定时让智能体执行 prompt,每次运行生成一个新会话。
+              按计划定时让智能体执行 prompt,每次运行生成一个新会话。
             </p>
           </div>
         ) : (
@@ -276,7 +343,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
       {editorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditorOpen(false)}>
           <div
-            className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl"
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="mb-4 text-sm font-semibold text-foreground">
@@ -289,20 +356,106 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="如:全网热点监控"
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className={inputClass}
                 />
               </div>
+
+              {/* 频率选择器:自动生成 cron,无需手写表达式 */}
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  cron 表达式 <span className="text-muted-foreground/60">({describeCron(form.cronExpression)})</span>
-                </label>
-                <input
-                  value={form.cronExpression}
-                  onChange={(e) => setForm({ ...form, cronExpression: e.target.value })}
-                  placeholder="0 9 * * *"
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                />
+                <label className="mb-1 block text-xs text-muted-foreground">执行频率</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(MODE_LABELS) as ScheduleMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setSchedule({ ...schedule, mode })}
+                      className={cn(
+                        'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                        schedule.mode === mode
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/60',
+                      )}
+                    >
+                      {MODE_LABELS[mode]}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                  {schedule.mode === 'minutes' && (
+                    <>
+                      <span className="text-xs text-muted-foreground">每</span>
+                      <input
+                        type="number" min={1} max={59}
+                        value={schedule.interval}
+                        onChange={(e) => setSchedule({ ...schedule, interval: e.target.value })}
+                        className="h-8 w-20 rounded-md border border-border bg-background px-2"
+                      />
+                      <span className="text-xs text-muted-foreground">分钟执行一次</span>
+                    </>
+                  )}
+                  {schedule.mode === 'hourly' && (
+                    <>
+                      <span className="text-xs text-muted-foreground">每小时的第</span>
+                      <input
+                        type="number" min={0} max={59}
+                        value={schedule.minute}
+                        onChange={(e) => setSchedule({ ...schedule, minute: e.target.value })}
+                        className="h-8 w-20 rounded-md border border-border bg-background px-2"
+                      />
+                      <span className="text-xs text-muted-foreground">分钟执行</span>
+                    </>
+                  )}
+                  {(schedule.mode === 'daily' || schedule.mode === 'weekly' || schedule.mode === 'monthly') && (
+                    <>
+                      {schedule.mode === 'weekly' && (
+                        <select
+                          value={schedule.weekday}
+                          onChange={(e) => setSchedule({ ...schedule, weekday: e.target.value })}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+                        >
+                          {WEEKDAY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      )}
+                      {schedule.mode === 'monthly' && (
+                        <>
+                          <span className="text-xs text-muted-foreground">每月</span>
+                          <input
+                            type="number" min={1} max={31}
+                            value={schedule.dayOfMonth}
+                            onChange={(e) => setSchedule({ ...schedule, dayOfMonth: e.target.value })}
+                            className="h-8 w-20 rounded-md border border-border bg-background px-2"
+                          />
+                          <span className="text-xs text-muted-foreground">日</span>
+                        </>
+                      )}
+                      <input
+                        type="time"
+                        value={`${String(Math.min(23, Number(schedule.hour) || 0)).padStart(2, '0')}:${String(Math.min(59, Number(schedule.minute) || 0)).padStart(2, '0')}`}
+                        onChange={(e) => {
+                          const [h, m] = e.target.value.split(':');
+                          setSchedule({ ...schedule, hour: h ?? '9', minute: m ?? '0' });
+                        }}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+                      />
+                      <span className="text-xs text-muted-foreground">执行</span>
+                    </>
+                  )}
+                  {schedule.mode === 'custom' && (
+                    <input
+                      value={customCron}
+                      onChange={(e) => setCustomCron(e.target.value)}
+                      placeholder="分 时 日 月 周,如 0 9 * * 1-5"
+                      className="h-8 flex-1 rounded-md border border-border bg-background px-2 font-mono text-xs"
+                    />
+                  )}
+                </div>
+
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <span className="font-mono">{cronExpression}</span> · {describeCron(cronExpression)}
+                </p>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs text-muted-foreground">智能体</label>
