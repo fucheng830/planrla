@@ -78,14 +78,16 @@ export class ZcodeSessionsProvider implements IProviderSessions {
     if (!raw) return [];
 
     // Shape 3: full message row (from session/messages, or replayed by wrapper).
+    // Transcript noise (injected reminders, tool-call echo blocks) is stripped
+    // for BOTH roles — a message reduced to empty was pure noise.
     const info = readObjectRecord(raw.info);
     if (info && Array.isArray(raw.parts)) {
       const role = readOptionalString(info.role);
       const timestamp = normalizeProviderTimestamp(readObjectRecord(info.time)?.created ?? info.time);
       const messageId = readOptionalString(info.id) ?? generateMessageId(PROVIDER);
-      const content = extractPartsText(raw.parts);
+      const content = stripInjectedBlocks(extractPartsText(raw.parts));
       if (role === 'assistant') {
-        if (!content.trim()) return [];
+        if (!content) return [];
         return [createNormalizedMessage({
           id: messageId,
           sessionId,
@@ -96,7 +98,7 @@ export class ZcodeSessionsProvider implements IProviderSessions {
           content,
         })];
       }
-      if (role === 'user' && content.trim()) {
+      if (role === 'user' && content) {
         return [createNormalizedMessage({
           id: messageId,
           sessionId,
@@ -260,9 +262,12 @@ export class ZcodeSessionsProvider implements IProviderSessions {
           .join('')
           .trim();
 
-        // User-role messages can carry injected preambles (system-reminder
-        // context etc.); strip them so history shows the human text only.
-        const content = role === 'user' ? stripInjectedBlocks(text) : text;
+        // Both roles can carry transcript noise the CLI writes as plain text:
+        // user messages get injected preambles (system-reminder context,
+        // TodoWrite nudges), assistant messages carry tool-invocation echo
+        // blocks (🌐 header + json fence). stripInjectedBlocks removes both
+        // kinds; a message reduced to empty was pure noise.
+        const content = stripInjectedBlocks(text);
         if (!content) continue;
 
         normalized.push(createNormalizedMessage({
@@ -357,8 +362,9 @@ export class ZcodeSessionsProvider implements IProviderSessions {
       for (const raw of messages) {
         const msg = readObjectRecord(raw);
         if (readOptionalString(msg?.role) === 'user') {
-          const content = typeof msg?.content === 'string' ? msg.content : extractContentBlocksText(msg?.content);
-          if (content.trim()) {
+          const raw = typeof msg?.content === 'string' ? msg.content : extractContentBlocksText(msg?.content);
+          const content = stripInjectedBlocks(raw);
+          if (content) {
             normalized.push(createNormalizedMessage({
               id: generateMessageId(PROVIDER),
               sessionId,
@@ -372,10 +378,11 @@ export class ZcodeSessionsProvider implements IProviderSessions {
         }
       }
 
-      // The assistant response.
+      // The assistant response (echo noise like tool-call JSON blocks is
+      // stripped the same way as in the CLI-DB path).
       const response = readObjectRecord(entry.response);
-      const assistantText = extractResponseText(response);
-      if (assistantText.trim()) {
+      const assistantText = stripInjectedBlocks(extractResponseText(response));
+      if (assistantText) {
         normalized.push(createNormalizedMessage({
           id: generateMessageId(PROVIDER),
           sessionId,

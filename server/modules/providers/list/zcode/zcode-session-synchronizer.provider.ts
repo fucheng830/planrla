@@ -40,6 +40,37 @@ const INJECTED_LINE_PREFIXES = [
 ];
 
 /**
+ * Plain-text reminders the CLI stores as user/assistant messages WITHOUT any
+ * XML wrapper (e.g. the TodoWrite nudge, which also embeds the todo list).
+ * A message whose remaining text STARTS with one of these is pure injected
+ * noise → drop the whole message.
+ */
+const INJECTED_MESSAGE_PREFIXES = [
+  'The TodoWrite tool hasn\u2019t been used',
+  "The TodoWrite tool hasn't been used",
+  'The existing contents of the todo list are',
+];
+
+/**
+ * The CLI echoes every tool invocation into the transcript as a text block:
+ *   **🌐 Z.ai Built-in Tool: analyze_image**
+ *   **输入：**
+ *   ```json
+ *   {"imageSource":"…","prompt":"…"}
+ *   ```
+ * The GUI renders these as compact cards; raw text walls of JSON read as
+ * garbage in planrla (especially mobile). Strip the whole segment, plus any
+ * leftover standalone echo lines (partial blocks, "*Executing on server…*").
+ */
+const TOOL_ECHO_BLOCK_RE = /[^\n]*🌐[^\n]*\n+(?:[ \t]*\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}[ \t]*\n+)?```(?:json)?\n[\s\S]*?\n```[ \t]*/g;
+const TOOL_ECHO_LINE_RES: RegExp[] = [
+  /^[ \t]*\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}[ \t]*$/,
+  /^[ \t]*\*{0,2}(?:服务器端|server[ _-]*)?(?:执行中|Executing on server)[….]*\*{0,2}[ \t]*$/,
+  /^[ \t]*\*{0,2}(?:输出|Output)\s*[：:]\s*\*{0,2}[ \t]*$/,
+  /^[ \t]*\*{0,2}[A-Za-z_.]*result_summary:?\*{0,2}/,
+];
+
+/**
  * Removes injected wrapper blocks from a message text. Returns the remaining
  * human text, or an empty string when the message is entirely injected
  * content (→ caller should try the next user message).
@@ -53,10 +84,24 @@ export function stripInjectedBlocks(text: string): string {
     );
     remaining = remaining.replace(pattern, '');
   }
+
+  // Tool-invocation echo segments (assistant text mostly, but harmless for
+  // any role — removal only).
+  remaining = remaining.replace(TOOL_ECHO_BLOCK_RE, '\n');
+
   const lines = remaining
     .split('\n')
-    .filter((line) => !INJECTED_LINE_PREFIXES.some((prefix) => line.trim().startsWith(prefix)));
-  return lines.join('\n').trim();
+    .filter((line) => !INJECTED_LINE_PREFIXES.some((prefix) => line.trim().startsWith(prefix)))
+    .filter((line) => !TOOL_ECHO_LINE_RES.some((re) => re.test(line)));
+  const joined = lines.join('\n').trim();
+
+  // Whole-message injected reminders (TodoWrite nudge + todo dump): after all
+  // stripping, if what remains still starts with a known reminder opener the
+  // message is pure noise.
+  if (INJECTED_MESSAGE_PREFIXES.some((prefix) => joined.startsWith(prefix))) {
+    return '';
+  }
+  return joined;
 }
 
 /** True when a stored title was derived from injected content (repairable). */
