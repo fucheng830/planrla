@@ -46,7 +46,7 @@ export const STATIC_FALLBACK: FeedEntry = {
   version: 'v0.2.0',
   title: 'v0.2.0 — 桌面端三态主题',
   body: '桌面端外观设置新增 system / light / dark 三态主题切换。\n\n- feat(theme): theme mode pure fns (system/light/dark)\n- feat(theme): three-state theme context\n- feat(theme): theme mode selector control\n- feat(theme): appearance tab + i18n (11 locales)',
-  htmlUrl: 'https://github.com/fucheng830/planrla/releases/tag/v0.2.0',
+  htmlUrl: 'https://updates.planrla.com/desktop',
   publishedAt: '2026-07-02T10:43:00Z',
 };
 
@@ -72,4 +72,52 @@ export async function fetchReleases(token?: string): Promise<FeedEntry[]> {
     console.warn(`[releases] fetch failed (${(e as Error).message}), using static fallback`);
     return [STATIC_FALLBACK];
   }
+}
+
+// ---------------------------------------------------------------------------
+// 本地发版录数据源（主用）。仓库为私有,GitHub Releases API 对外 404、v0.10.0 起
+// 也不再打 tag——而 docs/process/releases/*.md 每版必写。构建时直接读本地文件,
+// 无网络依赖、不依赖 token。fetchReleases 保留作公开仓库后的备用通道。
+// ---------------------------------------------------------------------------
+
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const RELEASES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../docs/process/releases');
+
+function compareSemverDesc(a: string, b: string): number {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0);
+  }
+  return 0;
+}
+
+/** 读取 docs/process/releases/*.md,解析 主题/日期 头字段,按版本倒序。 */
+export function readLocalReleases(): FeedEntry[] {
+  let files: string[];
+  try {
+    files = readdirSync(RELEASES_DIR);
+  } catch {
+    return [];
+  }
+  const entries: FeedEntry[] = [];
+  for (const file of files) {
+    const m = /^v(\d+)\.(\d+)\.(\d+)\.md$/.exec(file);
+    if (!m) continue;
+    const raw = readFileSync(join(RELEASES_DIR, file), 'utf8');
+    const title = raw.match(/\*\*主题\*\*[:：]\s*(.+)/)?.[1]?.trim() ?? '';
+    const date = raw.match(/\*\*日期\*\*[:：]\s*(\d{4}-\d{2}-\d{2})/)?.[1];
+    entries.push({
+      version: `v${m[1]}.${m[2]}.${m[3]}`,
+      title,
+      body: raw,
+      htmlUrl: 'https://updates.planrla.com/desktop',
+      publishedAt: date ? `${date}T00:00:00Z` : '',
+    });
+  }
+  entries.sort((a, b) => compareSemverDesc(a.version, b.version));
+  return entries;
 }

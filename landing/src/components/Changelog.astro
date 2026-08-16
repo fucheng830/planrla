@@ -1,13 +1,14 @@
 ---
-import { fetchReleases } from '../data/releases.ts';
-// build 时拉取（fetch 失败走 STATIC_FALLBACK，不挂构建）
-const entries = (await fetchReleases(process.env.GITHUB_TOKEN)).slice(0, 5);
+import { readLocalReleases, STATIC_FALLBACK } from '../data/releases.ts';
+// build 时读仓库本地发版录 docs/process/releases/*.md(私有仓库,GitHub API 404)
+const entries = readLocalReleases().slice(0, 6);
+if (entries.length === 0) entries.push(STATIC_FALLBACK);
 const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';
 ---
 <section id="changelog" class="section">
   <div class="container">
     <h2 class="section-title">更新日志</h2>
-    <p class="section-subtitle">来自 GitHub Releases</p>
+    <p class="section-subtitle">每个版本一份发版录,持续更新</p>
     {entries.length === 0 ? (
       <p class="empty">暂无发布记录</p>
     ) : (
@@ -18,12 +19,12 @@ const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('zh-CN',
               <span class="log-version">{e.version}</span>
               <span class="log-date">{fmtDate(e.publishedAt)}</span>
             </div>
-            <a class="log-title" href={e.htmlUrl} target="_blank" rel="noopener">{e.title}</a>
+            <span class="log-title">{e.title}</span>
           </li>
         ))}
       </ul>
     )}
-    <p class="log-more"><a href="https://github.com/fucheng830/planrla/releases">查看全部版本 →</a></p>
+    <p class="log-more">桌面端会在应用内提示新版本,也可在设置里手动检查更新。</p>
   </div>
 </section>
 
