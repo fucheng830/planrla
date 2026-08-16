@@ -82,3 +82,20 @@ export async function cloudListDevices(token: string): Promise<CloudDevice[]> {
 export function cloudDeviceUrl(token: string): string {
   return `${CLOUD_API_BASE}/?token=${encodeURIComponent(token)}`;
 }
+
+export interface CloudUsageCounters {
+  minutes: number;
+  httpRequests: number;
+  wsFrames: number;
+  connectedNow?: boolean;
+}
+
+export interface CloudUsage {
+  devices: Array<{ id: string; name: string; usage: CloudUsageCounters }>;
+  total: CloudUsageCounters;
+}
+
+/** Aggregated relay usage for the account (GTM T7 — the future paywall meter). */
+export async function cloudUsage(token: string): Promise<CloudUsage> {
+  return cloudRequest<CloudUsage>('/api/usage', { method: 'GET', token });
+}

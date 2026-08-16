@@ -574,7 +574,8 @@
         "enableFailed": "Could not enable remote access: {{message}}",
         "copyLink": "Copy phone access link",
         "linkCopied": "Copied — open it in a phone browser to take over this machine",
-        "stats": "{{requests}} requests relayed · {{reconnects}} reconnects"
+        "stats": "{{requests}} requests relayed · {{reconnects}} reconnects",
+        "cloudUsage": "Cloud metering: {{minutes}} min · {{requests}} requests (all-time)"
       }
     },
     "apiDocsLink": "API Documentation",

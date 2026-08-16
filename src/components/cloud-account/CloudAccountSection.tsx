@@ -8,7 +8,9 @@ import {
   cloudDeviceUrl,
   cloudListDevices,
   cloudRegisterDevice,
+  cloudUsage,
   type CloudDevice,
+  type CloudUsage,
 } from '../../utils/cloudApi';
 import CloudLoginModal from './CloudLoginModal';
 import { useCloudAccount } from './context/CloudAccountContext';
@@ -51,6 +53,7 @@ export default function CloudAccountSection() {
   const [relay, setRelay] = useState<RelayStatus | null>(null);
   const [relayBusy, setRelayBusy] = useState(false);
   const [relayError, setRelayError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<CloudUsage | null>(null);
   const [copiedDeviceId, setCopiedDeviceId] = useState<string | null>(null);
   const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,6 +94,29 @@ export default function CloudAccountSection() {
     const timer = setInterval(() => void loadRelay(), RELAY_POLL_MS);
     return () => clearInterval(timer);
   }, [loadRelay]);
+
+  // Cloud-side metering (authoritative for the future paywall) — slower poll.
+  useEffect(() => {
+    if (!token) {
+      setUsage(null);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const u = await cloudUsage(token);
+        if (!cancelled) setUsage(u);
+      } catch {
+        // usage endpoint not deployed yet or transient — silent
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [token]);
 
   useEffect(() => () => {
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
@@ -215,6 +241,14 @@ export default function CloudAccountSection() {
                     {t('apiKeys.remoteAccess.relay.stats', {
                       requests: relay.stats.httpRequests,
                       reconnects: relay.stats.reconnects,
+                    })}
+                  </span>
+                )}
+                {usage && (usage.total.minutes > 0 || usage.total.httpRequests > 0) && (
+                  <span className="text-muted-foreground">
+                    {t('apiKeys.remoteAccess.relay.cloudUsage', {
+                      minutes: usage.total.minutes,
+                      requests: usage.total.httpRequests,
                     })}
                   </span>
                 )}

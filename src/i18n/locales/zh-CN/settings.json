@@ -554,7 +554,8 @@
         "enableFailed": "开启远程访问失败：{{message}}",
         "copyLink": "复制手机访问链接",
         "linkCopied": "已复制，在手机浏览器打开即可接管本机",
-        "stats": "已中继 {{requests}} 个请求 · 重连 {{reconnects}} 次"
+        "stats": "已中继 {{requests}} 个请求 · 重连 {{reconnects}} 次",
+        "cloudUsage": "云端累计:{{minutes}} 分钟 · {{requests}} 次请求"
       }
     },
     "apiDocsLink": "API 文档",
