@@ -63,6 +63,11 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
   const load = useCallback(async () => {
     try {
       const res = await authenticatedFetch('/api/cron-prompts');
+      if (!res.ok) {
+        // Guard before parsing: a mid-restart backend can answer with the
+        // SPA's HTML, and res.json() would throw a cryptic parse error.
+        throw new Error(`加载定时任务失败 (HTTP ${res.status})`);
+      }
       const body = await res.json() as { data?: CronPromptTask[] };
       if (body.data) setTasks(body.data);
     } catch (e) {
