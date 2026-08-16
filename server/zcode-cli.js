@@ -13,12 +13,16 @@
 //   * Conversation: session/create {workspace} OR session/resume {sessionId}
 //                   -> server asks session/requestRuntimePreferences (must reply
 //                      {nativeSearchEnhancementsEnabled:boolean})
+//                   -> v4/conversation/subscribe {topic:"conversation/<id>",
+//                      connectionId:<client-generated>, clientMode:"desktop-continuous"}
+//                      -> live frames arrive as v4/conversation/frame notifications
+//                      whose payload.deltas carry row.delta {path:"text", append}
+//                      for true streaming text (assistantText rows), plus
+//                      reasoning rows and toolCall rows.
 //                   -> session/send {sessionId, content} returns ack immediately
-//                   -> assistant output streams as v4/telemetry/event
-//                      notifications (metadata only; stream.chunk has chunkLength
-//                      but no text). turn.terminal marks the end.
-//                   -> session/messages {sessionId} returns the full message
-//                      list including the assistant's text parts.
+//                   -> telemetry events are metadata-only (turn.terminal = end);
+//                      session/messages returns the full message list as a
+//                      non-streaming fallback.
 
 import { spawn } from 'child_process';
 import fsSync from 'node:fs';
@@ -248,6 +252,15 @@ export async function spawnZcode(command, options, writer) {
   let completeSent = false;
   let turnTerminalSeen = false;
 
+  // ----- v4 conversation streaming state -----
+  // subscribe -> row deltas give true streaming text (telemetry stream.chunk
+  // carries no content; see the protocol notes at the top of this file).
+  const v4ConnectionId = `conn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  let v4Subscription = null; // { subscriptionId }
+  const rowKinds = new Map(); // rowId -> row.kind (assistantText | reasoning | toolCall | ...)
+  const reasoningBuf = new Map(); // reasoning rowId -> accumulated delta text
+  let streamedAssistantText = false; // any assistant text delta was emitted
+
   const sendComplete = (exitCode) => {
     if (completeSent) return;
     completeSent = true;
@@ -256,6 +269,15 @@ export async function spawnZcode(command, options, writer) {
 
   const cleanup = () => {
     activeZcodeProcesses.delete(zcodeSessionId);
+    // Best-effort unsubscribe before teardown (ignored if the child is gone).
+    if (v4Subscription && zcodeSessionId) {
+      try {
+        child.stdin.write(JSON.stringify({
+          method: 'v4/conversation/unsubscribe',
+          params: { topic: `conversation/${zcodeSessionId}`, subscriptionId: v4Subscription.subscriptionId, connectionId: v4ConnectionId },
+        }) + '\n');
+      } catch { /* stdin already closed */ }
+    }
     try { child.kill(); } catch { /* already dead */ }
   };
 
@@ -367,6 +389,17 @@ export async function spawnZcode(command, options, writer) {
 
     // Notification (method, no id).
     if (msg.method && msg.id === undefined) {
+      // v4 conversation frames carry the actual streaming content.
+      if (msg.method === 'v4/conversation/frame') {
+        handleV4Frame(msg.params);
+        const flatFrame = JSON.stringify(msg);
+        if (flatFrame.includes('"state":"completedSuccess"')) {
+          // Turn-level completion also shows up as a row upsert; do not rely
+          // on it alone — telemetry turn.terminal below is the primary signal.
+        }
+        return;
+      }
+
       // Normalize and forward to the UI.
       const normalized = sessionsService.normalizeMessage(PROVIDER, msg.params || msg, zcodeSessionId);
       for (const m of normalized) writer.send(m);
@@ -378,6 +411,85 @@ export async function spawnZcode(command, options, writer) {
         turnTerminalSeen = true;
       }
       return;
+    }
+  }
+
+  /**
+   * Converts one v4/conversation/frame notification into normalized messages.
+   * Verified wire shape (zcode 0.16.x):
+   *   { frame: { payload: { kind: 'deltas', deltas: [
+   *       { op: 'row.appended'|'row.upserted', row: { rowId, kind, state, ... } },
+   *       { op: 'row.delta', rowId, path: 'text', append },
+   *   ] } } }
+   * Row kinds we care about: assistantText (state streaming→complete),
+   * reasoning (same), toolCall (status success/error/...).
+   */
+  function handleV4Frame(params) {
+    const payload = params?.frame?.payload;
+    if (!payload || payload.kind !== 'deltas' || !Array.isArray(payload.deltas)) return; // snapshot frames carry no live stream
+
+    for (const d of payload.deltas) {
+      try {
+        if (d.op === 'row.appended' || d.op === 'row.upserted') {
+          const row = d.row;
+          if (!row || typeof row.rowId !== 'number') continue;
+          rowKinds.set(row.rowId, row.kind);
+
+          if (row.kind === 'reasoning' && row.state === 'complete') {
+            const text = reasoningBuf.get(row.rowId) ?? (typeof row.text === 'string' ? row.text : '');
+            reasoningBuf.delete(row.rowId);
+            if (text.trim()) {
+              writer.send(createNormalizedMessage({
+                id: `zcode-reasoning-${row.rowId}`,
+                sessionId: zcodeSessionId,
+                timestamp: new Date().toISOString(),
+                provider: PROVIDER,
+                kind: 'thinking',
+                content: text,
+              }));
+            }
+            continue;
+          }
+
+          if (row.kind === 'toolCall' && row.status && row.status !== 'inputStreaming' && row.status !== 'pendingApproval' && row.status !== 'running') {
+            const toolId = row.toolCallId ?? `zcode-tool-${row.rowId}`;
+            writer.send(createNormalizedMessage({
+              id: toolId,
+              sessionId: zcodeSessionId,
+              timestamp: new Date().toISOString(),
+              provider: PROVIDER,
+              kind: 'tool_use',
+              toolName: row.toolName ?? 'Tool',
+              toolInput: row.input ?? (typeof row.inputText === 'string' ? row.inputText : {}),
+              toolId,
+              ...(row.output !== undefined && row.output !== null
+                ? { toolResult: { content: typeof row.output === 'string' ? row.output : JSON.stringify(row.output), isError: row.status === 'error' } }
+                : {}),
+            }));
+            continue;
+          }
+          continue;
+        }
+
+        if (d.op === 'row.delta' && d.path === 'text' && typeof d.append === 'string') {
+          const kind = rowKinds.get(d.rowId);
+          if (kind === 'assistantText') {
+            streamedAssistantText = true;
+            writer.send(createNormalizedMessage({
+              id: `zcode-delta-${d.rowId}`,
+              sessionId: zcodeSessionId,
+              timestamp: new Date().toISOString(),
+              provider: PROVIDER,
+              kind: 'stream_delta',
+              content: d.append,
+            }));
+          } else if (kind === 'reasoning') {
+            reasoningBuf.set(d.rowId, (reasoningBuf.get(d.rowId) ?? '') + d.append);
+          }
+        }
+      } catch {
+        // A malformed delta must never break the stream loop.
+      }
     }
   }
 
@@ -407,6 +519,25 @@ export async function spawnZcode(command, options, writer) {
     }
     if (!zcodeSessionId) {
       throw new Error('ZCode did not return a sessionId');
+    }
+
+    // 1.5. Subscribe to the v4 conversation stream BEFORE sending the prompt so
+    // early deltas (userInput echo, reasoning, first text chunks) are captured.
+    // clientMode "desktop-continuous" keeps all delta paths enabled (the
+    // "web-remote-replayable" profile drops everything but bare text).
+    try {
+      const subRes = await request(child, ++msgId, 'v4/conversation/subscribe', {
+        topic: `conversation/${zcodeSessionId}`,
+        connectionId: v4ConnectionId,
+        clientMode: 'desktop-continuous',
+      }, writer);
+      if (subRes?.result?.ack?.subscriptionId) {
+        v4Subscription = subRes.result.ack;
+      } else {
+        console.warn('[zcode] v4 subscribe failed, falling back to non-streaming:', JSON.stringify(subRes?.error ?? subRes).slice(0, 200));
+      }
+    } catch (subError) {
+      console.warn('[zcode] v4 subscribe error, falling back to non-streaming:', subError?.message ?? subError);
     }
 
     // 2. Resolve the model. resolveResumeModel returns the model the user
@@ -454,19 +585,34 @@ export async function spawnZcode(command, options, writer) {
     }
 
     // 5. Pull the full message list and surface the assistant reply.
+    // When the v4 stream delivered the text live, the assistant's full-text
+    // message is SKIPPED — clients accumulate stream_delta, and appending the
+    // whole text again would duplicate it on clients with append semantics.
     try {
       const messagesRes = await request(child, ++msgId, 'session/messages', { sessionId: zcodeSessionId }, writer);
       if (messagesRes.result && Array.isArray(messagesRes.result.messages)) {
-        // Forward the latest assistant message(s) so the UI has the actual text.
         const messages = messagesRes.result.messages;
-        // Replay all messages as history so the UI shows the full conversation.
         for (const message of messages) {
           const normalized = sessionsService.normalizeMessage(PROVIDER, message, zcodeSessionId);
-          for (const m of normalized) writer.send(m);
+          for (const m of normalized) {
+            if (streamedAssistantText && m.kind === 'text' && m.role === 'assistant') continue;
+            writer.send(m);
+          }
         }
       }
     } catch {
       // session/messages is best-effort; turn.terminal already signalled completion.
+    }
+
+    if (streamedAssistantText) {
+      // Finalize the streamed bubble (clients mark the last assistant done).
+      writer.send(createNormalizedMessage({
+        id: `zcode-stream-end-${Date.now()}`,
+        sessionId: zcodeSessionId,
+        timestamp: new Date().toISOString(),
+        provider: PROVIDER,
+        kind: 'stream_end',
+      }));
     }
 
     sendComplete(0);

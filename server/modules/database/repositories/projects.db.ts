@@ -25,11 +25,14 @@ export const projectsDb = {
         // one project into two sidebar entries. Reuse the existing row's
         // casing whenever it matches case-insensitively.
         if (/^[a-zA-Z]:[\\/]/.test(normalizedProjectPath)) {
+            // NOTE: `rowid` (insertion order) stands in for creation time — the
+            // projects table has no created_at column, and a bare `created_at`
+            // here resolves against projects and throws "no such column".
             const canonical = db.prepare(`
                 SELECT project_path FROM projects
                 WHERE LOWER(project_path) = LOWER(?)
                 ORDER BY (SELECT COUNT(*) FROM sessions WHERE sessions.project_path = projects.project_path) DESC,
-                         created_at ASC
+                         rowid ASC
                 LIMIT 1
             `).get(normalizedProjectPath) as { project_path: string } | undefined;
             if (canonical?.project_path) {
