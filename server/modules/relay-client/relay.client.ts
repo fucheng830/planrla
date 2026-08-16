@@ -51,12 +51,13 @@ const MAX_BODY_BYTES = 32 * 1024 * 1024;
 
 const utf8Strict = new TextDecoder('utf-8', { fatal: true });
 
-/** Drops the relay `token=…` query param so it never reaches the local server. */
+/** Drops the relay credential query params (`token` / `_relay`) so they never reach the local server. */
 function stripRelayToken(path: string): string {
   const q = path.indexOf('?');
   if (q === -1) return path;
   const params = new URLSearchParams(path.slice(q + 1));
   params.delete('token');
+  params.delete('_relay');
   const qs = params.toString();
   return qs ? `${path.slice(0, q)}?${qs}` : path.slice(0, q);
 }
@@ -238,10 +239,15 @@ export class RelayAgent {
     if (localToken) headers.Authorization = `Bearer ${localToken}`;
 
     try {
+      // Binary request bodies (uploads) arrive base64-encoded with binary: true.
+      let reqBody: Uint8Array | string | undefined;
+      if (msg.body !== undefined) {
+        reqBody = msg.binary ? new Uint8Array(Buffer.from(String(msg.body), 'base64')) : String(msg.body);
+      }
       const res = await fetch(`${this.opts.localHttpBase}${path}`, {
         method: msg.method ?? 'GET',
         headers,
-        body: msg.body !== undefined ? String(msg.body) : undefined,
+        body: reqBody,
       });
       const buf = Buffer.from(await res.arrayBuffer());
       if (buf.byteLength > MAX_BODY_BYTES) {
@@ -255,14 +261,15 @@ export class RelayAgent {
         resHeaders[k] = v;
       });
       let body: string;
+      let binary = false;
       try {
         body = utf8Strict.decode(buf);
       } catch {
         body = buf.toString('base64');
-        resHeaders['X-Relay-Binary'] = '1';
+        binary = true;
       }
       this.stats.httpRequests += 1;
-      this.send({ kind: 'http_res', streamId, status: res.status, headers: resHeaders, body });
+      this.send({ kind: 'http_res', streamId, status: res.status, headers: resHeaders, body, ...(binary ? { binary: true } : {}) });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       this.send({ kind: 'http_res', streamId, status: 502, headers: {}, body: `agent error: ${message}` });

@@ -89,6 +89,15 @@ function startLocal(): Promise<LocalStack> {
       res.end(Buffer.from([0xff, 0xfe, 0x00, 0x81]));
       return;
     }
+    if (url.pathname === '/api/echo' && req.method === 'POST') {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk) => chunks.push(chunk as Buffer));
+      req.on('end', () => {
+        res.setHeader('content-type', 'application/octet-stream');
+        res.end(Buffer.concat(chunks));
+      });
+      return;
+    }
     res.statusCode = 404;
     res.end('not found');
   });
@@ -163,7 +172,7 @@ test('http_req is forwarded with local auth, relay token stripped, body decoded'
   }
 });
 
-test('non-UTF8 HTTP body is base64-encoded with X-Relay-Binary', async () => {
+test('non-UTF8 HTTP response is base64-encoded with binary flag', async () => {
   const cloud = new FakeCloud();
   const local = await startLocal();
   const agent = makeAgent(cloud, local);
@@ -173,8 +182,36 @@ test('non-UTF8 HTTP body is base64-encoded with X-Relay-Binary', async () => {
     cloud.send({ kind: 'http_req', streamId: '2', method: 'GET', path: '/api/binary' });
     const res = await cloud.waitFor((m) => m.kind === 'http_res' && m.streamId === '2');
     assert.equal(res.status, 200);
-    assert.equal(res.headers['X-Relay-Binary'], '1');
+    assert.equal(res.binary, true);
     assert.equal(Buffer.from(res.body as string, 'base64').toString('hex'), 'fffe0081');
+  } finally {
+    agent.stop();
+    await local.close();
+    await cloud.close();
+  }
+});
+
+test('binary request body (base64 + flag) round-trips through the local server', async () => {
+  const cloud = new FakeCloud();
+  const local = await startLocal();
+  const agent = makeAgent(cloud, local);
+  agent.start();
+  try {
+    await new Promise((r) => setTimeout(r, 100));
+    const payload = Buffer.from([0x00, 0x01, 0xfe, 0xff, 0x7f]);
+    cloud.send({
+      kind: 'http_req',
+      streamId: '5',
+      method: 'POST',
+      path: '/api/echo',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: payload.toString('base64'),
+      binary: true,
+    });
+    const res = await cloud.waitFor((m) => m.kind === 'http_res' && m.streamId === '5');
+    assert.equal(res.status, 200);
+    assert.equal(res.binary, true);
+    assert.equal(Buffer.from(res.body as string, 'base64').toString('hex'), payload.toString('hex'));
   } finally {
     agent.stop();
     await local.close();
