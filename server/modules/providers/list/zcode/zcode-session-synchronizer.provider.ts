@@ -54,21 +54,103 @@ const INJECTED_MESSAGE_PREFIXES = [
 /**
  * The CLI echoes every tool invocation into the transcript as a text block:
  *   **🌐 Z.ai Built-in Tool: analyze_image**
- *   **输入：**
+ *   **输入：** / **Input:**
  *   ```json
  *   {"imageSource":"…","prompt":"…"}
  *   ```
- * The GUI renders these as compact cards; raw text walls of JSON read as
- * garbage in planrla (especially mobile). Strip the whole segment, plus any
- * leftover standalone echo lines (partial blocks, "*Executing on server…*").
+ * followed after the tool resolves by marker lines (*执行中…* / **输出：** /
+ * **<tool>_result_summary:** […]) which the line filter below removes.
+ *
+ * The params JSON can itself contain ``` sequences inside string values
+ * (prompts quoting markdown), so a lazy regex fence-match cuts the block
+ * short and strands half the JSON. stripToolEchoBlocks instead finds the END
+ * of the JSON value by brace/quote scanning, making the removal immune to
+ * embedded fences.
  */
-const TOOL_ECHO_BLOCK_RE = /[^\n]*🌐[^\n]*\n+(?:[ \t]*\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}[ \t]*\n+)?```(?:json)?\n[\s\S]*?\n```[ \t]*/g;
+const MASK = '\u0000';
+const INPUT_LINE_RE = /^\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}$/;
+
+/** Index just past a complete JSON object/array starting at/after `start`, or -1. */
+function findJsonEnd(text: string, start: number): number {
+  let i = start;
+  while (i < text.length && /\s/.test(text[i])) i++;
+  const open = text[i];
+  if (open !== '{' && open !== '[') return -1;
+  const close = open === '{' ? '}' : ']';
+  let depth = 0;
+  let inStr = false;
+  let escaped = false;
+  for (; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return -1;
+}
+
+/** Removes 🌐 tool-call echo blocks (header + input label + ```json params + fences). */
+export function stripToolEchoBlocks(text: string): string {
+  let out = text;
+  let idx = out.indexOf('🌐');
+  while (idx !== -1) {
+    const lineStart = out.lastIndexOf('\n', idx) + 1;
+    const nlPos = out.indexOf('\n', idx);
+    const headerEnd = nlPos === -1 ? out.length : nlPos;
+
+    // Skip blank lines and an optional 输入/Input label after the header.
+    let p = headerEnd;
+    for (let guard = 0; guard < 3; guard++) {
+      const nextNL = out.indexOf('\n', p + 1);
+      const seg = out.slice(p + 1, nextNL === -1 ? out.length : nextNL).trim();
+      if (seg === '' || INPUT_LINE_RE.test(seg)) {
+        if (nextNL === -1) { p = out.length; break; }
+        p = nextNL;
+        continue;
+      }
+      break;
+    }
+
+    const fence = /^```json[ \t]*\n/.exec(out.slice(p + 1));
+    if (fence) {
+      const jsonStart = p + 1 + fence[0].length;
+      const jsonEnd = findJsonEnd(out, jsonStart);
+      if (jsonEnd !== -1) {
+        let q = jsonEnd;
+        while (q < out.length && /\s/.test(out[q])) q++;
+        if (out.startsWith('```', q)) {
+          let r = q + 3;
+          while (r < out.length && out[r] !== '\n' && out[r] !== '\r') r++;
+          out = out.slice(0, lineStart) + out.slice(r);
+          idx = out.indexOf('🌐');
+          continue;
+        }
+      }
+    }
+    // No well-formed block after this header — mask the emoji and move on.
+    out = out.slice(0, idx) + MASK + out.slice(idx + 2);
+    idx = out.indexOf('🌐');
+  }
+  return out.replace(new RegExp(MASK, 'g'), '🌐');
+}
 const TOOL_ECHO_LINE_RES: RegExp[] = [
   /^[ \t]*\*{0,2}(?:输入|Input)\s*[：:]\s*\*{0,2}[ \t]*$/,
-  /^[ \t]*\*{0,2}(?:服务器端|server[ _-]*)?(?:执行中|Executing on server)[….]*\*{0,2}[ \t]*$/,
+  // Short standalone executing-marker line (message may be JUST this).
+  /^[ \t]*\*{0,2}(?:正在服务器上执行|服务器端执行中|执行中|Executing on server)[^*]{0,16}\*{0,2}[ \t]*$/,
   /^[ \t]*\*{0,2}(?:输出|Output)\s*[：:]\s*\*{0,2}[ \t]*$/,
   /^[ \t]*\*{0,2}[A-Za-z_.]*result_summary:?\*{0,2}/,
 ];
+/** Adjacent bare fences left over after a block was swallowed. */
+const ORPHAN_FENCE_PAIR_RE = /\n[ \t]*```[ \t]*\n+[ \t]*```[ \t]*(?=\n|$)/g;
 
 /**
  * Removes injected wrapper blocks from a message text. Returns the remaining
@@ -76,7 +158,8 @@ const TOOL_ECHO_LINE_RES: RegExp[] = [
  * content (→ caller should try the next user message).
  */
 export function stripInjectedBlocks(text: string): string {
-  let remaining = text;
+  // The CLI DB can store CRLF; normalize so line-anchored rules match.
+  let remaining = text.replace(/\r\n/g, '\n');
   for (const { openTag, closeTag } of INJECTED_WRAPPERS) {
     const pattern = new RegExp(
       `<${openTag}[^>]*>[\\s\\S]*?</${closeTag}\\s*>`,
@@ -87,12 +170,21 @@ export function stripInjectedBlocks(text: string): string {
 
   // Tool-invocation echo segments (assistant text mostly, but harmless for
   // any role — removal only).
-  remaining = remaining.replace(TOOL_ECHO_BLOCK_RE, '\n');
+  remaining = stripToolEchoBlocks(remaining);
+  remaining = remaining.replace(ORPHAN_FENCE_PAIR_RE, '\n');
 
   const lines = remaining
     .split('\n')
     .filter((line) => !INJECTED_LINE_PREFIXES.some((prefix) => line.trim().startsWith(prefix)))
     .filter((line) => !TOOL_ECHO_LINE_RES.some((re) => re.test(line)));
+
+  // A swallowed echo block can strand a bare fence at the message edges
+  // (its partner was inside the eaten block), possibly behind blank lines —
+  // strip leading/trailing blank/fence-only lines so markdown doesn't break.
+  const isEdgeJunk = (line: string) => line.trim() === '' || /^```[a-z]*[ \t]*$/.test(line.trim());
+  while (lines.length > 0 && isEdgeJunk(lines[0])) lines.shift();
+  while (lines.length > 0 && isEdgeJunk(lines[lines.length - 1])) lines.pop();
+
   const joined = lines.join('\n').trim();
 
   // Whole-message injected reminders (TodoWrite nudge + todo dump): after all
