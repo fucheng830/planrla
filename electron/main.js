@@ -190,7 +190,10 @@ function createWindow() {
   // 造成窗口四周出现深色"黑边"。
   const cache = readThemeCache(app.getPath('userData'));
   const effectiveDark = cache ? cache.effectiveDark : nativeTheme.shouldUseDarkColors;
-  const titlebarBg = effectiveDark ? '#0b1120' : '#ffffff';
+  // Light titlebar uses a soft gray (not pure white) so the unavoidable 1px
+  // DWM window border reads as an intentional edge instead of a black
+  // hairline against white.
+  const titlebarBg = effectiveDark ? '#0b1120' : '#f3f4f6';
   const symbolColor = effectiveDark ? '#e5e7eb' : '#374151';
   const titleBarStyle = process.platform === 'darwin' ? 'hiddenInset' : 'hidden';
 

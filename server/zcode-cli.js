@@ -207,6 +207,44 @@ function handleServerRequest(child, msg, writer) {
  * workspace; we use the run's cwd so the session is discoverable per project.
  */
 // ---------------------------------------------------------------------------
+// Tool payload summarization
+//
+// Live toolCall rows carry the FULL input (Edit old_string/new_string with
+// whole file chunks, request configs, …) and full output. Pushing those
+// verbatim makes expanded tool cards render as monospace walls on mobile.
+// Large payloads are trimmed to a compact summary: identity fields the UI
+// can show (file_path / url / command / …) plus size markers.
+// ---------------------------------------------------------------------------
+
+function summarizeToolPayload(value, maxLen) {
+  try {
+    if (typeof value === 'string') {
+      if (value.length <= maxLen) return value;
+      return `${value.slice(0, maxLen)}\n…[truncated ${value.length - maxLen} chars]`;
+    }
+    const serialized = JSON.stringify(value ?? {});
+    if (serialized.length <= maxLen) return value ?? {};
+    const summary = { _truncated: true, _originalSize: serialized.length };
+    if (value && typeof value === 'object') {
+      const KEY_FIELDS = ['file_path', 'path', 'command', 'url', 'pattern', 'query', 'description', 'prompt', 'content'];
+      for (const k of KEY_FIELDS) {
+        if (typeof value[k] === 'string') summary[k] = value[k].slice(0, 200);
+      }
+      for (const [k, v] of Object.entries(value)) {
+        if (summary[k] !== undefined) continue;
+        if (v === null || typeof v !== 'object') {
+          const s = String(v);
+          if (s.length <= 120) summary[k] = v;
+        }
+      }
+    }
+    return summary;
+  } catch {
+    return {};
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Live echo suppressor
 //
 // While an agent turn streams, its assistant text can contain tool-invocation
@@ -227,75 +265,121 @@ const ECHO_MARKER_PREFIXES = [
 ];
 
 class EchoSuppressor {
+  // Char-level pass-through. Text streams out IMMEDIATELY except:
+  //  - at each line start, the first 3 chars are held just long enough to
+  //    decide whether the line opens an echo block (`**🌐` / `🌐`). Beyond
+  //    that head, or once ruled out, everything flows through verbatim —
+  //    no line buffering, so newline-less paragraphs stream normally.
+  //  - inside a confirmed echo block: swallowed whole (header + optional
+  //    input label + ```json params via brace scanning + closing fence +
+  //    trailing marker lines), then streaming resumes at the next real line.
   constructor() {
-    this.line = '';        // current partial line (unterminated)
-    this.held = '';        // held complete lines (candidate echo block)
-    this.json = null;      // { depth, inStr, escaped, open, close } while scanning params
-    this.awaitFence = false;
+    this.state = 'flow';    // flow | head | echo-lines | echo-json | echo-fence | echo-markers
+    this.head = '';         // candidate line-head chars being decided
+    this.lineBuf = '';      // current line while inside an echo phase
+    this.json = null;       // brace/quote scanner state
   }
 
-  /** Feed text; return an array of clean pieces safe to emit now. */
+  /** Feed streamed text; returns clean text to emit now. */
   push(text) {
     let out = '';
     for (const ch of text) {
       if (ch === '\r') continue;
-      if (this.json) {
-        this.feedJson(ch);
-        continue;
-      }
-      if (ch === '\n') {
-        const flush = this.pushLine(this.line + '\n');
-        out += flush;
-        this.line = '';
-        continue;
-      }
-      this.line += ch;
+      out += this.char(ch);
     }
-    return out ? [out] : [];
+    return out;
   }
 
-  /** A complete line (with trailing \n) arrives. Returns text to emit. */
-  pushLine(line) {
-    // Inside a swallowed block: eat marker lines and the closing fence.
-    if (this.held !== '' || this.awaitFence) {
-      if (this.awaitFence && /^```/.test(line.trim())) {
-        this.awaitFence = false; // closing fence eaten; block done
-        this.held = '';
+  char(ch) {
+    switch (this.state) {
+      case 'flow': {
+        if (ch === '\n') return '\n';
+        this.head = ch;
+        this.state = 'head';
+        return this.decideHead();
+      }
+      case 'head': {
+        if (ch === '\n') { const h = this.head; this.head = ''; this.state = 'flow'; return h + '\n'; }
+        this.head += ch;
+        return this.decideHead();
+      }
+      case 'echo-lines': {
+        if (ch === '\n') { const r = this.echoLine(this.lineBuf + '\n'); this.lineBuf = ''; return r; }
+        this.lineBuf += ch;
         return '';
       }
-      if (line.trim() === '' || ECHO_INPUT_LINE_RE.test(line) || ECHO_MARKER_PREFIXES.some(re => re.test(line))) {
-        return ''; // still part of the block envelope
-      }
-      if (/^```json\b/.test(line.trim())) {
-        this.startJson();
+      case 'echo-json': {
+        this.feedJson(ch);
         return '';
       }
-      // Not an echo after all (prose after a 🌐 mention): flush the held text.
-      const flush = this.held + line;
-      this.held = '';
-      this.awaitFence = false;
-      return flush;
+      case 'echo-fence': {
+        if (ch === '\n') { this.state = 'echo-markers'; }
+        return '';
+      }
+      case 'echo-markers': {
+        if (ch === '\n') {
+          const line = this.lineBuf;
+          this.lineBuf = '';
+          if (line.trim() === '' || /^```/.test(line.trim()) || ECHO_INPUT_LINE_RE.test(line) || ECHO_MARKER_PREFIXES.some(re => re.test(line))) {
+            return ''; // closing fence / trailing markers / blank lines of the block
+          }
+          // Real text resumes — the line head may itself start a new echo.
+          this.state = 'flow';
+          let out = '';
+          for (const c of line + '\n') out += this.char(c);
+          return out;
+        }
+        this.lineBuf += ch;
+        return '';
+      }
     }
+    return '';
+  }
 
-    if (line.includes('🌐')) {
-      this.held = line; // hold the header line, decide on the next lines
+  /** Called with this.head just updated; returns text to emit or '' while still deciding. */
+  decideHead() {
+    const h = this.head;
+    // Echo opener? (up to two leading asterisks then the emoji)
+    const bare = h.replace(/^\*{1,2}/, '');
+    if (bare.startsWith('🌐')) {
+      this.state = 'echo-lines';
+      this.lineBuf = '';
+      this.sawHeaderTail = false;
+      this.head = '';
       return '';
     }
-    if (ECHO_MARKER_PREFIXES.some(re => re.test(line)) && line.trim() !== '') {
-      return ''; // stray marker line without header (mid-stream artifact)
+    // Not an echo once we have 3 chars that can't become `**🌐`.
+    if (h.length >= 3 || h.includes('\n')) {
+      this.head = '';
+      this.state = 'flow';
+      return h;
     }
-    return line;
+    return '';
   }
 
-  startJson() {
-    this.json = { depth: 0, inStr: false, escaped: false, started: false };
+  /** A complete line inside the echo block. Returns text to flush if it turns out not to be an echo. */
+  echoLine(line) {
+    // The first complete line is the rest of the detected 🌐 header — consume.
+    if (!this.sawHeaderTail) { this.sawHeaderTail = true; return ''; }
+    const t = line.trim();
+    if (t === '' || ECHO_INPUT_LINE_RE.test(line)) return ''; // envelope padding
+    if (/^```json\b/.test(t)) {
+      this.json = { depth: 0, inStr: false, escaped: false, started: false };
+      this.state = 'echo-json';
+      return '';
+    }
+    // Not an echo block after all (prose mention of 🌐) — release everything held.
+    this.state = 'flow';
+    let out = '';
+    for (const c of line) out += this.char(c);
+    return out;
   }
 
   feedJson(ch) {
     const j = this.json;
     if (!j.started) {
       if (ch === '{' || ch === '[') { j.started = true; j.open = ch; j.close = ch === '{' ? '}' : ']'; j.depth = 1; }
-      else if (!/\s/.test(ch)) { this.json = null; } // not JSON after all — give up holding (flush nothing; rare)
+      else if (!/\s/.test(ch)) { this.json = null; this.state = 'flow'; } // not JSON — give up holding
       return;
     }
     if (j.inStr) {
@@ -310,20 +394,24 @@ class EchoSuppressor {
       j.depth--;
       if (j.depth === 0) {
         this.json = null;
-        this.awaitFence = true; // swallow up to and including the next ``` line
+        this.state = 'echo-fence'; // swallow through end of line + the ``` closer line
       }
     }
   }
 
-  /** End of stream: flush anything still held (unterminated echo). */
+  /** End of stream: release a still-undecided head (prose), drop mid-block holds. */
   flush() {
-    if (this.json || this.awaitFence) { this.json = null; this.awaitFence = false; this.held = ''; return ''; }
-    const rest = this.held + this.line;
-    this.held = ''; this.line = '';
-    return rest;
+    if (this.state === 'head') { const h = this.head; this.head = ''; this.state = 'flow'; return h; }
+    if (this.state === 'echo-lines') {
+      // Held only a header line that never formed a block → it was prose.
+      this.state = 'flow';
+      return '';
+    }
+    this.state = 'flow';
+    this.lineBuf = '';
+    return '';
   }
 }
-
 const echoSuppressors = new Map();
 function getEchoSuppressor(rowId) {
   let s = echoSuppressors.get(rowId);
@@ -578,6 +666,10 @@ export async function spawnZcode(command, options, writer) {
 
           if (row.kind === 'toolCall' && row.status && row.status !== 'inputStreaming' && row.status !== 'pendingApproval' && row.status !== 'running') {
             const toolId = row.toolCallId ?? `zcode-tool-${row.rowId}`;
+            const rawInput = row.input ?? (typeof row.inputText === 'string' ? row.inputText : {});
+            const rawOutput = row.output === undefined || row.output === null
+              ? null
+              : (typeof row.output === 'string' ? row.output : JSON.stringify(row.output));
             writer.send(createNormalizedMessage({
               id: toolId,
               sessionId: zcodeSessionId,
@@ -585,10 +677,10 @@ export async function spawnZcode(command, options, writer) {
               provider: PROVIDER,
               kind: 'tool_use',
               toolName: row.toolName ?? 'Tool',
-              toolInput: row.input ?? (typeof row.inputText === 'string' ? row.inputText : {}),
+              toolInput: summarizeToolPayload(rawInput, 1500),
               toolId,
-              ...(row.output !== undefined && row.output !== null
-                ? { toolResult: { content: typeof row.output === 'string' ? row.output : JSON.stringify(row.output), isError: row.status === 'error' } }
+              ...(rawOutput !== null
+                ? { toolResult: { content: summarizeToolPayload(rawOutput, 2000), isError: row.status === 'error' } }
                 : {}),
             }));
             continue;

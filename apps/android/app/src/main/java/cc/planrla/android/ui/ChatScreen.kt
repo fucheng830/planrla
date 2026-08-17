@@ -1447,16 +1447,24 @@ private fun ToolCardRow(card: ChatItem.ToolCard) {
                                     )
                                 }
                             } else {
+                                // Non-bash tool params: dark code-block styling (consistent
+                                // with Bash) + bounded height so huge inputs (file diffs,
+                                // request configs) never flood the chat as text walls.
                                 Surface(
                                     Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = Color(0xFF1E1E2E),
                                 ) {
                                     Text(
                                         card.input,
-                                        Modifier.padding(10.dp),
+                                        Modifier
+                                            .padding(10.dp)
+                                            .heightIn(max = 260.dp)
+                                            .verticalScroll(rememberScrollState())
+                                            .horizontalScroll(rememberScrollState()),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
+                                        color = Color(0xFFE5E7EB),
                                         lineHeight = 18.sp,
                                     )
                                 }
