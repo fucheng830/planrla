@@ -61,6 +61,10 @@ dependencies {
 
     implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.22.0")
     implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.22.0")
+    // coil2 image loader — without it the markdown renderer's default NoOp
+    // ImageTransformer silently drops every ![](...) network image.
+    // (the coil3 variant of 0.22.0 pins an unresolvable coil 3.0.0-SNAPSHOT, so coil2 it is)
+    implementation("com.mikepenz:multiplatform-markdown-renderer-coil2:0.22.0")
     implementation("org.commonmark:commonmark:0.21.0")
 
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
