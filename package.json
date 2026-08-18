@@ -24,6 +24,7 @@
   },
   "scripts": {
     "dev": "concurrently --kill-others \"npm run server:dev-watch\" \"npm run client\"",
+    "dev:no-watch": "concurrently --kill-others -n server,vite \"npm run server:tsx\" \"npm run client\"",
     "server": "node dist-server/server/index.js",
     "server:dev": "tsx --tsconfig server/tsconfig.json server/index.js",
     "server:dev-watch": "tsx watch --tsconfig server/tsconfig.json server/index.js",

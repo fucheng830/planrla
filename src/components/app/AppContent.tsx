@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -86,6 +86,7 @@ function AppContentInner() {
     markSessionCompleted,
     clearSessionCompleted,
     syncProcessingSessions,
+    clearProcessingSessions,
   } = useSessionProtection();
 
   const {
@@ -140,12 +141,28 @@ function AppContentInner() {
     [projects],
   );
 
+  // How many consecutive /sessions/running poll failures (5s apart) before the
+  // frozen processing snapshot is dropped. Without this, a dead backend leaves
+  // "reasoning" elapsed timers climbing forever on runs that died with it.
+  const RUNNING_POLL_FAILURES_TO_CLEAR = 3;
+  const runningPollFailuresRef = useRef(0);
+  const handleRunningPollFailure = useCallback(() => {
+    runningPollFailuresRef.current += 1;
+    if (runningPollFailuresRef.current >= RUNNING_POLL_FAILURES_TO_CLEAR) {
+      // Backend unreachable: drop the stale map. Still-running runs reappear
+      // (with their original startedAt) on the next successful poll.
+      clearProcessingSessions();
+    }
+  }, [clearProcessingSessions]);
+
   const refreshRunningSessions = useCallback(async () => {
     try {
       const response = await api.runningSessions();
       if (!response.ok) {
+        handleRunningPollFailure();
         return;
       }
+      runningPollFailuresRef.current = 0;
 
       const payload = (await response.json()) as RunningSessionsApiPayload;
       const sessions = Array.isArray(payload.data?.sessions) ? payload.data.sessions : [];
@@ -167,9 +184,10 @@ function AppContentInner() {
           .filter((session): session is NonNullable<typeof session> => Boolean(session)),
       );
     } catch (error) {
+      handleRunningPollFailure();
       console.error('[AppContent] Failed to sync running sessions:', error);
     }
-  }, [syncProcessingSessions]);
+  }, [syncProcessingSessions, handleRunningPollFailure]);
 
   useEffect(() => {
     void refreshRunningSessions();

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+
 import type { SessionTaskStatus } from '../shared/taskStatus';
 
 export interface SessionActivity {
@@ -54,6 +55,8 @@ export type ClearSessionCompleted = (sessionId?: string | null) => void;
 export type SyncProcessingSessions = (
   sessions: readonly SessionActivitySnapshot[],
 ) => void;
+
+export type ClearProcessingSessions = () => void;
 
 const LOCAL_ACTIVITY_GRACE_MS = 10_000;
 
@@ -238,6 +241,17 @@ export function useSessionProtection() {
     });
   }, []);
 
+  /**
+   * Drops every processing entry. Used when the running-sessions poll has
+   * failed repeatedly (backend unreachable): the frozen snapshot would
+   * otherwise keep "reasoning" timers climbing forever on dead runs. The next
+   * successful poll rebuilds the map from the server's authoritative snapshot
+   * (still-running runs come back with their original startedAt).
+   */
+  const clearProcessingSessions = useCallback<ClearProcessingSessions>(() => {
+    setProcessingSessions((prev) => (prev.size === 0 ? prev : new Map()));
+  }, []);
+
   return {
     processingSessions,
     completedSessions,
@@ -246,5 +260,6 @@ export function useSessionProtection() {
     markSessionCompleted,
     clearSessionCompleted,
     syncProcessingSessions,
+    clearProcessingSessions,
   };
 }
