@@ -1,8 +1,8 @@
-import { MessageSquare, Terminal, GitBranch, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Terminal, GitBranch, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Tooltip, PillBar, Pill } from '../../../../shared/view/ui';
+import { Tooltip } from '../../../../shared/view/ui';
 import type { AppTab } from '../../../../types/app';
 import { usePlugins } from '../../../../contexts/PluginsContext';
 import PluginIcon from '../../../plugins/view/PluginIcon';
@@ -32,8 +32,12 @@ type PluginTab = {
 
 type TabDefinition = BuiltInTab | PluginTab;
 
+/**
+ * Secondary views shown as standalone icon buttons. Chat is NOT listed — it is
+ * the default main content; every icon toggles its view and clicking the
+ * active one returns to chat.
+ */
 const BASE_TABS: BuiltInTab[] = [
-  { kind: 'builtin', id: 'chat',  labelKey: 'tabs.chat',  icon: MessageSquare },
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
   { kind: 'builtin', id: 'git',   labelKey: 'tabs.git',   icon: GitBranch },
 ];
@@ -88,40 +92,47 @@ export default function MainContentTabSwitcher({
   const tabs: TabDefinition[] = [...builtInTabs, ...pluginTabs];
 
   return (
-    <PillBar>
+    <div className="flex items-center gap-0.5">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         const displayLabel = tab.kind === 'builtin' ? t(tab.labelKey) : tab.label;
 
         return (
           <Tooltip key={tab.id} content={displayLabel} position="bottom">
-            <Pill
-              isActive={isActive}
+            <button
+              type="button"
               onClick={() => {
-                // Shell tab toggles the bottom terminal panel (when wired up)
-                // instead of switching to a full-screen shell tab.
+                // Shell toggles the bottom terminal panel instead of
+                // switching to a full-screen shell tab.
                 if (tab.id === 'shell' && onToggleTerminalPanel) {
                   onToggleTerminalPanel();
                   return;
                 }
-                setActiveTab(tab.id);
+                // Chat is the base view: clicking the active view's icon
+                // returns to it.
+                setActiveTab(isActive ? 'chat' : tab.id);
               }}
-              className="px-2.5 py-[5px]"
+              className={`flex flex-shrink-0 items-center justify-center rounded p-1.5 transition-colors ${
+                isActive
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`}
+              aria-label={displayLabel}
+              aria-pressed={isActive}
             >
               {tab.kind === 'builtin' ? (
-                <tab.icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.2 : 1.8} />
+                <tab.icon className="h-4 w-4" strokeWidth={isActive ? 2.2 : 1.8} />
               ) : (
                 <PluginIcon
                   pluginName={tab.pluginName}
                   iconFile={tab.iconFile}
-                  className="flex h-3.5 w-3.5 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+                  className="flex h-4 w-4 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
                 />
               )}
-              <span className="hidden lg:inline">{displayLabel}</span>
-            </Pill>
+            </button>
           </Tooltip>
         );
       })}
-    </PillBar>
+    </div>
   );
 }
