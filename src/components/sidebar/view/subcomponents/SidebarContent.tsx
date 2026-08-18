@@ -290,11 +290,6 @@ function FlatSessionRow({
             <span className="truncate text-[11px] text-muted-foreground">
               {project.displayName}
             </span>
-            {provider !== 'claude' && (
-              <span className="flex-shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase text-muted-foreground">
-                {provider}
-              </span>
-            )}
           </div>
         </button>
       </ContextMenu>
@@ -605,11 +600,6 @@ export default function SidebarContent({
                           status={projectListProps.activeSessions.has(session.sessionId) ? 'running' : 'idle'}
                           className="flex-shrink-0"
                         />
-                        {session.provider && session.provider !== 'claude' && (
-                          <span className="flex-shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase text-muted-foreground">
-                            {session.provider}
-                          </span>
-                        )}
                       </div>
                       <div className="space-y-1 pl-4">
                         {session.matches.map((match, idx) => (
