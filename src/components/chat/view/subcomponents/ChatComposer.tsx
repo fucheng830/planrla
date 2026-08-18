@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ChangeEvent,
   ClipboardEvent,
+  DragEvent,
   FormEvent,
   KeyboardEvent,
   MouseEvent,
@@ -26,6 +27,8 @@ import {
   PromptInputButton,
   PromptInputSubmit,
 } from '../../../../shared/view/ui';
+import type { SessionReference } from '../../utils/sessionReferenceFormat';
+import { hasSessionDrag, readSessionDrag } from '../../../../shared/view/sessionDrag';
 
 import CommandMenu from './CommandMenu';
 import ActivityIndicator from './ActivityIndicator';
@@ -35,7 +38,6 @@ import PermissionRequestsBanner from './PermissionRequestsBanner';
 import TokenUsageSummary from './TokenUsageSummary';
 import SessionReferencePicker, { type PickerCandidateSession } from './SessionReferencePicker';
 import SessionReferenceChip from './SessionReferenceChip';
-import type { SessionReference } from '../../utils/sessionReferenceFormat';
 
 interface MentionableFile {
   name: string;
@@ -220,6 +222,38 @@ export default function ChatComposer({
   // Hide the thinking/status bar while any permission request is pending
   const hasPendingPermissions = pendingPermissionRequests.length > 0;
 
+  // Codex-style session drag-and-drop: a sidebar session row dragged over this
+  // area becomes a reference chip. Capture-phase handlers keep the drag away
+  // from the image dropzone (getRootProps) — session drags carry no files.
+  const composerAreaRef = useRef<HTMLDivElement>(null);
+  const [isSessionDragOver, setIsSessionDragOver] = useState(false);
+  const handleSessionDragOverCapture = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (!hasSessionDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsSessionDragOver(true);
+  }, []);
+  const handleSessionDragLeaveCapture = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (!isSessionDragOver) return;
+    const nextTarget = event.relatedTarget as Node | null;
+    if (!composerAreaRef.current?.contains(nextTarget)) {
+      setIsSessionDragOver(false);
+    }
+  }, [isSessionDragOver]);
+  const handleSessionDropCapture = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!hasSessionDrag(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsSessionDragOver(false);
+      const payload = readSessionDrag(event);
+      if (payload) {
+        onConfirmReference(payload.sessionId, payload.title, payload.provider);
+      }
+    },
+    [onConfirmReference],
+  );
+
   return (
     <div className="flex-shrink-0 p-2 pb-2 sm:p-4 sm:pb-4 md:p-4 md:pb-6">
       {isReferencePickerOpen && (
@@ -245,7 +279,22 @@ export default function ChatComposer({
         </div>
       )}
 
-      {!hasQuestionPanel && <div className="relative mx-auto max-w-4xl">
+      {!hasQuestionPanel && <div
+        ref={composerAreaRef}
+        className="relative mx-auto max-w-4xl"
+        onDragOverCapture={handleSessionDragOverCapture}
+        onDragLeaveCapture={handleSessionDragLeaveCapture}
+        onDropCapture={handleSessionDropCapture}
+      >
+        {isSessionDragOver && (
+          <div className="pointer-events-none absolute inset-0 z-[70] flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-primary/10">
+            <div className="rounded-xl border border-border/30 bg-card px-4 py-3 shadow-lg">
+              <p className="text-sm font-medium text-primary">
+                {t('references.dropSessionReference', { defaultValue: '松手引用该会话' })}
+              </p>
+            </div>
+          </div>
+        )}
         {isUserScrolledUp && hasMessages && (
           <div className="absolute -top-10 left-0 right-0 z-10 flex justify-center">
             <button

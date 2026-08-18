@@ -16,6 +16,7 @@ import { useA2aDelegate } from '../../contexts/A2aDelegateContext';
 import { usePaletteOps } from '../../../../contexts/PaletteOpsContext';
 import { copyTextToClipboard } from '../../../../utils/clipboard';
 import { api } from '../../../../utils/api';
+import { startSessionDrag } from '../../../../shared/view/sessionDrag';
 
 type SidebarSessionItemProps = {
   project: Project;
@@ -329,6 +330,14 @@ export default function SidebarSessionItem({
               isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30 hover:bg-accent/50',
             )}
             onClick={() => onSessionSelect(session, project.projectId)}
+            draggable={!isEditing}
+            onDragStart={(event) =>
+              startSessionDrag(event, {
+                sessionId: session.id,
+                title: sessionView.sessionName,
+                provider: session.__provider,
+              })
+            }
           >
             <div className="flex w-full min-w-0 items-center gap-2">
               <div

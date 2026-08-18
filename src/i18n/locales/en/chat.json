@@ -431,6 +431,7 @@
     "searchPlaceholder": "Search (empty = current project, type = all)",
     "noSessions": "No matching sessions",
     "queryableFrom": "Queryable: \"{{title}}\"",
+    "dropSessionReference": "Drop to reference this session",
     "cancel": "Cancel",
     "confirm": "Reference"
   }

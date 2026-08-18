@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+
 import { formatReferenceHints, type SessionReference } from '../utils/sessionReferenceFormat';
 
 export interface UseSessionReferencesResult {
@@ -18,7 +19,10 @@ const newId = () => {
 export function useSessionReferences(): UseSessionReferencesResult {
   const [references, setReferences] = useState<SessionReference[]>([]);
   const addReference = useCallback((ref: Omit<SessionReference, 'id'>) => {
-    setReferences((prev) => [...prev, { ...ref, id: newId() }]);
+    // Dedupe by sessionId — dragging the same session in twice keeps one chip.
+    setReferences((prev) =>
+      prev.some((r) => r.sessionId === ref.sessionId) ? prev : [...prev, { ...ref, id: newId() }],
+    );
   }, []);
   const removeReference = useCallback((id: string) => {
     setReferences((prev) => prev.filter((r) => r.id !== id));

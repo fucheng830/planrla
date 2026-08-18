@@ -403,6 +403,7 @@
     "searchPlaceholder": "搜索(空=当前 project,输入切全部)",
     "noSessions": "无匹配会话",
     "queryableFrom": "可查:「{{title}}」",
+    "dropSessionReference": "松手引用该会话",
     "cancel": "取消",
     "confirm": "引用"
   }

@@ -230,6 +230,12 @@ export function useChatComposerState({
       title: string,
       provider: string,
     ) => {
+      // Self-reference is pointless — the agent already sees this session's
+      // own history. Applies to both the picker and the drag-and-drop path.
+      if (selectedSession && selectedSession.id === sessionId) {
+        setIsReferencePickerOpen(false);
+        return;
+      }
       addReference({
         sessionId,
         title,
@@ -238,7 +244,7 @@ export function useChatComposerState({
       });
       setIsReferencePickerOpen(false);
     },
-    [addReference],
+    [addReference, selectedSession],
   );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);

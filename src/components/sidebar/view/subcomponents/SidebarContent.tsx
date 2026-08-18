@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 
 import { Button, Dialog, DialogContent, DialogTitle, ScrollArea } from '../../../../shared/view/ui';
 import ContextMenu, { type ContextMenuAction } from '../../../../shared/view/ContextMenu';
+import { startSessionDrag } from '../../../../shared/view/sessionDrag';
 import { api } from '../../../../utils/api';
 import { copyTextToClipboard } from '../../../../utils/clipboard';
 import { useA2aDelegate } from '../../contexts/A2aDelegateContext';
@@ -264,6 +265,14 @@ function FlatSessionRow({
               : 'border-transparent hover:border-border/60 hover:bg-accent/45'
           }`}
           onClick={onClick}
+          draggable
+          onDragStart={(event) =>
+            startSessionDrag(event, {
+              sessionId: session.id,
+              title: sessionTitle,
+              provider,
+            })
+          }
         >
           <div className="flex min-w-0 items-center gap-2">
             <SessionProviderLogo provider={provider} className="h-3.5 w-3.5 flex-shrink-0" />
