@@ -236,6 +236,21 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+// Single-instance lock: the NSIS installer auto-launches the app on finish
+// (runAfterFinish), and users double-click shortcuts — without this lock each
+// extra launch spawns a whole second app instance. The losing instance quits
+// immediately; the winner focuses its existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(async () => {
   try {
     if (!process.env.ELECTRON_DEV_URL) await startServer();
