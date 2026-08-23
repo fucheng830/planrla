@@ -14,15 +14,15 @@ export function statusStyle(
 ): { labelKey: string; dot: string; text: string } {
   switch (status) {
     case 'running':
-      return { labelKey: 'running', dot: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400' };
+      return { labelKey: 'running', dot: 'bg-workbench-accent', text: 'text-workbench-accent' };
     case 'queued':
-      return { labelKey: 'queued', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' };
+      return { labelKey: 'queued', dot: 'bg-workbench-waiting', text: 'text-workbench-waiting' };
     case 'waiting_user':
-      return { labelKey: 'waiting', dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' };
+      return { labelKey: 'waiting', dot: 'bg-workbench-waiting', text: 'text-workbench-waiting' };
     case 'paused':
       return { labelKey: 'paused', dot: 'bg-gray-400', text: 'text-gray-500 dark:text-gray-400' };
     case 'success':
-      return { labelKey: 'success', dot: 'bg-green-500', text: 'text-green-600 dark:text-green-400' };
+      return { labelKey: 'success', dot: 'bg-workbench-success', text: 'text-workbench-success' };
     case 'fail':
       return { labelKey: 'fail', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' };
     case 'cancelled':
@@ -39,7 +39,7 @@ export function AuxBadges({ flags }: { flags: TaskAuxFlags }) {
     <div className="flex items-center gap-1">
       {flags.askUserWaiting && (
         <Icon title={t('aux.ask')}>
-          <AlertCircle className="h-3 w-3 text-purple-500" />
+          <AlertCircle className="h-3 w-3 text-workbench-waiting" />
         </Icon>
       )}
       {flags.hasPlan && (
@@ -54,7 +54,7 @@ export function AuxBadges({ flags }: { flags: TaskAuxFlags }) {
       )}
       {flags.hasTask && (
         <Icon title={t('aux.task')}>
-          <GitBranch className="h-3 w-3 text-indigo-500" />
+          <GitBranch className="h-3 w-3 text-workbench-accent" />
         </Icon>
       )}
       {flags.sessionError && (

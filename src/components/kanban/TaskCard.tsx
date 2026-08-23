@@ -31,7 +31,7 @@ export function TaskCard({ task }: { task: Task }) {
   return (
     <>
       <Card
-        className={`group relative cursor-pointer rounded-[10px] p-2.5 text-xs transition-all hover:border-primary/40 ${isDone ? 'opacity-50' : ''}`}
+        className={`group relative cursor-pointer rounded-md border border-workbench-border bg-workbench-surface p-2.5 text-xs transition-colors hover:border-workbench-accent/50 ${isDone ? 'opacity-50' : ''}`}
         onClick={() => setOpen(true)}
       >
         {/* Hover quick-move buttons (no modal needed) */}
@@ -56,8 +56,7 @@ export function TaskCard({ task }: { task: Task }) {
 
         {/* 待答复 badge */}
         {task.auxFlags.askUserWaiting && (
-          <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" />
+          <span className="ds-status ds-status-waiting absolute right-2.5 top-2.5">
             {t('aux.asking')}
           </span>
         )}
@@ -72,7 +71,7 @@ export function TaskCard({ task }: { task: Task }) {
         </div>
 
         {/* Row 2: TASK CONTENT (input, not template name) */}
-        <div className="mt-1 line-clamp-2 font-medium text-foreground">
+        <div className="mt-1 line-clamp-2 font-medium text-workbench-ink">
           {task.taskTemplateName || `#${task.taskNumber}`}
         </div>
 
@@ -107,7 +106,7 @@ export function TaskCard({ task }: { task: Task }) {
 
         {/* 待答复 CTA (REQ-038) */}
         {task.auxFlags.askUserWaiting && (
-          <div className="mt-1 text-[11px] font-medium text-purple-600 dark:text-purple-400">
+          <div className="mt-1 text-[11px] font-medium text-workbench-waiting">
             {t('answer.cta')}
           </div>
         )}

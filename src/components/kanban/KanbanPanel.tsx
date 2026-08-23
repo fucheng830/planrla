@@ -27,7 +27,7 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
         <EmptyState text={t('panel.emptyProject')} />
       ) : (
         <div className="flex h-full flex-col">
-          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <div className="ds-panel-header px-3">
             <Button size="sm" onClick={() => setShowCreate(true)}>
               {t('panel.newTask')}
             </Button>
@@ -51,8 +51,8 @@ export function KanbanPanel({ isVisible }: { isVisible: boolean }) {
             {error && <span className="text-xs text-destructive">{error}</span>}
           </div>
           {nextTask && (
-            <div className="flex items-center gap-2 border-b border-border bg-primary/5 px-3 py-1.5 text-xs">
-              <span className="font-medium text-primary">{t('banner.nextTask')}</span>
+            <div className="flex items-center gap-2 border-b border-workbench-border bg-workbench-accent/5 px-3 py-1.5 text-xs">
+              <span className="font-medium text-workbench-accent">{t('banner.nextTask')}</span>
               <span className="font-mono font-semibold">#{nextTask.taskNumber}</span>
               <span className="truncate text-muted-foreground">{nextTask.taskTemplateName}</span>
               {nextTask.priority === 'high' && (

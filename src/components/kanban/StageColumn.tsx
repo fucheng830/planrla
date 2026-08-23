@@ -13,20 +13,20 @@ export function StageColumn({
 }) {
   const { t } = useTranslation('kanban');
   return (
-    <div className="flex w-72 shrink-0 flex-col border-r border-border">
-      <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-background px-3 py-2">
+    <div className="flex w-72 shrink-0 flex-col border-r border-workbench-border">
+      <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-workbench-border bg-workbench-surface px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground">#{index}</span>
           <span className="text-sm font-medium">{stage.name}</span>
         </div>
         <span
           className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide ${
-            stage.role === 'agent' ? 'text-blue-500' : 'text-muted-foreground'
+            stage.role === 'agent' ? 'text-workbench-accent' : 'text-workbench-subtle'
           }`}
         >
           <span
             className={`inline-block h-1.5 w-1.5 rounded-full ${
-              stage.role === 'agent' ? 'bg-blue-500' : 'bg-muted-foreground/50'
+              stage.role === 'agent' ? 'bg-workbench-accent' : 'bg-workbench-subtle/50'
             }`}
           />
           {t(`role.${stage.role}`)}
