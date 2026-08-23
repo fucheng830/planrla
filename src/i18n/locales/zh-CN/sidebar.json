@@ -58,6 +58,7 @@
   },
   "contextMenu": {
     "pinSession": "置顶",
+    "refreshList": "刷新列表",
     "unpinSession": "取消置顶",
     "archiveSession": "归档",
     "copySessionId": "复制会话 ID",

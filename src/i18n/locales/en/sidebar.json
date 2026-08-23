@@ -58,6 +58,7 @@
   },
   "contextMenu": {
     "pinSession": "Pin",
+    "refreshList": "Refresh list",
     "unpinSession": "Unpin",
     "archiveSession": "Archive",
     "copySessionId": "Copy session ID",

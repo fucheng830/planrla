@@ -1,14 +1,38 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { GitBranch } from 'lucide-react';
 
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import type { AppTab, Project, ProjectSession } from '../../../../types/app';
 import { usePlugins } from '../../../../contexts/PluginsContext';
+import { authenticatedFetch } from '../../../../utils/api';
 
 type MainContentTitleProps = {
   activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
 };
+
+/** Fetches the current git branch for the project; null when not a git repo. */
+function useProjectBranch(projectId: string | null | undefined): string | null {
+  const [branch, setBranch] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      setBranch(null);
+      return;
+    }
+    const controller = new AbortController();
+    authenticatedFetch(`/api/git/status?project=${encodeURIComponent(projectId)}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setBranch(data && !data.error && data.branch ? String(data.branch) : null))
+      .catch(() => setBranch(null));
+    return () => controller.abort();
+  }, [projectId]);
+
+  return branch;
+}
 
 function getTabTitle(activeTab: AppTab, t: (key: string) => string, pluginDisplayName?: string) {
   if (activeTab.startsWith('plugin:') && pluginDisplayName) {
@@ -21,10 +45,6 @@ function getTabTitle(activeTab: AppTab, t: (key: string) => string, pluginDispla
 
   if (activeTab === 'git') {
     return t('tabs.git');
-  }
-
-  if (activeTab === 'browser') {
-    return t('tabs.browser');
   }
 
   return t('mainContent.project');
@@ -40,6 +60,7 @@ function getSessionTitle(session: ProjectSession, t: (key: string) => string): s
 
 export default function MainContentTitle({
   activeTab,
+  setActiveTab,
   selectedProject,
   selectedSession,
 }: MainContentTitleProps) {
@@ -50,8 +71,33 @@ export default function MainContentTitle({
     ? plugins.find((p) => p.name === activeTab.replace('plugin:', ''))?.displayName
     : undefined;
 
+  const branch = useProjectBranch(selectedProject.projectId);
+
   const showSessionIcon = activeTab === 'chat' && Boolean(selectedSession);
   const showChatNewSession = activeTab === 'chat' && !selectedSession;
+
+  const subtitle = (
+    <div className="flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground">
+      <span className="truncate">{selectedProject.displayName}</span>
+      {branch && (
+        <button
+          type="button"
+          onClick={() => setActiveTab(activeTab === 'git' ? 'chat' : 'git')}
+          className={`flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 transition-colors ${
+            activeTab === 'git'
+              ? 'bg-accent text-foreground'
+              : 'text-muted-foreground/80 hover:bg-accent hover:text-foreground'
+          }`}
+          title={t('tabs.git')}
+          aria-label={t('tabs.git')}
+          aria-pressed={activeTab === 'git'}
+        >
+          <GitBranch className="h-3 w-3" />
+          <span className="max-w-40 truncate">{branch}</span>
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="scrollbar-hide flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
@@ -67,19 +113,19 @@ export default function MainContentTitle({
             <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-sm font-semibold leading-tight text-foreground">
               {getSessionTitle(selectedSession, t)}
             </h2>
-            <div className="truncate text-[11px] leading-tight text-muted-foreground">{selectedProject.displayName}</div>
+            {subtitle}
           </div>
         ) : showChatNewSession ? (
           <div className="min-w-0">
             <h2 className="text-base font-semibold leading-tight text-foreground">{t('mainContent.newSession')}</h2>
-            <div className="truncate text-xs leading-tight text-muted-foreground">{selectedProject.displayName}</div>
+            {subtitle}
           </div>
         ) : (
           <div className="min-w-0">
             <h2 className="text-sm font-semibold leading-tight text-foreground">
               {getTabTitle(activeTab, t, pluginDisplayName)}
             </h2>
-            <div className="truncate text-[11px] leading-tight text-muted-foreground">{selectedProject.displayName}</div>
+            {subtitle}
           </div>
         )}
       </div>

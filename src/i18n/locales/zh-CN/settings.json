@@ -254,6 +254,14 @@
       "open": "打开浏览器设置",
       "refresh": "刷新浏览器会话"
     },
+    "importChrome": {
+      "label": "从 Chrome 导入 Cookie",
+      "description": "将 Chrome 浏览器的登录状态导入到内置浏览器。仅导入 Cookie，不包含浏览历史、缓存或已保存的密码。",
+      "button": "导入 Chrome Cookie",
+      "confirm": "确认导入",
+      "importing": "正在导入...",
+      "success": "已导入 {{count}} 个 Cookie"
+    },
     "runtime": {
       "disabled": "已关闭",
       "ready": "就绪",
@@ -317,7 +325,8 @@
       "loadSettings": "加载浏览器设置失败",
       "loadStatus": "加载浏览器状态失败",
       "saveSettings": "保存浏览器设置失败",
-      "installRuntime": "安装浏览器运行时失败"
+      "installRuntime": "安装浏览器运行时失败",
+      "importChrome": "导入 Chrome Cookie 失败"
     }
   },
   "appearanceSettings": {

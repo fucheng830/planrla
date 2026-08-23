@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Archive, ChevronLeft, Copy, Edit2, Folder, FolderOpen, FolderTree, MessageSquare, Network, Pin, PinOff, RotateCcw, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Archive, ChevronLeft, Copy, Edit2, Folder, FolderOpen, FolderTree, MessageSquare, Network, Pin, PinOff, RefreshCw, RotateCcw, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Button, Dialog, DialogContent, DialogTitle, ScrollArea } from '../../../../shared/view/ui';
@@ -483,7 +483,19 @@ export default function SidebarContent({
         t={t}
       />
 
-      <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
+      <ContextMenu
+        actions={[
+          {
+            key: 'refresh-list',
+            label: t('contextMenu.refreshList'),
+            icon: RefreshCw,
+            onSelect: onRefresh,
+            isDisabled: isRefreshing,
+          },
+        ]}
+        menuLabel={t('contextMenu.refreshList')}
+      >
+        <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
         {searchMode === 'files' ? (
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1">
@@ -883,7 +895,8 @@ export default function SidebarContent({
         ) : (
           <SidebarProjectList {...projectListProps} />
         )}
-      </ScrollArea>
+        </ScrollArea>
+      </ContextMenu>
 
       <SidebarFooter
         updateAvailable={updateAvailable}

@@ -143,6 +143,7 @@ import cc.planrla.android.data.NormalizedMessage
 import cc.planrla.android.data.SessionInfo
 import cc.planrla.android.data.TokenBudget
 import cc.planrla.android.data.NetworkModule
+import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
@@ -195,14 +196,16 @@ private fun fmtTime(epoch: Long): String {
 class ChatViewModel(
     private val sessionId: String,
     private val cwd: String?,
-    private val projectId: String?
+    private val projectId: String?,
+    initialProvider: String? = null
 ) : ViewModel() {
     data class PermissionReq(val requestId: String, val toolName: String?, val input: String?)
     data class AttachImage(val dataUrl: String, val name: String)
 
-    /** The provider for this session ("claude"/"codex"/...). Set from history messages'
-     *  provider field or chat_subscribed. Used for correct branding + createSession + commands. */
-    private val _sessionProvider = MutableStateFlow<String?>(null)
+    /** The provider for this session ("claude"/"codex"/...). Seeded from the session-list
+     *  entry via navigation (avoids a wrong-logo flash), then confirmed from history
+     *  messages' provider field. Used for correct branding + createSession + commands. */
+    private val _sessionProvider = MutableStateFlow<String?>(initialProvider)
     val sessionProviderFlow: StateFlow<String?> = _sessionProvider
     private var sessionProvider: String?
         get() = _sessionProvider.value
@@ -725,8 +728,8 @@ class ChatViewModel(
     }
 
     companion object {
-        fun factory(sessionId: String, cwd: String?, projectId: String?) = viewModelFactory {
-            initializer { ChatViewModel(sessionId, cwd, projectId) }
+        fun factory(sessionId: String, cwd: String?, projectId: String?, initialProvider: String? = null) = viewModelFactory {
+            initializer { ChatViewModel(sessionId, cwd, projectId, initialProvider) }
         }
     }
 
@@ -745,11 +748,12 @@ fun ChatScreen(
     cwd: String?,
     title: String? = null,
     projectId: String? = null,
+    initialProvider: String? = null,
     onSelectSession: (projectId: String, cwd: String?, session: SessionInfo) -> Unit = { _, _, _ -> },
     onNewSession: (projectId: String, cwd: String?) -> Unit = { _, _ -> },
     onSwitchDevice: () -> Unit = {},
     onLogout: () -> Unit = {},
-    vm: ChatViewModel = viewModel(factory = ChatViewModel.factory(sessionId, cwd, projectId)),
+    vm: ChatViewModel = viewModel(factory = ChatViewModel.factory(sessionId, cwd, projectId, initialProvider)),
     projectsVm: ProjectsViewModel = viewModel(factory = ProjectsViewModel.Factory),
 ) {
     val items by vm.items.collectAsStateWithLifecycle()
@@ -1211,7 +1215,7 @@ private fun MessageList(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
     ) {
         itemsIndexed(items) { index, item ->
-            ChatRow(item, items.getOrNull(index - 1))
+            ChatRow(item, items.getOrNull(index - 1), items.getOrNull(index + 1))
         }
         // Regenerate button: show after the last assistant reply when idle.
         val last = items.lastOrNull()
@@ -1234,17 +1238,22 @@ private fun ChatItem?.isPartOfAssistantTurn(): Boolean =
     this is ChatItem.Assistant || this is ChatItem.Thinking || this is ChatItem.ToolCard
 
 @Composable
-private fun ChatRow(item: ChatItem, prev: ChatItem?) {
+private fun ChatRow(item: ChatItem, prev: ChatItem?, next: ChatItem?) {
     when (item) {
         is ChatItem.User -> UserBubble(item.text, item.time)
         is ChatItem.Assistant -> {
             val text by item.text.collectAsStateWithLifecycle()
             val done by item.done.collectAsStateWithLifecycle()
+            // One timestamp per turn: only the turn's last block (the one followed by a
+            // user/sys message or the list end) shows it. No time-gap heuristic — long
+            // turns (build + verify can span 10+ minutes) must still show just one.
+            val turnContinues = next.isPartOfAssistantTurn()
             if (text.isNotEmpty()) AssistantBlock(
                 text = if (done) text else "$text▌",
                 showHeader = !prev.isPartOfAssistantTurn(),
                 time = item.time,
                 done = done,
+                showMeta = !turnContinues,
                 provider = item.provider,
             )
         }
@@ -1258,9 +1267,19 @@ private fun ChatRow(item: ChatItem, prev: ChatItem?) {
     }
 }
 
-/** User message: blue bubble, right-aligned (bg-blue-600, rounded-2xl rounded-br-md). */
+/** Copy [text] to the clipboard and show a short confirmation. */
+private fun copyWithFeedback(context: android.content.Context, text: String) {
+    val cb = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? ClipboardManager
+    cb?.setPrimaryClip(ClipData.newPlainText("planrla", text))
+    android.widget.Toast.makeText(context, R.string.chat_copied, android.widget.Toast.LENGTH_SHORT).show()
+}
+
+/** User message: blue bubble, right-aligned (bg-blue-600, rounded-2xl rounded-br-md).
+ *  Long-press the bubble to copy its text. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun UserBubble(text: String, time: Long) {
+    val context = LocalContext.current
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.End
@@ -1271,7 +1290,10 @@ private fun UserBubble(text: String, time: Long) {
             shape = RoundedCornerShape(16.dp, 16.dp, 6.dp, 16.dp),
             tonalElevation = 0.dp,
             shadowElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth(0.85f)
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(16.dp, 16.dp, 6.dp, 16.dp))
+                .combinedClickable(onClick = {}, onLongClick = { copyWithFeedback(context, text) })
         ) {
             Text(
                 text,
@@ -1279,14 +1301,16 @@ private fun UserBubble(text: String, time: Long) {
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        MessageMeta(time, text, alignEnd = true)
+        MessageMeta(time, alignEnd = true)
     }
 }
 
-/** Assistant message: avatar + provider header (first of group only) then plain markdown-style text (no bubble). */
+/** Assistant message: avatar + provider header (first of group only) then plain markdown-style text (no bubble).
+ *  Long-press anywhere on the block to copy the full message text.
+ *  [showMeta] gates the timestamp row — only the turn's last block shows it. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long = 0L, done: Boolean = true, provider: String? = null) {
+private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long = 0L, done: Boolean = true, showMeta: Boolean = true, provider: String? = null) {
     val context = LocalContext.current
     Column(
         Modifier
@@ -1295,10 +1319,7 @@ private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long 
             .clip(RoundedCornerShape(8.dp))
             .combinedClickable(
                 onClick = {},
-                onLongClick = {
-                    val cb = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                    cb?.setPrimaryClip(ClipData.newPlainText("planrla", text))
-                },
+                onLongClick = { copyWithFeedback(context, text) },
             )
     ) {
         if (showHeader) {
@@ -1306,57 +1327,26 @@ private fun AssistantBlock(text: String, showHeader: Boolean = true, time: Long 
             Spacer(Modifier.height(4.dp))
         }
         MarkdownText(text, Modifier.fillMaxWidth())
-        if (done) MessageMeta(time, text, alignEnd = false)
+        if (done && showMeta) MessageMeta(time, alignEnd = false)
     }
 }
 
+/** Timestamp row under a message. Copy moved to long-press on the message itself:
+ *  web shows copy on hover, mobile has no hover, and a visible "Copy" under every
+ *  message cluttered the chat with repeated buttons (one per message + one per code block). */
 @Composable
-private fun MessageMeta(time: Long, copyContent: String, alignEnd: Boolean) {
-    val context = LocalContext.current
-    val clipboard = remember(copyContent) {
-        context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    }
-    var copied by remember { mutableStateOf(false) }
+private fun MessageMeta(time: Long, alignEnd: Boolean) {
     val timeStr = fmtTime(time)
-    if (timeStr.isEmpty() && copyContent.isBlank()) return
+    if (timeStr.isEmpty()) return
     Row(
         Modifier.padding(top = 2.dp),
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (copyContent.isNotBlank()) {
-            // Copy button — icon style like web's copy control (not just text)
-            Row(
-                Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable {
-                        clipboard?.setPrimaryClip(ClipData.newPlainText("planrla", copyContent))
-                        copied = true
-                    }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    if (copied) "✓" else "⎘",
-                    color = if (copied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    if (copied) stringResource(R.string.chat_copied) else stringResource(R.string.chat_copy),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (copied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (timeStr.isNotEmpty()) Spacer(Modifier.width(6.dp))
-        }
-        if (timeStr.isNotEmpty()) {
-            Text(
-                timeStr,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (alignEnd) UserTimestampBlue else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            )
-        }
+        Text(
+            timeStr,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (alignEnd) UserTimestampBlue else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        )
     }
 }
 
@@ -1431,29 +1421,30 @@ private fun ToolCardRow(card: ChatItem.ToolCard) {
                 if (expanded) {
                     Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                         if (card.input.isNotBlank()) {
+                            val palette = codePalette(App.settings.darkMode)
                             if (isBash) {
                                 Surface(
                                     Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFF111827),
+                                    color = palette.background,
                                 ) {
                                     Text(
                                         "$ ${card.input}",
                                         Modifier.padding(12.dp).horizontalScroll(rememberScrollState()),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
-                                        color = Color(0xFF86EFAC),
+                                        color = if (App.settings.darkMode) Color(0xFF86EFAC) else Color(0xFF15803D),
                                         lineHeight = 18.sp,
                                     )
                                 }
                             } else {
-                                // Non-bash tool params: dark code-block styling (consistent
+                                // Non-bash tool params: code-block styling (consistent
                                 // with Bash) + bounded height so huge inputs (file diffs,
                                 // request configs) never flood the chat as text walls.
                                 Surface(
                                     Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFF1E1E2E),
+                                    color = palette.background,
                                 ) {
                                     Text(
                                         card.input,
@@ -1464,7 +1455,7 @@ private fun ToolCardRow(card: ChatItem.ToolCard) {
                                             .horizontalScroll(rememberScrollState()),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
-                                        color = Color(0xFFE5E7EB),
+                                        color = palette.default,
                                         lineHeight = 18.sp,
                                     )
                                 }
@@ -1504,11 +1495,21 @@ private fun toolCategoryColor(toolName: String?): Color = when {
     else -> Color(0xFF6B7280) // default gray
 }
 
-/** Colored status badge (Running/Completed/Error) — mirrors web ToolStatusBadge. */
+/** Colored status badge (Running/Completed/Error) — mirrors web ToolStatusBadge.
+ *  Foreground colors switch with the theme: the light-on-dark pastels (#FCA5A5/#86EFAC)
+ *  are unreadable on light surfaces, so light mode uses red-600/green-600. */
 @Composable
 private fun ToolStatusBadge(isError: Boolean) {
-    val (text, bg, fg) = if (isError) Triple(stringResource(R.string.chat_tool_error), Color(0x44EF4444), Color(0xFFFCA5A5))
-                         else Triple(stringResource(R.string.chat_tool_ok), Color(0x4422C55E), Color(0xFF86EFAC))
+    val dark = App.settings.darkMode
+    val (text, bg, fg) = if (isError) Triple(
+        stringResource(R.string.chat_tool_error),
+        Color(0x44EF4444),
+        if (dark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
+    ) else Triple(
+        stringResource(R.string.chat_tool_ok),
+        Color(0x4422C55E),
+        if (dark) Color(0xFF86EFAC) else Color(0xFF16A34A),
+    )
     Box(
         Modifier.clip(RoundedCornerShape(4.dp)).background(bg).padding(horizontal = 6.dp, vertical = 1.dp)
     ) {
@@ -1530,10 +1531,11 @@ private fun MarkdownText(content: String, modifier: Modifier = Modifier) {
                 is MdPart.Text -> Markdown(
                     content = part.content,
                     modifier = Modifier.fillMaxWidth(),
+                    imageTransformer = Coil2ImageTransformerImpl,
                     colors = markdownColor(
                         text = MaterialTheme.colorScheme.onSurface,
                         codeText = MaterialTheme.colorScheme.onSurface,
-                        codeBackground = Color(0xFF1E1E2E),
+                        codeBackground = codePalette(App.settings.darkMode).background,
                     ),
                     typography = markdownTypography(
                         text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
@@ -1725,16 +1727,17 @@ private fun MarkdownInlineText(text: String, header: Boolean) {
     )
 }
 
-/** Dark code block with language label + copy button + regex-based syntax highlighting
- *  (approximates web Prism/oneDark — keywords purple, strings green, comments gray, numbers orange). */
+/** Code block with language label + copy button + regex-based syntax highlighting.
+ *  Colors follow the app theme (oneDark in dark mode, Atom One Light in light mode). */
 @Composable
 private fun CodeBlock(language: String, code: String, context: android.content.Context) {
     var copied by remember { mutableStateOf(false) }
-    val highlighted = remember(code, language) { highlightCode(code, language) }
+    val palette = codePalette(App.settings.darkMode)
+    val highlighted = remember(code, language, palette) { highlightCode(code, language, palette) }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         shape = RoundedCornerShape(8.dp),
-        color = Color(0xFF1E1E2E),
+        color = palette.background,
     ) {
         Column {
             Row(
@@ -1758,17 +1761,17 @@ private fun CodeBlock(language: String, code: String, context: android.content.C
                         }
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (copied) Color(0xFF86EFAC) else Color(0xFF9CA3AF),
+                    color = if (copied) Color(0xFF22C55E) else Color(0xFF9CA3AF),
                 )
             }
-            // Highlighted code — AnnotatedString with oneDark-style colors
+            // Highlighted code — AnnotatedString with palette-colored spans
             Text(
                 text = highlighted,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
                     .horizontalScroll(rememberScrollState()),
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
-                    color = Color(0xFFE5E7EB),
+                    color = palette.default,
                 ),
                 softWrap = false,
             )
@@ -1776,14 +1779,42 @@ private fun CodeBlock(language: String, code: String, context: android.content.C
     }
 }
 
-// oneDark-inspired syntax colors
-private val CodeKeyword = Color(0xFFC678DD)   // purple
-private val CodeString = Color(0xFF98C379)     // green
-private val CodeComment = Color(0xFF7F848E)    // gray
-private val CodeNumber = Color(0xFFD19A66)     // orange
-private val CodeFunction = Color(0xFF61AFEF)   // blue
-private val CodeType = Color(0xFFE5C07B)       // yellow
-private val CodeDefault = Color(0xFFE5E7EB)    // light gray
+// Syntax highlighting palette — oneDark for dark mode, Atom One Light for light mode.
+// Hardcoding the dark palette in light mode rendered code blocks as large black slabs.
+private data class CodePalette(
+    val keyword: Color,
+    val string: Color,
+    val comment: Color,
+    val number: Color,
+    val function: Color,
+    val type: Color,
+    val default: Color,
+    val background: Color,
+)
+
+private val DarkCodePalette = CodePalette(
+    keyword = Color(0xFFC678DD),   // purple
+    string = Color(0xFF98C379),    // green
+    comment = Color(0xFF7F848E),   // gray
+    number = Color(0xFFD19A66),    // orange
+    function = Color(0xFF61AFEF),  // blue
+    type = Color(0xFFE5C07B),      // yellow
+    default = Color(0xFFE5E7EB),   // light gray
+    background = Color(0xFF1E1E2E),
+)
+
+private val LightCodePalette = CodePalette(
+    keyword = Color(0xFFA626A4),   // purple
+    string = Color(0xFF50A14F),    // green
+    comment = Color(0xFF6B7280),   // gray
+    number = Color(0xFFB76B01),    // dark orange
+    function = Color(0xFF4078F2),  // blue
+    type = Color(0xFFC18401),      // dark yellow
+    default = Color(0xFF383A42),   // dark gray
+    background = Color(0xFFF1F5F9), // slate-100 — matches light surfaceVariant
+)
+
+private fun codePalette(dark: Boolean) = if (dark) DarkCodePalette else LightCodePalette
 
 private val LANG_KEYWORDS = mapOf(
     "kotlin" to setOf("fun", "val", "var", "class", "object", "interface", "if", "else", "when", "for", "while", "return", "import", "package", "override", "private", "public", "internal", "suspend", "companion", "init", "this", "super", "null", "true", "false", "is", "in", "as", "by", "lateinit", "const", "data", "sealed", "abstract", "open", "operator", "inline", "reified", "typealias", "where", "out", "in", "annotation", "crossinline", "noinline", "vararg", "break", "continue", "do", "throw", "try", "catch", "finally", "get", "set"),
@@ -1796,8 +1827,8 @@ private val LANG_KEYWORDS = mapOf(
     "sql" to setOf("SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "CREATE", "TABLE", "DROP", "ALTER", "INDEX", "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "ON", "AS", "AND", "OR", "NOT", "NULL", "ORDER", "BY", "GROUP", "HAVING", "LIMIT", "OFFSET", "DISTINCT", "COUNT", "SUM", "AVG", "MIN", "MAX", "INTO", "VALUES", "SET", "PRIMARY", "KEY", "FOREIGN", "REFERENCES", "DEFAULT", "CONSTRAINT", "UNIQUE", "CHECK", "CASCADE", "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION"),
 )
 
-/** Regex-based syntax highlighter — produces an AnnotatedString with oneDark-style spans. */
-private fun highlightCode(code: String, language: String): androidx.compose.ui.text.AnnotatedString {
+/** Regex-based syntax highlighter — produces an AnnotatedString with palette-colored spans. */
+private fun highlightCode(code: String, language: String, palette: CodePalette): androidx.compose.ui.text.AnnotatedString {
     val lang = language.lowercase()
     val keywords = LANG_KEYWORDS[lang] ?: LANG_KEYWORDS["javascript"]!!
     return androidx.compose.ui.text.buildAnnotatedString {
@@ -1809,11 +1840,11 @@ private fun highlightCode(code: String, language: String): androidx.compose.ui.t
         for (match in tokenRegex.findAll(code)) {
             val token = match.value
             val color = when {
-                token.startsWith("//") || token.startsWith("#") || token.startsWith("/*") -> CodeComment
-                token.startsWith("\"") || token.startsWith("'") || token.startsWith("`") -> CodeString
-                token.matches(Regex("""\d+\.?\d*""")) -> CodeNumber
-                keywords.any { it.equals(token, ignoreCase = lang == "sql") } -> CodeKeyword
-                else -> CodeDefault
+                token.startsWith("//") || token.startsWith("#") || token.startsWith("/*") -> palette.comment
+                token.startsWith("\"") || token.startsWith("'") || token.startsWith("`") -> palette.string
+                token.matches(Regex("""\d+\.?\d*""")) -> palette.number
+                keywords.any { it.equals(token, ignoreCase = lang == "sql") } -> palette.keyword
+                else -> palette.default
             }
             pushStyle(androidx.compose.ui.text.SpanStyle(color = color))
             append(token)
@@ -1852,6 +1883,8 @@ private fun providerDisplayName(provider: String?): String = when (provider?.low
     "cursor" -> "Cursor"
     "gemini" -> "Gemini"
     "opencode" -> "OpenCode"
+    "kimi" -> "Kimi Code"
+    "zcode" -> "ZCode"
     else -> "Claude"
 }
 
@@ -1870,6 +1903,7 @@ private fun providerAvatarColor(provider: String?): Color = when (provider?.lowe
     "cursor" -> Color(0xFF3B82F6)
     "gemini" -> Color(0xFF1A73E8)
     "opencode" -> Color(0xFFF97316)
+    "kimi", "zcode" -> Color(0xFF0F172A)
     else -> ClaudeCoral
 }
 
@@ -1880,6 +1914,8 @@ private fun ProviderAvatarHeader(sizeDp: Int = 32, provider: String? = null) {
         "cursor" -> R.drawable.ic_cursor
         "gemini" -> R.drawable.ic_gemini
         "opencode" -> R.drawable.ic_opencode
+        "kimi" -> R.drawable.ic_kimi
+        "zcode" -> R.drawable.ic_zcode
         else -> R.drawable.ic_claude
     }
     val bgColor = when (provider?.lowercase()) {
@@ -1887,6 +1923,7 @@ private fun ProviderAvatarHeader(sizeDp: Int = 32, provider: String? = null) {
         "cursor" -> Color(0xFF000000)
         "gemini" -> Color.White
         "opencode" -> Color(0xFFF97316)
+        "kimi", "zcode" -> Color(0xFF0F172A)
         else -> Color.Transparent // claude icon has its own bg
     }
     Box(

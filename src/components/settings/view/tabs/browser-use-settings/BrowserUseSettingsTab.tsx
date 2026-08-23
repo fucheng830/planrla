@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Import, Loader2 } from 'lucide-react';
 
 import { Button } from '../../../../../shared/view/ui';
 import { authenticatedFetch } from '../../../../../utils/api';
@@ -38,6 +38,9 @@ export default function BrowserUseSettingsTab() {
   const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
@@ -103,6 +106,25 @@ export default function BrowserUseSettingsTab() {
     }
   };
 
+  const importChromeCookies = async () => {
+    setIsImporting(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const response = await authenticatedFetch('/api/browser-use/import-chrome', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      const data = await readJson<{ data: { importedCount: number; profileName: string; message: string } }>(response);
+      setImportResult(t('browserUse.importChrome.success', { count: data.data.importedCount }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('browserUse.errors.importChrome'));
+    } finally {
+      setIsImporting(false);
+      setShowImportConfirm(false);
+    }
+  };
+
   const browserEnabled = settings?.enabled === true;
   const needsBrowserBinaries = Boolean(browserEnabled && status && (!status.playwrightInstalled || !status.chromiumInstalled));
   const runtimeLabel = (installed?: boolean) => {
@@ -134,6 +156,56 @@ export default function BrowserUseSettingsTab() {
               />
             )}
           </SettingsRow>
+
+          <SettingsRow
+            label={t('browserUse.importChrome.label')}
+            description={t('browserUse.importChrome.description')}
+          >
+            {isImporting ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('browserUse.importChrome.importing')}
+              </div>
+            ) : showImportConfirm ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowImportConfirm(false)}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void importChromeCookies()}
+                >
+                  {t('browserUse.importChrome.confirm')}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowImportConfirm(true);
+                  setImportResult(null);
+                }}
+                disabled={!browserEnabled}
+              >
+                <Import className="h-4 w-4" />
+                {t('browserUse.importChrome.button')}
+              </Button>
+            )}
+          </SettingsRow>
+
+          {importResult && (
+            <div className="px-4 pb-4 text-sm text-green-600 dark:text-green-400">
+              {importResult}
+            </div>
+          )}
 
           <div className="space-y-4 px-4 py-4">
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">

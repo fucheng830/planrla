@@ -11,6 +11,8 @@ export default function MainContentHeader({
   onToggleTerminalPanel,
   onToggleExtension,
   isExtensionOpen,
+  extensionActiveTab,
+  onToggleExtensionTab,
   selectedProject,
   selectedSession,
   shouldShowBrowserTab,
@@ -44,6 +46,7 @@ export default function MainContentHeader({
           {isMobile && <MobileMenuButton onMenuClick={onMenuClick} />}
           <MainContentTitle
             activeTab={activeTab}
+            setActiveTab={setActiveTab}
             selectedProject={selectedProject}
             selectedSession={selectedSession}
           />
@@ -63,6 +66,8 @@ export default function MainContentHeader({
               setActiveTab={setActiveTab}
               shouldShowBrowserTab={shouldShowBrowserTab}
               onToggleTerminalPanel={onToggleTerminalPanel}
+              extensionActiveTab={extensionActiveTab}
+              onToggleExtensionTab={onToggleExtensionTab}
             />
           </div>
           {canScrollRight && (

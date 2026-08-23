@@ -1,29 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, GitBranch, Globe, Plus, X } from 'lucide-react';
+import { CalendarClock, FileText, GitBranch, Globe, KanbanSquare, MonitorPlay, Plus, X } from 'lucide-react';
 
 import GitPanel from '../../git-panel/view/GitPanel';
-import EmbeddedBrowser from './subcomponents/EmbeddedBrowser';
+import { KanbanPanel } from '../../kanban';
+import { CronPromptsPanel } from '../../cron-prompts/CronPromptsPanel';
+import { BrowserUsePanel } from '../../browser-use';
 import type { Project } from '../../../types/app';
+import type { SettingsMainTab } from '../../settings/types/types';
+import type { ExtensionTabId } from '../hooks/useExtensionPanel';
 
-type ExtensionTabId = 'markdown' | 'review' | 'browser';
-
-type OpenTab = {
-  id: ExtensionTabId;
-  label: string;
-};
+import EmbeddedBrowser from './subcomponents/EmbeddedBrowser';
 
 type ExtensionPanelProps = {
   selectedProject: Project;
   onFileOpen?: (filePath: string) => void;
-  onOpenMarkdownEditor: () => void;
+  onShowSettings?: (tab?: SettingsMainTab) => void;
+  /** Controlled tab state — owned by useExtensionPanel in MainContent so the
+   *  header toolbar can open/activate/toggle tabs too. */
+  openTabs: ExtensionTabId[];
+  activeTabId: ExtensionTabId | null;
+  onOpenTab: (id: ExtensionTabId) => void;
+  onActivateTab: (id: ExtensionTabId) => void;
+  onCloseTab: (id: ExtensionTabId) => void;
   onClose: () => void;
 };
 
-const TAB_META: Record<ExtensionTabId, { label: string; icon: typeof FileText }> = {
-  markdown: { label: 'Markdown', icon: FileText },
-  review: { label: 'Review', icon: GitBranch },
-  browser: { label: 'Browser', icon: Globe },
+const TAB_META: Record<ExtensionTabId, { labelKey: string; icon: typeof FileText }> = {
+  markdown: { labelKey: 'extensionPanel.tabs.markdown', icon: FileText },
+  review: { labelKey: 'extensionPanel.tabs.review', icon: GitBranch },
+  browser: { labelKey: 'extensionPanel.tabs.browser', icon: Globe },
+  kanban: { labelKey: 'tabs.kanban', icon: KanbanSquare },
+  cron: { labelKey: 'tabs.cron', icon: CalendarClock },
+  browserUse: { labelKey: 'tabs.browser', icon: MonitorPlay },
 };
 
 const MIN_PANEL_WIDTH = 300;
@@ -32,10 +41,18 @@ const MIN_PANEL_WIDTH = 300;
  * Right-side extension panel with dynamic tabs (like VS Code editor tabs).
  * Default width is 50% of the container; drag the left edge to resize.
  */
-export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }: ExtensionPanelProps) {
+export default function ExtensionPanel({
+  selectedProject,
+  onFileOpen,
+  onShowSettings,
+  openTabs,
+  activeTabId,
+  onOpenTab,
+  onActivateTab,
+  onCloseTab,
+  onClose,
+}: ExtensionPanelProps) {
   const { t } = useTranslation();
-  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<ExtensionTabId | null>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0); // 0 = use 50% via flex-basis
   const [isResizing, setIsResizing] = useState(false);
   const [newTabMenuOpen, setNewTabMenuOpen] = useState(false);
@@ -52,21 +69,6 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [newTabMenuOpen]);
-
-  const openTab = (id: ExtensionTabId) => {
-    setOpenTabs((prev) => (prev.some((tab) => tab.id === id) ? prev : [...prev, { id, label: TAB_META[id].label }]));
-    setActiveTabId(id);
-  };
-
-  const closeTab = (id: ExtensionTabId) => {
-    setOpenTabs((prev) => {
-      const next = prev.filter((tab) => tab.id !== id);
-      if (activeTabId === id) {
-        setActiveTabId(next.length > 0 ? next[next.length - 1].id : null);
-      }
-      return next;
-    });
-  };
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -118,22 +120,22 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
       {/* Tab bar — dynamic, only shows opened tabs */}
       {openTabs.length > 0 && (
         <div className="flex items-stretch border-b border-border">
-          {openTabs.map((tab) => {
-            const meta = TAB_META[tab.id];
-            const isActive = tab.id === activeTabId;
+          {openTabs.map((tabId) => {
+            const meta = TAB_META[tabId];
+            const isActive = tabId === activeTabId;
             return (
               <div
-                key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
+                key={tabId}
+                onClick={() => onActivateTab(tabId)}
                 className={`group flex cursor-pointer items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs transition-colors ${
                   isActive ? 'bg-background font-medium text-foreground' : 'text-muted-foreground hover:bg-background/60'
                 }`}
               >
                 <meta.icon className="h-3 w-3" />
-                <span>{tab.label}</span>
+                <span>{t(meta.labelKey)}</span>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+                  onClick={(e) => { e.stopPropagation(); onCloseTab(tabId); }}
                   className="ml-1 flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
                 >
                   <X className="h-3 w-3" />
@@ -160,11 +162,11 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
                     <button
                       key={id}
                       type="button"
-                      onClick={() => { openTab(id); setNewTabMenuOpen(false); }}
+                      onClick={() => { onOpenTab(id); setNewTabMenuOpen(false); }}
                       className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                     >
                       <meta.icon className="h-3 w-3" />
-                      {meta.label}
+                      {t(meta.labelKey)}
                     </button>
                   );
                 })}
@@ -193,11 +195,11 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
                 <button
                   key={id}
                   type="button"
-                  onClick={() => openTab(id)}
+                  onClick={() => onOpenTab(id)}
                   className="flex flex-col items-center gap-2 text-muted-foreground/50 transition-colors hover:text-foreground"
                 >
                   <meta.icon className="h-10 w-10" strokeWidth={1} />
-                  <span className="text-xs">{meta.label}</span>
+                  <span className="text-xs">{t(meta.labelKey)}</span>
                 </button>
               );
             })}
@@ -215,6 +217,15 @@ export default function ExtensionPanel({ selectedProject, onFileOpen, onClose }:
         )}
         {activeTabId === 'browser' && (
           <EmbeddedBrowser overlayActive={newTabMenuOpen} />
+        )}
+        {activeTabId === 'kanban' && (
+          <KanbanPanel isVisible />
+        )}
+        {activeTabId === 'cron' && (
+          <CronPromptsPanel isVisible />
+        )}
+        {activeTabId === 'browserUse' && (
+          <BrowserUsePanel isVisible onShowSettings={onShowSettings ?? (() => {})} />
         )}
       </div>
     </div>

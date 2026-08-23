@@ -7,9 +7,6 @@ import { IS_PLATFORM } from '../../../../constants/config';
 import { cn } from '../../../../lib/utils';
 import type { SidebarSearchMode } from '../../types/types';
 
-const MOD_KEY =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
-
 type SidebarHeaderProps = {
   isPWA: boolean;
   isMobile: boolean;
@@ -58,6 +55,9 @@ export default function SidebarHeader({
   t,
 }: SidebarHeaderProps) {
   const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
+  // 桌面端（非 macOS）的 Logo 已上移到自绘标题栏（chrome/TitleBar），这里避免重复。
+  const hasCustomTitleBar =
+    typeof window !== 'undefined' && !!window.electronAPI && window.electronAPI.platform !== 'darwin';
   const searchPlaceholder = searchMode === 'sessions'
     ? t('search.sessionsPlaceholder')
     : searchMode === 'archived'
@@ -72,77 +72,86 @@ export default function SidebarHeader({
     </div>
   );
 
+  const LogoLink = () =>
+    IS_PLATFORM ? (
+      <a
+        href="https://planrla.com/dashboard"
+        className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80"
+        title={t('tooltips.viewEnvironments')}
+      >
+        <LogoBlock />
+      </a>
+    ) : (
+      <LogoBlock />
+    );
+
+  // 桌面端头部按钮组（刷新已移到列表区右键菜单）
+  const ActionButtons = () => (
+    <div className="flex flex-shrink-0 items-center gap-0.5">
+      {onOpenBackgroundTasks && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+          onClick={onOpenBackgroundTasks}
+          title="后台任务"
+          aria-label="后台任务"
+        >
+          <Activity className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+        onClick={onCreateProject}
+        title={t('tooltips.createProject')}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+        onClick={onCollapseSidebar}
+        title={t('tooltips.hideSidebar')}
+      >
+        <PanelLeftClose className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+
   return (
     <div className="flex-shrink-0">
       {/* Desktop header */}
-      <div
-        className="hidden px-3 pb-2 pt-3 md:block"
-        style={{}}
-      >
-        <div className="flex items-center justify-between gap-2">
-          {IS_PLATFORM ? (
-            <a
-              href="https://planrla.com/dashboard"
-              className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80"
-              title={t('tooltips.viewEnvironments')}
-            >
-              <LogoBlock />
-            </a>
-          ) : (
-            <LogoBlock />
-          )}
-
-          <div className="flex flex-shrink-0 items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              title={t('tooltips.refresh')}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${
-                  isRefreshing ? 'animate-spin' : ''
-                }`}
-              />
-            </Button>
-            {onOpenBackgroundTasks && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                onClick={onOpenBackgroundTasks}
-                title="后台任务"
-                aria-label="后台任务"
-              >
-                <Activity className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onCreateProject}
-              title={t('tooltips.createProject')}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onCollapseSidebar}
-              title={t('tooltips.hideSidebar')}
-            >
-              <PanelLeftClose className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-        {/* Search bar */}
-        {showSearchTools && (
-          <div className="mt-2.5 space-y-2">
-            {/* Search mode toggle */}
+      <div className="hidden px-3 pb-2 pt-3 md:block">
+        {showSearchTools ? (
+          <div className="space-y-2">
+            {/* Row 1: compact search + action buttons */}
+            <div className="flex items-center gap-1.5">
+              {!hasCustomTitleBar && <LogoLink />}
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+                <Input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={searchFilter}
+                  onChange={(event) => onSearchFilterChange(event.target.value)}
+                  className="nav-search-input h-7 rounded-lg border-0 pl-8 pr-7 text-xs transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {searchFilter && (
+                  <button
+                    onClick={onClearSearchFilter}
+                    aria-label={t('tooltips.clearSearch')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 hover:bg-accent"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+              <ActionButtons />
+            </div>
+            {/* Row 2: search mode toggle */}
             <div className="flex rounded-lg bg-muted/50 p-0.5">
               <button
                 onClick={() => onSearchModeChange('projects')}
@@ -194,34 +203,11 @@ export default function SidebarHeader({
                 </button>
               </Tooltip>
             </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-              <Input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchFilter}
-                onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-9 rounded-xl border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              {searchFilter ? (
-                <button
-                  onClick={onClearSearchFilter}
-                  aria-label={t('tooltips.clearSearch')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 hover:bg-accent"
-                >
-                  <X className="h-3 w-3 text-muted-foreground" />
-                </button>
-              ) : (
-                <kbd
-                  aria-hidden
-                  title={t('tooltips.openCommandPalette')}
-                  className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground md:inline-flex"
-                >
-                  {MOD_KEY}
-                  <span>K</span>
-                </kbd>
-              )}
-            </div>
+          </div>
+        ) : (
+          <div className={cn('flex items-center gap-2', hasCustomTitleBar ? 'justify-end' : 'justify-between')}>
+            {!hasCustomTitleBar && <LogoLink />}
+            <ActionButtons />
           </div>
         )}
       </div>

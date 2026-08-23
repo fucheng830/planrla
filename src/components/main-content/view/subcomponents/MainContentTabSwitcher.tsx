@@ -1,9 +1,10 @@
-import { Terminal, GitBranch, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tooltip } from '../../../../shared/view/ui';
 import type { AppTab } from '../../../../types/app';
+import type { ExtensionTabId } from '../../../extension-panel/hooks/useExtensionPanel';
 import { usePlugins } from '../../../../contexts/PluginsContext';
 import PluginIcon from '../../../plugins/view/PluginIcon';
 
@@ -13,11 +14,16 @@ type MainContentTabSwitcherProps = {
   shouldShowBrowserTab: boolean;
   /** When set, clicking the shell tab toggles the bottom terminal panel. */
   onToggleTerminalPanel?: () => void;
+  /** Active tab inside the right-side extension panel (null when closed/none). */
+  extensionActiveTab?: ExtensionTabId | null;
+  /** Toggle a tab inside the right-side extension panel. */
+  onToggleExtensionTab?: (id: ExtensionTabId) => void;
 };
 
 type BuiltInTab = {
   kind: 'builtin';
-  id: AppTab;
+  /** 'shell' toggles the bottom terminal panel; the others are extension-panel tabs. */
+  id: 'shell' | ExtensionTabId;
   labelKey: string;
   icon: LucideIcon;
 };
@@ -34,17 +40,20 @@ type TabDefinition = BuiltInTab | PluginTab;
 
 /**
  * Secondary views shown as standalone icon buttons. Chat is NOT listed — it is
- * the default main content; every icon toggles its view and clicking the
- * active one returns to chat.
+ * the default main content. 'shell' toggles the bottom terminal panel;
+ * kanban/cron/browserUse toggle tabs in the right-side extension panel;
+ * plugin tabs replace the main content and clicking the active one returns
+ * to chat.
  */
 const BASE_TABS: BuiltInTab[] = [
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
-  { kind: 'builtin', id: 'git',   labelKey: 'tabs.git',   icon: GitBranch },
+  // 'git' is intentionally not here: its entry point moved to the branch
+  // indicator next to the project name in MainContentTitle.
 ];
 
 const BROWSER_TAB: BuiltInTab = {
   kind: 'builtin',
-  id: 'browser',
+  id: 'browserUse',
   labelKey: 'tabs.browser',
   icon: MonitorPlay,
 };
@@ -68,6 +77,8 @@ export default function MainContentTabSwitcher({
   setActiveTab,
   shouldShowBrowserTab,
   onToggleTerminalPanel,
+  extensionActiveTab,
+  onToggleExtensionTab,
 }: MainContentTabSwitcherProps) {
   const { t } = useTranslation();
   const { plugins } = usePlugins();
@@ -94,7 +105,10 @@ export default function MainContentTabSwitcher({
   return (
     <div className="flex items-center gap-0.5">
       {tabs.map((tab) => {
-        const isActive = tab.id === activeTab;
+        const isActive =
+          tab.kind === 'plugin'
+            ? tab.id === activeTab
+            : tab.id !== 'shell' && tab.id === extensionActiveTab;
         const displayLabel = tab.kind === 'builtin' ? t(tab.labelKey) : tab.label;
 
         return (
@@ -102,15 +116,20 @@ export default function MainContentTabSwitcher({
             <button
               type="button"
               onClick={() => {
-                // Shell toggles the bottom terminal panel instead of
-                // switching to a full-screen shell tab.
-                if (tab.id === 'shell' && onToggleTerminalPanel) {
-                  onToggleTerminalPanel();
+                if (tab.kind === 'plugin') {
+                  // Chat is the base view: clicking the active plugin's icon
+                  // returns to it.
+                  setActiveTab(isActive ? 'chat' : tab.id);
                   return;
                 }
-                // Chat is the base view: clicking the active view's icon
-                // returns to it.
-                setActiveTab(isActive ? 'chat' : tab.id);
+                // Shell toggles the bottom terminal panel instead of
+                // switching to a full-screen shell tab.
+                if (tab.id === 'shell') {
+                  onToggleTerminalPanel?.();
+                  return;
+                }
+                // Kanban/cron/browserUse live in the right-side extension panel.
+                onToggleExtensionTab?.(tab.id);
               }}
               className={`flex flex-shrink-0 items-center justify-center rounded p-1.5 transition-colors ${
                 isActive

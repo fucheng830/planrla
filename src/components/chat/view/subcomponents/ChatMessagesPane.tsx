@@ -264,11 +264,13 @@ export default function ChatMessagesPane({
           <VList ref={virtuaRef} data={visibleMessages} keepMounted={streamingIndices} onScroll={onWheel} style={{ flex: 1, overflowAnchor: 'none' }}>
             {(message: ChatMessage, index: number) => {
               const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
+              const nextMessage = index < visibleMessages.length - 1 ? visibleMessages[index + 1] : null;
               return (
                 <div key={getMessageKey(message)} style={{ paddingBottom: '0.75rem' }}>
                   <MessageComponent
                     message={message}
                     prevMessage={prevMessage}
+                    nextMessage={nextMessage}
                     createDiff={createDiff}
                     onFileOpen={onFileOpen}
                     onOpenSession={onOpenSession}
@@ -279,7 +281,7 @@ export default function ChatMessagesPane({
                     showThinking={showThinking}
                     selectedProject={selectedProject}
                     provider={provider}
-                    canForkAtMessage={Boolean(onForkAtMessage && currentSessionId && !isProcessing && MESSAGE_FORKABLE_PROVIDERS.has(provider))}
+                    canForkAtMessage={Boolean(onForkAtMessage && currentSessionId && MESSAGE_FORKABLE_PROVIDERS.has(provider))}
                     onForkAtMessage={onForkAtMessage && currentSessionId ? () => onForkAtMessage(currentSessionId, message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp) : undefined}
                   />
                 </div>

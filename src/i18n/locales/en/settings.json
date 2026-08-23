@@ -274,6 +274,14 @@
       "open": "Open Browser settings",
       "refresh": "Refresh browser sessions"
     },
+    "importChrome": {
+      "label": "Import Chrome Cookies",
+      "description": "Import your Chrome login state into the built-in browser. Only cookies are imported; browsing history, cache, and saved passwords are left in Chrome.",
+      "button": "Import Chrome Cookies",
+      "confirm": "Confirm Import",
+      "importing": "Importing...",
+      "success": "Imported {{count}} cookies"
+    },
     "runtime": {
       "disabled": "Disabled",
       "ready": "Ready",
@@ -337,7 +345,8 @@
       "loadSettings": "Failed to load Browser settings",
       "loadStatus": "Failed to load Browser status",
       "saveSettings": "Failed to save Browser settings",
-      "installRuntime": "Failed to install browser runtime"
+      "installRuntime": "Failed to install browser runtime",
+      "importChrome": "Failed to import Chrome cookies"
     }
   },
   "appearanceSettings": {

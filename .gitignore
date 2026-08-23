@@ -179,3 +179,5 @@ landing/.astro/
 # Task files
 # tasks.json
 # tasks/ 
+rel015/
+release-0.15/

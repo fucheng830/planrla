@@ -302,7 +302,7 @@ const removeSessionFromProject = (project: Project, sessionIdToDelete: string): 
   return updatedProject;
 };
 
-const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'git', 'browser']);
+const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'git']);
 
 const isValidTab = (tab: string): tab is AppTab => {
   return VALID_TABS.has(tab) || tab.startsWith('plugin:');
@@ -742,10 +742,6 @@ export function useProjectsState({
       setSelectedSession(session);
       onCompletedSessionSeen(session.id);
 
-      if (activeTab === 'browser') {
-        setActiveTab('chat');
-      }
-
       if (isMobile) {
         // Sessions are tagged with the owning project's DB `projectId` when
         // picked from the sidebar (see useSidebarController); compare against
@@ -761,7 +757,7 @@ export function useProjectsState({
 
       navigate(`/session/${session.id}`);
     },
-    [activeTab, isMobile, navigate, onCompletedSessionSeen, selectedProject?.projectId],
+    [isMobile, navigate, onCompletedSessionSeen, selectedProject?.projectId],
   );
 
   const handleNewSession = useCallback(

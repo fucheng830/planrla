@@ -32,6 +32,10 @@ fun ShellView(
     val badUrlText = stringResource(R.string.shell_bad_url)
     val disconnectedText = stringResource(R.string.shell_disconnected)
     val wsErrorText = stringResource(R.string.shell_ws_error)
+    // key(dark) rebuilds the WebView when the app theme flips, so the terminal
+    // page is regenerated with matching colors instead of staying dark in light mode.
+    val dark = App.settings.darkMode
+    androidx.compose.runtime.key(dark) {
     AndroidView(
         factory = { ctx ->
             val xtermJs = ctx.assets.open("xterm.js").bufferedReader().use { it.readText() }
@@ -39,6 +43,7 @@ fun ShellView(
             val fitJs = ctx.assets.open("xterm-addon-fit.js").bufferedReader().use { it.readText() }
             val wsBase = serverUrl.replace(Regex("^http"), "ws").trimEnd('/')
             val path = projectPath.orEmpty()
+            val theme = shellTheme(dark)
             val html = buildShellHtml(
                 xtermJs,
                 xtermCss,
@@ -46,6 +51,7 @@ fun ShellView(
                 "$wsBase/shell?token=${encodeURIComponent(token)}",
                 path,
                 ShellLabels(connectingText, badUrlText, disconnectedText, wsErrorText),
+                theme,
             )
             WebView(ctx).apply {
                 layoutParams = ViewGroup.LayoutParams(
@@ -62,6 +68,9 @@ fun ShellView(
                 isFocusable = true
                 isFocusableInTouchMode = true
                 setOnClickListener { requestFocus() }
+                // Match the page background so the WebView doesn't flash white
+                // (light) before the inline HTML paints.
+                setBackgroundColor(theme.pageBackground.toInt())
                 loadDataWithBaseURL(
                     if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/",
                     html, "text/html", "utf-8", null,
@@ -71,6 +80,7 @@ fun ShellView(
         },
         modifier = modifier.fillMaxSize(),
     )
+    }
 }
 
 private fun encodeURIComponent(value: String): String =
@@ -83,6 +93,45 @@ private data class ShellLabels(
     val wsError: String,
 )
 
+/** Terminal color scheme — dark matches the app's dark background (#0B1120),
+ *  light keeps the terminal readable instead of rendering as a big black area. */
+private data class ShellTheme(
+    val pageBackground: Long,      // ARGB for WebView.setBackgroundColor + page css
+    val cssBackground: String,
+    val cssForeground: String,
+    val cssCursor: String,
+    val cssSelection: String,
+    val barBackground: String,
+    val barBorder: String,
+    val buttonBackground: String,
+    val buttonBorder: String,
+    val buttonText: String,
+)
+
+private fun shellTheme(dark: Boolean) = if (dark) ShellTheme(
+    pageBackground = 0xFF0B1120,
+    cssBackground = "#0B1120",
+    cssForeground = "#E2E8F0",
+    cssCursor = "#94A3B8",
+    cssSelection = "#334155",
+    barBackground = "rgba(15,23,42,.96)",
+    barBorder = "rgba(51,65,85,.9)",
+    buttonBackground = "#334155",
+    buttonBorder = "#475569",
+    buttonText = "#F8FAFC",
+) else ShellTheme(
+    pageBackground = 0xFFFFFFFF,
+    cssBackground = "#FFFFFF",
+    cssForeground = "#0F172A",
+    cssCursor = "#475569",
+    cssSelection = "#CBD5E1",
+    barBackground = "rgba(241,245,249,.96)",
+    barBorder = "rgba(226,232,240,.9)",
+    buttonBackground = "#FFFFFF",
+    buttonBorder = "#CBD5E1",
+    buttonText = "#0F172A",
+)
+
 private fun buildShellHtml(
     xtermJs: String,
     xtermCss: String,
@@ -90,6 +139,7 @@ private fun buildShellHtml(
     wsUrl: String,
     projectPath: String,
     labels: ShellLabels,
+    theme: ShellTheme,
 ): String {
     // Escape </ so an inlined script can't terminate the wrapping <script> early.
     val js = xtermJs.replace("</", "<\\/")
@@ -104,14 +154,14 @@ private fun buildShellHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>$xtermCss</style>
 <style>
-html,body{margin:0;padding:0;height:100%;background:#0B1120;overflow:hidden;overscroll-behavior:none;}
+html,body{margin:0;padding:0;height:100%;background:${theme.cssBackground};overflow:hidden;overscroll-behavior:none;}
 body{height:100dvh;}
 #t{width:100vw;height:calc(100dvh - 46px);}
 .xterm{height:100%;}
-#shortcuts{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:6px;align-items:center;overflow-x:auto;padding:6px 8px;background:rgba(15,23,42,.96);border-top:1px solid rgba(51,65,85,.9);box-sizing:border-box;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+#shortcuts{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:6px;align-items:center;overflow-x:auto;padding:6px 8px;background:${theme.barBackground};border-top:1px solid ${theme.barBorder};box-sizing:border-box;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 #shortcuts::-webkit-scrollbar{display:none;}
-button{flex:0 0 auto;border:1px solid #475569;border-radius:7px;background:#334155;color:#F8FAFC;font:600 12px system-ui,sans-serif;padding:7px 9px;min-width:34px;}
-button:active{background:#2563EB;border-color:#2563EB;}
+button{flex:0 0 auto;border:1px solid ${theme.buttonBorder};border-radius:7px;background:${theme.buttonBackground};color:${theme.buttonText};font:600 12px system-ui,sans-serif;padding:7px 9px;min-width:34px;}
+button:active{background:#2563EB;border-color:#2563EB;color:#F8FAFC;}
 *{-webkit-tap-highlight-color:transparent;}
 </style>
 </head><body><div id="t"></div>
@@ -134,7 +184,7 @@ var SHELL_CONFIG={wsUrl:$wsUrlJson,projectPath:$projectPathJson,labels:{connecti
 (function(){
   var c=SHELL_CONFIG;
   var labels=c.labels||{};
-  var term=new Terminal({cursorBlink:true,fontFamily:'Menlo,Consolas,monospace',fontSize:13,lineHeight:1.25,theme:{background:'#0B1120',foreground:'#E2E8F0',cursor:'#94A3B8',selectionBackground:'#334155'},allowProposedApi:true});
+  var term=new Terminal({cursorBlink:true,fontFamily:'Menlo,Consolas,monospace',fontSize:13,lineHeight:1.25,theme:{background:'${theme.cssBackground}',foreground:'${theme.cssForeground}',cursor:'${theme.cssCursor}',selectionBackground:'${theme.cssSelection}'},allowProposedApi:true});
   var fit=new FitAddon.FitAddon();term.loadAddon(fit);term.open(document.getElementById('t'));
   try{fit.fit();}catch(e){}
   var terminalEl=document.getElementById('t');

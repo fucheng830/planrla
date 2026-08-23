@@ -26,6 +26,13 @@
     "kanban": "Kanban",
     "cron": "Cron"
   },
+  "extensionPanel": {
+    "tabs": {
+      "markdown": "Markdown",
+      "review": "Review",
+      "browser": "Embedded browser"
+    }
+  },
   "status": {
     "loading": "Loading...",
     "success": "Success",
@@ -430,6 +437,7 @@
     "deleteUntrackedFile": "Delete untracked file",
     "discardChanges": "Discard changes",
     "delete": "Delete",
-    "discard": "Discard"
+    "discard": "Discard",
+    "repositoryModalTitle": "Git Repository"
   }
 }

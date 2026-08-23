@@ -58,6 +58,19 @@ router.post('/runtime/install', async (_req, res) => {
   }
 });
 
+router.post('/import-chrome', async (req, res) => {
+  try {
+    const profileName = typeof req.body?.profileName === 'string' ? req.body.profileName : undefined;
+    const result = await browserUseService.importChromeCookies({ profileName });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to import Chrome cookies.',
+    });
+  }
+});
+
 router.get('/sessions', async (_req, res) => {
   try {
     res.json({ success: true, data: { sessions: await browserUseService.listSessions() } });

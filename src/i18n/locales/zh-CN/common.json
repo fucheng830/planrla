@@ -26,6 +26,13 @@
     "kanban": "看板",
     "cron": "定时"
   },
+  "extensionPanel": {
+    "tabs": {
+      "markdown": "Markdown",
+      "review": "代码审查",
+      "browser": "内置浏览器"
+    }
+  },
   "status": {
     "loading": "加载中...",
     "success": "成功",
@@ -425,6 +432,7 @@
     "deleteUntrackedFile": "删除未跟踪文件",
     "discardChanges": "丢弃更改",
     "delete": "删除",
-    "discard": "丢弃"
+    "discard": "丢弃",
+    "repositoryModalTitle": "Git 仓库"
   }
 }

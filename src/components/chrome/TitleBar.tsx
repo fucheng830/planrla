@@ -15,6 +15,7 @@ export default function TitleBar() {
       style={{ WebkitAppRegion: 'drag', paddingRight: 'env(titlebar-area-x, 138px)' } as React.CSSProperties}
     >
       <div className="flex items-center gap-2 pl-3">
+        <img src="/logo.svg" alt="Planrla" className="h-5 w-5" draggable={false} />
         <span className="text-sm font-semibold text-foreground">Planrla</span>
       </div>
     </div>

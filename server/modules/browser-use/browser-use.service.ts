@@ -263,6 +263,334 @@ function findSystemChromiumBrowser(): string | null {
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
 
+/**
+ * Chrome-only executable lookup. Importing cookies from Chrome requires
+ * launching the real chrome.exe so it can decrypt its own cookie store.
+ */
+function findChromeExecutable(): string | null {
+  const candidates: string[] = [];
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+    const localAppData = process.env['LOCALAPPDATA'] || '';
+    candidates.push(
+      path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    );
+  } else if (process.platform === 'darwin') {
+    candidates.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+  } else {
+    candidates.push('/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium');
+  }
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+function getChromeUserDataDir(): string | null {
+  const home = os.homedir();
+  if (process.platform === 'win32') {
+    const localAppData = process.env['LOCALAPPDATA'];
+    return localAppData ? path.join(localAppData, 'Google', 'Chrome', 'User Data') : null;
+  }
+  if (process.platform === 'darwin') {
+    return path.join(home, 'Library', 'Application Support', 'Google', 'Chrome');
+  }
+  return path.join(home, '.config', 'google-chrome');
+}
+
+/**
+ * Directories under the Chrome profile that are intentionally excluded from the
+ * cookie import. We only need the cookie store + enough profile scaffolding for
+ * Chrome to boot; history, cache, extensions, and saved passwords stay behind.
+ */
+const CHROME_COPY_EXCLUDED_DIRS = new Set([
+  'Cache', 'Code Cache', 'GPUCache', 'Media Cache', 'Service Worker',
+  'Session Storage', 'IndexedDB', 'File System', 'blob_storage', 'databases',
+  'Local Storage', 'Extension Cookies', 'Extension State', 'Extensions',
+  'Sync Data', 'Sync App Settings', 'Sync Extension Settings',
+  'Managed Extension Settings', 'Web Applications', 'CertificateRevocation',
+  'Crowd Deny', 'DawnCache', 'DawnGraphiteCache', 'GrShaderCache',
+  'GraphiteDawnCache', 'ShaderCache', 'Subresource Filter', 'component_crx_cache',
+  'denylist_interventions', 'dynamic_module', 'feedback', 'first_party_sets',
+  'histograms', 'interventions', 'jump_list', 'leveldb', 'load_statistics',
+  'me2u', 'optimization_guide', 'privacy', 'segmentation', 'stability',
+  'structured', 'thumbnails', 'token_service', 'visited_links', 'webrtc',
+  'crashpad', 'SwReporter', 'Pepper Data', 'WidevineCdm', 'OptimizationHints',
+  'hyphen-data', 'GCM Store', 'Account Entity Database', 'ProtoDB',
+  // Exclusively locked while Chrome runs; irrelevant to cookies.
+  'Sessions', 'Safe Browsing Network', 'Safe Browsing',
+]);
+
+function runRobocopy(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('robocopy', args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { output += chunk.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      // robocopy exit codes 0–7 are success (0 = nothing to copy, 1 = copied).
+      if (code !== null && code < 8) {
+        resolve();
+        return;
+      }
+      const failures = output
+        .split(/\r?\n/)
+        // robocopy error lines carry a hex status like (0x00000020); matching
+        // that works regardless of the OS display language.
+        .filter((line) => /\(0x[0-9a-f]{8}\)/i.test(line))
+        .slice(0, 5)
+        .join(' | ');
+      reject(new Error(`robocopy exited with code ${code}${failures ? `: ${failures}` : ''}`));
+    });
+  });
+}
+
+/**
+ * Copies the Chrome profile (Default) to a temporary directory so the real
+ * Chrome executable can be launched against the copy without touching the
+ * live profile. Cookies are decrypted by Chrome itself on first read.
+ */
+async function copyChromeProfileToTemp(userDataDir: string): Promise<string> {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'planrla-chrome-import-'));
+  const defaultProfileDir = path.join(userDataDir, 'Default');
+  const tempProfileDir = path.join(tempDir, 'Default');
+
+  if (!fs.existsSync(defaultProfileDir)) {
+    throw new Error('Chrome Default profile directory not found.');
+  }
+
+  if (process.platform === 'win32') {
+    // robocopy reads Chrome's locked SQLite files via shared access, but a few
+    // files (e.g. Network\Cookies while Chrome is running) are locked
+    // exclusively. A non-zero exit is therefore not fatal here — the cookie
+    // store check below decides whether the copy is usable.
+    const robocopyArgs = [
+      defaultProfileDir,
+      tempProfileDir,
+      '/E', '/Z', '/R:1', '/W:1',
+      '/NFL', '/NDL', '/NJH', '/NJS', '/NP',
+      '/XF', '*-journal',
+      '/XD', ...[...CHROME_COPY_EXCLUDED_DIRS],
+    ];
+    try {
+      await runRobocopy(robocopyArgs);
+    } catch (err) {
+      if (!fs.existsSync(tempProfileDir)) {
+        // The copy never got off the ground (robocopy missing, bad args…).
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        throw err;
+      }
+      console.warn('[browser-use] robocopy reported partial failures:', err);
+    }
+  } else {
+    fs.cpSync(defaultProfileDir, tempProfileDir, {
+      recursive: true,
+      filter: (src) => !CHROME_COPY_EXCLUDED_DIRS.has(path.basename(src)),
+    });
+  }
+
+  const localStateSrc = path.join(userDataDir, 'Local State');
+  if (fs.existsSync(localStateSrc)) {
+    fs.copyFileSync(localStateSrc, path.join(tempDir, 'Local State'));
+  }
+
+  // Chrome ≥ 96 stores cookies in Default/Network/Cookies; older versions keep
+  // them in Default/Cookies. Fail fast with a clear message if neither copied.
+  const cookiesCopied =
+    fs.existsSync(path.join(tempProfileDir, 'Network', 'Cookies')) ||
+    fs.existsSync(path.join(tempProfileDir, 'Cookies'));
+  if (!cookiesCopied) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw new Error(
+      'Failed to copy the Chrome cookie store. Please close Chrome completely and try again.',
+    );
+  }
+
+  return tempDir;
+}
+
+/**
+ * Returns true if the copied Chrome cookie store contains v20 (App-Bound
+ * Encryption) entries. v20 keys are bound to the original profile path, so
+ * Chrome wipes the store when launched against a copy — extraction would
+ * silently yield zero cookies. Detect this up front and refuse instead.
+ */
+function hasAppBoundCookies(tempProfilePath: string): boolean {
+  const candidates = [
+    path.join(tempProfilePath, 'Default', 'Network', 'Cookies'),
+    path.join(tempProfilePath, 'Default', 'Cookies'),
+  ];
+  const dbPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!dbPath) {
+    return false;
+  }
+  let db: any;
+  try {
+    const Database = require('better-sqlite3');
+    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    const rows = db.prepare('SELECT encrypted_value FROM cookies LIMIT 25').all();
+    return rows.some((row: { encrypted_value: Buffer }) => {
+      const value = Buffer.from(row.encrypted_value);
+      return value.length >= 3 && value.subarray(0, 3).toString('utf8') === 'v20';
+    });
+  } catch {
+    return false;
+  } finally {
+    try { db?.close(); } catch { /* ignore */ }
+  }
+}
+
+async function getFreePort(): Promise<number> {
+  const net = await import('node:net');
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (typeof address === 'object' && address) {
+        const port = address.port;
+        server.close(() => resolve(port));
+        return;
+      }
+      reject(new Error('Could not allocate a free port.'));
+    });
+    server.on('error', reject);
+  });
+}
+
+async function waitForCdpReady(port: number, timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/json/version`);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Retry until Chrome's CDP endpoint is up.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error('Chrome CDP endpoint did not become ready.');
+}
+
+/**
+ * Launches the real Chrome executable against a copied profile and extracts
+ * decrypted cookies via CDP. Chrome decrypts its own cookie store, so this
+ * works even when the cookie values are encrypted at rest.
+ */
+async function extractCookiesViaCdp(chromePath: string, tempProfilePath: string, playwright: any): Promise<any[]> {
+  const port = await getFreePort();
+  const child = spawn(chromePath, [
+    '--headless=new',
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${tempProfilePath}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-extensions',
+    '--disable-background-networking',
+    '--disable-sync',
+    '--disable-features=Translate',
+    'about:blank',
+  ], { stdio: 'ignore' });
+
+  try {
+    await waitForCdpReady(port);
+    const browser = await playwright.chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+    try {
+      const context = browser.contexts()[0];
+      if (!context) {
+        throw new Error('Chrome CDP connection established but no browser context is available.');
+      }
+      const page = context.pages()[0] || await context.newPage();
+      const cdp = await context.newCDPSession(page);
+      const result = await cdp.send('Network.getAllCookies');
+      return Array.isArray(result.cookies) ? result.cookies : [];
+    } finally {
+      await browser.close().catch(() => undefined);
+    }
+  } finally {
+    child.kill('SIGKILL');
+    if (process.platform === 'win32') {
+      // taskkill /f /t also terminates any child processes Chrome spawned.
+      spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { stdio: 'ignore' });
+    }
+  }
+}
+
+/**
+ * Normalizes CDP cookies into Playwright's addCookies shape and writes them
+ * into a planrla browser profile so agent browser sessions start logged in.
+ */
+async function importCookiesToProfile(profileName: string | null, cookies: any[], playwright: any): Promise<number> {
+  const profilePath = getProfilePath(profileName || 'default');
+  fs.mkdirSync(PROFILE_ROOT, { recursive: true });
+
+  const systemBrowserPath = findSystemChromiumBrowser();
+  const launchOptions: { headless: boolean; args: string[]; executablePath?: string } = {
+    headless: true,
+    args: ['--disable-dev-shm-usage'],
+    ...(systemBrowserPath ? { executablePath: systemBrowserPath } : {}),
+  };
+
+  const context = await playwright.chromium.launchPersistentContext(profilePath, launchOptions);
+  try {
+    // Ensure at least one page exists so the context is fully initialized.
+    if (context.pages().length === 0) {
+      await context.newPage();
+    }
+
+    const playwrightCookies = cookies
+      .map((cookie) => {
+        const sameSite = cookie.sameSite === 'Strict' || cookie.sameSite === 'Lax' || cookie.sameSite === 'None'
+          ? cookie.sameSite
+          : undefined;
+        const expires = cookie.session || cookie.expires === -1 ? undefined : cookie.expires;
+        return {
+          name: String(cookie.name || ''),
+          value: String(cookie.value || ''),
+          domain: String(cookie.domain || ''),
+          path: String(cookie.path || '/'),
+          ...(expires !== undefined ? { expires } : {}),
+          httpOnly: Boolean(cookie.httpOnly),
+          secure: Boolean(cookie.secure),
+          ...(sameSite ? { sameSite } : {}),
+        };
+      })
+      .filter((cookie) => cookie.name && cookie.domain && cookie.path);
+
+    if (playwrightCookies.length === 0) {
+      return 0;
+    }
+
+    // addCookies validates the whole batch, so add in chunks to avoid one bad
+    // cookie aborting the entire import.
+    const chunkSize = 50;
+    let imported = 0;
+    for (let index = 0; index < playwrightCookies.length; index += chunkSize) {
+      const chunk = playwrightCookies.slice(index, index + chunkSize);
+      try {
+        await context.addCookies(chunk);
+        imported += chunk.length;
+      } catch (error) {
+        // Fall back to per-cookie insertion for this chunk.
+        for (const cookie of chunk) {
+          try {
+            await context.addCookies([cookie]);
+            imported += 1;
+          } catch {
+            // Skip cookies Playwright rejects (malformed domain, etc.).
+          }
+        }
+      }
+    }
+
+    return imported;
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}
+
 function getRuntimeReadiness(options: { force?: boolean } = {}): RuntimeReadiness {
   const now = Date.now();
   const cachedProbe = runtimeProbeCache;
@@ -544,6 +872,54 @@ export const browserUseService = {
       ...result,
       status: await this.getStatus(),
     };
+  },
+
+  /**
+   * Imports cookies from the user's Chrome browser into a planrla browser
+   * profile. Only cookies are copied; browsing history, cache, and saved
+   * passwords are left in Chrome.
+   */
+  async importChromeCookies(options?: { profileName?: string | null }) {
+    const settings = readSettings();
+    if (!settings.enabled) {
+      throw new Error('Browser is disabled in settings.');
+    }
+
+    const readiness = getRuntimeReadiness();
+    if (!readiness.playwright || !readiness.chromiumInstalled) {
+      throw new Error(getSetupMessage(settings, readiness));
+    }
+
+    const chromeUserDataDir = getChromeUserDataDir();
+    if (!chromeUserDataDir || !fs.existsSync(chromeUserDataDir)) {
+      throw new Error('Chrome user data directory not found.');
+    }
+
+    const chromePath = findChromeExecutable();
+    if (!chromePath) {
+      throw new Error('Chrome is not installed on this machine.');
+    }
+
+    const tempProfilePath = await copyChromeProfileToTemp(chromeUserDataDir);
+    try {
+      if (hasAppBoundCookies(tempProfilePath)) {
+        throw new Error(
+          'This Chrome version uses App-Bound Encryption (v20) for cookies, which cannot be '
+          + 'exported outside Chrome. Cookie import is currently not supported for this '
+          + 'Chrome installation.',
+        );
+      }
+      const cookies = await extractCookiesViaCdp(chromePath, tempProfilePath, readiness.playwright);
+      const profileName = normalizeProfileName(options?.profileName) || 'default';
+      const importedCount = await importCookiesToProfile(profileName, cookies, readiness.playwright);
+      return {
+        importedCount,
+        profileName,
+        message: `Imported ${importedCount} cookies from Chrome.`,
+      };
+    } finally {
+      await fs.promises.rm(tempProfilePath, { recursive: true, force: true }).catch(() => undefined);
+    }
   },
 
   async listSessions() {

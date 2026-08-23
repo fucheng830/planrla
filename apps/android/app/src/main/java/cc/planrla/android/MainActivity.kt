@@ -153,38 +153,40 @@ fun NomadNav() {
                 nav.navigate("chat/new") { popUpTo("connect") { inclusive = true } }
             })
         }
-        composable("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { back ->
+        composable("chat/{sid}?cwd={cwd}&title={title}&pid={pid}&prov={prov}") { back ->
             val sid = back.arguments?.getString("sid") ?: return@composable
             val cwd = back.arguments?.getString("cwd")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
             val title = back.arguments?.getString("title")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
             val pid = back.arguments?.getString("pid")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
+            val prov = back.arguments?.getString("prov")?.let(::safeUrlDecode)?.takeIf { it.isNotBlank() }
             ChatScreen(
-                sessionId = sid, cwd = cwd, title = title, projectId = pid,
+                sessionId = sid, cwd = cwd, title = title, projectId = pid, initialProvider = prov,
                 onSelectSession = { p, c, session ->
                     val enc = URLEncoder.encode(c ?: "", "UTF-8")
                     val titleEnc = URLEncoder.encode(session.summary ?: "", "UTF-8")
                     val pidEnc = URLEncoder.encode(p, "UTF-8")
-                    nav.navigate("chat/${session.id}?cwd=$enc&title=$titleEnc&pid=$pidEnc") {
-                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { inclusive = true }
+                    val provEnc = URLEncoder.encode(session.provider ?: "", "UTF-8")
+                    nav.navigate("chat/${session.id}?cwd=$enc&title=$titleEnc&pid=$pidEnc&prov=$provEnc") {
+                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}&prov={prov}") { inclusive = true }
                     }
                 },
                 onNewSession = { p, c ->
                     val enc = URLEncoder.encode(c ?: "", "UTF-8")
                     val pidEnc = URLEncoder.encode(p, "UTF-8")
                     nav.navigate("chat/new?cwd=$enc&pid=$pidEnc") {
-                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { inclusive = true }
+                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}&prov={prov}") { inclusive = true }
                     }
                 },
                 onSwitchDevice = {
                     // Switching devices = connecting to a different planrla instance; the old
                     // session/project context is invalid there, so drop it and start fresh.
                     nav.navigate("chat/new") {
-                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { inclusive = true }
+                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}&prov={prov}") { inclusive = true }
                     }
                 },
                 onLogout = {
                     nav.navigate("connect") {
-                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}") { inclusive = true }
+                        popUpTo("chat/{sid}?cwd={cwd}&title={title}&pid={pid}&prov={prov}") { inclusive = true }
                     }
                 },
             )

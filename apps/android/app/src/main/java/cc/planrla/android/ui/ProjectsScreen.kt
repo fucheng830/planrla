@@ -1156,11 +1156,15 @@ private fun SessionRow(
                             )
                         }
                     }
-                    Text(
-                        stringResource(R.string.projects_message_count, s.messageCount ?: 0),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    // Server does not provide message counts (mapSessionRowToSummary hardcodes 0),
+                    // so hide the row unless a real count arrives — matches web's badge (count > 0 only).
+                    if ((s.messageCount ?: 0) > 0) {
+                        Text(
+                            stringResource(R.string.projects_message_count, s.messageCount ?: 0),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

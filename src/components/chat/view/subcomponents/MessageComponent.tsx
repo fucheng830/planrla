@@ -27,6 +27,7 @@ type DiffLine = {
 type MessageComponentProps = {
   message: ChatMessage;
   prevMessage: ChatMessage | null;
+  nextMessage: ChatMessage | null;
   createDiff: (oldStr: string, newStr: string) => DiffLine[];
   onFileOpen?: (filePath: string, diffInfo?: unknown) => void;
   onOpenSession?: (sessionId: string) => void;
@@ -51,7 +52,7 @@ type InteractiveOption = {
 
 const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
 
-const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider, canForkAtMessage, onForkAtMessage }: MessageComponentProps) => {
+const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider, canForkAtMessage, onForkAtMessage }: MessageComponentProps) => {
   const { t } = useTranslation('chat');
   const isGrouped = prevMessage && prevMessage.type === message.type &&
     ((prevMessage.type === 'assistant') ||
@@ -72,10 +73,15 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
     message.isToolUse && COPY_HIDDEN_TOOL_NAMES.has(String(message.toolName || ''))
   );
   const shouldShowUserCopyControl = message.type === 'user' && userCopyContent.trim().length > 0;
+  // One hover toolbar per reply: all assistant-side blocks (text/tool/thinking) share
+  // type 'assistant', so a turn ends where the next message is not 'assistant'. Only the
+  // turn's last block shows the floating copy/speak/fork controls.
+  const isTurnEnd = !nextMessage || nextMessage.type !== 'assistant';
   const shouldShowAssistantCopyControl = message.type === 'assistant' &&
     assistantCopyContent.trim().length > 0 &&
     !isCommandOrFileEditToolResponse &&
-    !message.isThinking;
+    !message.isThinking &&
+    isTurnEnd;
 
 
   useEffect(() => {
@@ -104,7 +110,11 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
     };
   }, [autoExpandTools, isExpanded, message.isToolUse]);
 
-  const formattedTime = useMemo(() => new Date(message.timestamp).toLocaleTimeString(), [message.timestamp]);
+  // HH:MM only — seconds are noise in the chat meta row.
+  const formattedTime = useMemo(
+    () => new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    [message.timestamp]
+  );
   const shouldHideThinkingMessage = Boolean(message.isThinking && !showThinking);
 
   if (shouldHideThinkingMessage) {
@@ -135,6 +145,8 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
                 ))}
               </div>
             )}
+            {/* User bubble meta: copy / fork / time on one line, all hover-revealed
+                (same pattern as the assistant turn-end meta row). */}
             <div className="mt-1 flex items-center justify-end gap-1 text-xs text-blue-100">
               <span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
                 {shouldShowUserCopyControl && (
@@ -150,8 +162,8 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
                     <GitBranch className="h-3 w-3" />
                   </button>
                 )}
+                <span>{formattedTime}</span>
               </span>
-              <span>{formattedTime}</span>
             </div>
           </div>
           {!isGrouped && (
@@ -414,7 +426,10 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
               </div>
             )}
 
-            {(shouldShowAssistantCopyControl || !isGrouped) && (
+            {/* Turn-end meta row: timestamp + hover toolbar on ONE line, all revealed on
+                hover (group-hover/msg). Nothing renders mid-turn, so a multi-block reply
+                stays clean — the single meta row sits at the bottom of the last block. */}
+            {isTurnEnd && (
               <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
                 <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover/msg:opacity-100">
                   {shouldShowAssistantCopyControl && (
@@ -433,8 +448,8 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, o
                       <GitBranch className="h-3 w-3" />
                     </button>
                   )}
+                  <span>{formattedTime}</span>
                 </span>
-                {!isGrouped && <span>{formattedTime}</span>}
               </div>
             )}
           </div>

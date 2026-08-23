@@ -8,6 +8,77 @@ import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTail
 
 const PROVIDER = 'codex';
 
+/**
+ * codex++ / proxy-flavored Codex transcripts serialize tool calls as text markers
+ * inside assistant output instead of structured function_call records:
+ *   [external_agent_tool_call: NAME]\ninput: {...}\n[/external_agent_tool_call]
+ *   [external_agent_tool_call: Bash]\ndescription: ...\ncommand: ...\n[/external_agent_tool_call]
+ *   [external_agent_tool_result]\n...[/external_agent_tool_result]
+ *   [external_agent_tool_result: error]\n...[/external_agent_tool_result]
+ * Split such text into text / tool_use / tool_result parts so chat renders tool
+ * cards instead of raw marker dumps. A truncated marker (no closing tag) consumes
+ * the rest of the text.
+ */
+const EXT_TOOL_MARKER_RE = /\[(external_agent_tool_call|external_agent_tool_result)(?:: ([^\]\n]+))?\]\n?([\s\S]*?)(?:\[\/\1\]|$)/g;
+
+type ExtToolPart =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; toolName: string; toolInput: string }
+  | { type: 'tool_result'; content: string; isError: boolean };
+
+function parseExtToolCallBody(name: string, body: string): { toolName: string; toolInput: string } {
+  const trimmed = body.trim();
+  if (trimmed.startsWith('input:')) {
+    return { toolName: name, toolInput: trimmed.slice('input:'.length).trim() };
+  }
+  const commandMatch = trimmed.match(/^command: ([\s\S]*)$/m);
+  if (commandMatch) {
+    const descriptionMatch = trimmed.match(/^description: (.*)$/m);
+    return {
+      toolName: 'Bash',
+      toolInput: JSON.stringify({
+        command: commandMatch[1].trim(),
+        ...(descriptionMatch ? { description: descriptionMatch[1].trim() } : {}),
+      }),
+    };
+  }
+  return { toolName: name, toolInput: trimmed };
+}
+
+/** Split assistant text on external_agent_tool markers. Returns null when the text
+ *  contains no markers (common fast path — zero behavior change). */
+function splitExternalAgentToolParts(text: string): ExtToolPart[] | null {
+  if (!text.includes('[external_agent_tool_')) {
+    return null;
+  }
+  const parts: ExtToolPart[] = [];
+  let lastIndex = 0;
+  for (const match of text.matchAll(EXT_TOOL_MARKER_RE)) {
+    const preceding = text.slice(lastIndex, match.index).trim();
+    if (preceding) {
+      parts.push({ type: 'text', text: preceding });
+    }
+    const [, kind, headerArg, body] = match;
+    if (kind === 'external_agent_tool_call') {
+      const rawName = (headerArg || 'tool').trim();
+      const toolName = rawName.replace(/^mcp__plugin_/, '');
+      parts.push({ type: 'tool_use', ...parseExtToolCallBody(toolName, body) });
+    } else {
+      parts.push({
+        type: 'tool_result',
+        content: body.trim(),
+        isError: (headerArg || '').toLowerCase().includes('error'),
+      });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  const trailing = text.slice(lastIndex).trim();
+  if (trailing) {
+    parts.push({ type: 'text', text: trailing });
+  }
+  return parts;
+}
+
 type CodexHistoryResult =
   | AnyRecord[]
   | {
@@ -260,6 +331,49 @@ async function getCodexSessionMessages(
 }
 
 export class CodexSessionsProvider implements IProviderSessions {
+  /** Pairing queue for marker-derived tool calls (the external_agent_tool marker
+   *  format carries no call ids, so results are matched to pending calls FIFO). */
+  private pendingExtToolIds = new Map<string, string[]>();
+
+  private normalizeExtToolParts(
+    parts: ExtToolPart[],
+    ts: string,
+    sessionId: string | null,
+    baseId: string,
+  ): NormalizedMessage[] {
+    const key = sessionId ?? '';
+    const queue = this.pendingExtToolIds.get(key) ?? [];
+    const out: NormalizedMessage[] = [];
+    let index = 0;
+    for (const part of parts) {
+      const id = `${baseId}-ext${index++}`;
+      if (part.type === 'text') {
+        out.push(createNormalizedMessage({
+          id, sessionId, timestamp: ts, provider: PROVIDER,
+          kind: 'text', role: 'assistant', content: part.text,
+        }));
+      } else if (part.type === 'tool_use') {
+        queue.push(id);
+        out.push(createNormalizedMessage({
+          id, sessionId, timestamp: ts, provider: PROVIDER,
+          kind: 'tool_use', toolName: part.toolName, toolInput: part.toolInput, toolId: id,
+        }));
+      } else {
+        const toolId = queue.shift() || id;
+        out.push(createNormalizedMessage({
+          id, sessionId, timestamp: ts, provider: PROVIDER,
+          kind: 'tool_result', toolId, content: part.content, isError: part.isError,
+        }));
+      }
+    }
+    if (queue.length > 0) {
+      this.pendingExtToolIds.set(key, queue);
+    } else {
+      this.pendingExtToolIds.delete(key);
+    }
+    return out;
+  }
+
   /**
    * Normalizes a persisted Codex JSONL entry.
    *
@@ -322,6 +436,10 @@ export class CodexSessionsProvider implements IProviderSessions {
       if (!content.trim()) {
         return [];
       }
+      const extParts = splitExternalAgentToolParts(content);
+      if (extParts) {
+        return this.normalizeExtToolParts(extParts, ts, sessionId, baseId);
+      }
       return [createNormalizedMessage({
         id: baseId,
         sessionId,
@@ -380,7 +498,12 @@ export class CodexSessionsProvider implements IProviderSessions {
 
     if (raw.type === 'item') {
       switch (raw.itemType) {
-        case 'agent_message':
+        case 'agent_message': {
+          const content = typeof raw.message?.content === 'string' ? raw.message.content : '';
+          const extParts = splitExternalAgentToolParts(content);
+          if (extParts) {
+            return this.normalizeExtToolParts(extParts, ts, sessionId, baseId);
+          }
           return [createNormalizedMessage({
             id: baseId,
             sessionId,
@@ -388,8 +511,9 @@ export class CodexSessionsProvider implements IProviderSessions {
             provider: PROVIDER,
             kind: 'text',
             role: 'assistant',
-            content: raw.message?.content || '',
+            content,
           })];
+        }
         case 'reasoning':
           return [createNormalizedMessage({
             id: baseId,

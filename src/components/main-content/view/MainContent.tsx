@@ -3,17 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import ChatInterface from '../../chat/view/ChatInterface';
 import ExtensionPanel from '../../extension-panel/view/ExtensionPanel';
-import GitPanel from '../../git-panel/view/GitPanel';
+import { useExtensionPanel } from '../../extension-panel/hooks/useExtensionPanel';
+import GitRepositoryModal from '../../git-panel/view/modals/GitRepositoryModal';
 import PluginTabContent from '../../plugins/view/PluginTabContent';
-import { BrowserUsePanel } from '../../browser-use';
 import type { MainContentProps } from '../types/types';
 import { usePaletteOpsRegister } from '../../../contexts/PaletteOpsContext';
 import { useUiPreferences } from '../../../hooks/useUiPreferences';
 import { authenticatedFetch } from '../../../utils/api';
 import { useEditorSidebar } from '../../code-editor/hooks/useEditorSidebar';
 import EditorSidebar from '../../code-editor/view/EditorSidebar';
-import { KanbanPanel } from '../../kanban';
-import CronPromptsPanel from '../../cron-prompts/CronPromptsPanel';
 
 import MainContentHeader from './subcomponents/MainContentHeader';
 import MainContentStateView from './subcomponents/MainContentStateView';
@@ -48,7 +46,18 @@ function MainContent({
   const { autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter } = preferences;
 
   const [browserUseEnabled, setBrowserUseEnabled] = useState(false);
-  const [isExtensionOpen, setIsExtensionOpen] = useState(false);
+  const {
+    isOpen: isExtensionOpen,
+    openTabs: extensionTabs,
+    activeTabId: extensionActiveTab,
+    openTab: openExtensionTab,
+    closeTab: closeExtensionTab,
+    toggleTab: toggleExtensionTab,
+    togglePanel: toggleExtensionPanel,
+    closePanel: closeExtensionPanel,
+    setActiveTabId: setExtensionActiveTab,
+  } = useExtensionPanel();
+  const [isGitModalOpen, setIsGitModalOpen] = useState(false);
 
   const shouldShowBrowserTab = browserUseEnabled;
 
@@ -88,10 +97,17 @@ function MainContent({
   }, [loadBrowserUseSettings]);
 
   useEffect(() => {
-    if (!shouldShowBrowserTab && activeTab === 'browser') {
+    if (activeTab === 'git' && selectedProject) {
+      setIsGitModalOpen(true);
+    }
+  }, [activeTab, selectedProject]);
+
+  const handleCloseGitModal = useCallback(() => {
+    setIsGitModalOpen(false);
+    if (activeTab === 'git') {
       setActiveTab('chat');
     }
-  }, [shouldShowBrowserTab, activeTab, setActiveTab]);
+  }, [activeTab, setActiveTab]);
 
   usePaletteOpsRegister({
     openFile: (filePath: string) => {
@@ -116,8 +132,10 @@ function MainContent({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onToggleTerminalPanel={onToggleTerminalPanel}
-        onToggleExtension={() => setIsExtensionOpen((v) => !v)}
+        onToggleExtension={toggleExtensionPanel}
         isExtensionOpen={isExtensionOpen}
+        extensionActiveTab={isExtensionOpen ? extensionActiveTab : null}
+        onToggleExtensionTab={toggleExtensionTab}
         selectedProject={selectedProject}
         selectedSession={selectedSession}
         shouldShowBrowserTab={shouldShowBrowserTab}
@@ -127,7 +145,7 @@ function MainContent({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
-          <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files') ? 'block' : 'hidden'}`}>
+          <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files' || activeTab === 'git') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>
               <ChatInterface
                 selectedProject={selectedProject}
@@ -156,22 +174,13 @@ function MainContent({
             </ErrorBoundary>
           </div>
 
-
-          {activeTab === 'git' && (
-            <div className="h-full overflow-hidden">
-              <GitPanel selectedProject={selectedProject} isMobile={isMobile} onFileOpen={handleFileOpen} />
-            </div>
-          )}
-
-          <KanbanPanel isVisible={activeTab === 'kanban'} />
-
-          <CronPromptsPanel isVisible={activeTab === 'cron'} />
-
-          {shouldShowBrowserTab && activeTab === 'browser' && (
-            <div className="h-full overflow-hidden">
-              <BrowserUsePanel isVisible={activeTab === 'browser'} onShowSettings={onShowSettings} />
-            </div>
-          )}
+          <GitRepositoryModal
+            isOpen={isGitModalOpen}
+            selectedProject={selectedProject}
+            isMobile={isMobile}
+            onClose={handleCloseGitModal}
+            onFileOpen={handleFileOpen}
+          />
 
           {activeTab.startsWith('plugin:') && (
             <div className="h-full overflow-hidden">
@@ -188,8 +197,13 @@ function MainContent({
           <ExtensionPanel
             selectedProject={selectedProject}
             onFileOpen={handleFileOpen}
-            onOpenMarkdownEditor={() => onShowSettings?.()}
-            onClose={() => setIsExtensionOpen(false)}
+            onShowSettings={onShowSettings}
+            openTabs={extensionTabs}
+            activeTabId={extensionActiveTab}
+            onOpenTab={openExtensionTab}
+            onActivateTab={setExtensionActiveTab}
+            onCloseTab={closeExtensionTab}
+            onClose={closeExtensionPanel}
           />
         )}
 
