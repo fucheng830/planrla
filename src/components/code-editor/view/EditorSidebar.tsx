@@ -143,7 +143,7 @@ export default function EditorSidebar({
       )}
 
       <div
-        className={`flex h-full flex-col overflow-hidden border-l border-workbench-border ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
+        className={`flex h-full flex-col overflow-hidden border-l border-workbench-border ${useFlexLayout ? 'min-w-0 flex-1' : 'flex-shrink-0'}`}
         style={useFlexLayout ? undefined : { width: `${effectiveWidth}px`, minWidth: `${MIN_EDITOR_WIDTH}px` }}
       >
         {tabsBar}
