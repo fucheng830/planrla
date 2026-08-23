@@ -256,8 +256,8 @@ export default function SidebarProjectItem({
           tabIndex={0}
           aria-current={isSelected ? 'true' : undefined}
           className={cn(
-            'hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50',
-            isSelected && 'bg-accent text-accent-foreground',
+            'hidden md:flex w-full justify-between rounded-md p-2 h-auto font-normal hover:bg-workbench-muted',
+            isSelected && 'bg-workbench-muted text-workbench-ink',
             isStarred &&
               !isSelected &&
               'bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20',
@@ -302,7 +302,7 @@ export default function SidebarProjectItem({
                     type="text"
                     value={editingName}
                     onChange={(event) => onEditingNameChange(event.target.value)}
-                    className="w-full rounded border border-border bg-background px-2 py-1 text-sm text-foreground focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-md border border-workbench-border bg-workbench-surface px-2 py-1 text-sm text-workbench-ink focus:ring-2 focus:ring-workbench-accent/20"
                     placeholder={t('projects.projectNamePlaceholder')}
                     autoFocus
                     onKeyDown={(event) => {
@@ -320,10 +320,10 @@ export default function SidebarProjectItem({
                 </div>
               ) : (
                 <div>
-                  <div className="truncate text-sm font-semibold text-foreground" title={project.displayName}>
+                  <div className="truncate text-sm font-semibold text-workbench-ink" title={project.displayName}>
                     {project.displayName}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-workbench-subtle">
                     {sessionCountDisplay}
                     {project.fullPath !== project.displayName && (
                       <span className="ml-1 opacity-60" title={project.fullPath}>

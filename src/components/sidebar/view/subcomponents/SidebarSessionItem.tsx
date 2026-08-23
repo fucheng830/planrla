@@ -257,8 +257,8 @@ export default function SidebarSessionItem({
       <div className="md:hidden">
         <div
           className={cn(
-            'p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative',
-            isSelected ? 'bg-primary/5 border-primary/20' : 'border-border/30',
+            'p-2 mx-3 my-0.5 rounded-md border bg-workbench-surface transition-colors duration-150 relative',
+            isSelected ? 'bg-workbench-muted border-workbench-accent/40' : 'border-workbench-border',
           )}
           onClick={selectMobileSession}
         >
@@ -266,7 +266,7 @@ export default function SidebarSessionItem({
             <div
               className={cn(
                 'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
-                isSelected ? 'bg-primary/10' : 'bg-muted/50',
+                  isSelected ? 'bg-workbench-accent/10' : 'bg-workbench-muted',
               )}
             >
               <SessionProviderLogo provider={session.__provider} className="h-3 w-3" />
@@ -274,9 +274,9 @@ export default function SidebarSessionItem({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
+                <div className="min-w-0 flex-1 truncate text-xs font-medium text-workbench-ink">{sessionView.sessionName}</div>
                 {compactSessionAge && (
-                  <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground">{compactSessionAge}</span>
+                  <span className="ml-auto flex-shrink-0 text-[11px] text-workbench-subtle">{compactSessionAge}</span>
                 )}
               </div>
               <div className="mt-0.5 flex items-center gap-1.5">
@@ -326,8 +326,8 @@ export default function SidebarSessionItem({
           <Button
             variant="ghost"
             className={cn(
-              'h-auto w-full justify-start rounded-md border bg-card p-2 text-left font-normal transition-all duration-150',
-              isSelected ? 'border-primary/20 bg-primary/5' : 'border-border/30 hover:bg-accent/50',
+              'h-auto w-full justify-start rounded-md border bg-workbench-surface p-2 text-left font-normal transition-colors duration-150',
+              isSelected ? 'border-workbench-accent/40 bg-workbench-muted' : 'border-workbench-border hover:bg-workbench-muted',
             )}
             onClick={() => onSessionSelect(session, project.projectId)}
             draggable={!isEditing}
@@ -343,18 +343,18 @@ export default function SidebarSessionItem({
               <div
                 className={cn(
                   'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md',
-                  isSelected ? 'bg-primary/10' : 'bg-muted/50',
+                  isSelected ? 'bg-workbench-accent/10' : 'bg-workbench-muted',
                 )}
               >
                 <SessionProviderLogo provider={session.__provider} className="h-3 w-3" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{sessionView.sessionName}</div>
+                  <div className="min-w-0 flex-1 truncate text-xs font-medium text-workbench-ink">{sessionView.sessionName}</div>
                   {compactSessionAge && (
                     <span
                       className={cn(
-                        'ml-auto flex-shrink-0 text-[11px] text-muted-foreground transition-opacity duration-200',
+                        'ml-auto flex-shrink-0 text-[11px] text-workbench-subtle transition-opacity duration-200',
                         isEditing ? 'opacity-0' : 'group-hover:opacity-0',
                       )}
                     >
