@@ -181,3 +181,4 @@ landing/.astro/
 # tasks/ 
 rel015/
 release-0.15/
+.worktrees/
