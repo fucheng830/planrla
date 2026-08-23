@@ -19,6 +19,7 @@ import type { ArchivedProjectListItem, ArchivedSessionListItem, SidebarSearchMod
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 import FileTree from '../../../file-tree/view/FileTree';
+import { WorkbenchRail } from '../../../workbench';
 
 import SidebarFooter from './SidebarFooter';
 import SidebarHeader from './SidebarHeader';
@@ -432,6 +433,12 @@ export default function SidebarContent({
   const showConversationSearch = searchMode === 'sessions' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
+  const railItems = [
+    { id: 'projects', label: t('search.modeProjects'), icon: Folder },
+    { id: 'sessions', label: t('search.modeSessions'), icon: MessageSquare, badge: completedSessionsCount > 0 ? 'completed' : undefined },
+    { id: 'archived', label: t('search.archiveOnlyTooltip', 'Archive only'), icon: Archive },
+    { id: 'files', label: t('files.title', 'Files'), icon: FolderTree },
+  ] as const;
   const activeSessions = projectListProps.activeSessions;
   const conversationListItems: ConversationListItem[] = projects
     .flatMap((project) =>
@@ -456,11 +463,16 @@ export default function SidebarContent({
     });
 
   return (
-    <div
-      className="flex h-full flex-col bg-workbench-surface md:w-72 md:select-none"
-      style={{}}
-    >
-      <SidebarHeader
+    <div className="flex h-full flex-col bg-workbench-surface md:w-72 md:select-none">
+      <div className="flex min-h-0 flex-1">
+        <WorkbenchRail
+          className="hidden shrink-0 border-r border-workbench-border md:flex"
+          items={railItems}
+          activeId={searchMode}
+          onSelect={(id) => onSearchModeChange(id as SidebarSearchMode)}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+        <SidebarHeader
         isPWA={isPWA}
         isMobile={isMobile}
         isLoading={isLoading}
@@ -908,6 +920,8 @@ export default function SidebarContent({
         onShowSettings={onShowSettings}
         t={t}
       />
+        </div>
+      </div>
     </div>
   );
 }
