@@ -16,7 +16,12 @@ const BINARY_EXTENSIONS = [
   'bin', 'dat', 'iso', 'img', 'class', 'jar', 'war', 'pyc', 'pyo'
 ];
 
+const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v', 'ogv']);
+
+const getExtension = (filename: string) => filename.split('.').pop()?.toLowerCase() ?? '';
+
 export const isBinaryFile = (filename: string): boolean => {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  return BINARY_EXTENSIONS.includes(ext ?? '');
+  return BINARY_EXTENSIONS.includes(getExtension(filename));
 };
+
+export const isVideoFile = (filename: string): boolean => VIDEO_EXTENSIONS.has(getExtension(filename));

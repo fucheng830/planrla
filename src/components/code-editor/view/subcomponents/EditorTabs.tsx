@@ -21,7 +21,7 @@ export default function EditorTabs({ openFiles, activeFilePath, onSwitch, onClos
   if (openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50">
+    <div className="flex items-stretch overflow-x-auto border-b border-workbench-border bg-workbench-surface">
       {openFiles.map((file) => {
         const isActive = file.path === activeFilePath;
         return (
@@ -33,10 +33,10 @@ export default function EditorTabs({ openFiles, activeFilePath, onSwitch, onClos
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitch(file.path); } }}
             title={file.path}
             className={[
-              'group flex flex-shrink-0 cursor-pointer items-center gap-1.5 border-r border-gray-200 px-3 py-1.5 text-xs transition-colors dark:border-gray-700',
+              'group flex flex-shrink-0 cursor-pointer items-center gap-1.5 border-r border-workbench-border px-3 py-1.5 text-xs transition-colors',
               isActive
-                ? 'bg-white font-medium text-foreground dark:bg-gray-900 dark:text-gray-100'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200',
+                ? 'bg-workbench-muted font-medium text-workbench-ink'
+                : 'text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink',
             ].join(' ')}
           >
             <span className="max-w-32 truncate">{file.name}</span>

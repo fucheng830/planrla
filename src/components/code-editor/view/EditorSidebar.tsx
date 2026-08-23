@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { CodeEditorFile } from '../types/types';
 import CodeEditor from './CodeEditor';
 import EditorTabs from './subcomponents/EditorTabs';
+import VideoPreviewPanel from './VideoPreviewPanel';
+import { isVideoFile } from '../utils/binaryFile';
 
 type EditorSidebarProps = {
   editingFile: CodeEditorFile | null;
@@ -103,20 +105,23 @@ export default function EditorSidebar({
       onClose={onCloseFile}
     />
   );
+  const activeFile = editingFile ?? openFiles[0];
+  const isVideoPreview = isVideoFile(activeFile.name);
 
   if (isMobile || poppedOut) {
     return (
       <div className="flex h-full flex-col">
         {tabsBar}
-        <CodeEditor
-          file={editingFile ?? openFiles[0]}
-          onClose={() => {
-            setPoppedOut(false);
-            onCloseEditor();
-          }}
-          projectPath={projectPath}
-          isSidebar={false}
-        />
+        {isVideoPreview ? (
+          <VideoPreviewPanel file={activeFile} onClose={() => { setPoppedOut(false); onCloseEditor(); }} />
+        ) : (
+          <CodeEditor
+            file={activeFile}
+            onClose={() => { setPoppedOut(false); onCloseEditor(); }}
+            projectPath={projectPath}
+            isSidebar={false}
+          />
+        )}
       </div>
     );
   }
@@ -130,27 +135,31 @@ export default function EditorSidebar({
         <div
           ref={resizeHandleRef}
           onMouseDown={onResizeStart}
-          className="group relative w-1 flex-shrink-0 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 dark:bg-gray-700 dark:hover:bg-blue-600"
+          className="group relative w-1 flex-shrink-0 cursor-col-resize bg-workbench-border hover:bg-workbench-accent"
           title={t('toolbar.resize')}
         >
-          <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-blue-600" />
+          <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-workbench-accent opacity-0 group-hover:opacity-100" />
         </div>
       )}
 
       <div
-        className={`flex h-full flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700 ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
+        className={`flex h-full flex-col overflow-hidden border-l border-workbench-border ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
         style={useFlexLayout ? undefined : { width: `${effectiveWidth}px`, minWidth: `${MIN_EDITOR_WIDTH}px` }}
       >
         {tabsBar}
-        <CodeEditor
-          file={editingFile ?? openFiles[0]}
-          onClose={onCloseEditor}
-          projectPath={projectPath}
-          isSidebar
-          isExpanded={editorExpanded}
-          onToggleExpand={onToggleEditorExpand}
-          onPopOut={() => setPoppedOut(true)}
-        />
+        {isVideoPreview ? (
+          <VideoPreviewPanel file={activeFile} onClose={onCloseEditor} />
+        ) : (
+          <CodeEditor
+            file={activeFile}
+            onClose={onCloseEditor}
+            projectPath={projectPath}
+            isSidebar
+            isExpanded={editorExpanded}
+            onToggleExpand={onToggleEditorExpand}
+            onPopOut={() => setPoppedOut(true)}
+          />
+        )}
       </div>
     </div>
   );
