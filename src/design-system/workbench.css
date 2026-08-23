@@ -1,0 +1,152 @@
+/* Planrla Workbench design system.
+ * Keep visual decisions semantic so the shell and feature panels share one voice.
+ */
+
+:root {
+    --ds-canvas: 220 14% 96%;
+    --ds-surface: 0 0% 100%;
+    --ds-surface-muted: 220 14% 98%;
+    --ds-surface-raised: 0 0% 100%;
+    --ds-border: 220 13% 89%;
+    --ds-border-strong: 220 11% 80%;
+    --ds-ink: 222 20% 15%;
+    --ds-muted: 220 9% 45%;
+    --ds-subtle: 220 12% 58%;
+    --ds-accent: 217 91% 55%;
+    --ds-accent-soft: 217 91% 96%;
+    --ds-waiting: 38 92% 50%;
+    --ds-waiting-soft: 38 92% 95%;
+    --ds-success: 160 84% 35%;
+    --ds-success-soft: 160 84% 94%;
+    --ds-danger: 0 72% 51%;
+    --ds-danger-soft: 0 72% 96%;
+    --ds-radius-control: 6px;
+    --ds-radius-panel: 8px;
+    --ds-radius-tag: 4px;
+    --ds-shadow-panel: 0 1px 2px hsl(220 20% 10% / 0.04), 0 8px 24px hsl(220 20% 10% / 0.03);
+    --ds-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ds-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.dark {
+    --ds-canvas: 222 20% 9%;
+    --ds-surface: 222 18% 12%;
+    --ds-surface-muted: 222 17% 15%;
+    --ds-surface-raised: 222 17% 17%;
+    --ds-border: 220 14% 23%;
+    --ds-border-strong: 220 12% 31%;
+    --ds-ink: 210 20% 96%;
+    --ds-muted: 215 13% 70%;
+    --ds-subtle: 215 10% 55%;
+    --ds-accent: 217 91% 65%;
+    --ds-accent-soft: 217 45% 20%;
+    --ds-waiting: 38 92% 62%;
+    --ds-waiting-soft: 38 35% 19%;
+    --ds-success: 160 70% 52%;
+    --ds-success-soft: 160 35% 17%;
+    --ds-danger: 0 78% 64%;
+    --ds-danger-soft: 0 35% 19%;
+    --ds-shadow-panel: 0 1px 2px hsl(0 0% 0% / 0.25), 0 12px 28px hsl(0 0% 0% / 0.16);
+}
+
+.ds-workbench {
+    min-height: 100dvh;
+    background: hsl(var(--ds-canvas));
+    color: hsl(var(--ds-ink));
+    font-family: var(--ds-font-sans);
+}
+
+.ds-surface {
+    background: hsl(var(--ds-surface));
+    border: 1px solid hsl(var(--ds-border));
+}
+
+.ds-surface-raised {
+    background: hsl(var(--ds-surface-raised));
+    border: 1px solid hsl(var(--ds-border));
+    box-shadow: var(--ds-shadow-panel);
+}
+
+.ds-panel {
+    border: 1px solid hsl(var(--ds-border));
+    border-radius: var(--ds-radius-panel);
+    background: hsl(var(--ds-surface));
+}
+
+.ds-panel-header {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid hsl(var(--ds-border));
+    padding: 0 14px;
+}
+
+.ds-label {
+    color: hsl(var(--ds-muted));
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    text-transform: uppercase;
+}
+
+.ds-command-surface {
+    border: 1px solid hsl(var(--ds-border-strong));
+    border-radius: var(--ds-radius-panel);
+    background: hsl(var(--ds-surface-raised));
+    box-shadow: 0 8px 24px hsl(220 20% 10% / 0.06);
+}
+
+.ds-focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--ds-accent));
+    outline-offset: 2px;
+}
+
+.ds-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--ds-radius-tag);
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+}
+
+.ds-status::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    content: "";
+}
+
+.ds-status-running {
+    color: hsl(var(--ds-accent));
+    background: hsl(var(--ds-accent-soft));
+}
+
+.ds-status-waiting {
+    color: hsl(var(--ds-waiting));
+    background: hsl(var(--ds-waiting-soft));
+}
+
+.ds-status-complete {
+    color: hsl(var(--ds-success));
+    background: hsl(var(--ds-success-soft));
+}
+
+.ds-status-failed {
+    color: hsl(var(--ds-danger));
+    background: hsl(var(--ds-danger-soft));
+}
+
+.ds-divider {
+    height: 1px;
+    background: hsl(var(--ds-border));
+}
+
+.ds-mono {
+    font-family: var(--ds-font-mono);
+    font-variant-numeric: tabular-nums;
+}

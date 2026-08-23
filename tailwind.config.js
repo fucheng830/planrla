@@ -15,6 +15,19 @@ export default {
     },
     extend: {
       colors: {
+        workbench: {
+          canvas: "hsl(var(--ds-canvas))",
+          surface: "hsl(var(--ds-surface))",
+          muted: "hsl(var(--ds-surface-muted))",
+          raised: "hsl(var(--ds-surface-raised))",
+          border: "hsl(var(--ds-border))",
+          ink: "hsl(var(--ds-ink))",
+          subtle: "hsl(var(--ds-subtle))",
+          accent: "hsl(var(--ds-accent))",
+          waiting: "hsl(var(--ds-waiting))",
+          success: "hsl(var(--ds-success))",
+          danger: "hsl(var(--ds-danger))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
