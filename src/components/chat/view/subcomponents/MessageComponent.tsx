@@ -130,7 +130,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
       {message.type === 'user' ? (
         /* User message bubble on the right */
         <div className="flex w-full items-end space-x-0 sm:w-auto sm:max-w-[85%] sm:space-x-3 md:max-w-md lg:max-w-lg xl:max-w-xl">
-          <div className="group flex-1 rounded-2xl rounded-br-md bg-blue-600 px-3 py-2 text-white shadow-sm sm:flex-initial sm:px-4">
+          <div className="group flex-1 rounded-md rounded-br-sm bg-workbench-accent px-3 py-2 text-white shadow-sm sm:flex-initial sm:px-4">
             <div dir="auto" className="whitespace-pre-wrap break-words text-sm">{String(message.content || '')}</div>
             {message.images && message.images.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -167,7 +167,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
             </div>
           </div>
           {!isGrouped && (
-            <div className="hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm text-white sm:flex">
+            <div className="hidden size-8 flex-shrink-0 items-center justify-center rounded-full bg-workbench-accent text-sm text-white sm:flex">
               U
             </div>
           )}
@@ -190,7 +190,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
                   !
                 </div>
               ) : message.type === 'tool' ? (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 text-sm text-white dark:bg-gray-700">
+                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-workbench-muted text-sm text-workbench-ink">
                   🔧
                 </div>
               ) : (
@@ -366,7 +366,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
                 </ReasoningContent>
               </Reasoning>
             ) : (
-              <div dir="auto" className="text-sm text-gray-700 dark:text-gray-300">
+              <div dir="auto" className="text-sm text-workbench-ink">
                 {/* Reasoning accordion */}
                 {showThinking && message.reasoning && (
                   <Reasoning className="mb-3" defaultOpen={false}>
@@ -430,7 +430,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
                 hover (group-hover/msg). Nothing renders mid-turn, so a multi-block reply
                 stays clean — the single meta row sits at the bottom of the last block. */}
             {isTurnEnd && (
-              <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+              <div className="mt-1 flex w-full items-center gap-2 text-[11px] text-workbench-subtle">
                 <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover/msg:opacity-100">
                   {shouldShowAssistantCopyControl && (
                     <MessageCopyControl content={assistantCopyContent} messageType="assistant" />

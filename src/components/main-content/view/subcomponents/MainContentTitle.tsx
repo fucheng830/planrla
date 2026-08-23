@@ -77,7 +77,7 @@ export default function MainContentTitle({
   const showChatNewSession = activeTab === 'chat' && !selectedSession;
 
   const subtitle = (
-    <div className="flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground">
+    <div className="flex items-center gap-1.5 text-[11px] leading-tight text-workbench-subtle">
       <span className="truncate">{selectedProject.displayName}</span>
       {branch && (
         <button
@@ -85,8 +85,8 @@ export default function MainContentTitle({
           onClick={() => setActiveTab(activeTab === 'git' ? 'chat' : 'git')}
           className={`flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 transition-colors ${
             activeTab === 'git'
-              ? 'bg-accent text-foreground'
-              : 'text-muted-foreground/80 hover:bg-accent hover:text-foreground'
+              ? 'bg-workbench-muted text-workbench-ink'
+              : 'text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink'
           }`}
           title={t('tabs.git')}
           aria-label={t('tabs.git')}
@@ -110,19 +110,19 @@ export default function MainContentTitle({
       <div className="min-w-0 flex-1">
         {activeTab === 'chat' && selectedSession ? (
           <div className="min-w-0">
-            <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-sm font-semibold leading-tight text-foreground">
+            <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-sm font-semibold leading-tight text-workbench-ink text-balance">
               {getSessionTitle(selectedSession, t)}
             </h2>
             {subtitle}
           </div>
         ) : showChatNewSession ? (
           <div className="min-w-0">
-            <h2 className="text-base font-semibold leading-tight text-foreground">{t('mainContent.newSession')}</h2>
+            <h2 className="text-balance text-base font-semibold leading-tight text-workbench-ink">{t('mainContent.newSession')}</h2>
             {subtitle}
           </div>
         ) : (
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-tight text-foreground">
+            <h2 className="text-balance text-sm font-semibold leading-tight text-workbench-ink">
               {getTabTitle(activeTab, t, pluginDisplayName)}
             </h2>
             {subtitle}

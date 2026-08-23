@@ -457,7 +457,7 @@ export default function SidebarContent({
 
   return (
     <div
-      className="flex h-full flex-col bg-background/80 backdrop-blur-sm md:w-72 md:select-none"
+      className="flex h-full flex-col bg-workbench-surface md:w-72 md:select-none"
       style={{}}
     >
       <SidebarHeader
@@ -495,7 +495,7 @@ export default function SidebarContent({
         ]}
         menuLabel={t('contextMenu.refreshList')}
       >
-        <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
+        <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-2 md:py-2">
         {searchMode === 'files' ? (
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1">

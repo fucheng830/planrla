@@ -41,7 +41,7 @@ export const PromptInput = React.forwardRef<HTMLFormElement, PromptInputProps>(
           ref={ref}
           data-slot="prompt-input"
           className={cn(
-            'relative overflow-hidden rounded-xl border border-border/50 bg-card/80 shadow-sm backdrop-blur-sm transition-all duration-200 focus-within:border-primary/30 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/15',
+            'ds-command-surface relative overflow-hidden rounded-md shadow-sm transition-[border-color,box-shadow] duration-150 focus-within:border-workbench-accent focus-within:shadow-md focus-within:ring-1 focus-within:ring-workbench-accent/20',
             className
           )}
           {...props}
@@ -111,7 +111,7 @@ export const PromptInputFooter = React.forwardRef<
   <div
     ref={ref}
     data-slot="prompt-input-footer"
-    className={cn('flex items-center justify-between border-t border-border/30 px-3 py-2', className)}
+    className={cn('flex items-center justify-between border-t border-workbench-border px-3 py-2', className)}
     {...props}
   />
 ));

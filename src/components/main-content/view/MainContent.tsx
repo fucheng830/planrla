@@ -127,7 +127,7 @@ function MainContent({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-workbench-canvas">
       <MainContentHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -143,7 +143,7 @@ function MainContent({
         onMenuClick={onMenuClick}
       />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden bg-workbench-canvas">
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
           <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files' || activeTab === 'git') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>

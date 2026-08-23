@@ -108,18 +108,18 @@ export default function ExtensionPanel({
   return (
     <div
       ref={containerRef}
-      className="relative flex h-full flex-shrink-0 flex-col border-l border-border bg-card"
+      className="relative flex h-full flex-shrink-0 flex-col border-l border-workbench-border bg-workbench-surface"
       style={widthStyle}
     >
       {/* Left resize handle — drag to adjust panel width */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/50"
+        className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize bg-transparent hover:bg-workbench-accent/50"
       />
 
       {/* Tab bar — dynamic, only shows opened tabs */}
       {openTabs.length > 0 && (
-        <div className="flex items-stretch border-b border-border">
+        <div className="flex items-stretch border-b border-workbench-border">
           {openTabs.map((tabId) => {
             const meta = TAB_META[tabId];
             const isActive = tabId === activeTabId;
@@ -128,7 +128,7 @@ export default function ExtensionPanel({
                 key={tabId}
                 onClick={() => onActivateTab(tabId)}
                 className={`group flex cursor-pointer items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs transition-colors ${
-                  isActive ? 'bg-background font-medium text-foreground' : 'text-muted-foreground hover:bg-background/60'
+                  isActive ? 'bg-workbench-muted font-medium text-workbench-ink' : 'text-workbench-subtle hover:bg-workbench-muted'
                 }`}
               >
                 <meta.icon className="h-3 w-3" />
@@ -136,7 +136,7 @@ export default function ExtensionPanel({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onCloseTab(tabId); }}
-                  className="ml-1 flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  className="ds-focus-ring ml-1 flex size-4 items-center justify-center rounded text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -148,14 +148,14 @@ export default function ExtensionPanel({
             <button
               type="button"
               onClick={() => setNewTabMenuOpen((v) => !v)}
-              className="flex h-full items-center justify-center px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="ds-focus-ring flex h-full items-center justify-center px-2 text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink"
               aria-label="New tab"
               title="New tab"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
             {newTabMenuOpen && (
-              <div className="absolute right-0 top-full z-30 mt-1 min-w-36 rounded-md border border-border bg-popover p-1 shadow-lg">
+              <div className="absolute right-0 top-full z-30 mt-1 min-w-36 rounded-md border border-workbench-border bg-workbench-raised p-1 shadow-lg">
                 {(Object.keys(TAB_META) as ExtensionTabId[]).map((id) => {
                   const meta = TAB_META[id];
                   return (
@@ -163,7 +163,7 @@ export default function ExtensionPanel({
                       key={id}
                       type="button"
                       onClick={() => { onOpenTab(id); setNewTabMenuOpen(false); }}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink"
                     >
                       <meta.icon className="h-3 w-3" />
                       {t(meta.labelKey)}
