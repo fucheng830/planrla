@@ -54,14 +54,14 @@ export function BackgroundTasksPanel({ isOpen, onClose }: Props) {
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      className="modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-workbench-canvas/80 p-4"
       onClick={onClose}
     >
       <div
-        className="flex h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-card shadow-lg"
+        className="ds-surface-raised flex h-[80vh] w-full max-w-2xl flex-col rounded-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="ds-panel-header px-4">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold">后台任务</h2>
             {runningCount > 0 && (

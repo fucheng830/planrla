@@ -88,7 +88,7 @@ export default function GitPanel({ selectedProject, isMobile = false, onFileOpen
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
+      <div className="flex h-full flex-col bg-workbench-canvas">
       <GitPanelHeader
         isMobile={isMobile}
         currentBranch={currentBranch}

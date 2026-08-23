@@ -40,15 +40,15 @@ export default function GitRepositoryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60" onClick={onClose} />
       <div
-        className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+        className="ds-surface-raised relative flex w-full max-w-5xl flex-col overflow-hidden rounded-md"
         style={{ height: isMobile ? '92vh' : '85vh' }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="git-repository-title"
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="ds-panel-header px-4">
           <h2 id="git-repository-title" className="text-base font-semibold text-foreground">
             {t('gitPanel.repositoryModalTitle')}
           </h2>

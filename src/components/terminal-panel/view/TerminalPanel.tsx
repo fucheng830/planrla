@@ -37,14 +37,14 @@ export default function TerminalPanel({
 }: TerminalPanelProps) {
   return (
     <div
-      className="flex flex-shrink-0 flex-col border-t border-[#1e1e1e] bg-[#1e1e1e]"
+      className="flex flex-shrink-0 flex-col border-t border-workbench-border bg-[#1e1e1e]"
       style={{ height: panelHeight }}
     >
       {/* Top: resize handle (drag to change height) */}
       <div
         ref={resizeHandleRef}
         onMouseDown={onResizeStart}
-        className="group relative h-1 flex-shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/50"
+        className="group relative h-1 flex-shrink-0 cursor-row-resize bg-transparent hover:bg-workbench-accent/50"
       />
 
       {/* Tab bar (includes new/kill/collapse actions) */}

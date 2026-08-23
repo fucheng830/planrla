@@ -90,10 +90,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents', initi
   const isAuthenticated = Boolean(loginProvider && providerAuthStatus[loginProvider].authenticated);
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm md:p-4">
-      <div className="flex h-full w-full flex-col overflow-hidden border border-border bg-background shadow-2xl md:h-[90vh] md:max-w-4xl md:rounded-xl">
+    <div className="modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-workbench-canvas/80 md:p-4">
+      <div className="ds-surface-raised flex h-full w-full flex-col overflow-hidden md:h-[90vh] md:max-w-4xl md:rounded-md">
         {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-4 py-3 md:px-5">
+        <div className="ds-panel-header flex-shrink-0 px-4 md:px-5">
           <h2 className="text-base font-semibold text-foreground">{t('title')}</h2>
           <div className="flex items-center gap-2">
             {saveStatus === 'success' && (
