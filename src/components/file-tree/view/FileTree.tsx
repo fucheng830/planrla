@@ -200,7 +200,7 @@ export default function FileTree({ selectedProject, onFileOpen, compact, headerP
   return (
     <div
       ref={upload.treeRef}
-      className="relative flex h-full flex-col bg-background"
+      className="relative flex h-full flex-col bg-workbench-canvas"
       onDragEnter={upload.handleDragEnter}
       onDragOver={upload.handleDragOver}
       onDragLeave={upload.handleDragLeave}
@@ -208,9 +208,9 @@ export default function FileTree({ selectedProject, onFileOpen, compact, headerP
     >
       {/* Drag overlay */}
       {upload.isDragOver && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-blue-500 bg-blue-500/10">
-          <div className="flex items-center gap-3 rounded-lg bg-background/95 px-6 py-4 shadow-lg">
-            <Upload className="h-6 w-6 text-blue-500" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-workbench-accent bg-workbench-accent/10">
+          <div className="ds-surface-raised flex items-center gap-3 rounded-md px-6 py-4">
+            <Upload className="size-6 text-workbench-accent" />
             <span className="text-sm font-medium">{t('fileTree.dropToUpload', 'Drop files to upload')}</span>
           </div>
         </div>

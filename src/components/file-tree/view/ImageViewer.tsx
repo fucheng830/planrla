@@ -60,18 +60,18 @@ export default function ImageViewer({ file, onClose }: ImageViewerProps) {
   }, [imagePath]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{file.name}</h3>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="ds-surface-raised flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-md">
+        <div className="ds-panel-header px-4">
+          <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-workbench-ink">{file.name}</h3>
+          <Button variant="ghost" size="sm" onClick={onClose} className="size-8 p-0 text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink" aria-label={`Close ${file.name}`}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex min-h-[400px] items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+        <div className="flex min-h-[400px] items-center justify-center bg-workbench-canvas p-4">
           {loading && (
-            <div className="text-center text-gray-500 dark:text-gray-400">
+            <div className="text-center text-workbench-subtle">
               <p>{t('imageViewer.loading')}</p>
             </div>
           )}
@@ -79,19 +79,19 @@ export default function ImageViewer({ file, onClose }: ImageViewerProps) {
             <img
               src={imageUrl}
               alt={file.name}
-              className="max-h-[70vh] max-w-full rounded-lg object-contain shadow-md"
+              className="max-h-[70vh] max-w-full rounded-md object-contain shadow-md"
             />
           )}
           {!loading && !imageUrl && (
-            <div className="text-center text-gray-500 dark:text-gray-400">
+            <div className="text-center text-workbench-subtle">
               <p>{error || t('imageViewer.loadFailed')}</p>
               <p className="mt-2 break-all text-sm">{file.path}</p>
             </div>
           )}
         </div>
 
-        <div className="border-t bg-gray-50 p-4 dark:bg-gray-800">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{file.path}</p>
+        <div className="border-t border-workbench-border bg-workbench-surface p-3">
+          <p className="ds-mono truncate text-[11px] text-workbench-subtle" title={file.path}>{file.path}</p>
         </div>
       </div>
     </div>
