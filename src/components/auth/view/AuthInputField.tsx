@@ -39,7 +39,7 @@ export default function AuthInputField({
         autoComplete={autoComplete}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="ds-focus-ring w-full rounded-md border border-workbench-border bg-workbench-surface px-3 py-2 text-workbench-ink focus:border-workbench-accent focus:outline-none focus:ring-1 focus:ring-workbench-accent/40"
         placeholder={placeholder}
         required
         disabled={isDisabled}
