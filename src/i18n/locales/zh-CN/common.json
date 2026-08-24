@@ -24,7 +24,11 @@
     "git": "源代码管理",
     "browser": "浏览器",
     "kanban": "看板",
-    "cron": "定时"
+    "cron": "定时",
+    "overview": "项目总览",
+    "inbox": "消息盒子",
+    "workflow": "研发流程",
+    "schedule": "日程任务"
   },
   "extensionPanel": {
     "tabs": {

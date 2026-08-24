@@ -1,4 +1,4 @@
-import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, LayoutDashboard, Inbox, Workflow, CalendarDays, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,8 +22,9 @@ type MainContentTabSwitcherProps = {
 
 type BuiltInTab = {
   kind: 'builtin';
-  /** 'shell' toggles the bottom terminal panel; the others are extension-panel tabs. */
-  id: 'shell' | ExtensionTabId;
+  /** 'shell' toggles the bottom terminal panel; workbench pages replace the
+   *  main area; the rest are extension-panel tabs. */
+  id: 'shell' | 'overview' | 'inbox' | 'workflow' | 'schedule' | ExtensionTabId;
   labelKey: string;
   icon: LucideIcon;
 };
@@ -47,6 +48,10 @@ type TabDefinition = BuiltInTab | PluginTab;
  */
 const BASE_TABS: BuiltInTab[] = [
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
+  { kind: 'builtin', id: 'overview', labelKey: 'tabs.overview', icon: LayoutDashboard },
+  { kind: 'builtin', id: 'inbox', labelKey: 'tabs.inbox', icon: Inbox },
+  { kind: 'builtin', id: 'workflow', labelKey: 'tabs.workflow', icon: Workflow },
+  { kind: 'builtin', id: 'schedule', labelKey: 'tabs.schedule', icon: CalendarDays },
   // 'git' is intentionally not here: its entry point moved to the branch
   // indicator next to the project name in MainContentTitle.
 ];
@@ -108,7 +113,9 @@ export default function MainContentTabSwitcher({
         const isActive =
           tab.kind === 'plugin'
             ? tab.id === activeTab
-            : tab.id !== 'shell' && tab.id === extensionActiveTab;
+            : tab.id === 'overview' || tab.id === 'inbox' || tab.id === 'workflow' || tab.id === 'schedule'
+              ? tab.id === activeTab
+              : tab.id !== 'shell' && tab.id === extensionActiveTab;
         const displayLabel = tab.kind === 'builtin' ? t(tab.labelKey) : tab.label;
 
         return (
@@ -126,6 +133,11 @@ export default function MainContentTabSwitcher({
                 // switching to a full-screen shell tab.
                 if (tab.id === 'shell') {
                   onToggleTerminalPanel?.();
+                  return;
+                }
+                // Workbench pages are full main-area views.
+                if (tab.id === 'overview' || tab.id === 'inbox' || tab.id === 'workflow' || tab.id === 'schedule') {
+                  setActiveTab(isActive ? 'chat' : tab.id);
                   return;
                 }
                 // Kanban/cron/browserUse live in the right-side extension panel.

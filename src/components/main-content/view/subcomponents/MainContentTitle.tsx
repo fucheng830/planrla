@@ -47,6 +47,10 @@ function getTabTitle(activeTab: AppTab, t: (key: string) => string, pluginDispla
     return t('tabs.git');
   }
 
+  if (activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule') {
+    return t(`tabs.${activeTab}`);
+  }
+
   return t('mainContent.project');
 }
 
@@ -110,7 +114,7 @@ export default function MainContentTitle({
       <div className="min-w-0 flex-1">
         {activeTab === 'chat' && selectedSession ? (
           <div className="min-w-0">
-            <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-sm font-semibold leading-tight text-workbench-ink text-balance">
+            <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-balance text-sm font-semibold leading-tight text-workbench-ink">
               {getSessionTitle(selectedSession, t)}
             </h2>
             {subtitle}

@@ -24,7 +24,11 @@
     "git": "Source Control",
     "browser": "Browser",
     "kanban": "Kanban",
-    "cron": "Cron"
+    "cron": "Cron",
+    "overview": "Overview",
+    "inbox": "Inbox",
+    "workflow": "Delivery",
+    "schedule": "Calendar"
   },
   "extensionPanel": {
     "tabs": {

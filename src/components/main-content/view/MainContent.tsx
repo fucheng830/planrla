@@ -12,6 +12,10 @@ import { useUiPreferences } from '../../../hooks/useUiPreferences';
 import { authenticatedFetch } from '../../../utils/api';
 import { useEditorSidebar } from '../../code-editor/hooks/useEditorSidebar';
 import EditorSidebar from '../../code-editor/view/EditorSidebar';
+import { OverviewPage } from '../../workbench/pages/OverviewPage';
+import { InboxPage } from '../../workbench/pages/InboxPage';
+import { WorkflowPage } from '../../workbench/pages/WorkflowPage';
+import { SchedulePage } from '../../workbench/pages/SchedulePage';
 
 import MainContentHeader from './subcomponents/MainContentHeader';
 import MainContentStateView from './subcomponents/MainContentStateView';
@@ -189,6 +193,42 @@ function MainContent({
                 selectedProject={selectedProject}
                 selectedSession={selectedSession}
               />
+            </div>
+          )}
+
+          {activeTab === 'overview' && (
+            <div className="h-full">
+              <ErrorBoundary showDetails>
+                <OverviewPage
+                  project={selectedProject}
+                  onOpenWorkflow={() => setActiveTab('workflow')}
+                  onOpenInbox={() => setActiveTab('inbox')}
+                />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {activeTab === 'inbox' && (
+            <div className="h-full">
+              <ErrorBoundary showDetails>
+                <InboxPage project={selectedProject} />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {activeTab === 'workflow' && (
+            <div className="h-full">
+              <ErrorBoundary showDetails>
+                <WorkflowPage projectName={selectedProject.displayName} />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {activeTab === 'schedule' && (
+            <div className="h-full">
+              <ErrorBoundary showDetails>
+                <SchedulePage projectName={selectedProject.displayName} />
+              </ErrorBoundary>
             </div>
           )}
         </div>
