@@ -117,6 +117,11 @@ function AppContentInner() {
     onCompletedSessionSeen: clearSessionCompleted,
   });
 
+  const handleOpenWorkbenchTab = useCallback((tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+  }, [setActiveTab, setSidebarOpen]);
+
   const {
     terminals,
     activeTerminalId,
@@ -276,7 +281,13 @@ function AppContentInner() {
     >
       {!isMobile ? (
         <div className="h-full flex-shrink-0 border-r border-workbench-border bg-workbench-surface">
-          <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} onOpenBackgroundTasks={handleOpenBackgroundTasks} />
+          <Sidebar
+            {...sidebarSharedProps}
+            activeTab={activeTab}
+            onOpenWorkbenchTab={handleOpenWorkbenchTab}
+            onOpenMarkdownEditor={handleOpenMarkdownEditor}
+            onOpenBackgroundTasks={handleOpenBackgroundTasks}
+          />
         </div>
       ) : (
         <div
@@ -302,7 +313,13 @@ function AppContentInner() {
             onClick={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
           >
-            <Sidebar {...sidebarSharedProps} onOpenMarkdownEditor={handleOpenMarkdownEditor} onOpenBackgroundTasks={handleOpenBackgroundTasks} />
+            <Sidebar
+              {...sidebarSharedProps}
+              activeTab={activeTab}
+              onOpenWorkbenchTab={handleOpenWorkbenchTab}
+              onOpenMarkdownEditor={handleOpenMarkdownEditor}
+              onOpenBackgroundTasks={handleOpenBackgroundTasks}
+            />
           </div>
         </div>
       )}

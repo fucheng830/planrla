@@ -9,7 +9,7 @@ import { api } from '../../../../utils/api';
 import { copyTextToClipboard } from '../../../../utils/clipboard';
 import { useA2aDelegate } from '../../contexts/A2aDelegateContext';
 import { usePaletteOps } from '../../../../contexts/PaletteOpsContext';
-import type { LLMProvider, Project } from '../../../../types/app';
+import type { AppTab, LLMProvider, Project } from '../../../../types/app';
 import type { CompletedSessionNotificationMap } from '../../../../hooks/useSessionProtection';
 import type { SessionTaskStatus } from '../../../../shared/taskStatus';
 import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
@@ -20,6 +20,7 @@ import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo'
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 import FileTree from '../../../file-tree/view/FileTree';
 import { WorkbenchRail } from '../../../workbench';
+import { getSidebarRailItems, isWorkbenchTab } from './sidebarRailItems';
 
 import SidebarFooter from './SidebarFooter';
 import SidebarHeader from './SidebarHeader';
@@ -383,6 +384,8 @@ type SidebarContentProps = {
   onOpenMarkdownEditor?: () => void;
   // REQ-046 — 打开后台任务面板入口(可选,无则不渲染按钮)。
   onOpenBackgroundTasks?: () => void;
+  activeTab?: AppTab;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
   projectListProps: SidebarProjectListProps;
   completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
@@ -426,6 +429,8 @@ export default function SidebarContent({
   onShowSettings,
   onOpenMarkdownEditor,
   onOpenBackgroundTasks,
+  activeTab,
+  onOpenWorkbenchTab,
   projectListProps,
   completedSessions,
   t,
@@ -433,12 +438,9 @@ export default function SidebarContent({
   const showConversationSearch = searchMode === 'sessions' && searchFilter.trim().length >= 2;
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
-  const railItems = [
-    { id: 'projects', label: t('search.modeProjects'), icon: Folder },
-    { id: 'sessions', label: t('search.modeSessions'), icon: MessageSquare, badge: completedSessionsCount > 0 ? 'completed' : undefined },
-    { id: 'archived', label: t('search.archiveOnlyTooltip', 'Archive only'), icon: Archive },
-    { id: 'files', label: t('files.title', 'Files'), icon: FolderTree },
-  ] as const;
+  const railItems = getSidebarRailItems(t, completedSessionsCount);
+  const activeRailId = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' ? activeTab : searchMode;
+  const showProjectWorkspace = !isWorkbenchTab(activeTab);
   const activeSessions = projectListProps.activeSessions;
   const conversationListItems: ConversationListItem[] = projects
     .flatMap((project) =>
@@ -463,15 +465,21 @@ export default function SidebarContent({
     });
 
   return (
-    <div className="flex h-full flex-col bg-workbench-surface md:w-72 md:select-none">
+    <div className={`flex h-full flex-col bg-workbench-surface ${showProjectWorkspace ? 'md:w-72' : 'md:w-12'} md:select-none`}>
       <div className="flex min-h-0 flex-1">
         <WorkbenchRail
           className="hidden shrink-0 border-r border-workbench-border md:flex"
           items={railItems}
-          activeId={searchMode}
-          onSelect={(id) => onSearchModeChange(id as SidebarSearchMode)}
+          activeId={activeRailId}
+          onSelect={(id) => {
+            if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule') {
+              onOpenWorkbenchTab?.(id);
+              return;
+            }
+            onSearchModeChange(id as SidebarSearchMode);
+          }}
         />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className={showProjectWorkspace ? 'flex min-w-0 flex-1 flex-col' : 'hidden'}>
         <SidebarHeader
         isPWA={isPWA}
         isMobile={isMobile}

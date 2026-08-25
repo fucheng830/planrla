@@ -1,4 +1,4 @@
-import type { LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../types/app';
+import type { AppTab, LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../types/app';
 import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../hooks/useSessionProtection';
 
 export type ProjectSortOrder = 'name' | 'date';
@@ -67,6 +67,8 @@ export type SidebarProps = {
   onOpenMarkdownEditor?: () => void;
   // REQ-046 — 侧边栏"打开后台任务面板"入口回调。可选,不传则不渲染入口按钮。
   onOpenBackgroundTasks?: () => void;
+  activeTab?: AppTab;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
 };
 
 export type SessionViewModel = {

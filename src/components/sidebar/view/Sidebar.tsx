@@ -40,6 +40,8 @@ function Sidebar({
   isMobile,
   onOpenMarkdownEditor,
   onOpenBackgroundTasks,
+  activeTab,
+  onOpenWorkbenchTab,
 }: SidebarProps) {
   const { t } = useTranslation(['sidebar', 'common']);
   const { isPWA } = useDeviceSettings({ trackMobile: false });
@@ -309,6 +311,8 @@ function Sidebar({
             onShowSettings={onShowSettings}
             onOpenMarkdownEditor={onOpenMarkdownEditor}
             onOpenBackgroundTasks={onOpenBackgroundTasks}
+            activeTab={activeTab}
+            onOpenWorkbenchTab={onOpenWorkbenchTab}
             projectListProps={projectListProps}
             onOpenFile={paletteOps.openFile}
             completedSessions={completedSessions}
