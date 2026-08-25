@@ -20,7 +20,7 @@ import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo'
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 import FileTree from '../../../file-tree/view/FileTree';
 import { WorkbenchRail } from '../../../workbench';
-import { getSidebarRailItems, isWorkbenchTab } from './sidebarRailItems';
+import { getSidebarRailFooterItems, getSidebarRailItems, isWorkbenchTab } from './sidebarRailItems';
 
 import SidebarFooter from './SidebarFooter';
 import SidebarHeader from './SidebarHeader';
@@ -439,6 +439,7 @@ export default function SidebarContent({
   const hasPartialResults = conversationResults && conversationResults.results.length > 0;
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
   const railItems = getSidebarRailItems(t, completedSessionsCount);
+  const railFooterItems = getSidebarRailFooterItems(t);
   const activeRailId = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' || activeTab === 'kanban' ? activeTab : searchMode;
   const showProjectWorkspace = !isWorkbenchTab(activeTab);
   const activeSessions = projectListProps.activeSessions;
@@ -470,8 +471,13 @@ export default function SidebarContent({
         <WorkbenchRail
           className="hidden shrink-0 border-r border-workbench-border md:flex"
           items={railItems}
+          footerItems={railFooterItems}
           activeId={activeRailId}
           onSelect={(id) => {
+            if (id === 'settings') {
+              onShowSettings();
+              return;
+            }
             if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule' || id === 'kanban') {
               onOpenWorkbenchTab?.(id);
               return;

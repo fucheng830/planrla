@@ -1,4 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
+
 import { cn } from '../../lib/utils';
 
 export type WorkbenchRailItem = {
@@ -8,14 +10,24 @@ export type WorkbenchRailItem = {
   badge?: string;
 };
 
+/** Icon-only entries pinned to the rail bottom (settings + external links). */
+export type WorkbenchRailFooterItem = {
+  id: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  /** When set the entry renders as an external link instead of a button. */
+  href?: string;
+};
+
 type WorkbenchRailProps = {
   items: readonly WorkbenchRailItem[];
+  footerItems?: readonly WorkbenchRailFooterItem[];
   activeId: string | null;
   onSelect: (id: string) => void;
   className?: string;
 };
 
-export function WorkbenchRail({ items, activeId, onSelect, className }: WorkbenchRailProps) {
+export function WorkbenchRail({ items, footerItems, activeId, onSelect, className }: WorkbenchRailProps) {
   return (
     <nav aria-label="Workbench navigation" className={cn('flex w-12 flex-col items-center gap-1 border-r border-workbench-border bg-workbench-surface py-3', className)}>
       {items.map(({ id, label, icon: Icon, badge }) => {
@@ -38,6 +50,22 @@ export function WorkbenchRail({ items, activeId, onSelect, className }: Workbenc
           </button>
         );
       })}
+      {footerItems && footerItems.length > 0 && (
+        <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+          {footerItems.map(({ id, label, icon: Icon, href }) => {
+            const itemClass = 'ds-focus-ring relative flex size-9 items-center justify-center rounded-md text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink';
+            return href ? (
+              <a key={id} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className={itemClass}>
+                <Icon className="size-4" aria-hidden="true" />
+              </a>
+            ) : (
+              <button key={id} type="button" aria-label={label} title={label} onClick={() => onSelect(id)} className={itemClass}>
+                <Icon className="size-4" aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
+      )}
     </nav>
   );
 }
