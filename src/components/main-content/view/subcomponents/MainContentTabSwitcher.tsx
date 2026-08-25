@@ -7,6 +7,7 @@ import type { AppTab } from '../../../../types/app';
 import type { ExtensionTabId } from '../../../extension-panel/hooks/useExtensionPanel';
 import { usePlugins } from '../../../../contexts/PluginsContext';
 import PluginIcon from '../../../plugins/view/PluginIcon';
+import { getWorkbenchPageTarget } from './mainContentTabSwitcherModel';
 
 type MainContentTabSwitcherProps = {
   activeTab: AppTab;
@@ -113,7 +114,7 @@ export default function MainContentTabSwitcher({
         const isActive =
           tab.kind === 'plugin'
             ? tab.id === activeTab
-            : tab.id === 'overview' || tab.id === 'inbox' || tab.id === 'workflow' || tab.id === 'schedule'
+            : getWorkbenchPageTarget(tab.id) !== null
               ? tab.id === activeTab
               : tab.id !== 'shell' && tab.id === extensionActiveTab;
         const displayLabel = tab.kind === 'builtin' ? t(tab.labelKey) : tab.label;
@@ -135,13 +136,18 @@ export default function MainContentTabSwitcher({
                   onToggleTerminalPanel?.();
                   return;
                 }
-                // Workbench pages are full main-area views.
-                if (tab.id === 'overview' || tab.id === 'inbox' || tab.id === 'workflow' || tab.id === 'schedule') {
-                  setActiveTab(isActive ? 'chat' : tab.id);
+                // Workbench pages are full main-area views. Clicking the
+                // already-active page is a stable navigation action, not a
+                // hidden return-to-chat toggle.
+                const workbenchTarget = getWorkbenchPageTarget(tab.id);
+                if (workbenchTarget) {
+                  setActiveTab(workbenchTarget);
                   return;
                 }
-                // Kanban/cron/browserUse live in the right-side extension panel.
-                onToggleExtensionTab?.(tab.id);
+                if (tab.kind === 'builtin') {
+                  // Kanban/cron/browserUse live in the right-side extension panel.
+                  onToggleExtensionTab?.(tab.id as ExtensionTabId);
+                }
               }}
               className={`flex flex-shrink-0 items-center justify-center rounded p-1.5 transition-colors ${
                 isActive
