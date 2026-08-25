@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Planrla AI Agent Coding Workbench V3</title>
+  <style>
+    :root {
+      --canvas: #f7f8fb;
+      --surface: #ffffff;
+      --muted: #f3f5f8;
+      --line: #dfe4ec;
+      --line-strong: #c9d1de;
+      --ink: #111827;
+      --text: #334155;
+      --subtle: #64748b;
+      --faint: #94a3b8;
+      --blue: #1769f2;
+      --blue-soft: #e8f1ff;
+      --green: #10a66a;
+      --green-soft: #e8f8f0;
+      --amber: #f59e0b;
+      --amber-soft: #fff5df;
+      --red: #e5484d;
+      --red-soft: #fff0f1;
+      --radius: 10px;
+      --rail: 44px;
+      --shadow: 0 12px 32px rgba(15, 23, 42, .08);
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font);
+    }
+
+    .board-page {
+      min-height: 100vh;
+      padding: 24px;
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 32px 32px;
+    }
+
+    .board-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      max-width: 1880px;
+      margin: 0 auto 18px;
+    }
+
+    .brand-line {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .logo-mark span {
+      border-radius: 7px;
+      background: #0f172a;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 28px; letter-spacing: -.02em; }
+    .subtitle {
+      margin: 8px 0 0 48px;
+      color: var(--subtle);
+      font-size: 13px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--subtle);
+      font-size: 12px;
+      white-space: nowrap;
+      padding-top: 10px;
+    }
+
+    .grid {
+      max-width: 1880px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.4fr .78fr .92fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .section {
+      position: relative;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: var(--blue);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .frame {
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, .05);
+      overflow: hidden;
+    }
+
+    .main-frame {
+      height: 640px;
+      display: grid;
+      grid-template-columns: var(--rail) 236px 1fr 260px;
+    }
+
+    .small-frame {
+      height: 428px;
+      display: grid;
+      grid-template-columns: var(--rail) 1fr;
+    }
+
+    .kanban-frame {
+      height: 236px;
+      padding: 14px;
+    }
+
+    .rail {
+      width: var(--rail);
+      border-right: 1px solid var(--line);
+      background: #fbfcfe;
+      display: grid;
+      grid-template-rows: 54px repeat(7, 36px) 1fr 36px 42px;
+      justify-items: center;
+      align-items: center;
+    }
+
+    .rail-logo {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+    }
+
+    .rail-logo span,
+    .rail-icon {
+      border-radius: 5px;
+    }
+
+    .rail-logo span { background: #0f172a; }
+    .rail-icon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .rail-icon.active {
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .rail-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0f172a;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #fbfcfe;
+      padding: 14px 12px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .app-name {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .workspace-select,
+    .search,
+    .segmented,
+    .input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+
+    .workspace-select {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .search, .input {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .segmented {
+      height: 34px;
+      padding: 3px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .segmented span {
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+    }
+
+    .segmented .on { background: var(--muted); color: var(--ink); }
+
+    .group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .session-list,
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .session {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      padding: 8px 9px;
+      font-size: 12px;
+    }
+
+    .session.active {
+      border-color: #93c5fd;
+      background: var(--blue-soft);
+    }
+
+    .session-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .session-sub {
+      margin-top: 4px;
+      color: var(--subtle);
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .content {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 54px 1fr 82px;
+      background: white;
+    }
+
+    .top {
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 12px;
+    }
+
+    .crumb {
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .page-title {
+      margin-top: 5px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .run-state {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .tools {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: white;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .stream {
+      min-height: 0;
+      overflow: hidden;
+      padding: 14px 16px;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      background: #fff;
+    }
+
+    .message {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: white;
+    }
+
+    .message.ai {
+      border-color: #dbeafe;
+      background: #fbfdff;
+    }
+
+    .msg-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 9px;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr 74px 20px;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      min-height: 30px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .result-row:first-of-type { border-top: 0; }
+    .mono { font-family: var(--mono); }
+
+    .files {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .file-chip,
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 6px;
+      padding: 2px 8px;
+      background: var(--muted);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .pill.run { color: var(--green); background: var(--green-soft); }
+    .pill.wait { color: #b45309; background: var(--amber-soft); }
+    .pill.fail { color: var(--red); background: var(--red-soft); }
+    .pill.blue { color: var(--blue); background: var(--blue-soft); }
+
+    .permission {
+      border: 1px solid #f6c36b;
+      border-radius: 10px;
+      background: var(--amber-soft);
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: #92400e;
+      font-size: 13px;
+    }
+
+    .button {
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      background: white;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .button.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .button.ghost { background: transparent; }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      background: #fff;
+      padding: 10px 16px;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+
+    .composer-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      padding: 0 8px 0 12px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .send {
+      width: 34px;
+      height: 30px;
+      border-radius: 7px;
+      background: var(--blue);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .inspector {
+      border-left: 1px solid var(--line);
+      background: #fbfcfe;
+      display: grid;
+      grid-template-rows: 40px 1fr;
+      min-width: 0;
+    }
+
+    .inspector-tabs {
+      display: flex;
+      gap: 14px;
+      padding: 0 14px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .inspector-tabs .on { color: var(--blue); font-weight: 800; }
+
+    .inspect-body {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      overflow: hidden;
+    }
+
+    .preview-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      padding: 10px;
+    }
+
+    .video {
+      aspect-ratio: 9 / 12;
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.55)),
+        url("C:/Users/HONOR/AppData/Local/Temp/codex-clipboard-b659f612-c6b7-424d-b65e-67a484a0a589.png");
+      background-position: 52% 20%;
+      background-size: 800px auto;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 900;
+      font-size: 28px;
+      text-shadow: 0 2px 8px rgba(0,0,0,.45);
+    }
+
+    .meta-table {
+      display: grid;
+      gap: 7px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      gap: 10px;
+    }
+
+    .meta-row span:first-child { color: var(--subtle); }
+
+    .empty-main {
+      display: grid;
+      place-items: center;
+      background: #fff;
+    }
+
+    .empty-card {
+      width: 330px;
+      display: grid;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .wizard {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .wizard-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .step.on { color: var(--blue); font-weight: 800; }
+
+    .form {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .option-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .option {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 12px;
+    }
+
+    .option.on { border-color: #93c5fd; background: var(--blue-soft); }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      height: 170px;
+    }
+
+    .lane {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      display: grid;
+      grid-template-rows: 32px 1fr;
+      overflow: hidden;
+    }
+
+    .lane-head {
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .lane-body {
+      padding: 8px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px;
+      font-size: 12px;
+      background: white;
+    }
+
+    .task.active { background: var(--blue-soft); border-color: #93c5fd; }
+
+    .inspect-variants {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .variant {
+      height: 238px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      display: grid;
+      grid-template-rows: 34px 1fr;
+      overflow: hidden;
+    }
+
+    .variant-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .variant-body { padding: 10px; overflow: hidden; }
+
+    .file-tree {
+      display: grid;
+      gap: 7px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .mobile-row {
+      display: flex;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .phone {
+      width: 154px;
+      height: 312px;
+      border: 1px solid #b8c2d2;
+      border-radius: 22px;
+      background: white;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .phone-screen {
+      height: 100%;
+      border-radius: 14px;
+      display: grid;
+      grid-template-rows: 34px 1fr;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .phone-title {
+      font-weight: 800;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mobile-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 11px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .component-strip {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1.1fr 1.6fr 1.2fr 1.2fr 1.1fr;
+      gap: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: white;
+      overflow: hidden;
+    }
+
+    .component {
+      min-height: 160px;
+      padding: 14px;
+      border-right: 1px solid var(--line);
+    }
+
+    .component:last-child { border-right: 0; }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--muted);
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 8%;
+      background: var(--blue);
+    }
+
+    @media (max-width: 1200px) {
+      .grid { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: auto; }
+      .main-frame { grid-template-columns: var(--rail) 220px 1fr; }
+      .inspector { display: none; }
+      .component-strip { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="board-page">
+    <header class="board-title">
+      <div>
+        <div class="brand-line">
+          <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+          <h1>Planrla AI Agent Coding Workbench</h1>
+        </div>
+        <p class="subtitle">完整界面设计总览 | Light Theme | Zinc / Slate | Desktop & Mobile</p>
+      </div>
+      <div class="legend">共享左侧图标 Rail 不变 | 子页面只替换主内容区域 | 消息盒子 + SDLC + AI 协作</div>
+    </header>
+
+    <main class="grid">
+      <section class="section span-2">
+        <div class="section-head"><span class="num">1</span>桌面主工作台 (Main Workbench)</div>
+        <div class="frame main-frame">
+          <div class="rail">
+            <div class="rail-logo"><span></span><span></span><span></span><span></span></div>
+            <div class="rail-icon active">⌘</div>
+            <div class="rail-icon">⌗</div>
+            <div class="rail-icon">›</div>
+            <div class="rail-icon">✧</div>
+            <div class="rail-icon">◎</div>
+            <div class="rail-icon">▤</div>
+            <div></div>
+            <div class="rail-icon">⚙</div>
+            <div class="rail-avatar"></div>
+          </div>
+
+          <aside class="sidebar">
+            <div class="app-name"><div class="rail-logo" style="width:18px;height:18px"><span></span><span></span><span></span><span></span></div>Planrla</div>
+            <div class="stack">
+              <div class="workspace-select"><span>H&nbsp; HONOR Workspace</span><span>⌄</span></div>
+              <div class="search">搜索会话或文件... ⌘K</div>
+              <div class="segmented"><span>通道</span><span class="on">会话</span><span>文件</span></div>
+            </div>
+            <div class="stack">
+              <div>
+                <div class="group-title"><span>运行中</span><span>2</span></div>
+                <div class="session-list">
+                  <div class="session active"><div class="session-top">douyin_烤鱼活动视频.mp4 <span class="pill run">2m 7s</span></div><div class="session-sub"><span>gemini-1.5-pro</span><span>●</span></div></div>
+                  <div class="session"><div class="session-top">生成餐饮文案脚本 <span class="pill wait">等待确认</span></div><div class="session-sub"><span>claude-3.5-sonnet</span><span></span></div></div>
+                </div>
+              </div>
+              <div>
+                <div class="group-title"><span>待回复</span><span>3</span></div>
+                <div class="session-list">
+                  <div class="session"><div class="session-top">AI 请求确认 <span class="pill wait">待确认</span></div><div class="session-sub"><span>是否生成最终脚本</span><span></span></div></div>
+                  <div class="session"><div class="session-top">飞书: 视频需求 <span class="pill blue">归档</span></div><div class="session-sub"><span>绑定到当前项目</span><span></span></div></div>
+                </div>
+              </div>
+              <div>
+                <div class="group-title"><span>已完成</span><span>6</span></div>
+                <div class="session-list">
+                  <div class="session"><div class="session-top">视频内容分析 <span>12m</span></div><div class="session-sub"><span>gemini-1.5-pro</span><span>●</span></div></div>
+                  <div class="session"><div class="session-top">抖音活动串联提取 <span>8m</span></div><div class="session-sub"><span>gpt-4o</span><span>●</span></div></div>
+                </div>
+              </div>
+            </div>
+            <button class="button">查看全部会话</button>
+          </aside>
+
+          <section class="content">
+            <header class="top">
+              <div>
+                <div class="crumb">项目 / Downloads / douyin_烤鱼活动视频.mp4</div>
+                <div class="page-title">douyin_烤鱼活动视频.mp4 ✎</div>
+              </div>
+              <div class="run-state"><span class="pill run">运行中</span><span>02:07⌄</span><div class="tools"><div class="tool-btn">＋</div><div class="tool-btn">⌁</div><div class="tool-btn">⏱</div><div class="tool-btn">⋯</div></div></div>
+            </header>
+
+            <div class="stream">
+              <article class="message ai">
+                <div class="msg-title">✦ Planrla AI <span class="mono">10:32:41</span></div>
+                <p>我已帮你下载并分析这条抖音视频。先检查 yt-dlp 是否可用，然后下载视频并提取关键信息。</p>
+                <div class="result-row"><span>检查 yt-dlp 依赖</span><span class="pill">shell</span><span>●</span></div>
+                <div class="result-row"><span>下载抖音视频</span><span class="pill">shell</span><span>●</span></div>
+                <div class="result-row"><span>提取视频元素摘要</span><span class="pill">shell</span><span>●</span></div>
+                <div class="result-row"><span>提取音频并转写</span><span class="pill">whisper-1</span><span>●</span></div>
+                <div class="result-row"><span>分析活动内容与亮点</span><span class="pill">analysis</span><span>●</span></div>
+                <div class="files">
+                  <span class="file-chip">video_info.json 2.1KB</span>
+                  <span class="file-chip">transcript.txt 18.6KB</span>
+                  <span class="file-chip">keypoints.md 3.4KB</span>
+                  <span class="file-chip">查看全部 (4)</span>
+                </div>
+              </article>
+
+              <article class="message">
+                <div class="msg-title">✦ Planrla AI <span class="mono">10:33:12</span></div>
+                <p>视频下载完成并分析完毕，以下是关键信息提炼：</p>
+                <ul style="margin:8px 0 12px 18px;color:var(--text);font-size:13px;line-height:1.6">
+                  <li>活动主题：半天妖烤鱼 霸王活动</li>
+                  <li>核心卖点：菜品丰富、折扣力度明显、适合多人聚餐</li>
+                  <li>建议发布时间：午餐/晚餐前 1 小时</li>
+                </ul>
+                <div class="permission">
+                  <div><strong>等待确认</strong><br />是否基于以上分析生成最终文案脚本？</div>
+                  <div class="tools"><button class="button">拒绝</button><button class="button primary">确认并继续</button></div>
+                </div>
+              </article>
+            </div>
+
+            <footer class="composer">
+              <div class="composer-box"><span>输入指令或任务...（支持 @ 引用文件，/ 使用工具）</span><span class="send">↗</span></div>
+            </footer>
+          </section>
+
+          <aside class="inspector">
+            <div class="inspector-tabs"><span class="on">Inspector</span><span>Shell</span><span>Browser</span></div>
+            <div class="inspect-body">
+              <div class="crumb">Users › HONOR › Downloads</div>
+              <strong>douyin_烤鱼活动视频.mp4</strong>
+              <div class="preview-card"><div class="video">半天妖烤鱼</div></div>
+              <div class="segmented"><span class="on">信息</span><span>字幕</span><span>备注</span></div>
+              <div class="meta-table">
+                <div class="meta-row"><span>类型</span><strong>MP4 视频</strong></div>
+                <div class="meta-row"><span>大小</span><strong>6.80 MB</strong></div>
+                <div class="meta-row"><span>时长</span><strong>00:18</strong></div>
+                <div class="meta-row"><span>分辨率</span><strong>1080 × 1920</strong></div>
+                <div class="meta-row"><span>编码</span><strong>H.264 / AAC</strong></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="num">2</span>空项目状态 (Empty Project State)</div>
+        <div class="frame small-frame">
+          <div class="rail">
+            <div class="rail-logo"><span></span><span></span><span></span><span></span></div><div class="rail-icon active">⌘</div><div class="rail-icon">⌗</div><div class="rail-icon">›</div><div class="rail-icon">✧</div><div class="rail-icon">◎</div><div class="rail-icon">▤</div><div></div><div class="rail-icon">⚙</div><div class="rail-avatar"></div>
+          </div>
+          <div class="empty-main">
+            <div class="empty-card">
+              <div class="app-name" style="justify-content:center"><div class="rail-logo" style="width:22px;height:22px"><span></span><span></span><span></span><span></span></div>Planrla</div>
+              <strong>选择或创建项目</strong>
+              <div class="workspace-select">H&nbsp; HONOR Workspace <span>⌄</span></div>
+              <div class="search">搜索项目...</div>
+              <div class="session-list">
+                <div class="session active"><div class="session-top">douyin_烤鱼活动视频 <span>刚刚</span></div></div>
+                <div class="session"><div class="session-top">电商脚本分析 <span>2 小时前</span></div></div>
+                <div class="session"><div class="session-top">运营周报方案 <span>昨天</span></div></div>
+              </div>
+              <button class="button primary">新建项目</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="num">3</span>新建项目向导 (New Project Wizard)</div>
+        <div class="frame small-frame">
+          <div class="rail">
+            <div class="rail-logo"><span></span><span></span><span></span><span></span></div><div class="rail-icon active">⌘</div><div class="rail-icon">⌗</div><div class="rail-icon">›</div><div class="rail-icon">✧</div><div class="rail-icon">◎</div><div class="rail-icon">▤</div><div></div><div class="rail-icon">⚙</div><div class="rail-avatar"></div>
+          </div>
+          <div class="wizard">
+            <div class="wizard-head"><strong>新建项目</strong><span>×</span></div>
+            <div class="steps"><span class="step on">1 基础信息</span><span>2 权限设置</span><span>3 检查与创建</span></div>
+            <div class="form">
+              <label>工作空间 <div class="workspace-select">HONOR Workspace <span>⌄</span></div></label>
+              <label>项目名称 <div class="input">抖音活动视频分析</div></label>
+              <label>存储位置 <div class="input">~/Planrla/Projects/douyin-activity</div></label>
+              <label>AI 提供商 <div class="files"><span class="file-chip">OpenAI</span><span class="file-chip">Anthropic</span><span class="file-chip">Google</span><span class="file-chip">本地模型</span></div></label>
+              <label>权限模式 <div class="option-list"><div class="option on">托管：代理读取 + 手动确认</div><div class="option">严格：权限逐项确认</div><div class="option">宽松：自动执行低风险操作</div></div></label>
+              <div style="display:flex;justify-content:flex-end;gap:8px"><button class="button">取消</button><button class="button primary">下一步</button></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="num">4</span>消息盒子子页面 (Inbox Page / Rail unchanged)</div>
+        <div class="frame small-frame">
+          <div class="rail">
+            <div class="rail-logo"><span></span><span></span><span></span><span></span></div><div class="rail-icon">⌘</div><div class="rail-icon active">⌗</div><div class="rail-icon">›</div><div class="rail-icon">✧</div><div class="rail-icon">◎</div><div class="rail-icon">▤</div><div></div><div class="rail-icon">⚙</div><div class="rail-avatar"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:260px 1fr 260px;min-width:0">
+            <aside class="sidebar" style="grid-template-rows:auto 1fr">
+              <div class="app-name">消息盒子</div>
+              <div class="stack">
+                <div class="session active"><div class="session-top">企业微信: 王工 <span class="pill wait">待回复</span></div><div class="session-sub">确认首批接入渠道</div></div>
+                <div class="session"><div class="session-top">AI: Codex <span class="pill wait">求助</span></div><div class="session-sub">客服消息建任务策略</div></div>
+                <div class="session"><div class="session-top">Slack: Alex <span class="pill fail">失败</span></div><div class="session-sub">Windows packaging failed</div></div>
+              </div>
+            </aside>
+            <section class="stream">
+              <article class="message ai"><div class="msg-title">AI 摘要</div><p>这是范围确认问题。建议第一版接企业微信、Slack、Webhook，客服渠道先进入人工确认队列。</p></article>
+              <article class="message"><div class="msg-title">企业微信: 王工</div><p>消息盒子第一版要不要先接飞书和企业微信？客服渠道是不是一起做？</p></article>
+              <div class="composer-box" style="height:48px"><span>回复到企业微信，或写入任务备注...</span><span class="send">↗</span></div>
+            </section>
+            <aside class="inspect-body" style="border-left:1px solid var(--line)">
+              <strong>处理建议</strong>
+              <div class="session"><div class="session-top">绑定任务 <span class="pill blue">REQ-088</span></div><div class="session-sub">统一消息盒子</div></div>
+              <div class="session"><div class="session-top">建议动作 <span class="pill run">归档</span></div><div class="session-sub">回复并写入需求</div></div>
+              <button class="button primary">回复并归档</button>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="num">5</span>任务看板 (Tasks / Kanban)</div>
+        <div class="frame kanban-frame">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong>任务看板</strong><div class="tools"><button class="button">＋ 新任务</button><div class="tool-btn">☷</div><div class="tool-btn">≡</div></div></div>
+          <div class="kanban">
+            <div class="lane"><div class="lane-head">Backlog <span>2</span></div><div class="lane-body"><div class="task">提取前景并转写<br><span class="mono">whisper-1</span></div><div class="task">生成视频文案脚本<br><span class="mono">claude-3.5</span></div></div></div>
+            <div class="lane"><div class="lane-head">Running <span>2</span></div><div class="lane-body"><div class="task active">douyin_烤鱼活动视频下载<br><span class="mono">yt-dlp</span></div><div class="task">视频内容分析<br><span class="mono">gemini-1.5</span></div></div></div>
+            <div class="lane"><div class="lane-head">Waiting <span>2</span></div><div class="lane-body"><div class="task">确认文案脚本内容 <span class="pill wait">等待确认</span></div><div class="task">发布计划与渠道确认 <span class="pill wait">等待确认</span></div></div></div>
+            <div class="lane"><div class="lane-head">Done <span>4</span></div><div class="lane-body"><div class="task">检查视频片段<br><span class="mono">0.2s</span></div><div class="task">下载平台视频<br><span class="mono">21.4s</span></div><div class="task">提取视频元素<br><span class="mono">1.2s</span></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section span-2">
+        <div class="section-head"><span class="num">6</span>Inspector 变体 (Inspector Variants)</div>
+        <div class="inspect-variants">
+          <div class="variant"><div class="variant-head">文件树 (Files)<span>×</span></div><div class="variant-body file-tree"><strong>douyin-activity</strong><span>▸ .planrla</span><span>▸ docs</span><span>▸ outputs</span><span>▸ src</span><span>README.md</span><span>package.json</span></div></div>
+          <div class="variant"><div class="variant-head">视频预览 (Video)<span>×</span></div><div class="variant-body"><div class="video" style="font-size:22px">半天妖烤鱼</div></div></div>
+          <div class="variant"><div class="variant-head">Markdown 预览<span>×</span></div><div class="variant-body"><strong>活动卖点提炼</strong><ul style="font-size:12px;line-height:1.8;color:var(--text);padding-left:18px"><li>主题：半天妖烤鱼 霸王活动</li><li>卖点：性价比高、口味丰富</li><li>时间：午餐/晚餐前</li></ul></div></div>
+          <div class="variant"><div class="variant-head">浏览器 (Browser)<span>×</span></div><div class="variant-body"><div class="input">https://douyin.com/video/...</div><div class="video" style="margin-top:8px;font-size:20px">抖音预览</div></div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="num">7</span>移动端交互 (Mobile Handoff)</div>
+        <div class="mobile-row">
+          <div class="phone"><div class="phone-screen"><div class="phone-title">项目 <span>⌄</span></div><div class="stack"><div class="workspace-select" style="height:30px">HONOR Workspace</div><div class="mobile-card"><strong>douyin_烤鱼活动视频</strong><span class="pill run">运行中</span></div><div class="mobile-card">视频内容分析 <span class="pill">12m</span></div><div class="mobile-card">生成文案脚本 <span class="pill wait">等待确认</span></div></div></div></div>
+          <div class="phone"><div class="phone-screen"><div class="phone-title">任务状态</div><div class="stack"><div class="mobile-card">检查依赖 <span class="pill run">完成</span></div><div class="mobile-card">下载视频 <span class="pill run">完成</span></div><div class="mobile-card">提取音频 <span class="pill run">完成</span></div><div class="mobile-card">分析卖点 <span class="pill run">3.1s</span></div></div></div></div>
+          <div class="phone"><div class="phone-screen"><div class="phone-title">请求确认</div><div class="stack"><div class="mobile-card"><strong>是否生成最终脚本？</strong><br>生成餐饮短视频文案脚本</div><button class="button">拒绝</button><button class="button primary">允许</button></div></div></div>
+        </div>
+      </section>
+
+      <section class="section span-3">
+        <div class="section-head"><span class="num">8</span>组件库与状态 (Component Strip / Design System)</div>
+        <div class="component-strip">
+          <div class="component"><strong>状态标签</strong><div class="files"><span class="pill run">运行中</span><span class="pill run">已完成</span><span class="pill wait">等待确认</span><span class="pill fail">失败</span><span class="pill">跳过</span></div></div>
+          <div class="component"><strong>工具结果行</strong><div style="margin-top:10px"><div class="result-row"><span>shell</span><span>21.4s</span><span>●</span></div><div class="result-row"><span>whisper-1</span><span>18.7s</span><span>●</span></div><div class="result-row"><span>yt-dlp</span><span>1.2s</span><span>×</span></div></div></div>
+          <div class="component"><strong>文件芯片</strong><div class="files"><span class="file-chip">video_info.json 2.1K</span><span class="file-chip">transcript.txt 18.6K</span><span class="file-chip">keypoints.md 3.4K</span></div></div>
+          <div class="component"><strong>权限提示条</strong><div class="permission" style="margin-top:10px"><div><strong>等待确认</strong><br>此操作将写入文件 outputs/script.md</div><button class="button primary">允许</button></div></div>
+          <div class="component"><strong>命令按钮</strong><div class="files"><button class="button primary">运行</button><button class="button">停止</button><button class="button">重新运行</button><button class="button">查看日志</button></div></div>
+          <div class="component"><strong>模型选择器</strong><div class="stack" style="margin-top:10px"><div class="workspace-select">Google <span>⌄</span></div><div class="workspace-select">gemini-1.5-pro <span>⌄</span></div></div></div>
+          <div class="component"><strong>Token 使用</strong><div style="margin-top:18px" class="progress"><span></span></div><p style="font-size:11px;color:var(--subtle);margin-top:10px">12.4K / 200K tokens · 6%</p></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
