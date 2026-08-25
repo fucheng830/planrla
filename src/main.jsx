@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './design-system/workbench.css'
+import './components/calendar-schedule/calendar-schedule.css'
 import 'katex/dist/katex.min.css'
 
 import { measure } from './shared/perf/timing'
