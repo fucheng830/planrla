@@ -104,64 +104,68 @@ export default function SidebarFooter({
       {/* Community + Settings */}
       <div className="nav-divider" />
 
-      {/* Desktop footer: settings / report / community in a single row */}
-      <div className="hidden px-2 py-1.5 md:flex md:items-center md:justify-around">
+      {/* Desktop footer: icon-only settings / report / community pinned to the
+          sidebar bottom; labels stay in tooltips (fucheng: 不要文字标签). */}
+      <div className="hidden px-2 py-1 md:flex md:items-center md:justify-center md:gap-0.5">
         <button
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           onClick={onShowSettings}
           title={t('actions.settings')}
+          aria-label={t('actions.settings')}
         >
           <Settings className="h-3.5 w-3.5" />
-          <span className="text-xs">{t('actions.settings')}</span>
         </button>
         <a
           href={GITHUB_ISSUES_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           title={t('actions.reportIssue')}
+          aria-label={t('actions.reportIssue')}
         >
           <Bug className="h-3.5 w-3.5" />
-          <span className="text-xs">{t('actions.reportIssue')}</span>
         </a>
         <a
           href={DISCORD_INVITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           title={t('actions.joinCommunity')}
+          aria-label={t('actions.joinCommunity')}
         >
           <DiscordIcon className="h-3.5 w-3.5" />
-          <span className="text-xs">{t('actions.joinCommunity')}</span>
         </a>
       </div>
 
-      {/* Mobile footer: settings / report / community in a single row */}
-      <div className="flex items-center justify-around px-3 py-3 md:hidden">
+      {/* Mobile footer: same icon-only trio with larger touch targets */}
+      <div className="flex items-center justify-center gap-2 px-3 py-2 md:hidden">
         <button
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           onClick={onShowSettings}
+          title={t('actions.settings')}
+          aria-label={t('actions.settings')}
         >
           <Settings className="h-4 w-4" />
-          <span className="text-xs font-medium">{t('actions.settings')}</span>
         </button>
         <a
           href={GITHUB_ISSUES_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          title={t('actions.reportIssue')}
+          aria-label={t('actions.reportIssue')}
         >
           <Bug className="h-4 w-4" />
-          <span className="text-xs font-medium">{t('actions.reportIssue')}</span>
         </a>
         <a
           href={DISCORD_INVITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          title={t('actions.joinCommunity')}
+          aria-label={t('actions.joinCommunity')}
         >
           <DiscordIcon className="h-4 w-4" />
-          <span className="text-xs font-medium">{t('actions.joinCommunity')}</span>
         </a>
       </div>
     </div>
