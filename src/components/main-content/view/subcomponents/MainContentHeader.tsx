@@ -34,10 +34,8 @@ export default function MainContentHeader({
         </div>
       }
       tabs={
-        <div className="relative min-w-0 flex-shrink overflow-hidden sm:flex-shrink-0">
-          <div
-            className="scrollbar-hide overflow-x-auto"
-          >
+        <div className="relative min-w-0 overflow-hidden">
+          <div className="scrollbar-hide overflow-x-auto">
             <MainContentTabSwitcher
               activeTab={activeTab}
               setActiveTab={setActiveTab}
