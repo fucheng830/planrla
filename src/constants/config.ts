@@ -1,8 +1,9 @@
 /**
  * Environment Flag: Is Platform
  * Indicates if the app is running in Platform mode (hosted) or OSS mode (self-hosted)
+ * `import.meta.env` only exists under Vite; plain-node renders fall back to OSS mode.
  */
-export const IS_PLATFORM = import.meta.env.VITE_IS_PLATFORM === 'true';
+export const IS_PLATFORM = import.meta.env?.VITE_IS_PLATFORM === 'true';
 
 /**
  * For empty shell instances where no project is provided,

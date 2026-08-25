@@ -1,7 +1,8 @@
 import { CalendarDays, MoreHorizontal, Plus } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
-import { agendaItems, type AgendaItem } from './calendarData';
+
+import type { AgendaItem } from './calendarData';
 
 type CalendarAgendaProps = {
   year: number;
@@ -12,7 +13,7 @@ type CalendarAgendaProps = {
   onSelect?: (item: AgendaItem) => void;
 };
 
-export function CalendarAgenda({ year, month, selectedDay, items = agendaItems, onAdd, onSelect }: CalendarAgendaProps) {
+export function CalendarAgenda({ year, month, selectedDay, items = [], onAdd, onSelect }: CalendarAgendaProps) {
   const weekday = ['日', '一', '二', '三', '四', '五', '六'][new Date(year, month, selectedDay).getDay()];
   return (
     <section className="calendar-agenda" aria-labelledby="calendar-agenda-title">
