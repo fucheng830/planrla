@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Bell, Bot, MessageSquare, Star, User } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Bell, Bot, MessageSquare, User } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
+import { api } from '../../../utils/api';
 import { useKanban } from '../../kanban';
 import { WorkbenchStatus } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
 import { InboxThreadDetail } from './InboxThreadDetail';
-import type { InboxChannelId, InboxFilterId, InboxThread } from './inboxModel';
+import type { InboxChannelId, InboxFilterId } from './inboxModel';
+import { buildInboxThreads, type CronRunInfo, type RunningSessionInfo } from './inboxThreads';
 
 const CHANNEL_FILTERS: Array<{ id: InboxChannelId; label: string }> = [
   { id: 'all', label: '全部' },
@@ -24,92 +26,54 @@ const QUICK_FILTERS: Array<{ id: InboxFilterId; label: string }> = [
   { id: 'mine', label: '@我' },
 ];
 
-const EXTERNAL_SOURCES = ['微信', '企业微信', '飞书', '钉钉', 'Slack', '闲鱼客服', '小红书客服', 'TikTok 客服', '抖音客服'];
-
-function buildThreads(projectName: string, waitingCount: number): InboxThread[] {
-  const threads: InboxThread[] = [
-    {
-      id: 'ai-confirm',
-      title: '请求确认：技术方案边界',
-      sender: 'Planrla Agent',
-      source: 'AI 协作',
-      channel: 'ai',
-      preview: '方案 A 数据库迁移风险较低，但需要你确认是否允许在线 DDL。',
-      time: '2 分钟前',
-      unread: true,
-      starred: true,
-      state: 'waiting',
-      stateLabel: '等待确认',
-    },
-    {
-      id: 'team-review',
-      title: '设计评审：消息盒子信息架构',
-      sender: '林川',
-      source: '团队协作',
-      channel: 'team',
-      preview: '第二版把渠道分组提前了，右侧上下文栏保留绑定对象。',
-      time: '26 分钟前',
-      unread: true,
-      starred: false,
-      state: 'running',
-      stateLabel: '进行中',
-    },
-    {
-      id: 'external-douyin',
-      title: '抖音客服：活动视频交付时间',
-      sender: '客户 A',
-      source: '抖音客服',
-      channel: 'external',
-      preview: '请问霸王餐活动的视频今天能出第一版吗？',
-      time: '1 小时前',
-      unread: false,
-      starred: true,
-      state: 'waiting',
-      stateLabel: '待回复',
-    },
-    {
-      id: 'system-cron',
-      title: '定时任务提醒：每日站会同步',
-      sender: '系统',
-      source: '定时任务',
-      channel: 'system',
-      preview: '09:30 生成昨日进展摘要，并推送到项目频道。',
-      time: '3 小时前',
-      unread: false,
-      starred: false,
-      state: 'complete',
-      stateLabel: '已执行',
-    },
-  ];
-
-  if (waitingCount > 0) {
-    threads.unshift({
-      id: 'kanban-waiting',
-      title: `${projectName} 有 ${waitingCount} 个任务等待人工确认`,
-      sender: 'Planrla Agent',
-      source: 'AI 协作',
-      channel: 'ai',
-      preview: '看板任务已暂停，进入研发流程处理后自动继续。',
-      time: '刚刚',
-      unread: true,
-      starred: false,
-      state: 'waiting',
-      stateLabel: '等待确认',
-    });
-  }
-
-  return threads;
-}
+/** Live sources currently feeding the inbox. External-channel adapters land
+ *  with the Message Hub backend; until then this row shows only real data. */
+const CONNECTED_SOURCES = ['看板任务', '运行会话', '定时任务'];
 
 export function InboxPage({ project }: { project: Project }) {
-  const { tasks } = useKanban();
+  const { tasks, loading: kanbanLoading, error: kanbanError } = useKanban();
   const [channel, setChannel] = useState<InboxChannelId>('all');
   const [filter, setFilter] = useState<InboxFilterId>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [runningSessions, setRunningSessions] = useState<RunningSessionInfo[]>([]);
+  const [cronTasks, setCronTasks] = useState<CronRunInfo[]>([]);
+  const [sourcesError, setSourcesError] = useState<string | null>(null);
 
-  const waitingCount = useMemo(() => tasks.filter((t) => t.status === 'waiting_user').length, [tasks]);
-  const threads = useMemo(() => buildThreads(project.displayName, waitingCount), [project.displayName, waitingCount]);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      api.get('/providers/sessions/running').then(async (res) => {
+        if (!res.ok) throw new Error(`running sessions failed: ${res.status}`);
+        const data = (await res.json()) as { sessions?: RunningSessionInfo[] };
+        return data.sessions ?? [];
+      }),
+      api.get('/cron-prompts').then(async (res) => {
+        if (!res.ok) throw new Error(`cron-prompts failed: ${res.status}`);
+        const data = (await res.json()) as { data?: CronRunInfo[] };
+        return data.data ?? [];
+      }),
+    ])
+      .then(([sessions, crons]) => {
+        if (cancelled) return;
+        setRunningSessions(sessions);
+        setCronTasks(crons);
+        setSourcesError(null);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setSourcesError(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.projectId]);
+
+  const threads = useMemo(
+    () => buildInboxThreads({ projectName: project.displayName, tasks, runningSessions, cronTasks }),
+    [project.displayName, tasks, runningSessions, cronTasks],
+  );
+
+  const waitingCount = useMemo(() => threads.filter((t) => t.state === 'waiting').length, [threads]);
 
   const visibleThreads = threads.filter((thread) => {
     if (channel !== 'all' && thread.channel !== channel) return false;
@@ -139,7 +103,7 @@ export function InboxPage({ project }: { project: Project }) {
     <PageShell>
       <PageToolbar
         title="消息盒子"
-        description="统一接收外部渠道、团队、AI 协作与系统任务消息"
+        description="看板任务、运行会话与定时任务的实时消息(外部渠道适配接入后统一进入此处)"
         filters={
           <>
             {QUICK_FILTERS.map((f) => (
@@ -154,6 +118,24 @@ export function InboxPage({ project }: { project: Project }) {
           </>
         }
       />
+
+      {(kanbanLoading || sourcesError) && (
+        <p
+          role={sourcesError ? 'alert' : 'status'}
+          className={`rounded-md border px-3 py-2 text-sm ${
+            sourcesError
+              ? 'border-workbench-danger/30 bg-workbench-danger/10 text-workbench-danger'
+              : 'border-workbench-border bg-workbench-muted text-workbench-subtle'
+          }`}
+        >
+          {sourcesError ? `部分数据源加载失败:${sourcesError}` : '正在加载消息数据…'}
+        </p>
+      )}
+      {kanbanError && (
+        <p className="rounded-md border border-workbench-danger/30 bg-workbench-danger/10 px-3 py-2 text-sm text-workbench-danger">
+          看板数据加载失败:{kanbanError}
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <nav className="ds-panel h-fit p-2" aria-label="频道">
@@ -180,9 +162,9 @@ export function InboxPage({ project }: { project: Project }) {
             ))}
           </ul>
           <div className="ds-divider my-2" />
-          <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-workbench-subtle">已接入渠道</p>
+          <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-workbench-subtle">实时数据源</p>
           <div className="flex flex-wrap gap-1 px-1 pb-1">
-            {EXTERNAL_SOURCES.map((source) => (
+            {CONNECTED_SOURCES.map((source) => (
               <span key={source} className="rounded border border-workbench-border bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{source}</span>
             ))}
           </div>
@@ -213,14 +195,14 @@ export function InboxPage({ project }: { project: Project }) {
                         <span className="truncate">{thread.preview}</span>
                       </span>
                     </span>
-                    {thread.starred && <Star className="mt-1 size-3.5 flex-shrink-0 fill-workbench-waiting text-workbench-waiting" aria-label="重要" />}
+                    <span className="mt-1 flex-shrink-0"><WorkbenchStatus state={thread.state === 'waiting' ? 'waiting' : thread.state === 'running' ? 'running' : thread.stateLabel === '失败' ? 'failed' : 'complete'} label={thread.stateLabel} /></span>
                   </button>
                 </li>
               );
             })}
           </ul>
           {visibleThreads.length === 0 && (
-            <p className="py-10 text-center text-sm text-workbench-subtle">当前筛选下没有消息</p>
+            <p className="py-10 text-center text-sm text-workbench-subtle">当前筛选下没有消息:看板任务等待确认、运行中会话与定时任务执行记录会实时出现在这里</p>
           )}
         </section>
       </div>

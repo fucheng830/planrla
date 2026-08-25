@@ -26,6 +26,7 @@ export type AppTab =
   | 'inbox'
   | 'workflow'
   | 'schedule'
+  | 'kanban'
   | `plugin:${string}`;
 
 export interface ProjectSession {

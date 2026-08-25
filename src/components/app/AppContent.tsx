@@ -117,7 +117,7 @@ function AppContentInner() {
     onCompletedSessionSeen: clearSessionCompleted,
   });
 
-  const handleOpenWorkbenchTab = useCallback((tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => {
+  const handleOpenWorkbenchTab = useCallback((tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban') => {
     setActiveTab(tab);
     setSidebarOpen(false);
   }, [setActiveTab, setSidebarOpen]);

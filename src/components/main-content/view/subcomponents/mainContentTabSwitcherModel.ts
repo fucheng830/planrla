@@ -1,9 +1,9 @@
 import type { AppTab } from '../../../../types/app';
 
-export type WorkbenchPageTab = Extract<AppTab, 'overview' | 'inbox' | 'workflow' | 'schedule'>;
+export type WorkbenchPageTab = Extract<AppTab, 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban'>;
 
 export function isWorkbenchPageTab(tab: string): tab is WorkbenchPageTab {
-  return tab === 'overview' || tab === 'inbox' || tab === 'workflow' || tab === 'schedule';
+  return tab === 'overview' || tab === 'inbox' || tab === 'workflow' || tab === 'schedule' || tab === 'kanban';
 }
 
 export function getWorkbenchPageTarget(requestedTab: string): AppTab | null {

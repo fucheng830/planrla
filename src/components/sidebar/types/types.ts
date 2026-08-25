@@ -68,7 +68,7 @@ export type SidebarProps = {
   // REQ-046 — 侧边栏"打开后台任务面板"入口回调。可选,不传则不渲染入口按钮。
   onOpenBackgroundTasks?: () => void;
   activeTab?: AppTab;
-  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban') => void;
 };
 
 export type SessionViewModel = {

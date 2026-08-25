@@ -16,6 +16,7 @@ import { OverviewPage } from '../../workbench/pages/OverviewPage';
 import { InboxPage } from '../../workbench/pages/InboxPage';
 import { WorkflowPage } from '../../workbench/pages/WorkflowPage';
 import { SchedulePage } from '../../workbench/pages/SchedulePage';
+import { KanbanPanel } from '../../kanban';
 
 import MainContentHeader from './subcomponents/MainContentHeader';
 import MainContentStateView from './subcomponents/MainContentStateView';
@@ -232,6 +233,14 @@ function MainContent({
                   projectId={selectedProject.projectId}
                   projectPath={selectedProject.fullPath ?? selectedProject.path ?? ''}
                 />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {activeTab === 'kanban' && (
+            <div className="h-full">
+              <ErrorBoundary showDetails>
+                <KanbanPanel isVisible />
               </ErrorBoundary>
             </div>
           )}

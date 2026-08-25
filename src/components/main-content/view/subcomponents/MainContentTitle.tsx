@@ -47,7 +47,7 @@ function getTabTitle(activeTab: AppTab, t: (key: string) => string, pluginDispla
     return t('tabs.git');
   }
 
-  if (activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule') {
+  if (activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' || activeTab === 'kanban') {
     return t(`tabs.${activeTab}`);
   }
 
