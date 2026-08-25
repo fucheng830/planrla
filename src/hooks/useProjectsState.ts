@@ -12,6 +12,7 @@ import type {
 } from '../types/app';
 
 import type { ClearSessionCompleted, CompletedSessionNotificationMap, SessionActivityMap } from './useSessionProtection';
+import { getWorkbenchPageStorageValue, parsePersistedTab } from './persistedTab';
 
 type UseProjectsStateArgs = {
   sessionId?: string;
@@ -302,18 +303,10 @@ const removeSessionFromProject = (project: Project, sessionIdToDelete: string): 
   return updatedProject;
 };
 
-const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'git']);
-
-const isValidTab = (tab: string): tab is AppTab => {
-  return VALID_TABS.has(tab) || tab.startsWith('plugin:');
-};
-
 const readPersistedTab = (): AppTab => {
   try {
-    const stored = localStorage.getItem('activeTab');
-    if (stored && isValidTab(stored)) {
-      return stored as AppTab;
-    }
+    const parsed = parsePersistedTab(localStorage.getItem('activeTab'));
+    if (parsed) return parsed as AppTab;
   } catch {
     // localStorage unavailable
   }
@@ -336,7 +329,10 @@ export function useProjectsState({
 
   useEffect(() => {
     try {
-      localStorage.setItem('activeTab', activeTab);
+      localStorage.setItem(
+        'activeTab',
+        getWorkbenchPageStorageValue(activeTab) ?? activeTab,
+      );
     } catch {
       // Silently ignore storage errors
     }
