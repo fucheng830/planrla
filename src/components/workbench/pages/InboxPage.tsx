@@ -1,30 +1,15 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Bell, Bot, MessageSquare, Star, User } from 'lucide-react';
+import { Bell, Bot, MessageSquare, Star, User } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
 import { useKanban } from '../../kanban';
 import { WorkbenchStatus } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
+import { InboxThreadDetail } from './InboxThreadDetail';
+import type { InboxChannelId, InboxFilterId, InboxThread } from './inboxModel';
 
-type ChannelId = 'all' | 'ai' | 'team' | 'external' | 'system';
-type FilterId = 'all' | 'unread' | 'waiting' | 'mine';
-
-type ThreadItem = {
-  id: string;
-  title: string;
-  sender: string;
-  source: string;
-  channel: Exclude<ChannelId, 'all'>;
-  preview: string;
-  time: string;
-  unread: boolean;
-  starred: boolean;
-  state: 'waiting' | 'running' | 'complete';
-  stateLabel: string;
-};
-
-const CHANNEL_FILTERS: Array<{ id: ChannelId; label: string }> = [
+const CHANNEL_FILTERS: Array<{ id: InboxChannelId; label: string }> = [
   { id: 'all', label: '全部' },
   { id: 'ai', label: 'AI 协作' },
   { id: 'team', label: '团队协作' },
@@ -32,7 +17,7 @@ const CHANNEL_FILTERS: Array<{ id: ChannelId; label: string }> = [
   { id: 'system', label: '系统任务' },
 ];
 
-const QUICK_FILTERS: Array<{ id: FilterId; label: string }> = [
+const QUICK_FILTERS: Array<{ id: InboxFilterId; label: string }> = [
   { id: 'all', label: '全部' },
   { id: 'unread', label: '未读' },
   { id: 'waiting', label: '待确认' },
@@ -41,8 +26,8 @@ const QUICK_FILTERS: Array<{ id: FilterId; label: string }> = [
 
 const EXTERNAL_SOURCES = ['微信', '企业微信', '飞书', '钉钉', 'Slack', '闲鱼客服', '小红书客服', 'TikTok 客服', '抖音客服'];
 
-function buildThreads(projectName: string, waitingCount: number): ThreadItem[] {
-  const threads: ThreadItem[] = [
+function buildThreads(projectName: string, waitingCount: number): InboxThread[] {
+  const threads: InboxThread[] = [
     {
       id: 'ai-confirm',
       title: '请求确认：技术方案边界',
@@ -116,63 +101,10 @@ function buildThreads(projectName: string, waitingCount: number): ThreadItem[] {
   return threads;
 }
 
-function ThreadDetail({ thread, onBack }: { thread: ThreadItem; onBack: () => void }) {
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="ds-panel-header flex-shrink-0">
-        <button type="button" onClick={onBack} className="ds-focus-ring rounded-md p-1.5 text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink" aria-label="返回消息列表">
-          <ArrowLeft className="size-4" aria-hidden="true" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold text-workbench-ink">{thread.title}</h2>
-          <p className="text-xs text-workbench-subtle">{thread.sender} · {thread.source}</p>
-        </div>
-        <WorkbenchStatus state={thread.state} label={thread.stateLabel} />
-      </header>
-
-      <div className="min-h-0 flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-2xl space-y-3">
-          <article className="ds-surface rounded-md p-3">
-            <div className="flex items-center gap-2 text-xs text-workbench-subtle">
-              {thread.channel === 'ai' ? <Bot className="size-3.5" aria-hidden="true" /> : <User className="size-3.5" aria-hidden="true" />}
-              <span className="font-medium text-workbench-ink">{thread.sender}</span>
-              <span>· {thread.time}</span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-workbench-ink">{thread.preview}</p>
-          </article>
-
-          {thread.channel === 'ai' && (
-            <div className="rounded-md border border-workbench-waiting/40 bg-workbench-waiting/5 p-3">
-              <p className="text-sm font-medium text-workbench-ink">协作请求</p>
-              <p className="mt-1 text-xs text-workbench-subtle">需要人工确认后 AI 才能继续执行。</p>
-              <div className="mt-3 flex gap-2">
-                <button type="button" className="ds-focus-ring rounded-md bg-workbench-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">允许</button>
-                <button type="button" className="ds-focus-ring rounded-md border border-workbench-border px-3 py-1.5 text-xs font-medium text-workbench-ink hover:bg-workbench-muted">拒绝</button>
-                <button type="button" className="ds-focus-ring rounded-md border border-workbench-border px-3 py-1.5 text-xs font-medium text-workbench-ink hover:bg-workbench-muted">转交</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <footer className="border-t border-workbench-border bg-workbench-surface p-3">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="回复线程，@成员或附上文件…"
-            className="ds-focus-ring h-9 min-w-0 flex-1 rounded-md border border-workbench-border bg-workbench-surface px-3 text-sm text-workbench-ink placeholder:text-workbench-subtle"
-          />
-          <button type="button" className="ds-focus-ring h-9 rounded-md bg-workbench-accent px-4 text-sm font-medium text-white hover:opacity-90">发送</button>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
 export function InboxPage({ project }: { project: Project }) {
   const { tasks } = useKanban();
-  const [channel, setChannel] = useState<ChannelId>('all');
-  const [filter, setFilter] = useState<FilterId>('all');
+  const [channel, setChannel] = useState<InboxChannelId>('all');
+  const [filter, setFilter] = useState<InboxFilterId>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
@@ -194,7 +126,11 @@ export function InboxPage({ project }: { project: Project }) {
   if (selectedThread) {
     return (
       <div className="h-full bg-workbench-canvas">
-        <ThreadDetail thread={selectedThread} onBack={() => setSelectedId(null)} />
+        <InboxThreadDetail
+          thread={selectedThread}
+          projectName={project.displayName}
+          onBack={() => setSelectedId(null)}
+        />
       </div>
     );
   }
