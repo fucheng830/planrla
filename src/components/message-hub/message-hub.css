@@ -89,10 +89,3 @@
 .mh-status-bar.is-error { background: #fdecec; color: var(--mh-red); }
 .dark .mh-status-bar.is-error { background: #2b1518; }
 .mh-approval-options { margin: 10px 0 0; color: var(--mh-muted); font-size: 10px; }
-
-/* Approval actions use semantic colors (green approve / red reject / neutral
-   transfer) so they read instantly and stop clashing with the amber accent. */
-.mh-approval-actions .mh-primary-button { background: var(--mh-green); }
-.mh-approval-actions .mh-primary-button:hover { background: var(--mh-green); filter: brightness(1.1); }
-.mh-reject-button { border-color: rgb(213 77 91 / 35%); color: var(--mh-red); }
-.mh-reject-button:hover { border-color: var(--mh-red); background: rgb(213 77 91 / 8%); color: var(--mh-red); }
