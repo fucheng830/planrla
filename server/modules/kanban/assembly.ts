@@ -121,6 +121,27 @@ function buildKanban() {
       }
     },
   });
+
+  // REQ-046: the background-task registry is in-memory — rehydrate rows for
+  // non-terminal tasks on startup so the panel survives backend restarts
+  // (running tasks would otherwise vanish and never re-emit).
+  try {
+    for (const task of taskStore.listAllTasks()) {
+      if (task.status === 'success' || task.status === 'fail' || task.status === 'cancelled') continue;
+      const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+      backgroundTaskRegistry.upsertKanban({
+        taskId: task.id,
+        rootId: task.rootId,
+        title: task.taskTemplateName || `Task #${task.taskNumber}`,
+        status: task.status,
+        stage: task.currentStageIndex + 1,
+        stageTotal: tpl?.stages?.length,
+        aux: task.auxFlags,
+      });
+    }
+  } catch (e) {
+    console.error('[kanban-registry] startup rehydrate failed:', e);
+  }
   const auxBridge = createAuxBridge({
     updateAuxFlags: (taskId, flags) => {
       taskStore.updateTaskAuxFlags(taskId, flags);

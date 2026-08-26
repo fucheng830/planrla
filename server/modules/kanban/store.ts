@@ -235,7 +235,14 @@ export function createTaskStore(deps: TaskStoreDeps) {
     })();
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, listStageRuns, listTaskEvents };
+  function listAllTasks(): Task[] {
+    // Startup rehydration for the in-memory background-task registry: every
+    // root's tasks (non-terminal filtering happens at the caller).
+    const roots = db.prepare('SELECT DISTINCT root_id FROM tasks').all() as Array<{ root_id: string }>;
+    return roots.flatMap((row) => listTasks(row.root_id));
+  }
+
+  return { createTask, getTask, listQueuedTasks, listTasks, listAllTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, listStageRuns, listTaskEvents };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
