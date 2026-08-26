@@ -510,10 +510,11 @@ export function useProjectsState({
     void fetchProjects();
   }, [fetchProjects]);
 
-  // Auto-select on load: restore the last selected project first, otherwise
-  // fall back to the only project. Without the restore, a reload drops the
-  // selection and every workbench tab renders behind the "select a project"
-  // empty state (MainContent gates on selectedProject before any tab).
+  // Auto-select on load: restore the last selected project, otherwise fall
+  // back to the first project. A null selection renders every workbench tab
+  // behind the "select a project" empty state (MainContent gates on
+  // selectedProject before any tab), so rail navigation must never leave it
+  // unselected once the list is loaded.
   useEffect(() => {
     if (isLoadingProjects || selectedProject || sessionId) return;
     let restored: Project | undefined;
@@ -523,11 +524,7 @@ export function useProjectsState({
     } catch {
       restored = undefined;
     }
-    if (restored) {
-      setSelectedProject(restored);
-    } else if (projects.length === 1) {
-      setSelectedProject(projects[0]);
-    }
+    setSelectedProject(restored ?? projects[0] ?? null);
   }, [isLoadingProjects, projects, selectedProject, sessionId]);
 
   // Realtime sidebar updates. The backend pushes per-session deltas
