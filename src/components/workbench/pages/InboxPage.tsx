@@ -85,7 +85,7 @@ export function InboxPage({ project }: { project: Project }) {
         id: thread.id,
         sender: thread.sender,
         source: thread.source,
-        category: thread.state === 'waiting' ? '待处理' : thread.state === 'running' ? '进行中' : '通知',
+        category: thread.state === 'waiting' ? '待处理' : thread.state === 'running' ? 'AI 请求' : '通知',
         preview: thread.preview,
         time: thread.time,
         avatar: preset.icon,

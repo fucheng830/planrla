@@ -11,18 +11,29 @@ type MessageHubInboxProps = {
   onSessionSelect: (session: MessageSession) => void;
 };
 
+// Fixed filter set restored from the original design (with tone dots).
+// Categories not covered here (e.g. 通知) are appended dynamically from the
+// live data; channel categories stay at 0 until adapters land.
+const FIXED_FILTERS: ReadonlyArray<{ value: string; label: string; tone?: string }> = [
+  { value: 'all', label: '全部消息' },
+  { value: '待处理', label: '待处理', tone: 'amber' },
+  { value: 'AI 请求', label: 'AI 请求', tone: 'purple' },
+  { value: '客户消息', label: '客户消息', tone: 'green' },
+  { value: '团队消息', label: '团队消息', tone: 'blue' },
+];
+
 export function MessageHubInbox({ sessions, activeSessionId, onSessionSelect }: MessageHubInboxProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
 
-  // Filter tabs derive from the categories actually present.
-  const tabs = useMemo(() => {
+  const tabs = useMemo<Array<{ value: string; label: string; count: number; tone?: string }>>(() => {
     const counts = new Map<string, number>();
     for (const session of sessions) counts.set(session.category, (counts.get(session.category) ?? 0) + 1);
-    return [
-      { value: 'all', label: '全部消息', count: sessions.length },
-      ...[...counts.entries()].map(([value, count]) => ({ value, label: value, count })),
-    ];
+    const fixed = FIXED_FILTERS.map((item) => ({ ...item, count: item.value === 'all' ? sessions.length : (counts.get(item.value) ?? 0) }));
+    const extras = [...counts.keys()]
+      .filter((category) => !FIXED_FILTERS.some((item) => item.value === category))
+      .map((category) => ({ value: category, label: category, count: counts.get(category) ?? 0 }));
+    return [...fixed, ...extras];
   }, [sessions]);
 
   const unreadTotal = useMemo(() => sessions.reduce((sum, session) => sum + ((session.unread ?? 0) > 0 ? 1 : 0), 0), [sessions]);
@@ -47,6 +58,7 @@ export function MessageHubInbox({ sessions, activeSessionId, onSessionSelect }: 
         <Tabs.List aria-label="收件箱筛选">
           {tabs.map((item) => (
             <Tabs.Trigger key={item.value} value={item.value} className="mh-inbox-tab">
+              {item.tone && <i className={cn('mh-dot', `tone-${item.tone}`)} />}
               <span>{item.label}</span><b>{item.count}</b>
             </Tabs.Trigger>
           ))}
