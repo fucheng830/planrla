@@ -228,6 +228,11 @@ function Sidebar({
         <SidebarCollapsed
           onExpand={handleExpandSidebar}
           onShowSettings={onShowSettings}
+          onOpenWorkbenchTab={onOpenWorkbenchTab}
+          onSearchModeChange={(mode) => setSearchMode(mode)}
+          activeTab={activeTab}
+          searchMode={searchMode}
+          completedSessionsCount={completedSessions.size}
           updateAvailable={updateAvailable}
           restartRequired={restartRequired}
           onShowVersionModal={() => setShowVersionModal(true)}
