@@ -29,6 +29,8 @@ export type MessageBinding = {
   created?: string;
 };
 
+export type MessageAttachment = { label: string; size: string };
+
 export type MessageSession = {
   id: string;
   sender: string;
@@ -46,6 +48,7 @@ export type MessageSession = {
   /** Full body shown in the thread view (falls back to preview). Newlines
    *  render as separate paragraphs like the design mock. */
   body?: string;
+  attachments?: MessageAttachment[];
   /** Pending AskUserQuestion content — shown inside the approval card. */
   question?: string;
   options?: string[];
@@ -67,22 +70,34 @@ export const messageChannels: MessageChannel[] = [
   { id: 'agents', label: 'AI Agents', count: 9, icon: Bot, tone: 'purple' },
 ];
 
-export const messageSessions: MessageSession[] = [
-  { id: 'codex', sender: 'AI: Codex', source: 'AI Agents', category: 'AI 请求', preview: '请协助分析 Windows 打包失败...', time: '21:49', avatar: Bot, tone: 'purple', channel: 'agents', unread: 1, approval: true },
-  { id: 'customer', sender: '客户: 王先生', source: '企业微信', category: '客户消息', preview: '请问最新的 Windows 打包问题...', time: '21:30', avatar: MessagesSquare, tone: 'cyan', channel: 'wecom', unread: 2 },
-  { id: 'zhang', sender: '张三', source: 'Slack', category: '团队消息', preview: '已更新技术方案文档，请 review。', time: '20:58', avatar: Slack, tone: 'yellow', channel: 'slack' },
-  { id: 'li', sender: '李四', source: '钉钉', category: '团队消息', preview: '测试环境部署完成，日志正常。', time: '20:41', avatar: Zap, tone: 'blue', channel: 'dingtalk' },
-  { id: 'support', sender: '在线客服 #1024', source: '客服渠道', category: '客户消息', preview: '如何查看任务的开发进度？', time: '19:22', avatar: Headphones, tone: 'yellow', channel: 'support', unread: 3 },
-  { id: 'planner', sender: 'AI: Planner', source: 'AI Agents', category: 'AI 请求', preview: '建议优化需求文档的验收标准。', time: '18:19', avatar: Bot, tone: 'purple', channel: 'agents', unread: 4 },
-  { id: 'customer-2', sender: '客户: 张女士', source: '企业微信', category: '客户消息', preview: '给出错下版本太过时间？', time: '17:48', avatar: MessagesSquare, tone: 'cyan', channel: 'wecom' },
-];
-
 export const workflowStages: MessageStage[] = [
   { id: 'requirements', label: '需求设计', state: 'complete', meta: '完成 · 05-18 10:32', ref: 'PRD-4' },
   { id: 'architecture', label: '技术方案', state: 'complete', meta: '完成 · 05-18 15:20', ref: '方案-3' },
   { id: 'start', label: '开工', state: 'running', meta: '进行中 · 05-21 21:10', ref: 'Dev Agent' },
   { id: 'verify', label: '测试验证', state: 'waiting', meta: '待开始', ref: '测试-2' },
   { id: 'delivery', label: '交付', state: 'waiting', meta: '待开始', ref: '回顾-1' },
+];
+
+export const messageSessions: MessageSession[] = [
+  {
+    id: 'codex', sender: 'AI: Codex', source: 'AI Agents', category: 'AI 请求',
+    preview: '请协助分析 Windows 打包失败...', time: '21:49', avatar: Bot, tone: 'purple',
+    channel: 'agents', unread: 1, approval: true, statusLabel: '待负责人确认',
+    body: '请协助分析 Windows 打包失败问题并给出修复建议。\n错误摘要:Windows packaging failed after latest dependency update.\n- 缺失依赖:vcruntime140_1.dll\n- 构建环境:GitHub Actions / windows-latest\n- 影响版本:v2.3.1+\n相关日志与构建产物已上传至附件。',
+    attachments: [
+      { label: 'build_log.txt', size: '58 KB' },
+      { label: 'error_trace.log', size: '126 KB' },
+      { label: 'artifact.zip', size: '4.2 MB' },
+    ],
+    binding: { task: 'REQ-081 后台任务:Windows 打包修复', priority: '高', status: '待负责人确认', created: '3 天前' },
+    stages: workflowStages,
+  },
+  { id: 'customer', sender: '客户: 王先生', source: '企业微信', category: '客户消息', preview: '请问最新的 Windows 打包问题...', time: '21:30', avatar: MessagesSquare, tone: 'cyan', channel: 'wecom', unread: 2 },
+  { id: 'zhang', sender: '张三', source: 'Slack', category: '团队消息', preview: '已更新技术方案文档，请 review。', time: '20:58', avatar: Slack, tone: 'yellow', channel: 'slack' },
+  { id: 'li', sender: '李四', source: '钉钉', category: '团队消息', preview: '测试环境部署完成，日志正常。', time: '20:41', avatar: Zap, tone: 'blue', channel: 'dingtalk' },
+  { id: 'support', sender: '在线客服 #1024', source: '客服渠道', category: '客户消息', preview: '如何查看任务的开发进度？', time: '19:22', avatar: Headphones, tone: 'yellow', channel: 'support', unread: 3 },
+  { id: 'planner', sender: 'AI: Planner', source: 'AI Agents', category: 'AI 请求', preview: '建议优化需求文档的验收标准。', time: '18:19', avatar: Bot, tone: 'purple', channel: 'agents', unread: 4 },
+  { id: 'customer-2', sender: '客户: 张女士', source: '企业微信', category: '客户消息', preview: '给出错下版本太过时间？', time: '17:48', avatar: MessagesSquare, tone: 'cyan', channel: 'wecom' },
 ];
 
 // Real-source channel presets shared by the live inbox mapping.

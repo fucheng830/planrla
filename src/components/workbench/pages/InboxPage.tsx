@@ -8,6 +8,7 @@ import { useWebSocket } from '../../../contexts/WebSocketContext';
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { MessageHubPage } from '../../message-hub';
+import { messageSessions } from '../../message-hub';
 import type { MessageSession, MessageStage } from '../../message-hub';
 import type { Task, TaskTemplate } from '../../kanban/types';
 
@@ -104,19 +105,19 @@ function useInboxSources(projectId: string): {
 }
 
 export function InboxPage({ project }: { project: Project }) {
+  // 设计还原校准开关:mock 数据逐像素比对 5178 设计稿。校准完成后改回
+  // false 恢复真实数据(看板/会话/定时/团队消息)。
+  const MOCK_MODE = true;
   const { tasks, templates, loading: kanbanLoading, error: kanbanError, refresh } = useKanban();
   const { runningSessions, cronTasks, teamMessages, error: sourcesError } = useInboxSources(project.projectId);
   const handleApprovalAction = useApprovalAction(tasks, refresh);
-
-  // Team threads send for real (persisted + WS-broadcast); other threads keep
-  // the local echo. The WS event refreshes the feed.
   const handleSendMessage = useCallback(async (session: MessageSession | undefined, text: string): Promise<boolean> => {
-    if (session && session.source !== '团队消息') return false;
+    if (!MOCK_MODE && session && session.source !== '团队消息') return false;
     const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
     if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
     toast.success('已发送到团队');
     return true;
-  }, [project.projectId]);
+  }, [MOCK_MODE, project.projectId]);
 
   // Map real inbox threads (kanban tasks, running sessions, cron runs) into
   // the message-hub session model. Kanban threads additionally carry their
@@ -198,11 +199,11 @@ export function InboxPage({ project }: { project: Project }) {
 
   return (
     <MessageHubPage
-      sessions={sessions}
-      loadingHint={kanbanLoading ? '正在加载消息数据…' : null}
-      errorHint={sourcesError ? `部分数据源加载失败:${sourcesError}` : kanbanError ? `看板数据加载失败:${kanbanError}` : null}
-      onApprovalAction={handleApprovalAction}
-      onSendMessage={handleSendMessage}
+      sessions={MOCK_MODE ? messageSessions : sessions}
+      loadingHint={!MOCK_MODE && kanbanLoading ? '正在加载消息数据…' : null}
+      errorHint={!MOCK_MODE && sourcesError ? `部分数据源加载失败:${sourcesError}` : !MOCK_MODE && kanbanError ? `看板数据加载失败:${kanbanError}` : null}
+      onApprovalAction={MOCK_MODE ? undefined : handleApprovalAction}
+      onSendMessage={MOCK_MODE ? undefined : handleSendMessage}
     />
   );
 }

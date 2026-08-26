@@ -1,4 +1,4 @@
-import { AtSign, Bot, CheckCircle2, Ellipsis, Paperclip, Plus, Send } from 'lucide-react';
+import { AtSign, Bot, CheckCircle2, Ellipsis, FileText, Paperclip, Plus, Send } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
@@ -55,7 +55,7 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
       </div>
 
       <div className="mh-thread-content">
-        <article className="mh-message-block"><span className={cn('mh-sender-avatar', `tone-${activeSession.tone}`)}><Avatar /></span><div className="mh-message-card"><div className="mh-message-meta"><strong>{activeSession.sender}</strong><time>{activeSession.time}</time></div>{body.split('\n').map((line, index) => <p key={index}>{line}</p>)}</div></article>
+        <article className="mh-message-block"><span className={cn('mh-sender-avatar', `tone-${activeSession.tone}`)}><Avatar /></span><div className="mh-message-card"><div className="mh-message-meta"><strong>{activeSession.sender}</strong><time>{activeSession.time}</time></div>{body.split('\n').map((line, index) => <p key={index}>{line}</p>)}{(activeSession.attachments?.length ?? 0) > 0 && <div className="mh-attachment-box"><strong>附件({activeSession!.attachments!.length})</strong><div className="mh-attachment-list">{activeSession!.attachments!.map((attachment) => <Attachment key={attachment.label} label={attachment.label} size={attachment.size} />)}</div></div>}</div></article>
         {activeSession.approval && (
           <article className={cn('mh-approval-card', approvalState !== 'pending' && 'is-resolved')} role="alertdialog" aria-labelledby="mh-approval-title"><div className="mh-approval-heading"><span className="mh-approval-icon"><Bot /></span><div><p>AI 协作请求</p><h3 id="mh-approval-title">{approvalTitle}</h3></div></div><p>{activeSession.question ?? '此请求需要你确认是否分配给 AI Agent 执行并绑定到具体项目与任务。'}</p>{approvalState === 'pending' ? <><div className="mh-approval-actions"><button type="button" className="mh-primary-button" onClick={() => onApproval('approve')}>批准</button><button type="button" className="mh-secondary-button" onClick={() => onApproval('reject')}>驳回</button><button type="button" className="mh-secondary-button" onClick={() => onApproval('transfer')}>转交</button></div>{(activeSession.options?.length ?? 0) > 0 && <p className="mh-approval-options">选项:{(activeSession.options ?? []).join(' / ')}(批准时默认选第一项)</p>}</> : <div className="mh-resolved-note"><CheckCircle2 /> 已记录处理结果</div>}</article>
         )}
@@ -65,4 +65,8 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
       {composer}
     </section>
   );
+}
+
+function Attachment({ label, size }: { label: string; size: string }) {
+  return <button type="button" className="mh-attachment"><FileText /><span>{label}<small>{size}</small></span></button>;
 }
