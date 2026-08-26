@@ -9,7 +9,7 @@ import { getSidebarRailFooterItems, getSidebarRailItems } from './sidebarRailIte
 type SidebarCollapsedProps = {
   onExpand: () => void;
   onShowSettings: () => void;
-  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban') => void;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
   onSearchModeChange: (mode: SidebarSearchMode) => void;
   activeTab: AppTab | undefined;
   searchMode: SidebarSearchMode;
@@ -36,7 +36,7 @@ export default function SidebarCollapsed({
   const railItems = getSidebarRailItems(t, completedSessionsCount);
   const railFooterItems = getSidebarRailFooterItems(t);
   const isWorkbench =
-    activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' || activeTab === 'kanban';
+    activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule';
   const activeRailId = isWorkbench ? activeTab : searchMode;
 
   return (
@@ -65,7 +65,7 @@ export default function SidebarCollapsed({
             onShowSettings();
             return;
           }
-          if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule' || id === 'kanban') {
+          if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule') {
             onOpenWorkbenchTab?.(id);
             return;
           }

@@ -1,4 +1,4 @@
-import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, LayoutDashboard, Inbox, Workflow, CalendarDays, type LucideIcon } from 'lucide-react';
+import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, LayoutDashboard, Inbox, CalendarDays, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,7 +25,7 @@ type BuiltInTab = {
   kind: 'builtin';
   /** 'shell' toggles the bottom terminal panel; workbench pages replace the
    *  main area; the rest are extension-panel tabs. */
-  id: 'shell' | 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban' | ExtensionTabId;
+  id: 'shell' | 'overview' | 'inbox' | 'workflow' | 'schedule' | ExtensionTabId;
   labelKey: string;
   icon: LucideIcon;
 };
@@ -42,17 +42,15 @@ type TabDefinition = BuiltInTab | PluginTab;
 
 /**
  * Secondary views shown as standalone icon buttons. Chat is NOT listed — it is
- * the default main content. 'shell' toggles the bottom terminal panel;
- * kanban is a full main-area workbench page; cron/browserUse toggle tabs in
- * the right-side extension panel; plugin tabs replace the main content and
- * clicking the active one returns to chat.
+ * the default main content. 'shell' toggles the bottom terminal panel; cron/
+ * browserUse toggle tabs in the right-side extension panel; plugin tabs
+ * replace the main content and clicking the active one returns to chat.
  */
 const BASE_TABS: BuiltInTab[] = [
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
   { kind: 'builtin', id: 'overview', labelKey: 'tabs.overview', icon: LayoutDashboard },
   { kind: 'builtin', id: 'inbox', labelKey: 'tabs.inbox', icon: Inbox },
-  { kind: 'builtin', id: 'workflow', labelKey: 'tabs.workflow', icon: Workflow },
-  { kind: 'builtin', id: 'kanban', labelKey: 'tabs.kanban', icon: KanbanSquare },
+  { kind: 'builtin', id: 'workflow', labelKey: 'tabs.workflow', icon: KanbanSquare },
   { kind: 'builtin', id: 'schedule', labelKey: 'tabs.schedule', icon: CalendarDays },
   // 'git' is intentionally not here: its entry point moved to the branch
   // indicator next to the project name in MainContentTitle.

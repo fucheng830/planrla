@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { Bug, CalendarDays, Inbox, KanbanSquare, LayoutDashboard, MessageSquare, Settings, Workflow } from 'lucide-react';
+import { Bug, CalendarDays, Inbox, KanbanSquare, LayoutDashboard, MessageSquare, Settings } from 'lucide-react';
 
 import type { WorkbenchRailFooterItem, WorkbenchRailItem } from '../../../workbench';
 import type { AppTab } from '../../../../types/app';
@@ -17,7 +17,7 @@ export function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function isWorkbenchTab(activeTab: AppTab | undefined): boolean {
-  return activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' || activeTab === 'kanban';
+  return activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule';
 }
 
 export function getSidebarRailItems(t: TFunction, completedSessionsCount: number): readonly WorkbenchRailItem[] {
@@ -25,8 +25,7 @@ export function getSidebarRailItems(t: TFunction, completedSessionsCount: number
     { id: 'sessions', label: t('search.modeSessions'), icon: MessageSquare, badge: completedSessionsCount > 0 ? 'completed' : undefined },
     { id: 'overview', label: t('common:tabs.overview', 'Overview'), icon: LayoutDashboard },
     { id: 'inbox', label: t('common:tabs.inbox', 'Inbox'), icon: Inbox },
-    { id: 'workflow', label: t('common:tabs.workflow', 'Workflow'), icon: Workflow },
-    { id: 'kanban', label: t('common:tabs.kanban', 'Kanban'), icon: KanbanSquare },
+    { id: 'workflow', label: t('common:tabs.workflow', 'Workflow'), icon: KanbanSquare },
     { id: 'schedule', label: t('common:tabs.schedule', 'Calendar'), icon: CalendarDays },
   ];
 }

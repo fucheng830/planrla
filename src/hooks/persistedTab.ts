@@ -6,7 +6,6 @@ export const PERSISTED_TABS: ReadonlySet<string> = new Set([
   'overview',
   'inbox',
   'workflow',
-  'kanban',
   'schedule',
 ]);
 
@@ -15,7 +14,7 @@ export function isValidPersistedTab(tab: string): boolean {
 }
 
 export function getWorkbenchPageStorageValue(tab: string): `workbench:${string}` | null {
-  return tab === 'overview' || tab === 'inbox' || tab === 'workflow' || tab === 'kanban' || tab === 'schedule'
+  return tab === 'overview' || tab === 'inbox' || tab === 'workflow' || tab === 'schedule'
     ? (`workbench:${tab}` as const)
     : null;
 }
@@ -24,7 +23,7 @@ export function parsePersistedTab(stored: string | null | undefined): string | n
   if (!stored) return null;
   if (stored.startsWith('workbench:')) {
     const page = stored.slice('workbench:'.length);
-    return page === 'overview' || page === 'inbox' || page === 'workflow' || page === 'kanban' || page === 'schedule'
+    return page === 'overview' || page === 'inbox' || page === 'workflow' || page === 'schedule'
       ? page
       : null;
   }

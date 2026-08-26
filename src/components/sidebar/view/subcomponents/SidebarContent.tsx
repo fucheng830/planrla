@@ -386,7 +386,7 @@ type SidebarContentProps = {
   // REQ-046 — 打开后台任务面板入口(可选,无则不渲染按钮)。
   onOpenBackgroundTasks?: () => void;
   activeTab?: AppTab;
-  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'kanban') => void;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
   projectListProps: SidebarProjectListProps;
   completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
@@ -441,7 +441,7 @@ export default function SidebarContent({
   const groupedArchivedSessions = groupArchivedSessionsByProject(archivedSessions);
   const railItems = getSidebarRailItems(t, completedSessionsCount);
   const railFooterItems = getSidebarRailFooterItems(t);
-  const activeRailId = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' || activeTab === 'kanban' ? activeTab : searchMode;
+  const activeRailId = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule' ? activeTab : searchMode;
   const showProjectWorkspace = !isWorkbenchTab(activeTab);
   const activeSessions = projectListProps.activeSessions;
   const conversationListItems: ConversationListItem[] = projects
@@ -496,7 +496,7 @@ export default function SidebarContent({
               onShowSettings();
               return;
             }
-            if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule' || id === 'kanban') {
+            if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule') {
               onOpenWorkbenchTab?.(id);
               return;
             }
