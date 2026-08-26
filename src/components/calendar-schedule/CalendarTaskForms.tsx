@@ -31,7 +31,7 @@ export function CalendarTaskForms({ defaultDate, projectPath, onResult }: Calend
   return (
     <aside className="calendar-task-forms" aria-label="新建任务面板">
       <RecurringTaskForm defaultDate={defaultDate} projectPath={projectPath} onResult={onResult} />
-      <OneTimeTaskForm defaultDate={defaultDate} onResult={onResult} />
+      <OneTimeTaskForm defaultDate={defaultDate} projectPath={projectPath} onResult={onResult} />
     </aside>
   );
 }
@@ -130,19 +130,47 @@ function RecurringTaskForm({ defaultDate, projectPath, onResult }: { defaultDate
   );
 }
 
-function OneTimeTaskForm({ defaultDate, onResult }: { defaultDate: string; onResult?: (result: CalendarFormResult) => void }) {
+function OneTimeTaskForm({ defaultDate, projectPath, onResult }: { defaultDate: string; projectPath: string; onResult?: (result: CalendarFormResult) => void }) {
   const [name, setName] = useState('');
   const [dateTime, setDateTime] = useState(`${defaultDate}T16:00`);
+  const [duration, setDuration] = useState('60');
+  const [remind, setRemind] = useState('15');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setDateTime((current) => `${defaultDate}T${current.slice(11) || '16:00'}`);
   }, [defaultDate]);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // One-time events still need the calendar_events table (phase 2); the
-    // form stays honest instead of pretending the save persisted.
-    onResult?.({ tone: 'success', message: `已记录一次性任务：${name || '未命名任务'}（暂未持久化，日历事件表接入后生效）` });
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateTime)) {
+      onResult?.({ tone: 'error', message: '无效的时间，请重新选择' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await api.post('/calendar-events', {
+        title: name || '未命名任务',
+        startsAt: dateTime,
+        durationMinutes: Number(duration),
+        remindMinutes: remind === '0' ? null : Number(remind),
+        notes: notes.trim() || null,
+        projectPath,
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        onResult?.({ tone: 'error', message: `保存失败：${body?.error ?? res.status}` });
+        return;
+      }
+      onResult?.({ tone: 'success', message: `已保存日程：${name || '未命名任务'}（${dateTime.replace('T', ' ')}）`, reload: true });
+      setName('');
+      setNotes('');
+    } catch (e) {
+      onResult?.({ tone: 'error', message: `保存失败：${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -159,25 +187,22 @@ function OneTimeTaskForm({ defaultDate, onResult }: { defaultDate: string; onRes
         <Field label="时间"><input type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} /></Field>
         <Field label="时长">
           <span className="calendar-select-wrap">
-            <select defaultValue="1h">
-              <option value="30m">30 分钟</option>
-              <option value="1h">1 小时</option>
-              <option value="2h">2 小时</option>
+            <select value={duration} onChange={(event) => setDuration(event.target.value)}>
+              <option value="30">30 分钟</option>
+              <option value="60">1 小时</option>
+              <option value="120">2 小时</option>
             </select>
             <ChevronDown aria-hidden="true" />
           </span>
         </Field>
         <Field label="参与人">
           <div className="calendar-assignees">
-            <span className="calendar-avatar">🐟</span>
-            <span className="calendar-avatar">王</span>
-            <span className="calendar-avatar">正</span>
-            <button type="button">＋添加参与</button>
+            <button type="button" disabled title="参与人即将支持团队账号">＋添加参与</button>
           </div>
         </Field>
         <Field label="提醒">
           <span className="calendar-select-wrap">
-            <select defaultValue="15">
+            <select value={remind} onChange={(event) => setRemind(event.target.value)}>
               <option value="0">不提醒</option>
               <option value="15">提前 15 分钟</option>
               <option value="30">提前 30 分钟</option>
@@ -185,10 +210,10 @@ function OneTimeTaskForm({ defaultDate, onResult }: { defaultDate: string; onRes
             <ChevronDown aria-hidden="true" />
           </span>
         </Field>
-        <Field label="备注"><textarea defaultValue="请提前准备验收清单" rows={2} /></Field>
+        <Field label="备注"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="补充说明（可选）" rows={2} /></Field>
       </div>
       <div className="calendar-form-actions">
-        <button type="submit" className="calendar-primary-button" aria-label="保存一次性任务"><Check />保存</button>
+        <button type="submit" className="calendar-primary-button" aria-label="保存一次性任务" disabled={saving}><Check />{saving ? '保存中…' : '保存'}</button>
         <button type="button" className="calendar-secondary-button">取消</button>
       </div>
     </form>

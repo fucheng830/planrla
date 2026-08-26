@@ -7,6 +7,7 @@ import {
   buildMonthEvents,
   cronMatchesDate,
   cronTimeLabel,
+  eventDurationLabel,
 } from './cronCalendar';
 
 const cronTask = (overrides: Partial<Parameters<typeof buildMonthEvents>[0]['cronTasks'][number]> = {}) => ({
@@ -30,6 +31,16 @@ const schedule = (overrides: Partial<Parameters<typeof buildMonthEvents>[0]['sch
   enabled: true,
   input: '每周需求梳理',
   lastRunAt: null,
+  ...overrides,
+});
+
+const calendarEvent = (overrides: Partial<NonNullable<Parameters<typeof buildMonthEvents>[0]['events']>[number]> = {}) => ({
+  id: 'evt-1',
+  title: '成片最终验收',
+  startsAt: '2026-08-28T16:00',
+  durationMinutes: 90,
+  remindMinutes: 15,
+  notes: '准备验收清单',
   ...overrides,
 });
 
@@ -145,4 +156,76 @@ test('buildAgendaItems lists occurrences for the selected day', () => {
     projectPath: 'C:/workspace/项目/planrla',
   });
   assert.equal(sunday.length, 1);
+});
+
+test('buildMonthEvents maps one-time calendar events onto their day', () => {
+  const events = buildMonthEvents({
+    year: 2026,
+    month: 7,
+    cronTasks: [],
+    schedules: [],
+    events: [
+      calendarEvent(),
+      calendarEvent({ id: 'evt-2', startsAt: '2026-09-02T10:00' }), // next month — dropped
+      calendarEvent({ id: 'evt-3', startsAt: 'bad-shape' }), // malformed — day NaN but filtered by prefix
+    ],
+    projectPath: 'C:/workspace/项目/planrla',
+  });
+  const valid = events.filter((event) => event.id.startsWith('event-evt-1'));
+  assert.equal(valid.length, 1);
+  assert.equal(valid[0].day, 28);
+  assert.equal(valid[0].time, '16:00');
+  assert.equal(valid[0].tone, 'blue');
+  // malformed startsAt doesn't match the month prefix, so it never lands
+  assert.equal(events.filter((event) => event.id.startsWith('event-evt-3')).length, 0);
+});
+
+test('buildAgendaItems marks one-time events as deletable with duration and reminder', () => {
+  const items = buildAgendaItems({
+    year: 2026,
+    month: 7,
+    day: 28,
+    cronTasks: [],
+    schedules: [],
+    events: [calendarEvent()],
+    projectPath: 'C:/workspace/项目/planrla',
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].eventId, 'evt-1');
+  assert.equal(items[0].time, '16:00');
+  assert.equal(items[0].duration, '1 小时 30 分钟');
+  assert.match(items[0].meta, /一次性日程/);
+  assert.match(items[0].meta, /提前 15 分钟提醒/);
+});
+
+test('buildAgendaItems omits events on other days and hides reminder when off', () => {
+  const otherDay = buildAgendaItems({
+    year: 2026,
+    month: 7,
+    day: 27,
+    cronTasks: [],
+    schedules: [],
+    events: [calendarEvent()],
+    projectPath: 'C:/workspace/项目/planrla',
+  });
+  assert.equal(otherDay.length, 0);
+
+  const noRemind = buildAgendaItems({
+    year: 2026,
+    month: 7,
+    day: 28,
+    cronTasks: [],
+    schedules: [],
+    events: [calendarEvent({ remindMinutes: null, notes: null })],
+    projectPath: 'C:/workspace/项目/planrla',
+  });
+  assert.doesNotMatch(noRemind[0].meta, /提前/);
+  assert.equal(noRemind[0].meta, '一次性日程');
+});
+
+test('eventDurationLabel formats hours and minutes', () => {
+  assert.equal(eventDurationLabel(90), '1 小时 30 分钟');
+  assert.equal(eventDurationLabel(60), '1 小时');
+  assert.equal(eventDurationLabel(45), '45 分钟');
+  assert.equal(eventDurationLabel(0), '—');
 });

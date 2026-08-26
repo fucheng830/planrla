@@ -18,4 +18,6 @@ export type AgendaItem = {
   title: string;
   meta: string;
   tone: CalendarEventTone;
+  /** Real calendar_events id — present only on one-time events (deletable). */
+  eventId?: string;
 };

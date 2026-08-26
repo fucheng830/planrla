@@ -1,25 +1,30 @@
-// Fetches the two real schedule sources behind the 日历与定时任务 page:
-// cron prompt tasks (global, filtered client-side by project path) and
-// kanban cron schedules (already scoped by rootId = projectId).
+// Fetches the three real schedule sources behind the 日历与定时任务 page:
+// cron prompt tasks (global, filtered client-side by project path), kanban
+// cron schedules (already scoped by rootId = projectId) and one-time
+// calendar events (scoped server-side by project path).
 
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../../utils/api';
 import { kanbanApi } from '../kanban/api';
 
-import type { CronPromptTaskView, KanbanScheduleView } from './cronCalendar';
+import type { CalendarEventView, CronPromptTaskView, KanbanScheduleView } from './cronCalendar';
 
 export interface ScheduleSourcesState {
   cronTasks: CronPromptTaskView[];
   schedules: KanbanScheduleView[];
+  calendarEvents: CalendarEventView[];
   loading: boolean;
   error: string | null;
   reload: () => void;
+  /** DELETE a one-time event and refresh (returns ok even when offline). */
+  deleteEvent: (eventId: string) => Promise<boolean>;
 }
 
-export function useScheduleSources(projectId: string | null): ScheduleSourcesState {
+export function useScheduleSources(projectId: string | null, projectPath?: string): ScheduleSourcesState {
   const [cronTasks, setCronTasks] = useState<CronPromptTaskView[]>([]);
   const [schedules, setSchedules] = useState<KanbanScheduleView[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -30,12 +35,14 @@ export function useScheduleSources(projectId: string | null): ScheduleSourcesSta
     if (!projectId) {
       setCronTasks([]);
       setSchedules([]);
+      setCalendarEvents([]);
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError(null);
+    const eventsQuery = projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : '';
     Promise.all([
       api.get('/cron-prompts').then(async (res) => {
         if (!res.ok) throw new Error(`cron-prompts failed: ${res.status}`);
@@ -43,11 +50,17 @@ export function useScheduleSources(projectId: string | null): ScheduleSourcesSta
         return data.data ?? [];
       }),
       kanbanApi.listSchedules(projectId),
+      api.get(`/calendar-events${eventsQuery}`).then(async (res) => {
+        if (!res.ok) throw new Error(`calendar-events failed: ${res.status}`);
+        const data = (await res.json()) as { data?: CalendarEventView[] };
+        return data.data ?? [];
+      }),
     ])
-      .then(([tasks, kanbanSchedules]) => {
+      .then(([tasks, kanbanSchedules, events]) => {
         if (cancelled) return;
         setCronTasks(tasks);
         setSchedules(kanbanSchedules);
+        setCalendarEvents(events);
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -58,7 +71,21 @@ export function useScheduleSources(projectId: string | null): ScheduleSourcesSta
     return () => {
       cancelled = true;
     };
-  }, [projectId, reloadToken]);
+  }, [projectId, projectPath, reloadToken]);
 
-  return { cronTasks, schedules, loading, error, reload };
+  const deleteEvent = useCallback(
+    async (eventId: string) => {
+      try {
+        const res = await api.delete(`/calendar-events/${eventId}`);
+        if (!res.ok) return false;
+        setCalendarEvents((events) => events.filter((event) => event.id !== eventId));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
+  return { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent };
 }

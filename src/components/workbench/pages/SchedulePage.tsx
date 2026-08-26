@@ -25,16 +25,19 @@ export function SchedulePage({
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [saveState, setSaveState] = useState<SaveState>({ tone: 'idle' });
 
-  const { cronTasks, schedules, loading, error, reload } = useScheduleSources(projectId);
+  const { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent } = useScheduleSources(
+    projectId,
+    projectPath,
+  );
 
   const monthEvents = useMemo(
-    () => buildMonthEvents({ year, month, cronTasks, schedules, projectPath }),
-    [year, month, cronTasks, schedules, projectPath],
+    () => buildMonthEvents({ year, month, cronTasks, schedules, events: calendarEvents, projectPath }),
+    [year, month, cronTasks, schedules, calendarEvents, projectPath],
   );
 
   const agendaItems = useMemo(
-    () => buildAgendaItems({ year, month, day: selectedDay, cronTasks, schedules, projectPath }),
-    [year, month, selectedDay, cronTasks, schedules, projectPath],
+    () => buildAgendaItems({ year, month, day: selectedDay, cronTasks, schedules, events: calendarEvents, projectPath }),
+    [year, month, selectedDay, cronTasks, schedules, calendarEvents, projectPath],
   );
 
   const changeMonth = (direction: 'previous' | 'next') => {
@@ -48,6 +51,15 @@ export function SchedulePage({
   const handleFormResult = (result: CalendarFormResult) => {
     setSaveState({ tone: result.tone, message: result.message });
     if (result.reload) reload();
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    const ok = await deleteEvent(eventId);
+    setSaveState(
+      ok
+        ? { tone: 'idle' }
+        : { tone: 'error', message: '删除日程失败，请重试' },
+    );
   };
 
   return (
@@ -97,6 +109,7 @@ export function SchedulePage({
               selectedDay={selectedDay}
               items={agendaItems}
               onAdd={() => setSaveState({ tone: 'idle' })}
+              onDeleteEvent={(eventId) => void handleDeleteEvent(eventId)}
             />
           </div>
           <CalendarTaskForms

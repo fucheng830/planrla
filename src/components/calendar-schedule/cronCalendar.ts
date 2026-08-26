@@ -29,6 +29,30 @@ export interface KanbanScheduleView {
   lastRunAt: string | null;
 }
 
+/** One-time calendar events from /api/calendar-events (新建一次性任务). */
+export interface CalendarEventView {
+  id: string;
+  title: string;
+  /** Local 'YYYY-MM-DDTHH:mm' — the datetime-local shape, no timezone math. */
+  startsAt: string;
+  durationMinutes: number;
+  remindMinutes: number | null;
+  notes: string | null;
+}
+
+/** '14:30' from a startsAt value; '—' when the shape is unexpected. */
+function eventTimeLabel(startsAt: string): string {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt) ? startsAt.slice(11, 16) : '—';
+}
+
+/** '90' → '1 小时 30 分钟'; '45' → '45 分钟'. */
+export function eventDurationLabel(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '—';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return [hours > 0 ? `${hours} 小时` : null, rest > 0 ? `${rest} 分钟` : null].filter(Boolean).join(' ');
+}
+
 // --- cron field parsing (supports *, */n, a, a-b, a-b/n, comma lists) ---
 
 function parseField(field: string, min: number, max: number): ((value: number) => boolean) | null {
@@ -133,10 +157,12 @@ export function buildMonthEvents(options: {
   month: number;
   cronTasks: CronPromptTaskView[];
   schedules: KanbanScheduleView[];
+  events?: CalendarEventView[];
   projectPath: string;
 }): CalendarEvent[] {
-  const { year, month, cronTasks, schedules, projectPath } = options;
+  const { year, month, cronTasks, schedules, events = [], projectPath } = options;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
   const sources: Array<{ id: string; expression: string; title: string; tone: CalendarEventTone }> = [
     ...activeCronTasks(cronTasks, projectPath).map((task) => ({
       id: `cron-${task.id}`,
@@ -154,11 +180,11 @@ export function buildMonthEvents(options: {
       })),
   ];
 
-  const events: CalendarEvent[] = [];
+  const result: CalendarEvent[] = [];
   for (const source of sources) {
     for (let day = 1; day <= daysInMonth; day++) {
       if (!cronMatchesDate(source.expression, new Date(year, month, day))) continue;
-      events.push({
+      result.push({
         id: `${source.id}-${day}`,
         day,
         title: source.title,
@@ -167,7 +193,17 @@ export function buildMonthEvents(options: {
       });
     }
   }
-  return events.sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
+  for (const event of events) {
+    if (!event.startsAt.startsWith(monthPrefix)) continue;
+    result.push({
+      id: `event-${event.id}`,
+      day: Number(event.startsAt.slice(8, 10)),
+      title: event.title,
+      time: eventTimeLabel(event.startsAt),
+      tone: 'blue',
+    });
+  }
+  return result.sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
 }
 
 export interface CalendarAgendaSourceItem {
@@ -177,6 +213,8 @@ export interface CalendarAgendaSourceItem {
   title: string;
   meta: string;
   tone: CalendarEventTone;
+  /** Real calendar_events id — present only on one-time events (deletable). */
+  eventId?: string;
 }
 
 export function buildAgendaItems(options: {
@@ -185,10 +223,12 @@ export function buildAgendaItems(options: {
   day: number;
   cronTasks: CronPromptTaskView[];
   schedules: KanbanScheduleView[];
+  events?: CalendarEventView[];
   projectPath: string;
 }): CalendarAgendaSourceItem[] {
-  const { year, month, day, cronTasks, schedules, projectPath } = options;
+  const { year, month, day, cronTasks, schedules, events = [], projectPath } = options;
   const date = new Date(year, month, day);
+  const dayPrefix = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const items: CalendarAgendaSourceItem[] = [];
 
   for (const task of activeCronTasks(cronTasks, projectPath)) {
@@ -212,6 +252,20 @@ export function buildAgendaItems(options: {
       title: schedule.input ? schedule.input : '看板定时任务',
       meta: `看板排程 · ${schedule.cronExpression}`,
       tone: 'green',
+    });
+  }
+
+  for (const event of events) {
+    if (!event.startsAt.startsWith(dayPrefix)) continue;
+    const remind = event.remindMinutes !== null && event.remindMinutes > 0 ? ` · 提前 ${event.remindMinutes} 分钟提醒` : '';
+    items.push({
+      id: `event-${event.id}`,
+      eventId: event.id,
+      time: eventTimeLabel(event.startsAt),
+      duration: eventDurationLabel(event.durationMinutes),
+      title: event.title,
+      meta: `${event.notes ? `${event.notes} · ` : ''}一次性日程${remind}`,
+      tone: 'blue',
     });
   }
 

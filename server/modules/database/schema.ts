@@ -148,6 +148,23 @@ CREATE INDEX IF NOT EXISTS idx_a2a_agents_active ON a2a_agents(is_active);
 `;
 
 
+export const CALENDAR_EVENTS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    starts_at TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL DEFAULT 60,
+    remind_minutes INTEGER,
+    assignees TEXT,
+    notes TEXT,
+    project_path TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_project_path ON calendar_events(project_path);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_starts_at ON calendar_events(starts_at);
+`;
+
 export const CRON_PROMPTS_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS cron_prompts (
     id TEXT PRIMARY KEY,
