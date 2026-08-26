@@ -148,6 +148,18 @@ CREATE INDEX IF NOT EXISTS idx_a2a_agents_active ON a2a_agents(is_active);
 `;
 
 
+export const TEAM_MESSAGES_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS team_messages (
+    id TEXT PRIMARY KEY,
+    root_id TEXT NOT NULL,
+    sender TEXT NOT NULL,
+    content TEXT NOT NULL,
+    task_id TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_team_messages_root_id ON team_messages(root_id, created_at);
+`;
+
 export const CRON_PROMPTS_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS cron_prompts (
     id TEXT PRIMARY KEY,
@@ -207,4 +219,6 @@ ${APP_CONFIG_TABLE_SCHEMA_SQL}
 ${SESSION_SEARCH_TABLE_SCHEMA_SQL}
 
 ${A2A_AGENTS_TABLE_SCHEMA_SQL}
+
+${TEAM_MESSAGES_TABLE_SCHEMA_SQL}
 `;

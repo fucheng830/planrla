@@ -66,3 +66,28 @@ export function broadcastTaskDeleted(wss, rootId, taskId) {
     }
   });
 }
+
+/**
+ * Broadcast a newly created team message to every open socket.
+ * @param {object} wss - WebSocket server
+ * @param {string} rootId - project root the message belongs to
+ * @param {object} message - team message row
+ */
+export function broadcastTeamMessage(wss, rootId, message) {
+  if (!wss || !rootId || !message) return;
+  const payload = {
+    type: 'team-message-created',
+    rootId,
+    message,
+    timestamp: new Date().toISOString(),
+  };
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      try {
+        client.send(JSON.stringify(payload));
+      } catch (error) {
+        console.error('team message WS send error:', error);
+      }
+    }
+  });
+}

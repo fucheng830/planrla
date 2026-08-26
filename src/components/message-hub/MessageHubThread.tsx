@@ -25,10 +25,15 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
     setDraft('');
   };
 
+  const composer = (
+    <form className="mh-composer" aria-label="回复消息" onSubmit={handleSubmit}><textarea aria-label="回复消息" placeholder={activeSession ? '回复消息...' : '发送团队消息...'} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} /><div className="mh-composer-toolbar"><div><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加表情"><span>☺</span></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加附件"><Paperclip /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="提及成员"><AtSign /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加上下文"><Plus /></button></div><button type="submit" className="mh-send-button">发送 <Send /></button></div></form>
+  );
+
   if (!activeSession) {
     return (
       <section className="mh-thread" aria-label="消息线程">
-        <div className="mh-empty-inspector"><Bot /><strong>没有选中的会话</strong><span>从收件箱选择一条消息查看详情。</span></div>
+        <div className="mh-thread-content"><div className="mh-empty-inspector"><Bot /><strong>没有选中的会话</strong><span>从收件箱选择一条消息查看详情,或直接发送一条团队消息。</span></div></div>
+        {composer}
       </section>
     );
   }
@@ -57,7 +62,7 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
         {replies.map((reply, index) => <article key={`${reply}-${index}`} className="mh-message-block mh-user-message"><span className="mh-sender-avatar mh-user-avatar">{userName.slice(0, 1)}</span><div className="mh-message-card"><div className="mh-message-meta"><strong>{userName}</strong><time>刚刚</time></div><p>{reply}</p></div></article>)}
       </div>
 
-      <form className="mh-composer" aria-label="回复消息" onSubmit={handleSubmit}><textarea aria-label="回复消息" placeholder="回复消息..." rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} /><div className="mh-composer-toolbar"><div><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加表情"><span>☺</span></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加附件"><Paperclip /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="提及成员"><AtSign /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加上下文"><Plus /></button></div><button type="submit" className="mh-send-button">发送 <Send /></button></div></form>
+      {composer}
     </section>
   );
 }

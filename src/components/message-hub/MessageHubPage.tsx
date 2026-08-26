@@ -21,6 +21,11 @@ type MessageHubPageProps = {
   /** Real approval backend (e.g. kanban task actions). Throwing keeps the
    *  approval card pending; without a handler the action stays local. */
   onApprovalAction?: (session: MessageSession, action: 'approve' | 'reject' | 'transfer') => Promise<void>;
+  /** Real send backend (e.g. team messages). Receives undefined when the
+   *  composer is used with no session selected (new team message). Return
+   *  true when handled — the local reply append is skipped so the server
+   *  round-trip owns the thread. */
+  onSendMessage?: (session: MessageSession | undefined, message: string) => Promise<boolean>;
 };
 
 export function MessageHubPage({
@@ -30,6 +35,7 @@ export function MessageHubPage({
   loadingHint,
   errorHint,
   onApprovalAction,
+  onSendMessage,
 }: MessageHubPageProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [repliesBySession, setRepliesBySession] = useState<Record<string, string[]>>({});
@@ -50,9 +56,16 @@ export function MessageHubPage({
   const replies = (activeSession && repliesBySession[activeSession.id]) ?? [];
 
   const handleSend = (message: string) => {
-    if (!activeSession) return;
-    setRepliesBySession((current) => ({ ...current, [activeSession.id]: [...(current[activeSession.id] ?? []), message] }));
-    toast.success('消息已发送');
+    void (async () => {
+      try {
+        if (onSendMessage && (await onSendMessage(activeSession, message))) return;
+        if (!activeSession) return;
+        setRepliesBySession((current) => ({ ...current, [activeSession.id]: [...(current[activeSession.id] ?? []), message] }));
+        toast.success('消息已发送');
+      } catch (e) {
+        toast.error(`发送失败:${e instanceof Error ? e.message : String(e)}`);
+      }
+    })();
   };
 
   const handleApproval = (action: 'approve' | 'reject' | 'transfer') => {

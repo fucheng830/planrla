@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bot as BotIcon, CalendarClock as ClockIcon, KanbanSquare as KanbanIcon } from 'lucide-react';
+import { Bot as BotIcon, CalendarClock as ClockIcon, KanbanSquare as KanbanIcon, Users as UsersIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Project } from '../../../types/app';
 import { api } from '../../../utils/api';
+import { useWebSocket } from '../../../contexts/WebSocketContext';
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { MessageHubPage } from '../../message-hub';
 import type { MessageSession, MessageStage } from '../../message-hub';
 import type { Task, TaskTemplate } from '../../kanban/types';
 
-import { buildInboxThreads, type CronRunInfo, type RunningSessionInfo } from './inboxThreads';
+import { buildInboxThreads, formatRelativeTime, type CronRunInfo, type RunningSessionInfo } from './inboxThreads';
+
+export interface TeamMessageInfo {
+  id: string;
+  sender: string;
+  content: string;
+  taskId: string | null;
+  createdAt: string;
+}
 
 const priorityLabel = (priority?: string): string => (priority === 'high' ? '高' : priority === 'low' ? '低' : '中');
 
@@ -36,13 +45,23 @@ function taskStages(task: Task, templates: TaskTemplate[]): MessageStage[] {
   }));
 }
 
-/** Fetch running provider sessions + cron prompts once per project. */
-function useInboxSources(projectId: string): { runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; error: string | null } {
-  const [state, setState] = useState<{ runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; error: string | null }>({
+/** Fetch running provider sessions + cron prompts + team messages, and
+ *  refetch when a team message lands over the WebSocket. */
+function useInboxSources(projectId: string): {
+  runningSessions: RunningSessionInfo[];
+  cronTasks: CronRunInfo[];
+  teamMessages: TeamMessageInfo[];
+  error: string | null;
+} {
+  const { subscribe } = useWebSocket();
+  const [state, setState] = useState<{ runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; teamMessages: TeamMessageInfo[]; error: string | null }>({
     runningSessions: [],
     cronTasks: [],
+    teamMessages: [],
     error: null,
   });
+  const [reloadNonce, setReloadNonce] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -56,31 +75,55 @@ function useInboxSources(projectId: string): { runningSessions: RunningSessionIn
         const data = (await res.json()) as { data?: CronRunInfo[] };
         return data.data ?? [];
       }),
+      api.get(`/team-messages?rootId=${encodeURIComponent(projectId)}`).then(async (res) => {
+        if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
+        const data = (await res.json()) as { messages?: TeamMessageInfo[] };
+        return data.messages ?? [];
+      }),
     ])
-      .then(([runningSessions, cronTasks]) => {
-        if (!cancelled) setState({ runningSessions, cronTasks, error: null });
+      .then(([runningSessions, cronTasks, teamMessages]) => {
+        if (!cancelled) setState({ runningSessions, cronTasks, teamMessages, error: null });
       })
       .catch((e: unknown) => {
-        if (!cancelled) setState({ runningSessions: [], cronTasks: [], error: e instanceof Error ? e.message : String(e) });
+        if (!cancelled) setState({ runningSessions: [], cronTasks: [], teamMessages: [], error: e instanceof Error ? e.message : String(e) });
       });
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, reloadNonce]);
+
+  useEffect(() => {
+    return subscribe((event) => {
+      if (event.type === 'team-message-created' && (event as { rootId?: string }).rootId === projectId) {
+        setReloadNonce((n) => n + 1);
+      }
+    });
+  }, [projectId, subscribe]);
+
   return state;
 }
 
 export function InboxPage({ project }: { project: Project }) {
   const { tasks, templates, loading: kanbanLoading, error: kanbanError, refresh } = useKanban();
-  const { runningSessions, cronTasks, error: sourcesError } = useInboxSources(project.projectId);
+  const { runningSessions, cronTasks, teamMessages, error: sourcesError } = useInboxSources(project.projectId);
   const handleApprovalAction = useApprovalAction(tasks, refresh);
+
+  // Team threads send for real (persisted + WS-broadcast); other threads keep
+  // the local echo. The WS event refreshes the feed.
+  const handleSendMessage = useCallback(async (session: MessageSession | undefined, text: string): Promise<boolean> => {
+    if (session && session.source !== '团队消息') return false;
+    const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
+    if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
+    toast.success('已发送到团队');
+    return true;
+  }, [project.projectId]);
 
   // Map real inbox threads (kanban tasks, running sessions, cron runs) into
   // the message-hub session model. Kanban threads additionally carry their
   // workflow stages + binding so the thread/inspector panels show live state.
   const sessions = useMemo<MessageSession[]>(() => {
     const threads = buildInboxThreads({ projectName: project.displayName, tasks, runningSessions, cronTasks });
-    return threads.map((thread): MessageSession => {
+    const mapped = threads.map((thread): MessageSession => {
       const task = findTaskForThread(thread.id, tasks);
       const kind: LiveChannelId = thread.source === '运行会话' ? 'sessions' : thread.source === '定时任务' ? 'cron' : 'kanban';
       const preset = CHANNEL_PRESETS[kind];
@@ -109,7 +152,27 @@ export function InboxPage({ project }: { project: Project }) {
         stages: task ? taskStages(task, templates) : undefined,
       };
     });
-  }, [cronTasks, project.displayName, runningSessions, tasks, templates]);
+
+    // Team messages render as their own threads (团队消息 category).
+    const teamSessions = teamMessages.map((message): MessageSession => {
+      const task = message.taskId ? tasks.find((t) => t.id === message.taskId) : undefined;
+      return {
+        id: `team-${message.id}`,
+        sender: message.sender,
+        source: '团队消息',
+        category: '团队消息',
+        preview: message.content,
+        time: formatRelativeTime(message.createdAt),
+        avatar: UsersIcon,
+        tone: 'blue',
+        body: message.content,
+        binding: task
+          ? { task: `REQ-${String(task.taskNumber).padStart(3, '0')}`, status: task.status }
+          : undefined,
+      };
+    });
+    return [...mapped, ...teamSessions];
+  }, [cronTasks, project.displayName, runningSessions, tasks, teamMessages, templates]);
 
   return (
     <MessageHubPage
@@ -117,6 +180,7 @@ export function InboxPage({ project }: { project: Project }) {
       loadingHint={kanbanLoading ? '正在加载消息数据…' : null}
       errorHint={sourcesError ? `部分数据源加载失败:${sourcesError}` : kanbanError ? `看板数据加载失败:${kanbanError}` : null}
       onApprovalAction={handleApprovalAction}
+      onSendMessage={handleSendMessage}
     />
   );
 }

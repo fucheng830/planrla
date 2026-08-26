@@ -73,6 +73,7 @@ import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
+import { createTeamMessageRouter } from './modules/team-messages/index.js';
 import { startSyncScheduler } from './modules/sync/sync.client.js';
 import { autostartRelay, relayRouter } from './modules/relay-client/index.js';
 import { getKanban } from './modules/kanban/assembly.js';
@@ -360,6 +361,9 @@ app.use('/api/providers', authenticateToken, providerRoutes);
 // Full-text session search (protected)
 app.use('/api/search', authenticateToken, searchRoutes);
 app.use('/api/sync', authenticateToken, syncRoutes);
+
+// 团队消息 feed(message hub 团队消息 category)
+app.use('/api/team-messages', authenticateToken, createTeamMessageRouter());
 
 // Remote-access relay agent control (device token → outbound relay connection)
 app.use('/api/relay', authenticateToken, relayRouter);
