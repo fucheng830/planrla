@@ -324,6 +324,14 @@ export function useProjectsState({
 }: UseProjectsStateArgs) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  useEffect(() => {
+    if (!selectedProject?.projectId) return;
+    try {
+      localStorage.setItem('selected-project-id', selectedProject.projectId);
+    } catch {
+      // Silently ignore storage errors
+    }
+  }, [selectedProject?.projectId]);
   const [selectedSession, setSelectedSession] = useState<ProjectSession | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>(readPersistedTab);
 
@@ -502,9 +510,22 @@ export function useProjectsState({
     void fetchProjects();
   }, [fetchProjects]);
 
-  // Auto-select the project when there is only one, so the user lands on the new session page
+  // Auto-select on load: restore the last selected project first, otherwise
+  // fall back to the only project. Without the restore, a reload drops the
+  // selection and every workbench tab renders behind the "select a project"
+  // empty state (MainContent gates on selectedProject before any tab).
   useEffect(() => {
-    if (!isLoadingProjects && projects.length === 1 && !selectedProject && !sessionId) {
+    if (isLoadingProjects || selectedProject || sessionId) return;
+    let restored: Project | undefined;
+    try {
+      const persistedId = localStorage.getItem('selected-project-id');
+      restored = persistedId ? projects.find((p) => p.projectId === persistedId) : undefined;
+    } catch {
+      restored = undefined;
+    }
+    if (restored) {
+      setSelectedProject(restored);
+    } else if (projects.length === 1) {
       setSelectedProject(projects[0]);
     }
   }, [isLoadingProjects, projects, selectedProject, sessionId]);
