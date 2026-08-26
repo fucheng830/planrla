@@ -42,6 +42,7 @@ function MainContent({
   externalMessageUpdate,
   newSessionTrigger,
   allPickerSessions,
+  projects,
   onForkAtMessage,
   onToggleTerminalPanel,
 }: MainContentProps) {
@@ -219,7 +220,7 @@ function MainContent({
           {activeTab === 'workflow' && (
             <div className="h-full">
               <ErrorBoundary showDetails>
-                <WorkflowPage projectName={selectedProject.displayName} />
+                <WorkflowPage projectName={selectedProject.displayName} projects={projects} />
               </ErrorBoundary>
             </div>
           )}

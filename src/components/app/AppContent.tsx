@@ -351,6 +351,7 @@ function AppContentInner() {
             externalMessageUpdate={externalMessageUpdate}
             newSessionTrigger={newSessionTrigger}
             allPickerSessions={allPickerSessions}
+            projects={projects}
             onForkAtMessage={handleForkAtMessage}
             onToggleTerminalPanel={toggleTerminalPanel}
           />

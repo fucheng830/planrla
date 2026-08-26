@@ -36,6 +36,8 @@ export type MainContentProps = {
    *  "search all" mode. Undefined degrades the picker to current-project
    *  filtering only. Built by AppContent from the full projects array. */
   allPickerSessions?: PickerCandidateSession[];
+  /** All projects (for cross-project task creation in the workflow board). */
+  projects?: Project[];
   /** Message-level fork: branches a new conversation from a specific message. */
   onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
   /** Toggle the bottom terminal panel (shell tab is now a panel toggle). */

@@ -21,7 +21,7 @@ interface KanbanContextValue {
   createTask: (
     taskTemplateId: string,
     input: string,
-    options?: { priority?: TaskPriority; dependencies?: string[] },
+    options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string },
   ) => Promise<void>;
   moveTask: (taskId: string, action: string) => Promise<void>;
   jumpTask: (taskId: string, targetIndex: number) => Promise<void>;
@@ -141,11 +141,14 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     async (
       taskTemplateId: string,
       input: string,
-      options?: { priority?: TaskPriority; dependencies?: string[] },
+      options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string },
     ) => {
-      if (!rootId) return;
+      // rootId override: cross-project creation (每个需求必须关联项目);
+      // defaults to the mounted project.
+      const effectiveRootId = options?.rootId || rootId;
+      if (!effectiveRootId) return;
       try {
-        const t = await kanbanApi.createTask(rootId, taskTemplateId, input, options);
+        const t = await kanbanApi.createTask(effectiveRootId, taskTemplateId, input, options);
         setTasks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'createTask failed');
