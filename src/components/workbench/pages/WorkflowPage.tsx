@@ -79,13 +79,11 @@ function WorkflowTaskCard({ task, onAdvance }: { task: DisplayTask; onAdvance?: 
       className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
       onDoubleClick={onAdvance}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 text-sm font-semibold leading-snug text-workbench-ink">
-          <span className="ds-mono mr-1 text-[10px] text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</span>
-          {task.title}
-        </h3>
+      <div className="flex items-center justify-between gap-2">
+        <span className="ds-mono text-[10px] text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</span>
         <WorkbenchStatus state={task.status} label={task.statusLabel} />
       </div>
+      <h3 className="mt-1 text-sm font-semibold leading-snug text-workbench-ink">{task.title}</h3>
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-workbench-subtle">{task.detail}</p>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {task.tags.map((tag) => <span key={tag} className="ds-label rounded bg-workbench-muted px-1.5 py-0.5 normal-case tracking-normal">{tag}</span>)}
