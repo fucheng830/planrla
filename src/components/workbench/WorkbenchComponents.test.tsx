@@ -37,7 +37,7 @@ test('sidebar rail includes workbench inbox and calendar entries', () => {
 
   assert.deepEqual(
     items.map((item) => item.id),
-    ['sessions', 'files', 'overview', 'inbox', 'workflow', 'kanban', 'schedule'],
+    ['sessions', 'overview', 'inbox', 'workflow', 'kanban', 'schedule'],
   );
 });
 
