@@ -4,16 +4,13 @@ import { Toaster, toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { MessageHubInbox } from './MessageHubInbox';
 import { MessageHubInspector } from './MessageHubInspector';
-import { MessageHubRail } from './MessageHubRail';
 import { MessageHubThread, type ApprovalState } from './MessageHubThread';
 import { MessageHubWorkflowStrip } from './MessageHubWorkflowStrip';
-import { messageChannels, messageSessions, type MessageChannel, type MessageSession } from './messageHubData';
+import { messageSessions, type MessageSession } from './messageHubData';
 
 type MessageHubPageProps = {
   /** Live sessions; defaults to the bundled design sample data. */
   sessions?: MessageSession[];
-  /** Live channels; defaults to the bundled design sample data. */
-  channels?: MessageChannel[];
   userName?: string;
   /** embedded (default): fills the workbench area — the app shell provides
    *  the outer chrome and navigation sidebar. standalone keeps the padded
@@ -25,14 +22,12 @@ type MessageHubPageProps = {
 
 export function MessageHubPage({
   sessions = messageSessions,
-  channels = messageChannels,
   userName = '我',
   variant = 'embedded',
   loadingHint,
   errorHint,
 }: MessageHubPageProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeChannel, setActiveChannel] = useState('all');
   const [repliesBySession, setRepliesBySession] = useState<Record<string, string[]>>({});
   const [approvalBySession, setApprovalBySession] = useState<Record<string, ApprovalState>>({});
 
@@ -45,11 +40,6 @@ export function MessageHubPage({
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeId) ?? sessions[0],
     [activeId, sessions],
-  );
-
-  const visibleSessions = useMemo(
-    () => (activeChannel === 'all' ? sessions : sessions.filter((session) => session.channel === activeChannel)),
-    [activeChannel, sessions],
   );
 
   const approvalState: ApprovalState = (activeSession && approvalBySession[activeSession.id]) ?? (activeSession?.approval ? 'pending' : 'approved');
@@ -77,8 +67,7 @@ export function MessageHubPage({
           </p>
         )}
         <div className="mh-workspace-grid">
-          <MessageHubRail channels={channels} total={sessions.length} activeChannel={activeChannel} onChannelSelect={setActiveChannel} />
-          <MessageHubInbox sessions={visibleSessions} activeSessionId={activeSession?.id} onSessionSelect={(session) => setActiveId(session.id)} />
+          <MessageHubInbox sessions={sessions} activeSessionId={activeSession?.id} onSessionSelect={(session) => setActiveId(session.id)} />
           <MessageHubThread
             activeSession={activeSession}
             replies={replies}
