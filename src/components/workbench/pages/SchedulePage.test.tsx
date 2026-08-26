@@ -7,10 +7,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { SchedulePage } from './SchedulePage';
 test('schedule page renders the real-data workbench shell', () => {
   const markup = renderToStaticMarkup(
-    <SchedulePage projectName="planrla" projectId="root-1" projectPath="C:/workspace/项目/planrla" />,
+    <SchedulePage projectId="root-1" projectPath="C:/workspace/项目/planrla" />,
   );
 
-  assert.match(markup, /日历与定时任务/);
+  assert.match(markup, /calendar-schedule-page calendar-content-only/);
   assert.match(markup, /aria-label="新建任务面板"/);
   assert.match(markup, /新建定时任务/);
   assert.match(markup, /新建一次性任务/);

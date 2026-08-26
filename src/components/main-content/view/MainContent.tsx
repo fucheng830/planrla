@@ -229,7 +229,6 @@ function MainContent({
             <div className="h-full">
               <ErrorBoundary showDetails>
                 <SchedulePage
-                  projectName={selectedProject.displayName}
                   projectId={selectedProject.projectId}
                   projectPath={selectedProject.fullPath ?? selectedProject.path ?? ''}
                 />

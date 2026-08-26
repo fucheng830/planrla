@@ -6,8 +6,6 @@ import { CalendarTaskForms, type CalendarFormResult } from '../../calendar-sched
 import { buildAgendaItems, buildMonthEvents } from '../../calendar-schedule/cronCalendar';
 import { useScheduleSources } from '../../calendar-schedule/useScheduleSources';
 
-import { PageShell, PageToolbar } from './PageShell';
-
 type SaveState = { tone: 'idle' | 'success' | 'error'; message?: string };
 
 function formatDefaultDate(year: number, month: number, day: number) {
@@ -15,11 +13,9 @@ function formatDefaultDate(year: number, month: number, day: number) {
 }
 
 export function SchedulePage({
-  projectName,
   projectId,
   projectPath,
 }: {
-  projectName: string;
   projectId: string | null;
   projectPath: string;
 }) {
@@ -30,14 +26,6 @@ export function SchedulePage({
   const [saveState, setSaveState] = useState<SaveState>({ tone: 'idle' });
 
   const { cronTasks, schedules, loading, error, reload } = useScheduleSources(projectId);
-
-  const projectCronCount = useMemo(
-    () =>
-      cronTasks.filter(
-        (task) => task.projectPath.replace(/\\/g, '/').toLowerCase() === projectPath.replace(/\\/g, '/').toLowerCase(),
-      ).length,
-    [cronTasks, projectPath],
-  );
 
   const monthEvents = useMemo(
     () => buildMonthEvents({ year, month, cronTasks, schedules, projectPath }),
@@ -63,62 +51,61 @@ export function SchedulePage({
   };
 
   return (
-    <PageShell>
-      <PageToolbar
-        title="日历与定时任务"
-        description={`${projectName} · 定时任务 ${projectCronCount} · 看板排程 ${schedules.length}`}
-      />
-      {loading && (
-        <p role="status" className="rounded-md border border-workbench-border bg-workbench-muted px-3 py-2 text-sm text-workbench-subtle">
-          正在加载定时任务与看板排程…
-        </p>
-      )}
-      {!loading && error && (
-        <p role="alert" className="rounded-md border border-workbench-danger/30 bg-workbench-danger/10 px-3 py-2 text-sm text-workbench-danger">
-          加载失败：{error}
-        </p>
-      )}
-      {saveState.message && (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`rounded-md border px-3 py-2 text-sm ${
-            saveState.tone === 'success'
-              ? 'border-workbench-success/30 bg-workbench-success/10 text-workbench-success'
-              : 'border-workbench-danger/30 bg-workbench-danger/10 text-workbench-danger'
-          }`}
-        >
-          {saveState.message}
-        </p>
-      )}
-      <div className="calendar-content-grid calendar-workbench-grid">
-        <div className="calendar-main-column">
-          <CalendarMonthGrid
-            year={year}
-            month={month}
-            selectedDay={selectedDay}
-            events={monthEvents}
-            todayDay={today.getFullYear() === year && today.getMonth() === month ? today.getDate() : undefined}
-            onSelectDay={(day) => {
-              setSelectedDay(day);
-              setSaveState({ tone: 'idle' });
-            }}
-            onMonthChange={changeMonth}
-          />
-          <CalendarAgenda
-            year={year}
-            month={month}
-            selectedDay={selectedDay}
-            items={agendaItems}
-            onAdd={() => setSaveState({ tone: 'idle' })}
+    <main className="calendar-schedule-page calendar-content-only">
+      <div className="calendar-content-shell">
+        {loading && (
+          <p role="status" className="px-4 pt-3 text-xs" style={{ color: 'var(--cal-muted)' }}>
+            正在加载定时任务与看板排程…
+          </p>
+        )}
+        {!loading && error && (
+          <p role="alert" className="mx-4 mt-3 rounded-md border px-3 py-2 text-xs" style={{ borderColor: 'var(--cal-red)', background: 'var(--cal-red-soft)', color: 'var(--cal-red)' }}>
+            加载失败：{error}
+          </p>
+        )}
+        {saveState.message && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mx-4 mt-3 rounded-md border px-3 py-2 text-xs"
+            style={
+              saveState.tone === 'success'
+                ? { borderColor: 'var(--cal-green)', background: 'var(--cal-green-soft)', color: 'var(--cal-green)' }
+                : { borderColor: 'var(--cal-red)', background: 'var(--cal-red-soft)', color: 'var(--cal-red)' }
+            }
+          >
+            {saveState.message}
+          </p>
+        )}
+        <div className="calendar-content-grid">
+          <div className="calendar-main-column">
+            <CalendarMonthGrid
+              year={year}
+              month={month}
+              selectedDay={selectedDay}
+              events={monthEvents}
+              todayDay={today.getFullYear() === year && today.getMonth() === month ? today.getDate() : undefined}
+              onSelectDay={(day) => {
+                setSelectedDay(day);
+                setSaveState({ tone: 'idle' });
+              }}
+              onMonthChange={changeMonth}
+            />
+            <CalendarAgenda
+              year={year}
+              month={month}
+              selectedDay={selectedDay}
+              items={agendaItems}
+              onAdd={() => setSaveState({ tone: 'idle' })}
+            />
+          </div>
+          <CalendarTaskForms
+            defaultDate={formatDefaultDate(year, month, selectedDay)}
+            projectPath={projectPath}
+            onResult={handleFormResult}
           />
         </div>
-        <CalendarTaskForms
-          defaultDate={formatDefaultDate(year, month, selectedDay)}
-          projectPath={projectPath}
-          onResult={handleFormResult}
-        />
       </div>
-    </PageShell>
+    </main>
   );
 }
