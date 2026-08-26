@@ -104,18 +104,16 @@ function RecurringTaskForm({ defaultDate, projectPath, onResult }: { defaultDate
           </Field>
           <Field label="时间"><input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></Field>
         </div>
-        <div className="calendar-field-row">
-          <Field label="开始日期"><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></Field>
-          <Field label="结束日期">
-            <span className="calendar-select-wrap">
-              <select defaultValue="never">
-                <option value="never">永不</option>
-                <option value="date">指定日期</option>
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </span>
-          </Field>
-        </div>
+        <Field label="开始日期"><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></Field>
+        <Field label="结束日期">
+          <span className="calendar-select-wrap">
+            <select defaultValue="never">
+              <option value="never">永不</option>
+              <option value="date">指定日期</option>
+            </select>
+            <ChevronDown aria-hidden="true" />
+          </span>
+        </Field>
         <Field label="执行内容"><input value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="到点执行的任务描述" /></Field>
         <span className="calendar-field-label">通知方式</span>
         <div className="calendar-checkboxes">
@@ -158,19 +156,17 @@ function OneTimeTaskForm({ defaultDate, onResult }: { defaultDate: string; onRes
       </div>
       <div className="calendar-form-body">
         <Field label="任务名称"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：成片最终验收" /></Field>
-        <div className="calendar-field-row">
-          <Field label="时间"><input type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} /></Field>
-          <Field label="时长">
-            <span className="calendar-select-wrap">
-              <select defaultValue="1h">
-                <option value="30m">30 分钟</option>
-                <option value="1h">1 小时</option>
-                <option value="2h">2 小时</option>
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </span>
-          </Field>
-        </div>
+        <Field label="时间"><input type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} /></Field>
+        <Field label="时长">
+          <span className="calendar-select-wrap">
+            <select defaultValue="1h">
+              <option value="30m">30 分钟</option>
+              <option value="1h">1 小时</option>
+              <option value="2h">2 小时</option>
+            </select>
+            <ChevronDown aria-hidden="true" />
+          </span>
+        </Field>
         <Field label="参与人">
           <div className="calendar-assignees">
             <span className="calendar-avatar">🐟</span>
