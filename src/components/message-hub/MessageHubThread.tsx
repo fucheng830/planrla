@@ -1,5 +1,5 @@
 import { AtSign, Bot, CheckCircle2, Ellipsis, FileText, Paperclip, Plus, Send } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
 import type { MessageSession } from './messageHubData';
@@ -17,16 +17,26 @@ type MessageHubThreadProps = {
 
 export function MessageHubThread({ activeSession, replies, approvalState, userName, onSend, onApproval }: MessageHubThreadProps) {
   const [draft, setDraft] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // Auto-grow the composer while typing (capped) so multi-line replies stay
+  // visible instead of scrolling inside a one-row box.
+  const autoGrow = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = draft.trim();
     if (!message) return;
     onSend(message);
     setDraft('');
+    if (textareaRef.current) textareaRef.current.style.height = '';
   };
 
   const composer = (
-    <form className="mh-composer" aria-label="回复消息" onSubmit={handleSubmit}><textarea aria-label="回复消息" placeholder={activeSession ? '回复消息...' : '发送团队消息...'} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} /><div className="mh-composer-toolbar"><div><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加表情"><span>☺</span></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加附件"><Paperclip /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="提及成员"><AtSign /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加上下文"><Plus /></button></div><button type="submit" className="mh-send-button">发送 <Send /></button></div></form>
+    <form className="mh-composer" aria-label="回复消息" onSubmit={handleSubmit}><textarea ref={textareaRef} aria-label="回复消息" placeholder={activeSession ? '回复消息...' : '发送团队消息...'} rows={2} value={draft} onChange={(event) => { setDraft(event.target.value); autoGrow(); }} /><div className="mh-composer-toolbar"><div><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加表情"><span>☺</span></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加附件"><Paperclip /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="提及成员"><AtSign /></button><button type="button" className="mh-icon-button mh-icon-button-small" aria-label="添加上下文"><Plus /></button></div><button type="submit" className="mh-send-button">发送 <Send /></button></div></form>
   );
 
   if (!activeSession) {
