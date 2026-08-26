@@ -483,8 +483,74 @@ export default function SidebarContent({
     return () => observer.disconnect();
   }, [hasFlatSessions]);
 
+  // Drag-to-resize the expanded sidebar. Width persists in localStorage;
+  // collapsed rail mode ignores it.
+  const SIDEBAR_WIDTH_KEY = 'ui.sidebar-width';
+  const [sidebarWidth, setSidebarWidth] = useState<number | null>(() => {
+    try {
+      const raw = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+      return Number.isFinite(raw) && raw >= 200 && raw <= 520 ? raw : null;
+    } catch {
+      return null;
+    }
+  });
+  const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isDragging = dragStateRef.current !== null;
+
+  const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    dragStateRef.current = { startX: event.clientX, startWidth: sidebarWidth ?? (containerRef.current?.offsetWidth || 288) };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    // Force re-render for the cursor/drag state.
+    setSidebarWidth((w) => w);
+  };
+
+  const handleResizeMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag) return;
+    const next = Math.min(520, Math.max(200, drag.startWidth + (event.clientX - drag.startX)));
+    setSidebarWidth(next);
+  };
+
+  const handleResizeEnd = () => {
+    if (!dragStateRef.current) return;
+    dragStateRef.current = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    setSidebarWidth((current) => {
+      try {
+        if (current !== null) localStorage.setItem(SIDEBAR_WIDTH_KEY, String(current));
+      } catch { /* storage unavailable */ }
+      return current;
+    });
+  };
+
   return (
-    <div className={`flex h-full flex-col bg-workbench-surface ${showProjectWorkspace ? 'md:w-72' : 'md:w-12'} md:select-none`}>
+    <div
+      ref={containerRef}
+      className={`relative flex h-full flex-col bg-workbench-surface md:select-none ${showProjectWorkspace ? (sidebarWidth ? '' : 'md:w-72') : 'md:w-12'}`}
+      style={showProjectWorkspace && sidebarWidth ? { width: `${sidebarWidth}px` } : undefined}
+    >
+      {showProjectWorkspace && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="拖拽调整侧边栏宽度"
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={handleResizeEnd}
+          onPointerCancel={handleResizeEnd}
+          onDoubleClick={() => {
+            setSidebarWidth(null);
+            try { localStorage.removeItem(SIDEBAR_WIDTH_KEY); } catch { /* ignore */ }
+          }}
+          title="拖拽调整宽度,双击还原"
+          className={`absolute right-0 top-0 z-20 h-full w-1 cursor-col-resize touch-none transition-colors hover:bg-workbench-accent/40 ${isDragging ? 'bg-workbench-accent/60' : 'bg-transparent'}`}
+        />
+      )}
       <div className="flex min-h-0 flex-1">
         <WorkbenchRail
           className="hidden shrink-0 border-r border-workbench-border md:flex"
