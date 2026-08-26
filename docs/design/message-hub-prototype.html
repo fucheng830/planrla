@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071019" />
+    <title>Planrla · 消息协作中枢</title>
+    <link rel="stylesheet" href="./message-hub-prototype.css" />
+    <script src="./message-hub-prototype.js" defer></script>
+  </head>
+  <body>
+    <svg class="icon-defs" aria-hidden="true" focusable="false">
+      <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></symbol>
+      <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></symbol>
+      <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M9.7 9a2.4 2.4 0 0 1 4.6 1c0 1.8-2.3 2-2.3 3.5"></path><path d="M12 17h.01"></path></symbol>
+      <symbol id="icon-settings" viewBox="0 0 24 24"><path d="m9.5 4 .7-1h3.6l.7 1 .9 1.7 1.9.5 1.1-.4 2.5 2.5-.4 1.1.5 1.9 1.7.9v3.6l-1.7.7-.5 1.9.4 1.1-2.5 2.5-1.1-.4-1.9.5-.9 1.7h-3.6l-.7-1-1.9-.5-1.1.4-2.5-2.5.4-1.1-.5-1.9-1.7-.7v-3.6l1.7-.9.5-1.9-.4-1.1L6.5 5l1.1.4L9.5 4Z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></symbol>
+      <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"></path><circle cx="9" cy="7" r="2"></circle><circle cx="15" cy="17" r="2"></circle></symbol>
+      <symbol id="icon-paperclip" viewBox="0 0 24 24"><path d="m8 12 6.7-6.7a3 3 0 0 1 4.3 4.3L10.7 18a4 4 0 0 1-5.7-5.7l8.7-8.7"></path></symbol>
+      <symbol id="icon-send" viewBox="0 0 24 24"><path d="m4 4 16 8-16 8 3-8-3-8Z"></path><path d="M7 12h13"></path></symbol>
+      <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+      <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></symbol>
+    </svg>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <span class="brand-mark">P</span>
+          <span class="brand-name">Planrla</span>
+          <span class="topbar-divider"></span>
+          <span class="product-name">消息协作中枢</span>
+          <span class="beta-tag">BETA</span>
+        </div>
+        <label class="global-search">
+          <svg class="icon"><use href="#icon-search"></use></svg>
+          <input aria-label="Search messages" placeholder="搜索消息、发送方、内容、话题、项目、任务..." />
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="topbar-actions">
+          <button class="icon-button" aria-label="Notifications"><svg class="icon"><use href="#icon-bell"></use></svg><span class="notification-dot"></span></button>
+          <button class="icon-button" aria-label="Help"><svg class="icon"><use href="#icon-help"></use></svg></button>
+          <button class="icon-button" aria-label="Settings"><svg class="icon"><use href="#icon-settings"></use></svg></button>
+          <span class="user-avatar">王</span>
+          <span class="user-name">王工</span>
+          <svg class="icon chevron"><use href="#icon-chevron"></use></svg>
+        </div>
+      </header>
+
+      <div class="workspace-grid">
+        <aside id="channel-rail" class="channel-rail panel-surface" aria-label="频道">
+          <div class="panel-heading"><span>频道</span><button class="icon-button small" aria-label="Add channel"><svg class="icon"><use href="#icon-plus"></use></svg></button></div>
+          <nav class="channel-list" aria-label="消息频道">
+            <button class="channel-item is-active"><span class="channel-logo wecom">⌁</span><span>企业微信</span><span class="count-pill">8</span></button>
+            <button class="channel-item"><span class="channel-logo lark">◢</span><span>飞书</span><span class="count-pill">5</span></button>
+            <button class="channel-item"><span class="channel-logo slack">✣</span><span>Slack</span><span class="count-pill">7</span></button>
+            <button class="channel-item"><span class="channel-logo dingtalk">⚡</span><span>钉钉</span><span class="count-pill">6</span></button>
+            <button class="channel-item"><span class="channel-logo headset">◒</span><span>客服渠道</span><span class="count-pill">12</span></button>
+            <button class="channel-item"><span class="channel-logo team">••</span><span>团队成员</span><span class="count-pill">18</span></button>
+            <button class="channel-item"><span class="channel-logo agent">▣</span><span>AI Agents</span><span class="count-pill">9</span></button>
+          </nav>
+          <div class="rail-footer">
+            <button class="rail-footer-item"><span>▱</span><span>归档消息</span><em>45</em></button>
+            <button class="rail-footer-item"><span>♜</span><span>回收站</span><em>2</em></button>
+            <button class="collapse-rail" aria-label="Collapse channels">‹‹</button>
+          </div>
+        </aside>
+
+        <section id="inbox-panel" class="inbox-panel panel-surface" aria-labelledby="inbox-title">
+          <div class="panel-heading"><h1 id="inbox-title">收件箱</h1><div class="heading-actions"><button class="icon-button small" aria-label="Sort messages">↕</button><span class="unread-badge">12</span></div></div>
+          <div class="inbox-tabs" role="tablist" aria-label="收件箱筛选">
+            <button class="inbox-tab is-active" role="tab" aria-selected="true">全部消息 <span>65</span></button>
+            <button class="inbox-tab" role="tab" aria-selected="false"><i class="dot amber"></i>待处理 <span>12</span></button>
+            <button class="inbox-tab" role="tab" aria-selected="false"><i class="dot purple"></i>AI 请求 <span>9</span></button>
+            <button class="inbox-tab" role="tab" aria-selected="false"><i class="dot green"></i>客户消息 <span>14</span></button>
+            <button class="inbox-tab" role="tab" aria-selected="false"><i class="dot blue"></i>团队消息 <span>18</span></button>
+            <button class="inbox-tab" role="tab" aria-selected="false"><i class="dot red"></i>未绑定 <span>7</span></button>
+          </div>
+          <div class="list-toolbar"><span>按时间排序</span><svg class="icon"><use href="#icon-chevron"></use></svg><button class="icon-button small" aria-label="Filter inbox"><svg class="icon"><use href="#icon-sliders"></use></svg></button></div>
+          <div class="session-list" aria-label="会话列表">
+            <button class="session-card is-active" data-session-id="codex"><span class="sender-avatar agent">▣</span><span class="session-copy"><strong>AI: Codex</strong><small>AI Agents · AI 请求</small><span>请协助分析 Windows 打包失败...</span></span><time>21:49</time><b class="session-status amber">个性化确认</b><em>1</em></button>
+            <button class="session-card" data-session-id="customer"><span class="sender-avatar wecom">⌁</span><span class="session-copy"><strong>客户: 王先生</strong><small>企业微信 · 客户消息</small><span>请问最新的 Windows 打包问题...</span></span><time>21:30</time><em>2</em></button>
+            <button class="session-card" data-session-id="zhang"><span class="sender-avatar slack">✣</span><span class="session-copy"><strong>张三</strong><small>Slack · 团队消息</small><span>已更新技术方案文档，请 review。</span></span><time>20:58</time></button>
+            <button class="session-card" data-session-id="li"><span class="sender-avatar dingtalk">⚡</span><span class="session-copy"><strong>李四</strong><small>钉钉 · 团队消息</small><span>测试环境部署完成，日志正常。</span></span><time>20:41</time></button>
+            <button class="session-card" data-session-id="support"><span class="sender-avatar support">◌</span><span class="session-copy"><strong>在线客服 #1024</strong><small>客服渠道 · 客户消息</small><span>如何查看任务的开发进度？</span></span><time>19:22</time><em>3</em></button>
+            <button class="session-card" data-session-id="planner"><span class="sender-avatar planner">▣</span><span class="session-copy"><strong>AI: Planner</strong><small>AI Agents · AI 请求</small><span>建议优化需求文档的验收标准。</span></span><time>18:19</time><em>4</em></button>
+            <button class="session-card" data-session-id="customer-2"><span class="sender-avatar wecom">⌁</span><span class="session-copy"><strong>客户: 张女士</strong><small>企业微信 · 客户消息</small><span>给出错下版本太过时间？</span></span><time>17:48</time></button>
+          </div>
+        </section>
+
+        <section id="thread-panel" class="thread-panel panel-surface" aria-labelledby="thread-title">
+          <div class="thread-header">
+            <div class="breadcrumb"><span>AI Agents</span><svg class="icon"><use href="#icon-arrow"></use></svg><span>AI 请求</span></div>
+            <div class="thread-title-row"><span class="sender-avatar agent large">▣</span><div><h2 id="thread-title">AI: Codex <span class="status-chip amber">待负责人确认</span></h2><p>来自 AI Agents · <time>21:49</time></p><p>频道：Windows 打包失败分析与修复建议</p></div><div class="thread-actions"><button class="quiet-button">↪ 标记已读</button><button class="quiet-button">转交</button><button class="quiet-button" aria-label="More thread actions"><svg class="icon"><use href="#icon-more"></use></svg></button></div></div>
+          </div>
+          <div class="thread-content">
+            <article class="message-block"><span class="sender-avatar agent">▣</span><div class="message-card"><div class="message-meta"><strong>AI: Codex</strong><time>21:49</time></div><p>请协助分析 Windows 打包失败问题并给出修复建议。</p><p>错误摘要：Windows packaging failed after latest dependency update.</p><p>- 缺失依赖：vcruntime140_1.dll<br>- 构建环境：GitHub Actions / windows-latest<br>- 影响版本：v2.3.1+</p><p>相关日志与构建产物已上传至附件。</p><div class="attachment-box"><strong>附件（3）</strong><div class="attachment-list"><button class="attachment"><span>▱</span><span>build_log.txt<small>58 KB</small></span></button><button class="attachment"><span>▱</span><span>error_trace.log<small>126 KB</small></span></button><button class="attachment"><span>▱</span><span>artifact.zip<small>4.2 MB</small></span></button></div></div></div></article>
+            <article class="approval-card" role="alertdialog" aria-labelledby="approval-title"><div class="approval-heading"><span class="approval-icon">♙</span><div><p>AI 协作请求</p><h3 id="approval-title">等待负责人确认</h3></div></div><p>此请求需要你确认是否分配给 AI Agent 执行并绑定到具体项目与任务。</p><div class="approval-actions"><button class="primary-button" data-action="approve">批准</button><button class="secondary-button" data-action="reject">驳回</button><button class="secondary-button" data-action="transfer">转交</button></div></article>
+            <article class="message-block user-message"><span class="sender-avatar user">王</span><div class="message-card"><div class="message-meta"><strong>王工</strong><time>21:52</time></div><p>请先绑定到 Planrla 系统项目的 Windows 打包任务。</p></div></article>
+          </div>
+          <form id="message-composer" class="composer"><textarea placeholder="回复消息..." aria-label="Reply message" rows="1"></textarea><div class="composer-toolbar"><div><button type="button" class="icon-button small" aria-label="Add emoji">☺</button><button type="button" class="icon-button small" aria-label="Attach file"><svg class="icon"><use href="#icon-paperclip"></use></svg></button><button type="button" class="icon-button small" aria-label="Mention">@</button></div><button type="submit" class="send-button">发送 <svg class="icon"><use href="#icon-send"></use></svg></button></div></form>
+        </section>
+
+        <aside id="inspector-panel" class="inspector-panel panel-surface" aria-labelledby="inspector-title">
+          <div class="inspector-heading"><h2 id="inspector-title">消息详情</h2><span class="unread-state"><i class="dot green"></i>未读</span></div>
+          <div class="inspector-tabs" role="tablist" aria-label="详情面板"><button class="inspector-tab is-active" role="tab" aria-selected="true">消息详情</button><button class="inspector-tab" role="tab" aria-selected="false">关联任务</button></div>
+          <div class="inspector-body">
+            <details class="detail-card" open><summary>来源信息 <svg class="icon"><use href="#icon-chevron"></use></svg></summary><dl><div><dt>来源</dt><dd><span class="mini-agent">▣</span> AI Agents</dd></div><div><dt>代理</dt><dd>Codex <small>v1.2.3</small></dd></div><div><dt>消息类型</dt><dd><span class="tag purple">AI 请求</span></dd></div><div><dt>接收时间</dt><dd>2024-05-21 21:49:12</dd></div></dl></details>
+            <details class="detail-card" open><summary>发送方 <svg class="icon"><use href="#icon-chevron"></use></svg></summary><dl><div><dt>名称</dt><dd>Codex (AI Agent)</dd></div><div><dt>角色</dt><dd><span class="mini-agent">▣</span> AI 架构与问题分析</dd></div></dl></details>
+            <details class="detail-card" open><summary>绑定信息 <svg class="icon"><use href="#icon-chevron"></use></svg></summary><dl><div><dt>项目</dt><dd class="link">Planrla 系统</dd></div><div><dt>任务</dt><dd class="link">REQ-081 后台任务：Windows 打包修复</dd></div><div><dt>会话</dt><dd class="link">Session #2658</dd></div><div><dt>优先级</dt><dd><span class="priority"><i></i> 高</span></dd></div><div><dt>当前状态</dt><dd><span class="tag amber">待负责人确认</span></dd></div></dl></details>
+            <details class="detail-card next-step" open><summary>建议的下一步 <svg class="icon"><use href="#icon-chevron"></use></svg></summary><ol><li>批准后分配给 AI Agent 执行分析与修复</li><li>绑定到项目与任务并开始开发流程</li><li>跟踪进度并在完成后自动验收</li></ol><div class="inspector-actions"><button class="primary-button">批准并启动</button><button class="secondary-button">转交给他人</button></div></details>
+            <details class="detail-card process-card" open><summary>研发流程 <small>（该任务）</small> <svg class="icon"><use href="#icon-chevron"></use></svg></summary><ol class="process-list"><li class="complete"><i>✓</i><span>需求设计<small>完成 · 05-18 10:32</small></span></li><li class="complete"><i>✓</i><span>技术方案<small>完成 · 05-18 15:20</small></span></li><li class="running"><i>◉</i><span>开工<small>进行中 · 05-21 21:10</small></span></li><li><i>○</i><span>测试验证<small>待开始</small></span></li><li><i>○</i><span>交付<small>待开始</small></span></li></ol></details>
+          </div>
+        </aside>
+
+        <section id="workflow-strip" class="workflow-strip panel-surface" aria-labelledby="workflow-title"><div class="workflow-title"><h2 id="workflow-title">研发流程总览</h2><span>Planrla 系统 / REQ-081 后台任务：Windows 打包修复</span></div><div class="workflow-cards"><article class="workflow-card complete"><i>✓</i><strong>需求设计</strong><small>完成 · 05-18 10:32<br />PRD-4</small><svg class="icon"><use href="#icon-arrow"></use></svg></article><article class="workflow-card complete"><i>✓</i><strong>技术方案</strong><small>完成 · 05-18 15:20<br />方案-3</small><svg class="icon"><use href="#icon-arrow"></use></svg></article><article class="workflow-card running"><i>●</i><strong>开工</strong><small>进行中 · 05-21 21:10<br />Dev Agent</small><svg class="icon"><use href="#icon-arrow"></use></svg></article><article class="workflow-card"><i>○</i><strong>测试验证</strong><small>待开始<br />测试-2</small><svg class="icon"><use href="#icon-arrow"></use></svg></article><article class="workflow-card"><i>○</i><strong>交付</strong><small>待开始<br />回顾-1</small></article></div></section>
+      </div>
+
+      <aside class="phone-preview" aria-label="手机端消息预览"><div class="phone-speaker"></div><div class="phone-screen"><div class="phone-status"><span>21:50</span><span>▮▮▮ ◷</span></div><div class="phone-header"><strong>消息协作中枢</strong><span>⌕　↕</span></div><div class="phone-tabs"><span class="is-active">全部 <b>65</b></span><span>待处理 <b>12</b></span><span>AI 请求 <b>9</b></span></div><div class="phone-sessions"><button class="phone-session is-active"><span class="sender-avatar agent">▣</span><span><strong>AI: Codex</strong><small>AI Agents · 21:49</small><em>请协助分析 Windows 打包失败...</em></span><b>1</b></button><button class="phone-session"><span class="sender-avatar wecom">⌁</span><span><strong>客户: 王先生</strong><small>企业微信 · 21:30</small><em>请问最新的 Windows 打包问题...</em></span><b>2</b></button><button class="phone-session"><span class="sender-avatar slack">✣</span><span><strong>张三</strong><small>Slack · 20:58</small><em>已更新技术方案文档，请 review。</em></span></button><button class="phone-session"><span class="sender-avatar dingtalk">⚡</span><span><strong>李四</strong><small>钉钉 · 20:41</small><em>测试环境部署完成，日志正常。</em></span></button><button class="phone-session"><span class="sender-avatar support">◌</span><span><strong>在线客服 #1024</strong><small>客服渠道 · 19:22</small><em>如何查看任务的开发进度？</em></span><b>3</b></button><button class="phone-session"><span class="sender-avatar planner">▣</span><span><strong>AI: Planner</strong><small>AI Agents · 18:19</small><em>建议优化需求文档的验收标准。</em></span><b>4</b></button></div><nav class="phone-nav"><span>⌘<small>频道</small></span><span class="is-active">▰<small>消息</small><b>12</b></span><span>▣<small>任务</small></span><span>◉<small>设置</small></span></nav></div></aside>
+    </main>
+  </body>
+</html>
