@@ -211,13 +211,15 @@ export function InboxPage({ project }: { project: Project }) {
           task.worktreeBranch ? `worktree:${task.worktreeBranch}` : null,
           question ? `待确认问题:${question}` : null,
         ].filter((line): line is string => line !== null).join('\n')
-        : [liveSession?.summary || liveSession?.title, thread.preview].filter((line): line is string => Boolean(line)).join('\n');
+        : (liveSession
+          ? [liveSession.title, liveSession.summary].filter((line): line is string => Boolean(line)).join('\n')
+          : thread.preview);
       const options = (task?.auxFlags?.pendingAskUser?.questions?.questions?.[0]?.options ?? [])
         .map((option) => option.label)
         .filter((label): label is string => typeof label === 'string');
       return {
         id: thread.id,
-        sender: thread.sender,
+        sender: thread.source === '运行会话' && liveSession ? `AI:${thread.sender}` : thread.sender,
         source: thread.source,
         category: thread.state === 'waiting' ? '待处理' : thread.state === 'running' ? 'AI 请求' : '通知',
         preview: thread.preview,
@@ -268,7 +270,9 @@ export function InboxPage({ project }: { project: Project }) {
     // Chat rows carry a raw session id as title — resolve the real session
     // title/summary from the project list so threads show actual content.
     const bgSessions = backgroundTasks
-      .filter((bt) => bt.type !== 'kanban')
+      // kanban rows are covered by kanban threads; chat rows duplicate the
+      // running-session threads (same session, richer content there).
+      .filter((bt) => bt.type !== 'kanban' && bt.type !== 'chat')
       .map((bt): MessageSession => {
         const appSessionId = bt.detail?.appSessionId;
         const liveSession = appSessionId ? project.sessions?.find((s) => s.id === appSessionId) : undefined;
