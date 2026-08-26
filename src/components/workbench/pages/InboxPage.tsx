@@ -32,6 +32,16 @@ export interface BackgroundTaskInfo {
   lastActivityAt?: string;
 }
 
+/** A direct-chat session waiting on a tool approval (server-side registry). */
+export interface ChatApprovalInfo {
+  requestId: string;
+  sessionId: string | null;
+  toolName: string;
+  question: string;
+  options?: string[];
+  receivedAt: string;
+}
+
 const EVENT_LABELS: Record<string, string> = {
   task_created: '任务创建',
   agent_stage_started: 'Agent 阶段启动',
@@ -72,14 +82,23 @@ function useInboxSources(projectId: string): {
   cronTasks: CronRunInfo[];
   teamMessages: TeamMessageInfo[];
   backgroundTasks: BackgroundTaskInfo[];
+  chatApprovals: ChatApprovalInfo[];
   error: string | null;
 } {
   const { subscribe } = useWebSocket();
-  const [state, setState] = useState<{ runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; teamMessages: TeamMessageInfo[]; backgroundTasks: BackgroundTaskInfo[]; error: string | null }>({
+  const [state, setState] = useState<{
+    runningSessions: RunningSessionInfo[];
+    cronTasks: CronRunInfo[];
+    teamMessages: TeamMessageInfo[];
+    backgroundTasks: BackgroundTaskInfo[];
+    chatApprovals: ChatApprovalInfo[];
+    error: string | null;
+  }>({
     runningSessions: [],
     cronTasks: [],
     teamMessages: [],
     backgroundTasks: [],
+    chatApprovals: [],
     error: null,
   });
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -107,12 +126,17 @@ function useInboxSources(projectId: string): {
         const data = (await res.json()) as { tasks?: BackgroundTaskInfo[] };
         return data.tasks ?? [];
       }),
+      api.get('/providers/chat-approvals').then(async (res) => {
+        if (!res.ok) return []; // no pending approvals is normal
+        const data = (await res.json()) as { approvals?: ChatApprovalInfo[] };
+        return data.approvals ?? [];
+      }),
     ])
-      .then(([runningSessions, cronTasks, teamMessages, backgroundTasks]) => {
-        if (!cancelled) setState({ runningSessions, cronTasks, teamMessages, backgroundTasks, error: null });
+      .then(([runningSessions, cronTasks, teamMessages, backgroundTasks, chatApprovals]) => {
+        if (!cancelled) setState({ runningSessions, cronTasks, teamMessages, backgroundTasks, chatApprovals, error: null });
       })
       .catch((e: unknown) => {
-        if (!cancelled) setState({ runningSessions: [], cronTasks: [], teamMessages: [], backgroundTasks: [], error: e instanceof Error ? e.message : String(e) });
+        if (!cancelled) setState({ runningSessions: [], cronTasks: [], teamMessages: [], backgroundTasks: [], chatApprovals: [], error: e instanceof Error ? e.message : String(e) });
       });
     return () => {
       cancelled = true;
@@ -122,6 +146,9 @@ function useInboxSources(projectId: string): {
   useEffect(() => {
     return subscribe((event) => {
       if (event.type === 'team-message-created' && (event as { rootId?: string }).rootId === projectId) {
+        setReloadNonce((n) => n + 1);
+      }
+      if (event.type === 'chat-approval-updated') {
         setReloadNonce((n) => n + 1);
       }
     });
@@ -134,8 +161,9 @@ export function InboxPage({ project }: { project: Project }) {
   // 设计还原校准开关已验收(2026-08-26),保留开关便于日后比对。
   const MOCK_MODE = false;
   const { tasks, templates, loading: kanbanLoading, error: kanbanError, refresh } = useKanban();
-  const { runningSessions, cronTasks, teamMessages, backgroundTasks, error: sourcesError } = useInboxSources(project.projectId);
-  const handleApprovalAction = useApprovalAction(tasks, refresh);
+  const { sendMessage } = useWebSocket();
+  const { runningSessions, cronTasks, teamMessages, backgroundTasks, chatApprovals, error: sourcesError } = useInboxSources(project.projectId);
+  const handleApprovalAction = useApprovalAction(tasks, refresh, sendMessage, chatApprovals);
   const handleSendMessage = useCallback(async (session: MessageSession | undefined, text: string): Promise<boolean> => {
     if (session && session.source !== '团队消息') return false;
     const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
@@ -250,8 +278,28 @@ export function InboxPage({ project }: { project: Project }) {
         body: bt.title,
         statusLabel: bt.status,
       }));
-    return [...mapped, ...teamSessions, ...bgSessions];
-  }, [backgroundTasks, cronTasks, project.displayName, project.sessions, runningSessions, tasks, teamMessages, templates]);
+    // Direct-chat tool approvals — 待处理 threads with a real approval card.
+    const approvalSessions = chatApprovals.map((approval): MessageSession => ({
+      id: `approval-${approval.requestId}`,
+      sender: `会话 ${approval.sessionId?.slice(0, 8) ?? '??'}`,
+      source: 'AI 协作',
+      category: '待处理',
+      preview: approval.question,
+      time: formatRelativeTime(approval.receivedAt),
+      avatar: BotIcon,
+      tone: 'yellow',
+      unread: 1,
+      approval: true,
+      body: approval.toolName === 'AskUserQuestion'
+        ? `AI 在直接对话中提问,等待你的选择:\n${approval.question}`
+        : `AI 请求执行工具「${approval.toolName}」,等待你的批准。`,
+      question: approval.question,
+      options: approval.options,
+      statusLabel: '等待确认',
+      binding: { session: approval.sessionId?.slice(0, 8), status: '等待批准' },
+    }));
+    return [...mapped, ...teamSessions, ...bgSessions, ...approvalSessions];
+  }, [backgroundTasks, chatApprovals, cronTasks, project.displayName, project.sessions, runningSessions, tasks, teamMessages, templates]);
 
   return (
     <MessageHubPage
@@ -267,9 +315,35 @@ export function InboxPage({ project }: { project: Project }) {
 
 /** Real approval actions against the kanban engine:
  *  approve → advance the stage (spawns the agent session) or answer a
- *  pending AskUserQuestion; reject → cancel the task; transfer → pause. */
-function useApprovalAction(tasks: Task[], refresh: () => Promise<void>) {
+ *  pending AskUserQuestion; reject → cancel the task; transfer → pause.
+ *  Direct-chat tool approvals are answered over the chat WS instead. */
+function useApprovalAction(
+  tasks: Task[],
+  refresh: () => Promise<void>,
+  sendMessage: (message: unknown) => void,
+  chatApprovals: ChatApprovalInfo[],
+) {
   return useCallback(async (session: { id: string }, action: 'approve' | 'reject' | 'transfer') => {
+    // Direct-chat tool approval → chat.permission-response over WS.
+    if (session.id.startsWith('approval-')) {
+      const approval = chatApprovals.find((a) => session.id === `approval-${a.requestId}`);
+      if (!approval) throw new Error('该审批已不存在(可能已被处理)');
+      if (action === 'transfer') {
+        toast.info('聊天审批暂不支持转交,请在会话页处理');
+        throw new Error('unsupported');
+      }
+      sendMessage({
+        type: 'chat.permission-response',
+        requestId: approval.requestId,
+        allow: action === 'approve',
+        updatedInput: action === 'approve' && approval.options?.length
+          ? { answers: [approval.options[0]] }
+          : undefined,
+      });
+      toast.success(action === 'approve' ? '已批准,会话将继续执行' : '已驳回该工具请求');
+      return;
+    }
+
     const task = findTaskForThread(session.id, tasks);
     if (!task) throw new Error('此消息未绑定看板任务');
     try {
@@ -293,5 +367,5 @@ function useApprovalAction(tasks: Task[], refresh: () => Promise<void>) {
     } finally {
       await refresh();
     }
-  }, [refresh, tasks]);
+  }, [chatApprovals, refresh, sendMessage, tasks]);
 }

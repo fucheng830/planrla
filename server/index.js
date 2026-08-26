@@ -27,6 +27,8 @@ import {
     abortClaudeSDKSession,
     resolveToolApproval,
     getPendingApprovalsForSession,
+    listPendingChatApprovals,
+    setChatApprovalListener,
 } from './claude-sdk.js';
 import {
     spawnCursor,
@@ -190,6 +192,18 @@ app.locals.wss = wss;
 // REQ-034: runner/scheduler-driven kanban task changes (status transitions,
 // aux flags) broadcast over WS so the board updates in realtime.
 getKanban().setTaskBroadcaster((rootId, task) => broadcastTaskUpdated(wss, rootId, task));
+
+// 直接聊天会话的工具审批:等待/解除时广播,消息盒子实时增删待处理线程。
+setChatApprovalListener((kind, approval) => {
+  const payload = { type: 'chat-approval-updated', kind, approval, timestamp: new Date().toISOString() };
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      try {
+        client.send(JSON.stringify(payload));
+      } catch { /* best-effort */ }
+    }
+  });
+});
 
 // REQ-046: 后台任务管理面板 — registry 广播器 + TTL sweeper(挂载点见下方 router mount)。
 // killBash 调度器:bash-kill.ts 的 killBashTask(它再调 claude-sdk.js 注入的 SDK stopTask)。
@@ -364,6 +378,11 @@ app.use('/api/sync', authenticateToken, syncRoutes);
 
 // 团队消息 feed(message hub 团队消息 category)
 app.use('/api/team-messages', authenticateToken, createTeamMessageRouter());
+
+// 直接聊天会话等待中的工具审批(message hub 待处理 category)
+app.get('/api/providers/chat-approvals', authenticateToken, (_req, res) => {
+  res.json({ approvals: listPendingChatApprovals() });
+});
 
 // Remote-access relay agent control (device token → outbound relay connection)
 app.use('/api/relay', authenticateToken, relayRouter);

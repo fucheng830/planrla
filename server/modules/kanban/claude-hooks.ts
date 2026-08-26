@@ -150,6 +150,9 @@ export function createKanbanClaudeHooks(deps: KanbanClaudeHooksDeps): Record<str
         ? (Number(askUserQuestionAutoContinueTimeoutMs) || 300000)
         : 0,
       signal: options?.signal,
+      // Direct chat sessions surface their AskUserQuestion in the message hub;
+      // kanban task sessions use pendingAskUser on the task instead.
+      exposeChatApproval: !emitHookEvents,
       metadata: {
         _sessionId: sessionId,
         _toolName: 'AskUserQuestion',

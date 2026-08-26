@@ -43,6 +43,37 @@ const TOOL_APPROVAL_TIMEOUT_MS = parseInt(process.env.CLAUDE_TOOL_APPROVAL_TIMEO
 
 const TOOLS_REQUIRING_INTERACTION = new Set(['AskUserQuestion', 'ExitPlanMode']);
 
+// Chat-session tool approvals exposed to the message hub inbox (direct chat
+// sessions waiting for permission; kanban task sessions keep their own
+// pendingAskUser representation and are excluded via exposeChatApproval).
+const pendingChatApprovals = new Map();
+let chatApprovalListener = null;
+
+function notifyChatApproval(kind, approval) {
+  try { chatApprovalListener && chatApprovalListener(kind, approval); } catch { /* best-effort */ }
+}
+
+function extractQuestion(toolName, input) {
+  if (toolName === 'AskUserQuestion') {
+    const first = Array.isArray(input && input.questions) ? input.questions[0] : null;
+    return {
+      question: first && typeof first.question === 'string' ? first.question : 'AI 提出了一个问题,等待你的选择',
+      options: Array.isArray(first && first.options)
+        ? first.options.map((o) => (typeof o === 'string' ? o : o && o.label)).filter((x) => typeof x === 'string')
+        : [],
+    };
+  }
+  return { question: `工具 ${toolName} 请求执行权限`, options: [] };
+}
+
+function listPendingChatApprovals() {
+  return [...pendingChatApprovals.values()];
+}
+
+function setChatApprovalListener(fn) {
+  chatApprovalListener = typeof fn === 'function' ? fn : null;
+}
+
 function createRequestId() {
   if (typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -67,6 +98,11 @@ function waitForToolApproval(requestId, options = {}) {
 
     const cleanup = () => {
       pendingToolApprovals.delete(requestId);
+      if (pendingChatApprovals.has(requestId)) {
+        const entry = pendingChatApprovals.get(requestId);
+        pendingChatApprovals.delete(requestId);
+        notifyChatApproval('removed', entry);
+      }
       if (timeout) clearTimeout(timeout);
       if (signal && abortHandler) {
         signal.removeEventListener('abort', abortHandler);
@@ -103,6 +139,20 @@ function waitForToolApproval(requestId, options = {}) {
       Object.assign(resolver, metadata);
     }
     pendingToolApprovals.set(requestId, resolver);
+    // Direct-chat approvals surface in the message hub until settled.
+    if (options.exposeChatApproval && metadata && metadata._toolName) {
+      const extracted = extractQuestion(metadata._toolName, metadata._input);
+      const entry = {
+        requestId,
+        sessionId: metadata._sessionId || null,
+        toolName: metadata._toolName,
+        question: extracted.question,
+        options: extracted.options.length > 0 ? extracted.options : undefined,
+        receivedAt: (metadata._receivedAt instanceof Date ? metadata._receivedAt : new Date()).toISOString(),
+      };
+      pendingChatApprovals.set(requestId, entry);
+      notifyChatApproval('added', entry);
+    }
   });
 }
 
@@ -684,6 +734,7 @@ async function queryClaudeSDK(command, options = {}, ws) {
           _input: input,
           _receivedAt: new Date(),
         },
+        exposeChatApproval: options.emitHookEvents !== true,
         onCancel: (reason) => {
           ws.send(createNormalizedMessage({ kind: 'permission_cancelled', requestId, reason, sessionId: capturedSessionId || sessionId || null, provider: 'claude' }));
         }
@@ -991,5 +1042,8 @@ export {
   getActiveClaudeSDKSessions,
   resolveToolApproval,
   getPendingApprovalsForSession,
-  reconnectSessionWriter
+  reconnectSessionWriter,
+  waitForToolApproval,
+  listPendingChatApprovals,
+  setChatApprovalListener
 };
