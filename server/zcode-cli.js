@@ -25,6 +25,13 @@
 //                      non-streaming fallback.
 
 import { spawn } from 'child_process';
+import { randomUUID } from 'node:crypto';
+
+// ZCode tool decisions surfaced to a human (message hub / chat WS). Falls back
+// to the old auto-deny behaviour on timeout so headless runs never hang.
+import { waitForToolApproval } from './claude-sdk.js';
+
+const ZCODE_DECISION_TIMEOUT_MS = parseInt(process.env.ZCODE_DECISION_TIMEOUT_MS, 10) || 30 * 60 * 1000;
 import fsSync from 'node:fs';
 import path from 'node:path';
 
@@ -182,19 +189,79 @@ function replyServerRequest(child, id, result) {
  * session/create is session/requestRuntimePreferences, which expects
  * {nativeSearchEnhancementsEnabled:boolean} (strict schema, no extra keys).
  */
-function handleServerRequest(child, msg, writer) {
+/**
+ * Registers a zcode server-initiated decision (permission / user input) in
+ * the chat-approvals registry and waits for the human answer over the chat
+ * WebSocket. Timeout (or error) falls back to the pre-existing auto
+ * behaviour via buildReply(null).
+ */
+function surfaceZcodeDecision(child, msg, writer, context, info, buildReply) {
+  const requestId = randomUUID();
+  waitForToolApproval(requestId, {
+    timeoutMs: ZCODE_DECISION_TIMEOUT_MS,
+    exposeChatApproval: true,
+    metadata: {
+      _sessionId: (context && (context.appSessionId || context.zcodeSessionId)) || null,
+      _toolName: info.toolName,
+      _input: { questions: [{ question: info.question, options: (info.options || []).map((label) => ({ label })) }] },
+      _receivedAt: new Date(),
+    },
+  })
+    .then((decision) => {
+      try {
+        replyServerRequest(child, msg.id, buildReply(decision && decision.cancelled ? null : decision));
+      } catch { /* child may be gone */ }
+    })
+    .catch(() => {
+      try { replyServerRequest(child, msg.id, buildReply(null)); } catch { /* ignore */ }
+    });
+}
+
+function handleServerRequest(child, msg, writer, context) {
   const method = msg.method;
   if (method === 'session/requestRuntimePreferences') {
     replyServerRequest(child, msg.id, { nativeSearchEnhancementsEnabled: false });
     return;
   }
   if (method === 'interaction/requestPermission') {
-    // Auto-deny tool permission prompts in headless mode (safer default).
-    // The user can re-run interactively from the ZCode app if needed.
-    replyServerRequest(child, msg.id, { decision: 'deny', memory: 'session' });
+    // Surface the decision to a human (message hub 待处理) instead of the
+    // old headless auto-deny; timeout falls back to deny.
+    const params = msg.params || {};
+    const toolName = params.toolName || params.tool || params.name || 'unknown-tool';
+    surfaceZcodeDecision(child, msg, writer, context, {
+      toolName: String(toolName),
+      question: `工具 ${toolName} 请求执行权限`,
+    }, (decision) => (decision && decision.allow
+      ? { decision: 'allow' }
+      : { decision: 'deny', memory: 'session' }));
     return;
   }
-  if (method === 'interaction/requestUserInput' || method === 'interaction/requestProviderRuntimeHeaders') {
+  if (method === 'interaction/requestUserInput') {
+    // AskUserQuestion-style input: surface to the message hub with options;
+    // approve picks the first option, reject/timeout dismiss (as before).
+    const params = msg.params || {};
+    const first = Array.isArray(params.questions) ? params.questions[0] : null;
+    const options = Array.isArray(first && first.options)
+      ? first.options.map((o) => (typeof o === 'string' ? o : o && o.label)).filter((x) => typeof x === 'string')
+      : [];
+    surfaceZcodeDecision(child, msg, writer, context, {
+      toolName: 'AskUserQuestion',
+      question: (first && first.question) || params.prompt || params.message || 'AI 提出了问题,等待你的选择',
+      options,
+    }, (decision) => {
+      if (decision && decision.allow) {
+        const answers = decision.updatedInput && Array.isArray(decision.updatedInput.answers)
+          ? decision.updatedInput.answers.filter((x) => typeof x === 'string')
+          : [];
+        if (answers.length > 0 || options.length > 0) {
+          return { answers: [answers[0] || options[0]] };
+        }
+      }
+      return { cancelled: true };
+    });
+    return;
+  }
+  if (method === 'interaction/requestProviderRuntimeHeaders') {
     replyServerRequest(child, msg.id, { cancelled: true });
     return;
   }
@@ -596,7 +663,7 @@ export async function spawnZcode(command, options, writer) {
           content: zcodeSessionId,
         }));
       }
-      handleServerRequest(child, msg, writer);
+      handleServerRequest(child, msg, writer, { appSessionId: runtimeSessionId || null, zcodeSessionId: zcodeSessionId || null });
       return;
     }
 
