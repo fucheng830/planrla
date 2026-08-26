@@ -92,3 +92,6 @@
 .dark .mh-status-bar.is-error { background: #2b1518; }
 .mh-approval-options { margin: 10px 0 0; color: var(--mh-muted); font-size: 10px; }
 .mh-timeline-line { color: var(--mh-faint) !important; font-size: 10px; }
+/* Empty thread has no header row — without this the composer lands on the 1fr
+   row and stretches to fill the whole thread. */
+.mh-thread-empty { grid-template-rows: minmax(0, 1fr) auto; }

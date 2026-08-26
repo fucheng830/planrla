@@ -43,7 +43,7 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
 
   if (!activeSession) {
     return (
-      <section className="mh-thread" aria-label="消息线程">
+      <section className="mh-thread mh-thread-empty" aria-label="消息线程">
         <div className="mh-thread-content"><div className="mh-empty-inspector"><Bot /><strong>没有选中的会话</strong><span>从收件箱选择一条消息查看详情,或直接发送一条团队消息。</span></div></div>
         {composer}
       </section>
