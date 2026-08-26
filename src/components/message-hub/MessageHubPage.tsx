@@ -25,6 +25,9 @@ type MessageHubPageProps = {
    *  true when handled — the local reply append is skipped so the server
    *  round-trip owns the thread. */
   onSendMessage?: (session: MessageSession | undefined, message: string) => Promise<boolean>;
+  /** Lazily load extra thread content (e.g. the kanban task's execution
+   *  timeline) when a session becomes active. Cached per session id. */
+  loadSessionDetail?: (session: MessageSession) => Promise<{ bodyAppend?: string } | undefined>;
 };
 
 export function MessageHubPage({
@@ -35,10 +38,12 @@ export function MessageHubPage({
   errorHint,
   onApprovalAction,
   onSendMessage,
+  loadSessionDetail,
 }: MessageHubPageProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [repliesBySession, setRepliesBySession] = useState<Record<string, string[]>>({});
   const [approvalBySession, setApprovalBySession] = useState<Record<string, ApprovalState>>({});
+  const [detailBySession, setDetailBySession] = useState<Record<string, string | undefined>>({});
 
   // Sessions arrive asynchronously (live sources); drop a stale selection.
   useEffect(() => {
@@ -53,6 +58,25 @@ export function MessageHubPage({
 
   const approvalState: ApprovalState = (activeSession && approvalBySession[activeSession.id]) ?? (activeSession?.approval ? 'pending' : 'approved');
   const replies = (activeSession && repliesBySession[activeSession.id]) ?? [];
+
+  // Lazily fetch thread detail (execution timeline) once per session.
+  // `id in detailBySession` marks loaded; '' means loaded-with-nothing.
+  useEffect(() => {
+    if (!loadSessionDetail || !activeSession) return;
+    if (activeSession.id in detailBySession) return;
+    let cancelled = false;
+    void loadSessionDetail(activeSession)
+      .then((detail) => {
+        if (!cancelled) setDetailBySession((current) => ({ ...current, [activeSession.id]: detail?.bodyAppend ?? '' }));
+      })
+      .catch(() => {
+        if (!cancelled) setDetailBySession((current) => ({ ...current, [activeSession.id]: '' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession, loadSessionDetail]);
 
   const handleSend = (message: string) => {
     void (async () => {
@@ -99,6 +123,7 @@ export function MessageHubPage({
             replies={replies}
             approvalState={approvalState}
             userName={userName}
+            detailBody={activeSession ? detailBySession[activeSession.id] : undefined}
             onSend={handleSend}
             onApproval={handleApproval}
           />

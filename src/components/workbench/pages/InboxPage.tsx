@@ -22,6 +22,25 @@ export interface TeamMessageInfo {
   createdAt: string;
 }
 
+/** Live background-task registry rows (a2a / chat / bash; kanban rows are
+ *  already covered by the kanban threads). */
+export interface BackgroundTaskInfo {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+  lastActivityAt?: string;
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  task_created: '任务创建',
+  agent_stage_started: 'Agent 阶段启动',
+  stage_approved: '阶段确认',
+  task_completed: '任务完成',
+  task_cancelled: '任务取消',
+  task_failed: '任务失败',
+};
+
 const priorityLabel = (priority?: string): string => (priority === 'high' ? '高' : priority === 'low' ? '低' : '中');
 
 const CHANNEL_PRESETS = {
@@ -52,13 +71,15 @@ function useInboxSources(projectId: string): {
   runningSessions: RunningSessionInfo[];
   cronTasks: CronRunInfo[];
   teamMessages: TeamMessageInfo[];
+  backgroundTasks: BackgroundTaskInfo[];
   error: string | null;
 } {
   const { subscribe } = useWebSocket();
-  const [state, setState] = useState<{ runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; teamMessages: TeamMessageInfo[]; error: string | null }>({
+  const [state, setState] = useState<{ runningSessions: RunningSessionInfo[]; cronTasks: CronRunInfo[]; teamMessages: TeamMessageInfo[]; backgroundTasks: BackgroundTaskInfo[]; error: string | null }>({
     runningSessions: [],
     cronTasks: [],
     teamMessages: [],
+    backgroundTasks: [],
     error: null,
   });
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -81,12 +102,17 @@ function useInboxSources(projectId: string): {
         const data = (await res.json()) as { messages?: TeamMessageInfo[] };
         return data.messages ?? [];
       }),
+      api.get('/background-tasks').then(async (res) => {
+        if (!res.ok) return []; // registry is best-effort
+        const data = (await res.json()) as { tasks?: BackgroundTaskInfo[] };
+        return data.tasks ?? [];
+      }),
     ])
-      .then(([runningSessions, cronTasks, teamMessages]) => {
-        if (!cancelled) setState({ runningSessions, cronTasks, teamMessages, error: null });
+      .then(([runningSessions, cronTasks, teamMessages, backgroundTasks]) => {
+        if (!cancelled) setState({ runningSessions, cronTasks, teamMessages, backgroundTasks, error: null });
       })
       .catch((e: unknown) => {
-        if (!cancelled) setState({ runningSessions: [], cronTasks: [], teamMessages: [], error: e instanceof Error ? e.message : String(e) });
+        if (!cancelled) setState({ runningSessions: [], cronTasks: [], teamMessages: [], backgroundTasks: [], error: e instanceof Error ? e.message : String(e) });
       });
     return () => {
       cancelled = true;
@@ -105,19 +131,29 @@ function useInboxSources(projectId: string): {
 }
 
 export function InboxPage({ project }: { project: Project }) {
-  // 设计还原校准开关:mock 数据逐像素比对 5178 设计稿。校准完成后改回
-  // false 恢复真实数据(看板/会话/定时/团队消息)。
-  const MOCK_MODE = true;
+  // 设计还原校准开关已验收(2026-08-26),保留开关便于日后比对。
+  const MOCK_MODE = false;
   const { tasks, templates, loading: kanbanLoading, error: kanbanError, refresh } = useKanban();
-  const { runningSessions, cronTasks, teamMessages, error: sourcesError } = useInboxSources(project.projectId);
+  const { runningSessions, cronTasks, teamMessages, backgroundTasks, error: sourcesError } = useInboxSources(project.projectId);
   const handleApprovalAction = useApprovalAction(tasks, refresh);
   const handleSendMessage = useCallback(async (session: MessageSession | undefined, text: string): Promise<boolean> => {
-    if (!MOCK_MODE && session && session.source !== '团队消息') return false;
+    if (session && session.source !== '团队消息') return false;
     const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
     if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
     toast.success('已发送到团队');
     return true;
-  }, [MOCK_MODE, project.projectId]);
+  }, [project.projectId]);
+
+  /** Real agent execution history for the active kanban thread — stage runs
+   *  + audit events from the timeline API, rendered as thread body lines. */
+  const loadSessionDetail = useCallback(async (session: MessageSession): Promise<{ bodyAppend?: string } | undefined> => {
+    const task = findTaskForThread(session.id, tasks);
+    if (!task) return undefined;
+    const { runs, events } = await kanbanApi.getTaskTimeline(task.id, task.rootId);
+    const runLines = runs.slice(-6).map((run) => `· ${run.stageName} — ${run.status}${run.finishedAt ? ` · ${formatRelativeTime(run.finishedAt)}` : ''}`);
+    const eventLines = events.slice(-6).map((event) => `· ${EVENT_LABELS[event.type] ?? event.type} · ${formatRelativeTime(event.createdAt)}`);
+    return { bodyAppend: ['—— 执行动态 ——', ...runLines, ...eventLines].join('\n') };
+  }, [tasks]);
 
   // Map real inbox threads (kanban tasks, running sessions, cron runs) into
   // the message-hub session model. Kanban threads additionally carry their
@@ -132,6 +168,11 @@ export function InboxPage({ project }: { project: Project }) {
         ? templates.find((tpl) => tpl.id === task.taskTemplateId)?.stages[task.currentStageIndex]?.snapshot.name
         : undefined;
       const question = task?.auxFlags?.pendingAskUser?.questions?.questions?.[0]?.question;
+      // Running-session threads pull the real session title/summary from the
+      // project's session list so the preview says what the agent is doing.
+      const liveSession = thread.source === '运行会话'
+        ? project.sessions?.find((s) => thread.id === `session-running-${s.id}`)
+        : undefined;
       // Rich multi-line body for kanban threads — newline-split paragraphs in
       // the thread view, matching the design mock's density.
       const body = task
@@ -141,7 +182,7 @@ export function InboxPage({ project }: { project: Project }) {
           task.worktreeBranch ? `worktree:${task.worktreeBranch}` : null,
           question ? `待确认问题:${question}` : null,
         ].filter((line): line is string => line !== null).join('\n')
-        : thread.preview;
+        : [liveSession?.summary || liveSession?.title, thread.preview].filter((line): line is string => Boolean(line)).join('\n');
       const options = (task?.auxFlags?.pendingAskUser?.questions?.questions?.[0]?.options ?? [])
         .map((option) => option.label)
         .filter((label): label is string => typeof label === 'string');
@@ -194,8 +235,23 @@ export function InboxPage({ project }: { project: Project }) {
           : undefined,
       };
     });
-    return [...mapped, ...teamSessions];
-  }, [cronTasks, project.displayName, runningSessions, tasks, teamMessages, templates]);
+    // Background-task registry rows (a2a/chat/bash — kanban already covered).
+    const bgSessions = backgroundTasks
+      .filter((bt) => bt.type !== 'kanban')
+      .map((bt): MessageSession => ({
+        id: `bg-${bt.id}`,
+        sender: bt.type === 'a2a' ? 'A2A 任务' : bt.type === 'chat' ? '聊天任务' : '命令任务',
+        source: 'AI 协作',
+        category: bt.status === 'running' || bt.status === 'idle' ? 'AI 请求' : '通知',
+        preview: bt.title,
+        time: formatRelativeTime(bt.lastActivityAt ?? null),
+        avatar: bt.type === 'bash' ? ClockIcon : BotIcon,
+        tone: 'cyan',
+        body: bt.title,
+        statusLabel: bt.status,
+      }));
+    return [...mapped, ...teamSessions, ...bgSessions];
+  }, [backgroundTasks, cronTasks, project.displayName, project.sessions, runningSessions, tasks, teamMessages, templates]);
 
   return (
     <MessageHubPage
@@ -204,6 +260,7 @@ export function InboxPage({ project }: { project: Project }) {
       errorHint={!MOCK_MODE && sourcesError ? `部分数据源加载失败:${sourcesError}` : !MOCK_MODE && kanbanError ? `看板数据加载失败:${kanbanError}` : null}
       onApprovalAction={MOCK_MODE ? undefined : handleApprovalAction}
       onSendMessage={MOCK_MODE ? undefined : handleSendMessage}
+      loadSessionDetail={MOCK_MODE ? undefined : loadSessionDetail}
     />
   );
 }

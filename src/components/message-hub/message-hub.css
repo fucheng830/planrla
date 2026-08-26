@@ -91,3 +91,4 @@
 .mh-status-bar.is-error { background: #fdecec; color: var(--mh-red); }
 .dark .mh-status-bar.is-error { background: #2b1518; }
 .mh-approval-options { margin: 10px 0 0; color: var(--mh-muted); font-size: 10px; }
+.mh-timeline-line { color: var(--mh-faint) !important; font-size: 10px; }
