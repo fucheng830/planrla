@@ -86,10 +86,10 @@ function buildKanban() {
       updatedAt: now,
       stages: [
         { id: 'st0', position: 0, snapshot: stage('ss0', '需求设计', 'user') },
-        { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求:\n{input}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
-        { id: 'st2', position: 2, snapshot: stage('ss2', '开工', 'agent', '{input}\n\n按已确认的技术方案实施开发。') },
-        { id: 'st3', position: 3, snapshot: stage('ss3', '测试验证', 'agent', '{input}\n\n运行测试与验证,输出验证记录。') },
-        { id: 'st4', position: 4, snapshot: stage('ss4', '交付', 'agent', '{input}\n\n整理交付说明与 changelog。') },
+        { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求:\n{{input}}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
+        { id: 'st2', position: 2, snapshot: stage('ss2', '开工', 'agent', '{{input}}\n\n按已确认的技术方案实施开发。') },
+        { id: 'st3', position: 3, snapshot: stage('ss3', '测试验证', 'agent', '{{input}}\n\n运行测试与验证,输出验证记录。') },
+        { id: 'st4', position: 4, snapshot: stage('ss4', '交付', 'agent', '{{input}}\n\n整理交付说明与 changelog。') },
       ],
     });
   }
