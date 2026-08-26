@@ -96,7 +96,16 @@ export function createTaskStore(deps: TaskStoreDeps) {
   }
 
   function getTask(id: string): Task | null {
-    const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | undefined;
+    // Same input join as listTasks so create/move responses and WS broadcasts
+    // carry the requirement text too.
+    const row = db.prepare(`
+      SELECT t.*, (
+        SELECT input FROM stage_runs
+        WHERE task_id = t.id AND stage_index = 0
+        ORDER BY created_at ASC LIMIT 1
+      ) AS input
+      FROM tasks t WHERE t.id = ?
+    `).get(id) as TaskRow | undefined;
     if (!row) return null;
     return rowToTask(row);
   }
@@ -108,8 +117,18 @@ export function createTaskStore(deps: TaskStoreDeps) {
   }
 
   function listTasks(rootId: string): Task[] {
-    const rows = db.prepare('SELECT * FROM tasks WHERE root_id = ? ORDER BY updated_at DESC, created_at DESC')
-      .all(rootId) as TaskRow[];
+    // The tasks table has no input column — the requirement text lives in the
+    // first stage run. Join it out so board/inbox cards can show what the
+    // task actually asks for.
+    const rows = db.prepare(`
+      SELECT t.*, (
+        SELECT input FROM stage_runs
+        WHERE task_id = t.id AND stage_index = 0
+        ORDER BY created_at ASC LIMIT 1
+      ) AS input
+      FROM tasks t WHERE t.root_id = ?
+      ORDER BY t.updated_at DESC, t.created_at DESC
+    `).all(rootId) as TaskRow[];
     return rows.map(rowToTask);
   }
 
@@ -235,6 +254,7 @@ interface TaskRow {
   aux_ask_user_waiting: number; aux_has_plan: number;
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
   pending_ask_user: string | null;
+  input?: string | null;
   created_at: string; updated_at: string; completed_at: string | null;
 }
 
@@ -290,6 +310,7 @@ function rowToTask(row: TaskRow): Task {
   return {
     id: row.id, taskNumber: row.task_number, rootId: row.root_id,
     taskTemplateId: row.task_template_id,
+    input: row.input ?? undefined,
     taskTemplateName: row.task_template_name ?? undefined,
     createWorktree: Boolean(row.create_worktree),
     worktreeBranchMode: row.worktree_branch_mode ?? undefined,

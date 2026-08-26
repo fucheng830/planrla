@@ -14,9 +14,9 @@ import { createRunner } from '@/modules/kanban/runner.js';
 import { createWorktreeGit } from '@/modules/kanban/git-worktree.js';
 import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 import { resolveToolApproval } from '@/claude-sdk.js';
-import type { Task } from '@/modules/kanban/types.js';
+import type { Task, TaskTemplate } from '@/modules/kanban/types.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
-import { recordTombstone } from '@/modules/sync/sync.db.js';
+import { recordTombstone } from '@/modules/sync/index.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -69,6 +69,30 @@ function buildKanban() {
   // 自动创建 kanban-templates 子目录(见 TPL_SUBDIR)
   const templateDir = path.join(os.homedir(), '.planrla');
   const templateStore = createTemplateStore({ dir: templateDir });
+  // First run: seed a default SDLC template so task creation works out of the
+  // box — an empty template dir leaves the workflow board unable to create
+  // anything. All stages default to manual advance; agent stages only run
+  // after a human explicitly moves a task into them.
+  if (templateStore.listTaskTemplates().length === 0) {
+    const now = new Date().toISOString();
+    const stage = (id: string, name: string, role: 'user' | 'agent', promptTemplate?: string): TaskTemplate['stages'][number]['snapshot'] => ({
+      id, name, role, autoAdvance: false, ...(role === 'agent' ? { agent: 'claude', agentCanControlStage: true } : {}), ...(promptTemplate ? { promptTemplate } : {}), createdAt: now, updatedAt: now,
+    });
+    templateStore.saveTaskTemplate({
+      id: 'sdlc-default',
+      name: '研发流程(需求 → 交付)',
+      maxConcurrency: 1,
+      createdAt: now,
+      updatedAt: now,
+      stages: [
+        { id: 'st0', position: 0, snapshot: stage('ss0', '需求设计', 'user') },
+        { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求:\n{input}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
+        { id: 'st2', position: 2, snapshot: stage('ss2', '开工', 'agent', '{input}\n\n按已确认的技术方案实施开发。') },
+        { id: 'st3', position: 3, snapshot: stage('ss3', '测试验证', 'agent', '{input}\n\n运行测试与验证,输出验证记录。') },
+        { id: 'st4', position: 4, snapshot: stage('ss4', '交付', 'agent', '{input}\n\n整理交付说明与 changelog。') },
+      ],
+    });
+  }
   templateStoreRef = templateStore;
   const resolveRootPath = (rootId: string): string | null => projectsDb.getProjectPathById(rootId);
   // W4: worktree setup. mcpBaseUrl mirrors index.js SERVER_PORT default (env contract).

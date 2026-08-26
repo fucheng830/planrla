@@ -116,6 +116,8 @@ export interface Task {
    * this task. See server/modules/kanban/types.ts. */
   dependencies?: string[];
   auxFlags: TaskAuxFlags;
+  /** Requirement text from the task's first stage run (joined server-side). */
+  input?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
