@@ -88,3 +88,4 @@
 .mh-status-bar { margin: 0; padding: 6px 14px; border-bottom: 1px solid var(--mh-line); background: var(--mh-blue-soft); color: var(--mh-muted); font-size: 11px; }
 .mh-status-bar.is-error { background: #fdecec; color: var(--mh-red); }
 .dark .mh-status-bar.is-error { background: #2b1518; }
+.mh-approval-options { margin: 10px 0 0; color: var(--mh-muted); font-size: 10px; }

@@ -127,6 +127,23 @@ export function InboxPage({ project }: { project: Project }) {
       const task = findTaskForThread(thread.id, tasks);
       const kind: LiveChannelId = thread.source === '运行会话' ? 'sessions' : thread.source === '定时任务' ? 'cron' : 'kanban';
       const preset = CHANNEL_PRESETS[kind];
+      const stageName = task
+        ? templates.find((tpl) => tpl.id === task.taskTemplateId)?.stages[task.currentStageIndex]?.snapshot.name
+        : undefined;
+      const question = task?.auxFlags?.pendingAskUser?.questions?.questions?.[0]?.question;
+      // Rich multi-line body for kanban threads — newline-split paragraphs in
+      // the thread view, matching the design mock's density.
+      const body = task
+        ? [
+          task.input?.trim() ? `需求:${task.input.trim()}` : null,
+          `当前阶段:${stageName ?? task.currentStageIndex + 1} · ${thread.stateLabel}`,
+          task.worktreeBranch ? `worktree:${task.worktreeBranch}` : null,
+          question ? `待确认问题:${question}` : null,
+        ].filter((line): line is string => line !== null).join('\n')
+        : thread.preview;
+      const options = (task?.auxFlags?.pendingAskUser?.questions?.questions?.[0]?.options ?? [])
+        .map((option) => option.label)
+        .filter((label): label is string => typeof label === 'string');
       return {
         id: thread.id,
         sender: thread.sender,
@@ -139,14 +156,19 @@ export function InboxPage({ project }: { project: Project }) {
         channel: kind,
         unread: thread.unread ? 1 : undefined,
         approval: thread.state === 'waiting',
-        body: thread.preview,
+        body,
+        question,
+        options: options.length > 0 ? options : undefined,
         statusLabel: thread.stateLabel,
         binding: task
           ? {
             task: `REQ-${String(task.taskNumber).padStart(3, '0')} ${task.input?.trim().slice(0, 30) || task.taskTemplateName || ''}`.trim(),
-            stage: templates.find((tpl) => tpl.id === task.taskTemplateId)?.stages[task.currentStageIndex]?.snapshot.name,
+            stage: stageName,
             priority: priorityLabel(task.priority),
             status: thread.stateLabel,
+            worktree: task.worktreeBranch,
+            session: task.providerSessionId?.slice(0, 8),
+            created: formatRelativeTime(task.createdAt),
           }
           : undefined,
         stages: task ? taskStages(task, templates) : undefined,

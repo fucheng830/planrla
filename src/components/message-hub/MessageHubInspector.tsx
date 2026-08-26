@@ -38,6 +38,9 @@ export function MessageHubInspector({ session, onApprove }: MessageHubInspectorP
               ...(binding.stage ? [['阶段', binding.stage] as [string, React.ReactNode]] : []),
               ...(binding.priority ? [['优先级', <span className="mh-priority">{binding.priority}</span>] as [string, React.ReactNode]] : []),
               ...(binding.status ? [['当前状态', <span className="mh-tag tone-amber">{binding.status}</span>] as [string, React.ReactNode]] : []),
+              ...(binding.worktree ? [['worktree', <span className="mh-link">{binding.worktree}</span>] as [string, React.ReactNode]] : []),
+              ...(binding.session ? [['会话', binding.session] as [string, React.ReactNode]] : []),
+              ...(binding.created ? [['创建时间', binding.created] as [string, React.ReactNode]] : []),
             ]} /></InspectorCard>
           )}
           {session.approval && (

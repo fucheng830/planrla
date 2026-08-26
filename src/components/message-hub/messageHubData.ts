@@ -24,6 +24,9 @@ export type MessageBinding = {
   stage?: string;
   priority?: string;
   status?: string;
+  worktree?: string;
+  session?: string;
+  created?: string;
 };
 
 export type MessageSession = {
@@ -40,8 +43,12 @@ export type MessageSession = {
   unread?: number;
   /** Threads with approval render the AI-collaboration approval card. */
   approval?: boolean;
-  /** Full body shown in the thread view (falls back to preview). */
+  /** Full body shown in the thread view (falls back to preview). Newlines
+   *  render as separate paragraphs like the design mock. */
   body?: string;
+  /** Pending AskUserQuestion content — shown inside the approval card. */
+  question?: string;
+  options?: string[];
   statusLabel?: string;
   binding?: MessageBinding;
   stages?: MessageStage[];
