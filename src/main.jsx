@@ -4,6 +4,7 @@ import App from './App.tsx'
 import './index.css'
 import './design-system/workbench.css'
 import './components/calendar-schedule/calendar-schedule.css'
+import './components/message-hub/message-hub.css'
 import 'katex/dist/katex.min.css'
 
 import { measure } from './shared/perf/timing'
