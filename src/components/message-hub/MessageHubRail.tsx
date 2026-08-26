@@ -23,8 +23,7 @@ export function MessageHubRail({ channels, total, activeChannel, onChannelSelect
           <span className="mh-channel-logo tone-blue"><ChevronLeft /></span>
           <span>全部消息</span>
           <span className="mh-count-pill">{total}</span>
-        </button>
-        {channels.map((channel) => {
+        </button>        {channels.map((channel) => {
           const Icon = channel.icon;
           return (
             <button key={channel.id} type="button" className={cn('mh-channel-item', activeChannel === channel.id && 'is-active')} onClick={() => onChannelSelect(channel.id)}>
@@ -36,9 +35,8 @@ export function MessageHubRail({ channels, total, activeChannel, onChannelSelect
         })}
       </nav>
       <div className="mh-rail-footer">
-        <button type="button" className="mh-rail-footer-item" onClick={() => toast('已打开归档消息')}><Archive /><span>归档消息</span><em>—</em></button>
-        <button type="button" className="mh-rail-footer-item" onClick={() => toast('已打开回收站')}><Trash2 /><span>回收站</span><em>—</em></button>
-        <button type="button" className="mh-rail-collapse-button" aria-label="收起频道栏"><ChevronLeft /><ChevronLeft /></button>
+        <button type="button" className="mh-rail-footer-item" onClick={() => toast('已打开归档消息')}><Archive /><span>归档消息</span></button>
+        <button type="button" className="mh-rail-footer-item" onClick={() => toast('已打开回收站')}><Trash2 /><span>回收站</span></button>
       </div>
     </aside>
   );
