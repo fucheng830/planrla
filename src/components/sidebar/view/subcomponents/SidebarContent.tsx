@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Archive, ChevronLeft, Copy, Edit2, Folder, FolderOpen, FolderTree, MessageSquare, Network, Pin, PinOff, RefreshCw, RotateCcw, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import type { TFunction } from 'i18next';
 
 import { Button, Dialog, DialogContent, DialogTitle, ScrollArea } from '../../../../shared/view/ui';
@@ -20,8 +21,8 @@ import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo'
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 import FileTree from '../../../file-tree/view/FileTree';
 import { WorkbenchRail } from '../../../workbench';
-import { getSidebarRailFooterItems, getSidebarRailItems, isWorkbenchTab } from './sidebarRailItems';
 
+import { getSidebarRailFooterItems, getSidebarRailItems, isWorkbenchTab } from './sidebarRailItems';
 import SidebarFooter from './SidebarFooter';
 import SidebarHeader from './SidebarHeader';
 import SidebarProjectList, { type SidebarProjectListProps } from './SidebarProjectList';
@@ -465,6 +466,23 @@ export default function SidebarContent({
       return itemB.lastActivityTime - itemA.lastActivityTime;
     });
 
+  // Flat session list virtualization (react-window needs a px height).
+  // Rows measured uniform at 55px + 4px gap in the old space-y-1 layout.
+  const SESSION_ROW_STRIDE = 55 + 4;
+  const sessionListRef = useRef<HTMLDivElement | null>(null);
+  const [sessionListHeight, setSessionListHeight] = useState(0);
+  const hasFlatSessions = searchMode === 'sessions' && conversationListItems.length > 0;
+  useEffect(() => {
+    if (!hasFlatSessions) return;
+    const el = sessionListRef.current;
+    if (!el) return;
+    const update = () => setSessionListHeight(el.clientHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasFlatSessions]);
+
   return (
     <div className={`flex h-full flex-col bg-workbench-surface ${showProjectWorkspace ? 'md:w-72' : 'md:w-12'} md:select-none`}>
       <div className="flex min-h-0 flex-1">
@@ -672,7 +690,7 @@ export default function SidebarContent({
               </p>
             </div>
           ) : (
-            <div className="space-y-1 px-2">
+            <div className="flex h-full flex-col px-2">
               <div className="flex items-center justify-between px-1 pb-1">
                 <p className="text-xs text-muted-foreground">
                   {t('search.sessionsListCount', {
@@ -689,32 +707,47 @@ export default function SidebarContent({
                   </span>
                 )}
               </div>
-              {conversationListItems.map(({ project, session }) => {
-                const completion = completedSessions.get(session.id);
-                const isSelected = projectListProps.selectedSession?.id === session.id;
-                const status: SessionTaskStatus =
-                  projectListProps.activeSessions.get(session.id)?.taskStatus ?? completion?.status ?? 'idle';
-                const sessionTitle = getSessionName(session, t);
-                const sessionDate = getSessionDate(session);
-                const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
+              <div ref={sessionListRef} className="min-h-0 flex-1">
+                {sessionListHeight > 0 && (
+                  <List
+                    height={sessionListHeight}
+                    itemCount={conversationListItems.length}
+                    itemSize={SESSION_ROW_STRIDE}
+                    width="100%"
+                    overscanCount={6}
+                  >
+                    {({ index, style }: ListChildComponentProps) => {
+                      const { project, session } = conversationListItems[index];
+                      const completion = completedSessions.get(session.id);
+                      const isSelected = projectListProps.selectedSession?.id === session.id;
+                      const status: SessionTaskStatus =
+                        projectListProps.activeSessions.get(session.id)?.taskStatus ?? completion?.status ?? 'idle';
+                      const sessionTitle = getSessionName(session, t);
+                      const sessionDate = getSessionDate(session);
+                      const age = Number.isNaN(sessionDate.getTime()) ? '' : formatCompactArchivedAge(sessionDate.toISOString());
 
-                return (
-                  <FlatSessionRow
-                    key={`${project.projectId}-${session.id}`}
-                    project={project}
-                    session={session}
-                    sessionTitle={sessionTitle}
-                    age={age}
-                    status={status}
-                    isSelected={isSelected}
-                    onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
-                    onDeleteSession={projectListProps.onDeleteSession}
-                    onSaveEditingSession={projectListProps.onSaveEditingSession}
-                    onRefresh={() => onRefresh()}
-                    t={t}
-                  />
-                );
-              })}
+                      return (
+                        <div style={style}>
+                          <FlatSessionRow
+                            key={`${project.projectId}-${session.id}`}
+                            project={project}
+                            session={session}
+                            sessionTitle={sessionTitle}
+                            age={age}
+                            status={status}
+                            isSelected={isSelected}
+                            onClick={() => onConversationResultClick(project.projectId, session.id, session.__provider)}
+                            onDeleteSession={projectListProps.onDeleteSession}
+                            onSaveEditingSession={projectListProps.onSaveEditingSession}
+                            onRefresh={() => onRefresh()}
+                            t={t}
+                          />
+                        </div>
+                      );
+                    }}
+                  </List>
+                )}
+              </div>
             </div>
           )
         ) : searchMode === 'archived' ? (

@@ -323,7 +323,7 @@ export default function SidebarProjectItem({
                   <div className="truncate text-sm font-semibold text-workbench-ink" title={project.displayName}>
                     {project.displayName}
                   </div>
-                  <div className="text-xs text-workbench-subtle">
+                  <div className="truncate text-xs text-workbench-subtle">
                     {sessionCountDisplay}
                     {project.fullPath !== project.displayName && (
                       <span className="ml-1 opacity-60" title={project.fullPath}>
@@ -368,7 +368,7 @@ export default function SidebarProjectItem({
                 <button
                   type="button"
                   aria-label={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
-                  className="touch:opacity-100 focus-within:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-accent group-hover:opacity-100"
+                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100"
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenFileTree(project);
@@ -380,7 +380,7 @@ export default function SidebarProjectItem({
                 <button
                   type="button"
                   aria-label={t('tooltips.renameProject')}
-                  className="touch:opacity-100 focus-within:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-accent group-hover:opacity-100"
+                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100"
                   onClick={(event) => {
                     event.stopPropagation();
                     onStartEditingProject(project);
@@ -392,7 +392,7 @@ export default function SidebarProjectItem({
                 <button
                   type="button"
                   aria-label={t('tooltips.deleteProject')}
-                  className="touch:opacity-100 focus-within:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-900/20"
+                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-900/20"
                   onClick={(event) => {
                     event.stopPropagation();
                     onDeleteProject(project);
