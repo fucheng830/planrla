@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Toaster, toast } from 'sonner';
 
 import { cn } from '../../lib/utils';
+
 import { MessageHubInbox } from './MessageHubInbox';
 import { MessageHubInspector } from './MessageHubInspector';
 import { MessageHubThread, type ApprovalState } from './MessageHubThread';
@@ -28,6 +29,10 @@ type MessageHubPageProps = {
   /** Lazily load extra thread content (e.g. the kanban task's execution
    *  timeline) when a session becomes active. Cached per session id. */
   loadSessionDetail?: (session: MessageSession) => Promise<{ bodyAppend?: string } | undefined>;
+  /** Extra action rendered in the inbox panel heading (登记客户咨询 etc.). */
+  inboxAction?: ReactNode;
+  /** Overlays/portals rendered above the page (e.g. 登记客户咨询 dialog). */
+  children?: ReactNode;
 };
 
 export function MessageHubPage({
@@ -39,6 +44,8 @@ export function MessageHubPage({
   onApprovalAction,
   onSendMessage,
   loadSessionDetail,
+  inboxAction,
+  children,
 }: MessageHubPageProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [repliesBySession, setRepliesBySession] = useState<Record<string, string[]>>({});
@@ -117,7 +124,7 @@ export function MessageHubPage({
           </p>
         )}
         <div className="mh-workspace-grid">
-          <MessageHubInbox sessions={sessions} activeSessionId={activeSession?.id} onSessionSelect={(session) => setActiveId(session.id)} />
+          <MessageHubInbox sessions={sessions} activeSessionId={activeSession?.id} onSessionSelect={(session) => setActiveId(session.id)} action={inboxAction} />
           <MessageHubThread
             activeSession={activeSession}
             replies={replies}
@@ -130,6 +137,7 @@ export function MessageHubPage({
           <MessageHubInspector session={activeSession} onApprove={() => handleApproval('approve')} />
         </div>
       </div>
+      {children}
       <Toaster theme="system" position="bottom-right" closeButton richColors />
     </main>
   );

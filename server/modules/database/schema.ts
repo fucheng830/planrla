@@ -153,6 +153,9 @@ export const TEAM_MESSAGES_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS team_messages (
     id TEXT PRIMARY KEY,
     root_id TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'team',
+    channel TEXT,
+    thread_id TEXT,
     sender TEXT NOT NULL,
     content TEXT NOT NULL,
     task_id TEXT,

@@ -1,19 +1,19 @@
 import * as Tabs from '@radix-ui/react-tabs';
 import { Filter, ListFilter, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { cn } from '../../lib/utils';
+
 import type { MessageSession } from './messageHubData';
 
 type MessageHubInboxProps = {
   sessions: MessageSession[];
   activeSessionId?: string;
   onSessionSelect: (session: MessageSession) => void;
+  /** Extra heading action (e.g. 登记客户咨询 button). */
+  action?: ReactNode;
 };
 
-// Fixed filter set restored from the original design (with tone dots).
-// Categories not covered here (e.g. 通知) are appended dynamically from the
-// live data; channel categories stay at 0 until adapters land.
 const FIXED_FILTERS: ReadonlyArray<{ value: string; label: string; tone?: string }> = [
   { value: 'all', label: '全部消息' },
   { value: '待处理', label: '待处理', tone: 'amber' },
@@ -22,7 +22,7 @@ const FIXED_FILTERS: ReadonlyArray<{ value: string; label: string; tone?: string
   { value: '团队消息', label: '团队消息', tone: 'blue' },
 ];
 
-export function MessageHubInbox({ sessions, activeSessionId, onSessionSelect }: MessageHubInboxProps) {
+export function MessageHubInbox({ sessions, activeSessionId, onSessionSelect, action }: MessageHubInboxProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
 
@@ -48,7 +48,11 @@ export function MessageHubInbox({ sessions, activeSessionId, onSessionSelect }: 
     <section className="mh-inbox" aria-labelledby="mh-inbox-title">
       <div className="mh-panel-heading">
         <h1 id="mh-inbox-title">收件箱</h1>
-        <div className="mh-heading-actions"><ListFilter aria-hidden="true" />{unreadTotal > 0 && <span className="mh-unread-badge">{unreadTotal}</span>}</div>
+        <div className="mh-heading-actions">
+          {action}
+          <ListFilter aria-hidden="true" />
+          {unreadTotal > 0 && <span className="mh-unread-badge">{unreadTotal}</span>}
+        </div>
       </div>
       <label className="mh-inbox-search">
         <Search aria-hidden="true" />

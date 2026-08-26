@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { broadcastTeamMessage } from '@/utils/kanban-websocket.js';
+
 import { createTeamMessageStore } from './store.js';
 
 // 团队消息 v1: per-project message feed surfaced in the message hub
@@ -14,18 +15,29 @@ export function createTeamMessageRouter() {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });
     const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 100) || 100));
-    res.json({ messages: store.listMessages(rootId, limit) });
+    const kindParam = req.query.kind === 'customer' || req.query.kind === 'team' ? req.query.kind : undefined;
+    res.json({ messages: store.listMessages(rootId, limit, kindParam as 'team' | 'customer' | undefined) });
   });
 
   router.post('/', (req, res) => {
-    const { rootId, content, taskId } = req.body ?? {};
+    const { rootId, content, taskId, kind, channel, threadId, sender, asMember } = req.body ?? {};
     if (!rootId || typeof content !== 'string' || !content.trim()) {
       return res.status(400).json({ message: 'rootId and non-empty content required' });
     }
-    const sender = (req as any)?.user?.username ?? '本地成员';
+    // 团队消息/asMember 的发送人固定为登录用户;客户消息允许登记外部联系人。
+    const isCustomer = kind === 'customer';
+    const effectiveSender = (!isCustomer || asMember)
+      ? ((req as any)?.user?.username ?? '本地成员')
+      : String(sender ?? '').trim().slice(0, 60) || '';
+    if (isCustomer && !effectiveSender) {
+      return res.status(400).json({ message: 'customer messages require a contact name (sender)' });
+    }
     const message = store.createMessage({
       rootId: String(rootId),
-      sender: String(sender),
+      kind: isCustomer ? 'customer' : 'team',
+      channel: channel ? String(channel).slice(0, 30) : null,
+      threadId: threadId ? String(threadId) : null,
+      sender: effectiveSender,
       content: content.trim().slice(0, 4000),
       taskId: taskId ? String(taskId) : null,
     });

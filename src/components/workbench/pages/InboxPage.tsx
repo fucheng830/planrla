@@ -7,8 +7,7 @@ import { api } from '../../../utils/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
-import { MessageHubPage } from '../../message-hub';
-import { messageSessions } from '../../message-hub';
+import { MessageHubPage, messageSessions  } from '../../message-hub';
 import type { MessageSession, MessageStage } from '../../message-hub';
 import type { Task, TaskTemplate } from '../../kanban/types';
 
@@ -16,6 +15,11 @@ import { buildInboxThreads, formatRelativeTime, type CronRunInfo, type RunningSe
 
 export interface TeamMessageInfo {
   id: string;
+  rootId?: string;
+  /** 'team' = 同事协作;'customer' = 客户咨询(带联系人/渠道/会话线程)。 */
+  kind?: 'team' | 'customer';
+  channel?: string | null;
+  threadId?: string | null;
   sender: string;
   content: string;
   taskId: string | null;
@@ -165,13 +169,22 @@ export function InboxPage({ project }: { project: Project }) {
   const { sendMessage } = useWebSocket();
   const { runningSessions, cronTasks, teamMessages, backgroundTasks, chatApprovals, error: sourcesError } = useInboxSources(project.projectId);
   const handleApprovalAction = useApprovalAction(tasks, refresh, sendMessage, chatApprovals);
+  // Team threads send as team kind; customer threads append to their thread.
   const handleSendMessage = useCallback(async (session: MessageSession | undefined, text: string): Promise<boolean> => {
-    if (session && session.source !== '团队消息') return false;
+    if (!session) return false;
+    if (session.source === '客户消息') {
+      const threadId = session.id.replace(/^team-customer-/, '');
+      const res = await api.post('/team-messages', { rootId: project.projectId, content: text, kind: 'customer', asMember: true, channel: session.channel ?? null, threadId });
+      if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
+      toast.success('已回复客户');
+      return true;
+    }
+    if (session.source !== '团队消息') return false;
     const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
     if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
     toast.success('已发送到团队');
     return true;
-  }, [project.projectId]);
+  }, [project.displayName, project.projectId]);
 
   /** Real agent execution history for the active kanban thread — stage runs
    *  + audit events from the timeline API, rendered as thread body lines. */
@@ -248,24 +261,64 @@ export function InboxPage({ project }: { project: Project }) {
       };
     });
 
-    // Team messages render as their own threads (团队消息 category).
-    const teamSessions = teamMessages.map((message): MessageSession => {
-      const task = message.taskId ? tasks.find((t) => t.id === message.taskId) : undefined;
+    // Customer conversations: group messages by threadId (fallback id),
+    // newest thread first. Body renders the dialogue flow.
+    const groups = new Map<string, TeamMessageInfo[]>();
+      for (const message of teamMessages) {
+        if (message.kind !== 'customer') continue;
+        const key = message.threadId ?? message.id;
+        const bucket = groups.get(key) ?? [];
+        bucket.push(message);
+        groups.set(key, bucket);
+      }
+      const customerThreads = [...groups.entries()]
+        .map(([threadId, items]) => ({
+          threadId,
+          items: [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        }))
+        .sort((a, b) => b.items[b.items.length - 1].createdAt.localeCompare(a.items[a.items.length - 1].createdAt));
+
+    const customerSessions = customerThreads.map(({ threadId, items }): MessageSession => {
+      const last = items[items.length - 1];
+      const contact = items.find((m) => m.channel)?.sender ?? items[0].sender;
+      const channel = items.find((m) => m.channel)?.channel;
+      const dialogue = items
+        .slice(-8)
+        .map((m) => `${m.sender}:${m.content.length > 40 ? `${m.content.slice(0, 40)}…` : m.content}`)
+        .join('\n');
       return {
-        id: `team-${message.id}`,
-        sender: message.sender,
-        source: '团队消息',
-        category: '团队消息',
-        preview: message.content,
-        time: formatRelativeTime(message.createdAt),
+        id: `team-customer-${threadId}`,
+        sender: contact,
+        source: '客户消息',
+        category: '客户消息',
+        preview: `${contact}:${last.content}`.slice(0, 60),
+        time: formatRelativeTime(last.createdAt),
         avatar: UsersIcon,
-        tone: 'blue',
-        body: message.content,
-        binding: task
-          ? { task: `REQ-${String(task.taskNumber).padStart(3, '0')}`, status: task.status }
-          : undefined,
+        tone: 'cyan',
+        body: dialogue || last.content,
+        statusLabel: `沟通中 · ${channel ?? '未标记渠道'}`,
+        binding: { status: channel ?? undefined, created: formatRelativeTime(items[0].createdAt) },
       };
     });
+    const teamSessions = teamMessages
+      .filter((message) => (message.kind ?? 'team') === 'team')
+      .map((message): MessageSession => {
+        const task = message.taskId ? tasks.find((t) => t.id === message.taskId) : undefined;
+        return {
+          id: `team-${message.id}`,
+          sender: message.sender,
+          source: '团队消息',
+          category: '团队消息',
+          preview: message.content,
+          time: formatRelativeTime(message.createdAt),
+          avatar: UsersIcon,
+          tone: 'blue',
+          body: message.content,
+          binding: task
+            ? { task: `REQ-${String(task.taskNumber).padStart(3, '0')}`, status: task.status }
+            : undefined,
+        };
+      });
     // Background-task registry rows (a2a/chat/bash — kanban already covered).
     // Chat rows carry a raw session id as title — resolve the real session
     // title/summary from the project list so threads show actual content.
@@ -311,8 +364,40 @@ export function InboxPage({ project }: { project: Project }) {
       statusLabel: '等待确认',
       binding: { session: approval.sessionId?.slice(0, 8), status: '等待批准' },
     }));
-    return [...mapped, ...teamSessions, ...bgSessions, ...approvalSessions];
+    return [...mapped, ...customerSessions, ...teamSessions, ...bgSessions, ...approvalSessions];
   }, [backgroundTasks, chatApprovals, cronTasks, project.displayName, project.sessions, runningSessions, tasks, teamMessages, templates]);
+
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [customerChannel, setCustomerChannel] = useState('企业微信');
+  const [inquiryText, setInquiryText] = useState('');
+  const [submittingInquiry, setSubmittingInquiry] = useState(false);
+
+  const submitCustomerInquiry = async () => {
+    if (!contactName.trim() || !inquiryText.trim()) {
+      toast.error('请填写客户称呼和咨询内容');
+      return;
+    }
+    setSubmittingInquiry(true);
+    try {
+      const res = await api.post('/team-messages', {
+        rootId: project.projectId,
+        kind: 'customer',
+        sender: contactName.trim(),
+        channel: customerChannel,
+        content: inquiryText.trim(),
+      });
+      if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
+      toast.success('客户咨询已登记');
+      setContactName('');
+      setInquiryText('');
+      setRegisterOpen(false);
+    } catch (e) {
+      toast.error(`登记失败:${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSubmittingInquiry(false);
+    }
+  };
 
   return (
     <MessageHubPage
@@ -322,7 +407,77 @@ export function InboxPage({ project }: { project: Project }) {
       onApprovalAction={MOCK_MODE ? undefined : handleApprovalAction}
       onSendMessage={MOCK_MODE ? undefined : handleSendMessage}
       loadSessionDetail={MOCK_MODE ? undefined : loadSessionDetail}
-    />
+      inboxAction={MOCK_MODE ? undefined : (
+        <button
+          type="button"
+          onClick={() => setRegisterOpen(true)}
+          className="ds-focus-ring inline-flex h-6 items-center rounded-full border border-workbench-border bg-workbench-surface px-2.5 text-[11px] font-medium text-workbench-subtle transition-colors hover:border-workbench-accent/60 hover:text-workbench-ink"
+        >
+          登记客户咨询
+        </button>
+      )}
+    >
+      {registerOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+          role="dialog"
+          aria-label="登记客户咨询"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setRegisterOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md rounded-lg border border-workbench-border bg-white p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-workbench-ink">登记客户咨询</h3>
+            <p className="mt-1 text-xs text-workbench-subtle">记录外部客户的咨询,沟通往来在客户消息线程中追踪。</p>
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-workbench-subtle">客户称呼 *</span>
+                <input
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                  placeholder="例如:王先生"
+                  autoFocus
+                  className="ds-focus-ring h-8 w-full rounded border border-workbench-border bg-white px-2.5 text-sm text-workbench-ink"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-workbench-subtle">渠道</span>
+                <select
+                  value={customerChannel}
+                  onChange={(event) => setCustomerChannel(event.target.value)}
+                  className="ds-focus-ring h-8 w-full rounded border border-workbench-border bg-white px-2 text-sm text-workbench-ink"
+                >
+                  {['企业微信', '飞书', 'Slack', '钉钉', '电话', '官网', '其他'].map((channelOption) => (
+                    <option key={channelOption} value={channelOption}>{channelOption}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-workbench-subtle">咨询内容 *</span>
+                <textarea
+                  value={inquiryText}
+                  onChange={(event) => setInquiryText(event.target.value)}
+                  rows={4}
+                  placeholder="客户的问题或诉求…"
+                  className="ds-focus-ring w-full resize-none rounded border border-workbench-border bg-white p-2.5 text-sm text-workbench-ink"
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button type="button" onClick={() => setRegisterOpen(false)} className="ds-focus-ring h-8 rounded border border-workbench-border px-3 text-xs text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink">取消</button>
+              <button
+                type="button"
+                disabled={submittingInquiry}
+                onClick={() => void submitCustomerInquiry()}
+                className="ds-focus-ring h-8 rounded bg-workbench-accent px-4 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {submittingInquiry ? '提交中…' : '登记'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </MessageHubPage>
   );
 }
 

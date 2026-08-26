@@ -11,6 +11,7 @@ import {
   SESSIONS_TABLE_SCHEMA_SQL,
   USER_NOTIFICATION_PREFERENCES_TABLE_SCHEMA_SQL,
   VAPID_KEYS_TABLE_SCHEMA_SQL,
+  TEAM_MESSAGES_TABLE_SCHEMA_SQL,
 } from '@/modules/database/schema.js';
 
 const SQLITE_UUID_SQL = `
@@ -554,6 +555,11 @@ export const runMigrations = (db: Database) => {
     db.exec(A2A_AGENTS_TABLE_SCHEMA_SQL);
     db.exec(CRON_PROMPTS_TABLE_SCHEMA_SQL);
     db.exec(CALENDAR_EVENTS_TABLE_SCHEMA_SQL);
+    db.exec(TEAM_MESSAGES_TABLE_SCHEMA_SQL);
+    const teamMessageColumns = db.prepare('PRAGMA table_info(team_messages)').all().map((c) => c.name);
+    addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'kind', "TEXT NOT NULL DEFAULT 'team'");
+    addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'channel', 'TEXT');
+    addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'thread_id', 'TEXT');
     console.log('Database migrations completed successfully');
   } catch (error: any) {
     console.error('Error running migrations:', error.message);
