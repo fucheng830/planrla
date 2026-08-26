@@ -2,6 +2,7 @@ import { PanelRight } from 'lucide-react';
 import type { MainContentHeaderProps } from '../../types/types';
 import MobileMenuButton from './MobileMenuButton';
 import MainContentTabSwitcher from './MainContentTabSwitcher';
+import { isWorkbenchPageTab } from './mainContentTabSwitcherModel';
 import MainContentTitle from './MainContentTitle';
 import { WorkbenchHeader } from '../../../workbench';
 
@@ -33,7 +34,7 @@ export default function MainContentHeader({
           />
         </div>
       }
-      tabs={
+      tabs={!isWorkbenchPageTab(activeTab) ? (
         <div className="relative min-w-0 overflow-hidden">
           <div className="scrollbar-hide overflow-x-auto">
             <MainContentTabSwitcher
@@ -46,7 +47,7 @@ export default function MainContentHeader({
             />
           </div>
         </div>
-      }
+      ) : undefined}
       actions={onToggleExtension && (
           <button
             type="button"
