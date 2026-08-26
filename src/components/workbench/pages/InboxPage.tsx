@@ -30,6 +30,7 @@ export interface BackgroundTaskInfo {
   title: string;
   status: string;
   lastActivityAt?: string;
+  detail?: { type?: string; appSessionId?: string; provider?: string };
 }
 
 /** A direct-chat session waiting on a tool approval (server-side registry). */
@@ -264,20 +265,28 @@ export function InboxPage({ project }: { project: Project }) {
       };
     });
     // Background-task registry rows (a2a/chat/bash — kanban already covered).
+    // Chat rows carry a raw session id as title — resolve the real session
+    // title/summary from the project list so threads show actual content.
     const bgSessions = backgroundTasks
       .filter((bt) => bt.type !== 'kanban')
-      .map((bt): MessageSession => ({
-        id: `bg-${bt.id}`,
-        sender: bt.type === 'a2a' ? 'A2A 任务' : bt.type === 'chat' ? '聊天任务' : '命令任务',
-        source: 'AI 协作',
-        category: bt.status === 'running' || bt.status === 'idle' ? 'AI 请求' : '通知',
-        preview: bt.title,
-        time: formatRelativeTime(bt.lastActivityAt ?? null),
-        avatar: bt.type === 'bash' ? ClockIcon : BotIcon,
-        tone: 'cyan',
-        body: bt.title,
-        statusLabel: bt.status,
-      }));
+      .map((bt): MessageSession => {
+        const appSessionId = bt.detail?.appSessionId;
+        const liveSession = appSessionId ? project.sessions?.find((s) => s.id === appSessionId) : undefined;
+        const content = liveSession?.summary || liveSession?.title || bt.title;
+        return {
+          id: `bg-${bt.id}`,
+          sender: liveSession?.title?.slice(0, 24) || (bt.type === 'a2a' ? 'A2A 任务' : bt.type === 'chat' ? '聊天任务' : '命令任务'),
+          source: 'AI 协作',
+          category: bt.status === 'running' || bt.status === 'idle' ? 'AI 请求' : '通知',
+          preview: content,
+          time: formatRelativeTime(bt.lastActivityAt ?? null),
+          avatar: bt.type === 'bash' ? ClockIcon : BotIcon,
+          tone: 'cyan',
+          body: [content, appSessionId ? `会话:${appSessionId.slice(0, 8)}` : null].filter((line): line is string => Boolean(line)).join('\n'),
+          statusLabel: bt.status === 'idle' ? '空闲' : bt.status === 'running' ? '运行中' : bt.status,
+          binding: appSessionId ? { session: appSessionId.slice(0, 8), status: bt.status } : undefined,
+        };
+      });
     // Direct-chat tool approvals — 待处理 threads with a real approval card.
     const approvalSessions = chatApprovals.map((approval): MessageSession => ({
       id: `approval-${approval.requestId}`,
