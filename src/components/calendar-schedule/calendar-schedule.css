@@ -77,3 +77,6 @@
 .calendar-agenda-delete:hover { background: var(--cal-red-soft); color: var(--cal-red); }
 .calendar-agenda-delete svg { width: 13px; height: 13px; }
 .calendar-assignees button:disabled { color: var(--cal-faint); cursor: not-allowed; }
+
+/* 今天 button: .calendar-schedule-page button{font:inherit} and .calendar-month-actions > button{width:28px} both outrank the old .calendar-today rule, squeezing the 2-CJK label into a 28px box. */
+.calendar-month-actions > button.calendar-today { width: auto; padding: 0 10px; font-size: 11px; }
