@@ -56,7 +56,6 @@ export function MessageHubThread({ activeSession, replies, approvalState, userNa
   return (
     <section className="mh-thread" aria-labelledby="mh-thread-title">
       <div className="mh-thread-header">
-        <div className="mh-breadcrumb"><span>{activeSession.source}</span><span>›</span><span>{activeSession.category}</span></div>
         <div className="mh-thread-title-row">
           <span className={cn('mh-sender-avatar', 'mh-sender-avatar-large', `tone-${activeSession.tone}`)}><Avatar /></span>
           <div><h2 id="mh-thread-title">{activeSession.sender} <span className={cn('mh-status-chip', approvalState === 'pending' ? 'tone-amber' : 'tone-purple')}>{statusLabel}</span></h2><p>来自 {activeSession.source} · <time>{activeSession.time}</time></p>{activeSession.binding?.task && <p>关联:{activeSession.binding.task}</p>}</div>
