@@ -9,7 +9,7 @@ import { getSidebarRailFooterItems, getSidebarRailItems } from './sidebarRailIte
 type SidebarCollapsedProps = {
   onExpand: () => void;
   onShowSettings: () => void;
-  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'chat') => void;
   onSearchModeChange: (mode: SidebarSearchMode) => void;
   activeTab: AppTab | undefined;
   searchMode: SidebarSearchMode;
@@ -70,6 +70,7 @@ export default function SidebarCollapsed({
             return;
           }
           if (id === 'sessions') {
+            onOpenWorkbenchTab?.('chat');
             onSearchModeChange('sessions');
             onExpand();
           }

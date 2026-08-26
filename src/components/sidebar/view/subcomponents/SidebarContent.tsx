@@ -386,7 +386,7 @@ type SidebarContentProps = {
   // REQ-046 — 打开后台任务面板入口(可选,无则不渲染按钮)。
   onOpenBackgroundTasks?: () => void;
   activeTab?: AppTab;
-  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule') => void;
+  onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'chat') => void;
   projectListProps: SidebarProjectListProps;
   completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
@@ -499,6 +499,9 @@ export default function SidebarContent({
             if (id === 'overview' || id === 'inbox' || id === 'workflow' || id === 'schedule') {
               onOpenWorkbenchTab?.(id);
               return;
+            }
+            if (id === 'sessions') {
+              onOpenWorkbenchTab?.('chat');
             }
             onSearchModeChange(id as SidebarSearchMode);
           }}
