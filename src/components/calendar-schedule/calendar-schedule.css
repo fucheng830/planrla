@@ -70,3 +70,13 @@
 .calendar-content-only .calendar-task-forms { min-height: 100%; }
 @media (max-width: 1080px) { .calendar-content-only .calendar-content-grid { grid-template-columns: minmax(0, 1fr) 285px; }.calendar-content-only .calendar-main-column { grid-column: 1; }.calendar-content-only .calendar-task-forms { grid-column: 2; display: block; border-top: 0; border-left: 1px solid var(--cal-line); } }
 @media (max-width: 760px) { .calendar-content-only .calendar-content-grid { grid-template-columns: minmax(0, 1fr); }.calendar-content-only .calendar-main-column { grid-column: 1; }.calendar-content-only .calendar-task-forms { grid-column: 1; min-height: auto; border-top: 1px solid var(--cal-line); border-left: 0; }.calendar-content-only .calendar-agenda { display: none; } }
+
+/* One-time calendar events: agenda row delete + unwired assignee button. */
+.calendar-agenda-item { cursor: pointer; }
+.calendar-agenda-delete { display: grid; place-items: center; width: 18px; height: 18px; margin-left: auto; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--cal-faint); cursor: pointer; }
+.calendar-agenda-delete:hover { background: var(--cal-red-soft); color: var(--cal-red); }
+.calendar-agenda-delete svg { width: 13px; height: 13px; }
+.calendar-assignees button:disabled { color: var(--cal-faint); cursor: not-allowed; }
+
+/* 今天 button: .calendar-schedule-page button{font:inherit} and .calendar-month-actions > button{width:28px} both outrank the old .calendar-today rule, squeezing the 2-CJK label into a 28px box. */
+.calendar-month-actions > button.calendar-today { width: auto; padding: 0 10px; font-size: 11px; }

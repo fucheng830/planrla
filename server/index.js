@@ -339,6 +339,10 @@ import { createCronPromptsRouter } from './modules/cron-prompts/cron-prompts.rou
 import { cronPromptsDriver } from './modules/cron-prompts/cron-prompts.driver.js';
 app.use('/api/cron-prompts', authenticateToken, createCronPromptsRouter());
 
+// 日历一次性事件 (calendar one-time events) — list + create + delete.
+import { createCalendarEventsRouter } from './modules/calendar-events/calendar-events.routes.js';
+app.use('/api/calendar-events', authenticateToken, createCalendarEventsRouter());
+
 // REQ-046 Background Tasks API (protected) — list + stop/dismiss
 app.use('/api/background-tasks', authenticateToken, backgroundTaskRoutes);
 
