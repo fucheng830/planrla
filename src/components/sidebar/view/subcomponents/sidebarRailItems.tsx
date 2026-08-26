@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { Archive, Bug, CalendarDays, Folder, FolderTree, Inbox, KanbanSquare, LayoutDashboard, MessageSquare, Settings, Workflow } from 'lucide-react';
+import { Archive, Bug, CalendarDays, FolderTree, Inbox, KanbanSquare, LayoutDashboard, MessageSquare, Settings, Workflow } from 'lucide-react';
 
 import type { WorkbenchRailFooterItem, WorkbenchRailItem } from '../../../workbench';
 import type { AppTab } from '../../../../types/app';
@@ -22,7 +22,6 @@ export function isWorkbenchTab(activeTab: AppTab | undefined): boolean {
 
 export function getSidebarRailItems(t: TFunction, completedSessionsCount: number): readonly WorkbenchRailItem[] {
   return [
-    { id: 'projects', label: t('search.modeProjects'), icon: Folder },
     { id: 'sessions', label: t('search.modeSessions'), icon: MessageSquare, badge: completedSessionsCount > 0 ? 'completed' : undefined },
     { id: 'archived', label: t('search.archiveOnlyTooltip', 'Archive only'), icon: Archive },
     { id: 'files', label: t('files.title', 'Files'), icon: FolderTree },
