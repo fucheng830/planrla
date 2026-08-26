@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
+import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 
 /**
  * In-process HTTP MCP server for the kanban self-drive agent (W4-T4).
@@ -125,6 +126,23 @@ export function createKanbanMcpRouter(deps: KanbanMcpDeps): Router {
           return res.json(jsonRpcError(id, -32602, `task not found: ${taskId}`));
         }
         const rootId = task.rootId;
+
+        // Agent heartbeat: any MCP tool call proves the agent is alive.
+        // Refresh the registry row (bumps lastActivityAt) so the TTL sweeper
+        // does not flag an actively working task as stuck in the panel; the
+        // overwrite also repairs a previously mis-flagged row.
+        try {
+          const kanban = deps.getKanban();
+          backgroundTaskRegistry.upsertKanban({
+            taskId: task.id,
+            rootId: task.rootId,
+            title: task.taskTemplateName || `Task #${task.taskNumber}`,
+            status: task.status,
+            stage: task.currentStageIndex + 1,
+            stageTotal: kanban.templateStore.getTaskTemplate(task.taskTemplateId)?.stages?.length,
+            aux: task.auxFlags,
+          });
+        } catch { /* heartbeat is best-effort */ }
 
         // task_complete: the agent declares its current goal satisfied. Record
         // the goal_completed event FIRST (best-effort — never let an event-log
