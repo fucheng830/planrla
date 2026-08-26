@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bot as BotIcon, CalendarClock as ClockIcon, KanbanSquare as KanbanIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 import type { Project } from '../../../types/app';
 import { api } from '../../../utils/api';
 import { useKanban } from '../../kanban';
+import { kanbanApi } from '../../kanban/api';
 import { MessageHubPage } from '../../message-hub';
 import type { MessageSession, MessageStage } from '../../message-hub';
 import type { Task, TaskTemplate } from '../../kanban/types';
@@ -69,8 +71,9 @@ function useInboxSources(projectId: string): { runningSessions: RunningSessionIn
 }
 
 export function InboxPage({ project }: { project: Project }) {
-  const { tasks, templates, loading: kanbanLoading, error: kanbanError } = useKanban();
+  const { tasks, templates, loading: kanbanLoading, error: kanbanError, refresh } = useKanban();
   const { runningSessions, cronTasks, error: sourcesError } = useInboxSources(project.projectId);
+  const handleApprovalAction = useApprovalAction(tasks, refresh);
 
   // Map real inbox threads (kanban tasks, running sessions, cron runs) into
   // the message-hub session model. Kanban threads additionally carry their
@@ -113,6 +116,38 @@ export function InboxPage({ project }: { project: Project }) {
       sessions={sessions}
       loadingHint={kanbanLoading ? '正在加载消息数据…' : null}
       errorHint={sourcesError ? `部分数据源加载失败:${sourcesError}` : kanbanError ? `看板数据加载失败:${kanbanError}` : null}
+      onApprovalAction={handleApprovalAction}
     />
   );
+}
+
+/** Real approval actions against the kanban engine:
+ *  approve → advance the stage (spawns the agent session) or answer a
+ *  pending AskUserQuestion; reject → cancel the task; transfer → pause. */
+function useApprovalAction(tasks: Task[], refresh: () => Promise<void>) {
+  return useCallback(async (session: { id: string }, action: 'approve' | 'reject' | 'transfer') => {
+    const task = findTaskForThread(session.id, tasks);
+    if (!task) throw new Error('此消息未绑定看板任务');
+    try {
+      if (action === 'approve') {
+        const pending = task.auxFlags?.pendingAskUser;
+        if (pending?.questions?.questions?.[0]) {
+          const first = pending.questions.questions[0].options?.[0]?.label;
+          await kanbanApi.answerTask(task.id, task.rootId, { answers: first ? [first] : [] });
+          toast.success(`已答复:${first ?? '默认选项'}`);
+        } else {
+          await kanbanApi.move(task.id, task.rootId, 'next');
+          toast.success('已批准:任务推进到下一阶段,AI Agent 即将启动');
+        }
+      } else if (action === 'reject') {
+        await kanbanApi.move(task.id, task.rootId, 'cancel');
+        toast.success('已驳回:任务已取消');
+      } else {
+        await kanbanApi.move(task.id, task.rootId, 'pause');
+        toast.success('已转交:任务已暂停等待处理');
+      }
+    } finally {
+      await refresh();
+    }
+  }, [refresh, tasks]);
 }

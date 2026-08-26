@@ -18,6 +18,9 @@ type MessageHubPageProps = {
   variant?: 'embedded' | 'standalone';
   loadingHint?: string | null;
   errorHint?: string | null;
+  /** Real approval backend (e.g. kanban task actions). Throwing keeps the
+   *  approval card pending; without a handler the action stays local. */
+  onApprovalAction?: (session: MessageSession, action: 'approve' | 'reject' | 'transfer') => Promise<void>;
 };
 
 export function MessageHubPage({
@@ -26,6 +29,7 @@ export function MessageHubPage({
   variant = 'embedded',
   loadingHint,
   errorHint,
+  onApprovalAction,
 }: MessageHubPageProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [repliesBySession, setRepliesBySession] = useState<Record<string, string[]>>({});
@@ -53,9 +57,19 @@ export function MessageHubPage({
 
   const handleApproval = (action: 'approve' | 'reject' | 'transfer') => {
     if (!activeSession) return;
-    const nextState: ApprovalState = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'transferred';
-    setApprovalBySession((current) => ({ ...current, [activeSession.id]: nextState }));
-    toast.success(action === 'approve' ? '已批准并启动 AI Agent' : action === 'reject' ? '已驳回 AI 请求' : '已转交负责人');
+    void (async () => {
+      try {
+        if (onApprovalAction) {
+          await onApprovalAction(activeSession, action);
+        } else {
+          toast.success(action === 'approve' ? '已批准并启动 AI Agent' : action === 'reject' ? '已驳回 AI 请求' : '已转交负责人');
+        }
+        const nextState: ApprovalState = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'transferred';
+        setApprovalBySession((current) => ({ ...current, [activeSession.id]: nextState }));
+      } catch (e) {
+        toast.error(`操作失败:${e instanceof Error ? e.message : String(e)}`);
+      }
+    })();
   };
 
   return (
