@@ -5,7 +5,6 @@ import { cn } from '../../lib/utils';
 import { MessageHubInbox } from './MessageHubInbox';
 import { MessageHubInspector } from './MessageHubInspector';
 import { MessageHubThread, type ApprovalState } from './MessageHubThread';
-import { MessageHubWorkflowStrip } from './MessageHubWorkflowStrip';
 import { messageSessions, type MessageSession } from './messageHubData';
 
 type MessageHubPageProps = {
@@ -104,7 +103,6 @@ export function MessageHubPage({
             onApproval={handleApproval}
           />
           <MessageHubInspector session={activeSession} onApprove={() => handleApproval('approve')} />
-          <MessageHubWorkflowStrip label={activeSession?.binding?.task ?? activeSession?.sender ?? ''} stages={activeSession?.stages ?? []} />
         </div>
       </div>
       <Toaster theme="system" position="bottom-right" closeButton richColors />
