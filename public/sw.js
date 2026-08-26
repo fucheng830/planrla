@@ -15,9 +15,19 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Fetch event — network-first for everything except hashed assets
+// Fetch event — network-first for everything except hashed assets.
+// Never respondWith(undefined): a rejected fetch plus a cache miss must fall
+// back to a proper network-error Response, otherwise the page's module
+// requests die with "Failed to convert value to 'Response'" and the app ends
+// up running half-dead modules (dead click handlers).
 self.addEventListener('fetch', event => {
   const url = event.request.url;
+
+  // Only handle same-origin http(s) requests. chrome-extension:// and other
+  // schemes cannot be fetched or cached and crash cache.put().
+  if (!url.startsWith(self.location.origin + '/')) {
+    return;
+  }
 
   // Never intercept API requests or WebSocket upgrades
   if (url.includes('/api/') || url.includes('/ws')) {
@@ -27,11 +37,11 @@ self.addEventListener('fetch', event => {
   // Navigation requests (HTML) — always go to network, no caching
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/manifest.json').then(() =>
+      fetch(event.request).catch(() =>
         new Response('<h1>Offline</h1><p>Please check your connection.</p>', {
           headers: { 'Content-Type': 'text/html' }
         })
-      ))
+      )
     );
     return;
   }
@@ -43,7 +53,9 @@ self.addEventListener('fetch', event => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME)
+            .then(cache => cache.put(event.request, clone))
+            .catch(() => {});
           return response;
         });
       })
@@ -51,9 +63,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Everything else — network-first
+  // Everything else — network-first; fall back to cache only on a real match
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request)
+      .catch(() => caches.match(event.request))
+      .then(response => response || Response.error())
   );
 });
 
