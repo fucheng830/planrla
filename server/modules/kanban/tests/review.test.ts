@@ -25,6 +25,8 @@ function stubTaskStore(task: unknown) {
 
 test('getTaskDiff covers tracked edits and untracked new files', async () => {
   const dir = await initRepo();
+  // root 是另一个仓库:rootPath === worktree toplevel 是生产里要拦的假 worktree 形态
+  const rootDir = await initRepo();
   try {
     await writeFile(path.join(dir, 'a.txt'), 'v1\nv2\n');
     await writeFile(path.join(dir, 'b.txt'), 'brand\nnew\n');
@@ -32,7 +34,7 @@ test('getTaskDiff covers tracked edits and untracked new files', async () => {
     const task = { id: 't1', rootId: 'r1', worktreePath: dir };
     const result = await getTaskDiff({
       taskStore: stubTaskStore(task),
-      resolveRootPath: () => dir,
+      resolveRootPath: () => rootDir,
       rootId: 'r1',
       taskId: 't1',
     });

@@ -279,7 +279,7 @@ test('runAgentStage renders prompt with MCP preamble containing taskId', async (
   const { db, templateStore, service, runner } = setup({
     mockSpawn,
     worktreeSetup: {
-      ensureWorktree: async () => null,
+      ensureWorktree: async () => 'C:/tmp/wt-fake',
       removeWorktree: async () => {},
     },
   });

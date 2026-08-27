@@ -154,6 +154,13 @@ export async function getTaskDiff(options: {
     throw new AppError('unable to resolve diff base', { code: 'DIFF_BASE_FAILED', statusCode: 500 });
   }
 
+  // 半删残留的「假 worktree」目录(plain 子目录)解析回主仓 git——diff 会抓到
+  // 主仓工作区的无关未提交改动冒充交付物。校验 toplevel:必须不是主仓本身。
+  const topLevel = (await tryGit(['rev-parse', '--show-toplevel'], worktreePath))?.trim() ?? '';
+  const normalizePathForCompare = (p: string) => p.replace(/[\\/]+/g, '/').replace(/\/$/, '').toLowerCase();
+  if (rootPath && topLevel && normalizePathForCompare(topLevel) === normalizePathForCompare(rootPath)) {
+    throw new AppError('worktree 未注册(疑似半删残留),交付物不可用', { code: 'NO_WORKTREE', statusCode: 404 });
+  }
   const [numstatRaw, nameStatusRaw, patchRaw, statusRaw] = await Promise.all([
     tryGit(['diff', '--numstat', baseSha], worktreePath),
     tryGit(['diff', '--name-status', baseSha], worktreePath),

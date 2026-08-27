@@ -72,8 +72,19 @@ export function createWorktreeGit(deps: WorktreeGitDeps = {}) {
   async function createLinkedWorktree(rootPath: string, branch: string): Promise<CreatedWorktree> {
     appendGitInfoExclude(rootPath, '.worktree/');
     const wtPath = resolveWorktreePath(rootPath, branch);
-    await runGit(rootPath, ['worktree', 'add', '-b', branch, wtPath]);
-    return { path: wtPath, branch };
+    try {
+      await runGit(rootPath, ['worktree', 'add', '-b', branch, wtPath]);
+      return { path: wtPath, branch };
+    } catch (first) {
+      // Windows 文件锁/中断会留下「目录在、注册没了」的半删残留,重试必然再撞。
+      // 自愈:prune 掉僵尸注册;若目录仍存在(非空残留)直接清除后重试一次。
+      await runGit(rootPath, ['worktree', 'prune']).catch(() => undefined);
+      if (existsSync(wtPath)) {
+        try { rmSync(wtPath, { recursive: true, force: true }); } catch { /* 保留原错误 */ }
+      }
+      await runGit(rootPath, ['worktree', 'add', '-b', branch, wtPath]);
+      return { path: wtPath, branch };
+    }
   }
 
   /** Remove a linked worktree (unregisters + deletes on disk). Best-effort: throws on git failure. */

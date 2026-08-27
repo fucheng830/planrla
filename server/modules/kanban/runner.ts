@@ -136,7 +136,8 @@ export function createRunner(deps: RunnerDeps) {
     let cwd: string | undefined;
     if (worktreeSetup) {
       const wt = await worktreeSetup.ensureWorktree(task, rootPath);
-      cwd = wt ?? rootPath ?? undefined;
+      if (!wt) throw new Error('worktree 创建失败:拒绝在主仓直接执行 agent(防污染用户仓库)');
+      cwd = wt;
     } else {
       cwd = task.worktreePath ?? rootPath ?? undefined;
     }
