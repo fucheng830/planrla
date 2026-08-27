@@ -17,7 +17,7 @@ import {
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import type { Task, TaskPriority } from '../../kanban/types';
+import type { Task, TaskPriority, TaskDiffResult } from '../../kanban/types';
 import type { Project } from '../../../types/app';
 import { toast } from 'sonner';
 import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
@@ -71,7 +71,48 @@ function displayTask(task: Task, stageCount: number, projects: Project[]): Displ
   };
 }
 
-function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel }: { task: DisplayTask; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void }) {
+/** 交付物面板:worktree 分支 + 相对主仓的 diff 统计/文件/补丁摘要。 */
+function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }) {
+  const [diff, setDiff] = useState<TaskDiffResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    kanbanApi.getTaskDiff(task.id, task.rootId)
+      .then((d) => { if (!cancelled) setDiff(d); })
+      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
+    return () => { cancelled = true; };
+  }, [task.id, task.rootId]);
+  const additions = diff?.files.reduce((sum: number, f: TaskDiffResult["files"][number]) => sum + f.additions, 0) ?? 0;
+  const deletions = diff?.files.reduce((sum: number, f: TaskDiffResult["files"][number]) => sum + f.deletions, 0) ?? 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="ds-panel flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <header className="flex items-center justify-between border-b border-workbench-border p-3">
+          <div className="min-w-0"><h2 className="truncate text-sm font-semibold text-workbench-ink">交付物 · REQ-{String(task.taskNumber).padStart(3, '0')}</h2>
+          <p className="ds-mono mt-0.5 text-[10px] text-workbench-subtle">分支 {task.worktreeBranch}</p></div>
+          <button type="button" onClick={onClose} className="ds-focus-ring rounded px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">关闭</button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-auto p-4 text-sm">
+          {error && <p className="rounded border border-workbench-danger/30 bg-workbench-danger/10 p-3 text-xs text-workbench-danger">{error}(worktree 可能已被清理)</p>}
+          {!error && !diff && <p className="text-xs text-workbench-subtle">正在加载 diff…</p>}
+          {diff && (<>
+            <p className="text-xs text-workbench-subtle">{diff.files.length} 个文件改动 · <span className="text-workbench-success">+{additions}</span> / <span className="text-workbench-danger">-{deletions}</span>{diff.truncated && ' (已截断)'} · worktree {diff.worktreePath}</p>
+            <ul className="mt-3 space-y-1">
+              {diff.files.map((f: TaskDiffResult["files"][number]) => (
+                <li key={f.path} className="flex items-center justify-between gap-2 rounded border border-workbench-border bg-workbench-surface px-2 py-1.5 text-xs">
+                  <span className="min-w-0 truncate text-workbench-ink">{f.path}</span>
+                  <span className="flex-shrink-0 ds-mono text-[10px] text-workbench-subtle"><span className="text-workbench-success">+{f.additions}</span> <span className="text-workbench-danger">-{f.deletions}</span></span>
+                </li>
+              ))}
+            </ul>
+            <pre className="ds-mono mt-3 max-h-72 overflow-auto rounded border border-workbench-border bg-workbench-surface p-2 text-[10px] leading-4 text-workbench-subtle">{diff.patch.slice(0, 20000)}</pre>
+          </>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel, onShowDeliverable }: { task: DisplayTask; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void }) {
   return (
     <article
       className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
@@ -89,6 +130,9 @@ function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel }: { task: Displa
         {task.tags.map((tag) => <span key={tag} className="ds-label rounded bg-workbench-muted px-1.5 py-0.5 normal-case tracking-normal">{tag}</span>)}
         <span className="ml-auto text-[10px] text-workbench-subtle">优先级 {task.priority}</span>
       </div>
+      {task.status === 'complete' && task.source?.worktreeBranch && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onShowDeliverable?.(task.source!); }} className="ds-focus-ring mt-2 inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted">查看交付物</button>
+      )}
       {task.status === 'failed' && task.source && (
         <div className="mt-2 flex gap-1.5">
           <button type="button" onClick={(e) => { e.stopPropagation(); onRetry?.(task.source!.id, task.source!.rootId); }} className="ds-focus-ring inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted"><Play className="size-3" />重试此阶段</button>
@@ -185,6 +229,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const [createInput, setCreateInput] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [deliverableTask, setDeliverableTask] = useState<Task | null>(null);
 
   // 每个需求必须关联一个项目:默认当前项目,可切换到其它项目(任务落到
   // 该项目的看板/工作树)。rootId 决定 agent 的工作目录。
@@ -251,11 +296,12 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2 text-xs text-workbench-subtle"><FilterChip label="看板" active={view === 'board'} onClick={() => setView('board')} /><FilterChip label="列表" active={view === 'list'} onClick={() => setView('list')} />{liveTasks.length === 0 && !loading && <span className="rounded bg-workbench-muted px-2 py-1">还没有任务 · 点右上角「创建任务」开始</span>}</div><div className="flex items-center gap-3 text-xs text-workbench-subtle"><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-accent" />AI 运行中</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-waiting" />等负责人</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-danger" />验证失败</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-success" />已交付</span></div></div>
           {error && <p className="mb-3 rounded-md border border-workbench-danger/30 bg-workbench-danger-soft/30 p-3 text-sm text-workbench-danger">加载任务失败：{error}</p>}
           {loading && <p className="mb-3 text-sm text-workbench-subtle">正在加载看板数据…</p>}
-          {view === 'board' ? <div className="flex gap-3 overflow-x-auto pb-1">{columns.map((column) => <section key={column.name} className="ds-panel flex min-h-[520px] w-56 shrink-0 grow flex-col" aria-label={column.name}><header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header><div className="flex-1 space-y-2 overflow-auto p-2">{column.tasks.length === 0 ? <p className="py-8 text-center text-xs text-workbench-subtle">暂无任务</p> : column.tasks.map((task) => <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} />)}</div></section>)}</div> : <section className="ds-panel overflow-hidden" aria-label="任务列表"><table className="w-full text-left text-sm"><thead className="border-b border-workbench-border bg-workbench-muted/50 text-xs text-workbench-subtle"><tr><th className="px-3 py-2 font-medium">编号</th><th className="px-3 py-2 font-medium">任务</th><th className="px-3 py-2 font-medium">阶段</th><th className="px-3 py-2 font-medium">优先级</th><th className="px-3 py-2 font-medium">状态</th></tr></thead><tbody>{liveTasks.map((task) => <tr key={task.id} className="border-b border-workbench-border/60 last:border-0 hover:bg-workbench-muted/50"><td className="ds-mono px-3 py-2 text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</td><td className="max-w-md truncate px-3 py-2 text-workbench-ink">{task.title}</td><td className="px-3 py-2 text-workbench-subtle">{stageNames[task.stageIndex] ?? task.stageIndex}</td><td className="px-3 py-2 text-workbench-subtle">{task.priority}</td><td className="px-3 py-2"><WorkbenchStatus state={task.status} label={task.statusLabel} /></td></tr>)}</tbody></table></section>}
+          {view === 'board' ? <div className="flex gap-3 overflow-x-auto pb-1">{columns.map((column) => <section key={column.name} className="ds-panel flex min-h-[520px] w-56 shrink-0 grow flex-col" aria-label={column.name}><header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header><div className="flex-1 space-y-2 overflow-auto p-2">{column.tasks.length === 0 ? <p className="py-8 text-center text-xs text-workbench-subtle">暂无任务</p> : column.tasks.map((task) => <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} />)}</div></section>)}</div> : <section className="ds-panel overflow-hidden" aria-label="任务列表"><table className="w-full text-left text-sm"><thead className="border-b border-workbench-border bg-workbench-muted/50 text-xs text-workbench-subtle"><tr><th className="px-3 py-2 font-medium">编号</th><th className="px-3 py-2 font-medium">任务</th><th className="px-3 py-2 font-medium">阶段</th><th className="px-3 py-2 font-medium">优先级</th><th className="px-3 py-2 font-medium">状态</th></tr></thead><tbody>{liveTasks.map((task) => <tr key={task.id} className="border-b border-workbench-border/60 last:border-0 hover:bg-workbench-muted/50"><td className="ds-mono px-3 py-2 text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</td><td className="max-w-md truncate px-3 py-2 text-workbench-ink">{task.title}</td><td className="px-3 py-2 text-workbench-subtle">{stageNames[task.stageIndex] ?? task.stageIndex}</td><td className="px-3 py-2 text-workbench-subtle">{task.priority}</td><td className="px-3 py-2"><WorkbenchStatus state={task.status} label={task.statusLabel} /></td></tr>)}</tbody></table></section>}
           <div className="mt-3 flex items-center gap-4 text-xs text-workbench-subtle"><span className="flex items-center gap-1.5"><KanbanSquare className="size-3.5" aria-hidden="true" />任务按工程阶段推进</span><span className="flex items-center gap-1.5"><List className="size-3.5" aria-hidden="true" />列表视图用于快速扫描全量任务</span></div>
         </main>
         <WorkflowRightRail schedules={schedules} agentRows={agentRows} nextTask={nextTask} failedTask={failedTask} refreshAll={refreshAll} />
       </div>
+      {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} />}
     </PageShell>
   );
 }
