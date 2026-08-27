@@ -104,6 +104,12 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   router.get('/', (req, res) => {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    // rootId=all: 全局看板——跨项目聚合所有任务(任务自带 rootId,客户端
+    // 映射项目名)。worktree 等历史 root 一并返回,由客户端按项目表过滤。
+    if (rootId === 'all') {
+      res.json({ tasks: taskStore.listAllTasks() });
+      return;
+    }
     res.json({ tasks: service.listTasks(rootId) });
   });
 

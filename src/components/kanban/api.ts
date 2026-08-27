@@ -10,6 +10,13 @@ import { api } from '@/utils/api';
 // return the raw fetch Response. Each method below throws on non-ok responses
 // and unwraps the typed payload.
 export const kanbanApi = {
+  /** 全局看板:跨项目聚合(rootId=all)。 */
+  listAllTasks: async (): Promise<Task[]> => {
+    const res = await api.get('/tasks?rootId=all');
+    if (!res.ok) throw new Error(`listAllTasks failed: ${res.status}`);
+    const data = (await res.json()) as TaskListResponse;
+    return data.tasks;
+  },
   listTasks: async (rootId: string): Promise<Task[]> => {
     const res = await api.get(`/tasks?rootId=${encodeURIComponent(rootId)}`);
     if (!res.ok) throw new Error(`listTasks failed: ${res.status}`);
