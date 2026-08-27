@@ -108,7 +108,9 @@ function buildKanban() {
     taskStore,
     templateStore,
     onTerminal: (task) => {
-      // best-effort worktree cleanup; resolveRootPath mirrors the runner's cwd resolution
+      // success 保留 worktree:交付物(分支+diff+DELIVERY.md)要留给用户评审;
+      // fail/cancel 的现场没有保留价值,照旧清理。resolveRootPath mirrors the runner's cwd resolution
+      if (task.status === 'success') return;
       void worktreeSetup.removeWorktree(task, resolveRootPath(task.rootId))
         .catch((e) => console.error('[kanban-worktree] terminal cleanup failed:', e));
     },

@@ -136,6 +136,7 @@ export interface TaskDiffResult {
   files: TaskDiffFile[];
   patch: string;
   truncated: boolean;
+  mergedIntoRoot?: boolean;
 }
 
 export interface StageRun {

@@ -18,6 +18,8 @@ export interface TaskDiffResult {
   files: TaskDiffFile[];
   patch: string;
   truncated: boolean;
+  /** 分支回落模式:任务分支已完全并入主仓(无未合并改动)。 */
+  mergedIntoRoot?: boolean;
 }
 
 const MAX_PATCH_BYTES = 280_000;
@@ -155,17 +157,37 @@ export async function getTaskDiff(options: {
   }
 
   // 半删残留的「假 worktree」目录(plain 子目录)解析回主仓 git——diff 会抓到
-  // 主仓工作区的无关未提交改动冒充交付物。校验 toplevel:必须不是主仓本身。
+  // 主仓工作区的无关未提交改动冒充交付物。
+  // 两种处置:worktree 有效 → 照常在工作树里 diff;失效但任务分支还在 →
+  // 回落到主仓按「merge-base..分支」diff(交付物随分支存活,清理不影响查看)。
   const topLevel = (await tryGit(['rev-parse', '--show-toplevel'], worktreePath))?.trim() ?? '';
   const normalizePathForCompare = (p: string) => p.replace(/[\\/]+/g, '/').replace(/\/$/, '').toLowerCase();
-  if (rootPath && topLevel && normalizePathForCompare(topLevel) === normalizePathForCompare(rootPath)) {
-    throw new AppError('worktree 未注册(疑似半删残留),交付物不可用', { code: 'NO_WORKTREE', statusCode: 404 });
+  const worktreeIsFake = rootPath && topLevel && normalizePathForCompare(topLevel) === normalizePathForCompare(rootPath);
+  let diffDir = worktreePath;
+  let mergedIntoRoot = false;
+  let diffArgsBase: string[] = [baseSha];
+  let resolvedWorktreePath = worktreePath;
+  if (worktreeIsFake) {
+    if (!rootPath || !task.worktreeBranch) {
+      throw new AppError('worktree 未注册且无任务分支,交付物不可用', { code: 'NO_WORKTREE', statusCode: 404 });
+    }
+    const branchSha = (await tryGit(['rev-parse', task.worktreeBranch], rootPath))?.trim();
+    if (!branchSha) {
+      throw new AppError('worktree 已清理且任务分支不存在,交付物不可用', { code: 'NO_WORKTREE', statusCode: 404 });
+    }
+    diffDir = rootPath;
+    const rootHead = (await tryGit(['rev-parse', 'HEAD'], rootPath))?.trim() ?? '';
+    const mergeBase = rootHead ? (await tryGit(['merge-base', rootHead, branchSha], rootPath))?.trim() : null;
+    diffArgsBase = [mergeBase ?? baseSha, branchSha];
+    mergedIntoRoot = mergeBase === branchSha;
+    resolvedWorktreePath = `${rootPath} (分支 ${task.worktreeBranch})`;
   }
   const [numstatRaw, nameStatusRaw, patchRaw, statusRaw] = await Promise.all([
-    tryGit(['diff', '--numstat', baseSha], worktreePath),
-    tryGit(['diff', '--name-status', baseSha], worktreePath),
-    tryGit(['diff', baseSha], worktreePath),
-    tryGit(['status', '--porcelain'], worktreePath),
+    tryGit(['diff', '--numstat', ...diffArgsBase], diffDir),
+    tryGit(['diff', '--name-status', ...diffArgsBase], diffDir),
+    tryGit(['diff', ...diffArgsBase], diffDir),
+    // 分支回落模式没有工作树改动可看;worktree 模式下 status 用于 untracked 补丁
+    worktreeIsFake ? Promise.resolve(null) : tryGit(['status', '--porcelain'], diffDir),
   ]);
 
   const stats = parseNumstat(numstatRaw ?? '');
@@ -194,5 +216,5 @@ export async function getTaskDiff(options: {
     truncated = true;
   }
 
-  return { worktreePath, baseSha, files, patch, truncated };
+  return { worktreePath: resolvedWorktreePath, baseSha, files, patch, truncated, mergedIntoRoot };
 }
