@@ -17,6 +17,17 @@ import { getSyncEngine, startSyncScheduler } from './sync.client.js';
 
 const router = express.Router();
 
+/** Default relay; users only override for self-hosted deployments. */
+const DEFAULT_CLOUD_URL = 'https://api.planrla.com';
+
+/** Explicit value wins (trimmed); otherwise persisted config; otherwise the
+ *  public default — which is then persisted so the UI reflects it. */
+function resolveCloudUrl(repo: ReturnType<typeof createSyncConfigRepository>, explicit?: string): string {
+  const url = (explicit?.trim() || repo.get('cloud_url') || DEFAULT_CLOUD_URL).replace(//+$/, '');
+  if (!repo.get('cloud_url')) repo.set('cloud_url', url);
+  return url;
+}
+
 /** GET /api/sync/config — current sync configuration + connection status. */
 router.get('/config', async (_req, res) => {
   const repo = createSyncConfigRepository(getConnection());
@@ -37,10 +48,8 @@ router.get('/config', async (_req, res) => {
 /** POST /api/sync/config — set just the cloud URL (step 1, before team ops). */
 router.post('/config', async (req, res) => {
   const { cloudUrl } = req.body as { cloudUrl?: string };
-  if (!cloudUrl?.trim()) return res.status(400).json({ error: 'cloudUrl required' });
   const repo = createSyncConfigRepository(getConnection());
-  repo.set('cloud_url', cloudUrl.trim());
-  res.json({ success: true });
+  res.json({ success: true, cloudUrl: resolveCloudUrl(repo, cloudUrl) });
 });
 
 /** POST /api/sync/team/create — create a team on cloud and store credentials. */
@@ -49,9 +58,8 @@ router.post('/team/create', async (req, res) => {
     const { name } = req.body as { name?: string };
     if (!name?.trim()) return res.status(400).json({ error: 'team name required' });
     const repo = createSyncConfigRepository(getConnection());
-    const cloudUrl = repo.get('cloud_url');
+    const cloudUrl = resolveCloudUrl(repo);
     const jwt = req.headers.authorization ?? '';
-    if (!cloudUrl) return res.status(400).json({ error: 'cloud_url not set' });
 
     const r = await fetch(`${cloudUrl.replace(/\/+$/, '')}/api/teams`, {
       method: 'POST',
@@ -79,9 +87,8 @@ router.post('/team/join', async (req, res) => {
     const { inviteCode } = req.body as { inviteCode?: string };
     if (!inviteCode?.trim()) return res.status(400).json({ error: 'inviteCode required' });
     const repo = createSyncConfigRepository(getConnection());
-    const cloudUrl = repo.get('cloud_url');
+    const cloudUrl = resolveCloudUrl(repo);
     const jwt = req.headers.authorization ?? '';
-    if (!cloudUrl) return res.status(400).json({ error: 'cloud_url not set' });
 
     const r = await fetch(`${cloudUrl.replace(/\/+$/, '')}/api/teams/join`, {
       method: 'POST',
@@ -105,10 +112,10 @@ router.post('/instance/register', async (req, res) => {
   try {
     const { name } = req.body as { name?: string };
     const repo = createSyncConfigRepository(getConnection());
-    const cloudUrl = repo.get('cloud_url');
+    const cloudUrl = resolveCloudUrl(repo);
     const teamId = repo.get('team_id');
     const jwt = req.headers.authorization ?? '';
-    if (!cloudUrl || !teamId) return res.status(400).json({ error: 'cloud_url and team required first' });
+    if (!teamId) return res.status(400).json({ error: 'join a team before registering an instance' });
 
     const r = await fetch(`${cloudUrl.replace(/\/+$/, '')}/api/teams/${teamId}/instances`, {
       method: 'POST',

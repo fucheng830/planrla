@@ -190,9 +190,11 @@ export default function SyncSettingsTab() {
         </div>
       )}
 
-      {/* Step 1: cloud URL */}
-      <section className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Cloud URL</label>
+      {/* Step 1: cloud URL — optional; empty applies the official relay */}
+        <section className="space-y-2">
+        <label className="text-sm font-medium text-foreground">
+          Cloud URL <span className="font-normal text-muted-foreground">(留空使用默认官方中转，仅自建部署时修改)</span>
+        </label>
         <div className="flex gap-2">
           <input
             type="text"
