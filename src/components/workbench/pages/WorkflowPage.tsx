@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CircleDot,
   FileWarning,
+  Plus,
   KanbanSquare,
   List,
   MessageCircle,
@@ -13,16 +14,17 @@ import {
   ShieldAlert,
   UserRound,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import type { Task, TaskPriority, TaskDiffResult } from '../../kanban/types';
 import type { Project } from '../../../types/app';
-import { toast } from 'sonner';
 import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
+import { CreateTaskCard } from './CreateTaskCard';
 import { WORKFLOW_STAGES } from './workflowModel';
 
 type AgentRow = { name: string; detail: string; state: 'running' | 'idle' | 'waiting'; label: string };
@@ -105,7 +107,7 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
               {diff.files.map((f: TaskDiffResult["files"][number]) => (
                 <li key={f.path} className="flex items-center justify-between gap-2 rounded border border-workbench-border bg-workbench-surface px-2 py-1.5 text-xs">
                   <span className="min-w-0 truncate text-workbench-ink">{f.path}</span>
-                  <span className="flex-shrink-0 ds-mono text-[10px] text-workbench-subtle"><span className="text-workbench-success">+{f.additions}</span> <span className="text-workbench-danger">-{f.deletions}</span></span>
+                  <span className="ds-mono flex-shrink-0 text-[10px] text-workbench-subtle"><span className="text-workbench-success">+{f.additions}</span> <span className="text-workbench-danger">-{f.deletions}</span></span>
                 </li>
               ))}
             </ul>
@@ -150,7 +152,7 @@ function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel, onShowDeliverabl
 
 function ActionCard({ title, detail, status, tone, children }: { title: string; detail: string; status: string; tone: 'waiting' | 'failed'; children?: ReactNode }) {
   return (
-    <article className={`rounded-md border p-3 ${tone === 'waiting' ? 'border-workbench-waiting/40 bg-workbench-waiting-soft/30' : 'border-workbench-danger/40 bg-workbench-danger-soft/30'}`}>
+    <article className={`rounded-md border p-3 ${tone === 'waiting' ? 'bg-workbench-waiting-soft/30 border-workbench-waiting/40' : 'bg-workbench-danger-soft/30 border-workbench-danger/40'}`}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-workbench-ink">{title}</h3>
         <WorkbenchStatus state={tone === 'waiting' ? 'waiting' : 'failed'} label={status} />
@@ -169,7 +171,7 @@ function WorkflowRightRail({ schedules, agentRows, nextTask, failedTask, refresh
       <section className="ds-panel p-3" aria-label="当前需要你处理">
         <header className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-workbench-ink"><ShieldAlert className="size-4 text-workbench-waiting" aria-hidden="true" />当前需要你处理</h2>
-          <span className="ds-mono rounded bg-workbench-waiting-soft px-1.5 py-0.5 text-[10px] text-workbench-waiting">{(nextTask ? 1 : 0) + (failedTask ? 1 : 0)}</span>
+          <span className="ds-mono bg-workbench-waiting-soft rounded px-1.5 py-0.5 text-[10px] text-workbench-waiting">{(nextTask ? 1 : 0) + (failedTask ? 1 : 0)}</span>
         </header>
         {nextTask ? (
           <ActionCard title={nextTask.taskTemplateName ?? `任务 #${nextTask.taskNumber}`} detail="AI 已暂停，等待你确认后继续推进任务。" status="待确认" tone="waiting">
@@ -183,7 +185,7 @@ function WorkflowRightRail({ schedules, agentRows, nextTask, failedTask, refresh
         ) : (
           <p className="rounded-md border border-workbench-border bg-workbench-muted/30 p-3 text-xs text-workbench-subtle">当前没有等待人工确认的任务</p>
         )}
-        {failedTask && <div className="mt-2"><ActionCard title={`REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''}`} detail={failedTask.auxFlags?.sessionError ?? '任务运行失败,需要工程师检查日志并决定是否重试。'} status="转派" tone="failed"><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { void kanbanApi.retryTask(failedTask.id, failedTask.rootId).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-ink hover:bg-workbench-muted"><Play className="size-3" />重试</button><button type="button" onClick={() => { const input = window.prompt('转给哪位同事?(输入名字,将创建一条团队消息)'); if (input?.trim()) { void (async () => { const rootId = failedTask.rootId; const res = await fetch('/api/team-messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rootId, content: `@${input.trim()} 转派:REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''} 执行失败(${failedTask.auxFlags?.sessionError ?? '未知原因'}),请协助处理。`, taskId: failedTask.id }) }); if (!res.ok) throw new Error(`team-messages failed: ${res.status}`); toast.success(`已转给 ${input.trim()},消息在消息盒子可见`); })(); } }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-danger/40 px-2 py-1 text-xs text-workbench-danger hover:bg-workbench-danger-soft"><MessageCircle className="size-3" />转给同事</button><button type="button" onClick={() => { void kanbanApi.move(failedTask.id, failedTask.rootId, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">取消任务</button></div></ActionCard></div>}
+        {failedTask && <div className="mt-2"><ActionCard title={`REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''}`} detail={failedTask.auxFlags?.sessionError ?? '任务运行失败,需要工程师检查日志并决定是否重试。'} status="转派" tone="failed"><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { void kanbanApi.retryTask(failedTask.id, failedTask.rootId).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-ink hover:bg-workbench-muted"><Play className="size-3" />重试</button><button type="button" onClick={() => { const input = window.prompt('转给哪位同事?(输入名字,将创建一条团队消息)'); if (input?.trim()) { void (async () => { const rootId = failedTask.rootId; const res = await fetch('/api/team-messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rootId, content: `@${input.trim()} 转派:REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''} 执行失败(${failedTask.auxFlags?.sessionError ?? '未知原因'}),请协助处理。`, taskId: failedTask.id }) }); if (!res.ok) throw new Error(`team-messages failed: ${res.status}`); toast.success(`已转给 ${input.trim()},消息在消息盒子可见`); })(); } }} className="ds-focus-ring hover:bg-workbench-danger-soft inline-flex items-center gap-1 rounded border border-workbench-danger/40 px-2 py-1 text-xs text-workbench-danger"><MessageCircle className="size-3" />转给同事</button><button type="button" onClick={() => { void kanbanApi.move(failedTask.id, failedTask.rootId, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">取消任务</button></div></ActionCard></div>}
       </section>
 
       <section className="ds-panel p-3" aria-label="日历与定时任务">
@@ -230,7 +232,6 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const [view, setView] = useState<'board' | 'list'>('board');
   const [showRules, setShowRules] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [createInput, setCreateInput] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [deliverableTask, setDeliverableTask] = useState<Task | null>(null);
@@ -269,14 +270,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
     });
   }, [templates, tasks]);
 
-  const handleCreateTask = async () => {
-    if (!activeTemplate || !targetProjectId) return;
-    // 跨项目创建:rootId 决定任务归属与 agent 的 worktree 位置
-    await createTask(activeTemplate.id, createInput.trim() || '新的研发任务', { rootId: targetProjectId });
-    toast.success(`任务已创建到「${createTargetLabel === projectName ? '当前项目' : createTargetLabel}」的看板`);
-    setCreateInput('');
-    setShowCreate(false);
-  };
+
 
   return (
     <PageShell>
@@ -292,15 +286,68 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
       />
 
       {showRules && <section className="ds-panel flex flex-wrap items-center gap-4 p-3 text-xs text-workbench-subtle" aria-label="流程规则"><span className="font-semibold text-workbench-ink">工程化约束</span><span>需求确认后才能进入技术方案</span><span>测试失败自动暂停并通知协作者</span><span>交付前必须生成验证记录</span></section>}
-      {showCreate && <section className="ds-panel flex flex-wrap items-center gap-2 p-3" aria-label="创建任务"><select value={targetProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="ds-focus-ring h-8 rounded border border-workbench-border bg-workbench-surface px-2 text-xs text-workbench-ink" aria-label="关联项目">{selectableProjects.map((p) => <option key={p.projectId} value={p.projectId}>{p.displayName || p.fullPath || p.path || p.projectId.slice(0, 8)}</option>)}</select>
-          {templates.length > 1 && <select value={activeTemplate?.id ?? ''} onChange={(event) => setSelectedTemplateId(event.target.value)} className="ds-focus-ring h-8 rounded border border-workbench-border bg-workbench-surface px-2 text-xs text-workbench-ink" aria-label="选择模板">{templates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}</select>}<input value={createInput} onChange={(event) => setCreateInput(event.target.value)} placeholder="输入需求描述,回车创建" onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateTask(); }} className="ds-focus-ring h-8 min-w-[240px] flex-1 rounded border border-workbench-border bg-workbench-surface px-3 text-sm text-workbench-ink" /><button type="button" onClick={() => void handleCreateTask()} disabled={!activeTemplate || !targetProjectId} className="ds-focus-ring h-8 rounded bg-workbench-accent px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">创建</button></section>}
+      {showCreate && (
+        <CreateTaskCard
+          projects={selectableProjects}
+          templates={templates}
+          defaultProjectId={targetProjectId}
+          onClose={() => setShowCreate(false)}
+          onCreate={async (input, projectId, templateId, priority) => {
+            await createTask(templateId, input, { rootId: projectId, priority });
+            const label = selectableProjects.find((p) => p.projectId === projectId)?.displayName ?? '';
+            toast.success(`已创建到「${label || projectName}」的需求设计列`);
+            await refreshAll();
+          }}
+        />
+      )}
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2 text-xs text-workbench-subtle"><FilterChip label="看板" active={view === 'board'} onClick={() => setView('board')} /><FilterChip label="列表" active={view === 'list'} onClick={() => setView('list')} />{liveTasks.length === 0 && !loading && <span className="rounded bg-workbench-muted px-2 py-1">还没有任务 · 点右上角「创建任务」开始</span>}</div><div className="flex items-center gap-3 text-xs text-workbench-subtle"><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-accent" />AI 运行中</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-waiting" />等负责人</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-danger" />验证失败</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-success" />已交付</span></div></div>
-          {error && <p className="mb-3 rounded-md border border-workbench-danger/30 bg-workbench-danger-soft/30 p-3 text-sm text-workbench-danger">加载任务失败：{error}</p>}
+          {error && <p className="bg-workbench-danger-soft/30 mb-3 rounded-md border border-workbench-danger/30 p-3 text-sm text-workbench-danger">加载任务失败：{error}</p>}
           {loading && <p className="mb-3 text-sm text-workbench-subtle">正在加载看板数据…</p>}
-          {view === 'board' ? <div className="flex gap-3 overflow-x-auto pb-1">{columns.map((column) => <section key={column.name} className="ds-panel flex min-h-[520px] w-56 shrink-0 grow flex-col" aria-label={column.name}><header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header><div className="flex-1 space-y-2 overflow-auto p-2">{column.tasks.length === 0 ? <p className="py-8 text-center text-xs text-workbench-subtle">暂无任务</p> : column.tasks.map((task) => <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} />)}</div></section>)}</div> : <section className="ds-panel overflow-hidden" aria-label="任务列表"><table className="w-full text-left text-sm"><thead className="border-b border-workbench-border bg-workbench-muted/50 text-xs text-workbench-subtle"><tr><th className="px-3 py-2 font-medium">编号</th><th className="px-3 py-2 font-medium">任务</th><th className="px-3 py-2 font-medium">阶段</th><th className="px-3 py-2 font-medium">优先级</th><th className="px-3 py-2 font-medium">状态</th></tr></thead><tbody>{liveTasks.map((task) => <tr key={task.id} className="border-b border-workbench-border/60 last:border-0 hover:bg-workbench-muted/50"><td className="ds-mono px-3 py-2 text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</td><td className="max-w-md truncate px-3 py-2 text-workbench-ink">{task.title}</td><td className="px-3 py-2 text-workbench-subtle">{stageNames[task.stageIndex] ?? task.stageIndex}</td><td className="px-3 py-2 text-workbench-subtle">{task.priority}</td><td className="px-3 py-2"><WorkbenchStatus state={task.status} label={task.statusLabel} /></td></tr>)}</tbody></table></section>}
+          {view === 'board' ? (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {columns.map((column, index0) => (
+                <section key={column.name} className="ds-panel flex min-h-[520px] w-56 shrink-0 grow flex-col" aria-label={column.name}>
+                  <header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header>
+                  <div className="flex flex-1 flex-col space-y-2 overflow-auto p-2">
+                    {column.tasks.length === 0 ? (
+                      <p className="py-8 text-center text-xs text-workbench-subtle">暂无任务</p>
+                    ) : (
+                      <>
+                        {column.tasks.map((task) => (
+                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} />
+                        ))}
+                      </>
+                    )}
+                    {(index0 === 0 && column.name === stageNames[0]) && (
+                      <button type="button" onClick={() => setShowCreate(true)} className="ds-focus-ring mt-auto flex w-full flex-col items-center gap-1 rounded-md border border-dashed border-workbench-border py-3 text-xs text-workbench-subtle transition-colors hover:border-workbench-accent/60 hover:text-workbench-accent">
+                        <Plus className="size-4" aria-hidden="true" />新建需求
+                      </button>
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <section className="ds-panel overflow-hidden" aria-label="任务列表">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-workbench-border bg-workbench-muted/50 text-xs text-workbench-subtle"><tr><th className="px-3 py-2 font-medium">编号</th><th className="px-3 py-2 font-medium">任务</th><th className="px-3 py-2 font-medium">阶段</th><th className="px-3 py-2 font-medium">优先级</th><th className="px-3 py-2 font-medium">状态</th></tr></thead>
+                <tbody>
+                  {liveTasks.map((task) => (
+                    <tr key={task.id} className="border-b border-workbench-border/60 last:border-0 hover:bg-workbench-muted/50">
+                      <td className="ds-mono px-3 py-2 text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</td>
+                      <td className="max-w-md truncate px-3 py-2 text-workbench-ink">{task.title}</td>
+                      <td className="px-3 py-2 text-workbench-subtle">{stageNames[task.stageIndex] ?? task.stageIndex}</td>
+                      <td className="px-3 py-2 text-workbench-subtle">{task.priority}</td>
+                      <td className="px-3 py-2"><WorkbenchStatus state={task.status} label={task.statusLabel} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
           <div className="mt-3 flex items-center gap-4 text-xs text-workbench-subtle"><span className="flex items-center gap-1.5"><KanbanSquare className="size-3.5" aria-hidden="true" />任务按工程阶段推进</span><span className="flex items-center gap-1.5"><List className="size-3.5" aria-hidden="true" />列表视图用于快速扫描全量任务</span></div>
         </main>
         <WorkflowRightRail schedules={schedules} agentRows={agentRows} nextTask={nextTask} failedTask={failedTask} refreshAll={refreshAll} />
