@@ -1,4 +1,4 @@
-import { Terminal, MonitorPlay, KanbanSquare, CalendarClock, LayoutDashboard, Inbox, CalendarDays, type LucideIcon } from 'lucide-react';
+import { Terminal, MonitorPlay, CalendarClock, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -41,17 +41,14 @@ type PluginTab = {
 type TabDefinition = BuiltInTab | PluginTab;
 
 /**
- * Secondary views shown as standalone icon buttons. Chat is NOT listed — it is
- * the default main content. 'shell' toggles the bottom terminal panel; cron/
- * browserUse toggle tabs in the right-side extension panel; plugin tabs
- * replace the main content and clicking the active one returns to chat.
+ * Header quick buttons for things the left rail does NOT cover: the shell
+ * toggles the bottom terminal panel; cron/browserUse toggle tabs in the
+ * right-side extension panel; plugin tabs replace the main content. Workbench
+ * pages (overview/inbox/workflow/schedule) live in the rail only — no header
+ * duplicates.
  */
 const BASE_TABS: BuiltInTab[] = [
   { kind: 'builtin', id: 'shell', labelKey: 'tabs.shell', icon: Terminal },
-  { kind: 'builtin', id: 'overview', labelKey: 'tabs.overview', icon: LayoutDashboard },
-  { kind: 'builtin', id: 'inbox', labelKey: 'tabs.inbox', icon: Inbox },
-  { kind: 'builtin', id: 'workflow', labelKey: 'tabs.workflow', icon: KanbanSquare },
-  { kind: 'builtin', id: 'schedule', labelKey: 'tabs.schedule', icon: CalendarDays },
   // 'git' is intentionally not here: its entry point moved to the branch
   // indicator next to the project name in MainContentTitle.
 ];
