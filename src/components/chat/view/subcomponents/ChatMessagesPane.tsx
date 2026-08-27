@@ -266,7 +266,7 @@ export default function ChatMessagesPane({
               const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
               const nextMessage = index < visibleMessages.length - 1 ? visibleMessages[index + 1] : null;
               return (
-                <div key={getMessageKey(message)} style={{ paddingBottom: '0.75rem' }}>
+                <div key={getMessageKey(message)} className="mx-auto w-full max-w-3xl" style={{ paddingBottom: '0.75rem' }}>
                   <MessageComponent
                     message={message}
                     prevMessage={prevMessage}

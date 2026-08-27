@@ -281,7 +281,7 @@ export default function ChatComposer({
 
       {!hasQuestionPanel && <div
         ref={composerAreaRef}
-        className="relative mx-auto max-w-4xl"
+        className="relative mx-auto w-full max-w-3xl"
         onDragOverCapture={handleSessionDragOverCapture}
         onDragLeaveCapture={handleSessionDragLeaveCapture}
         onDropCapture={handleSessionDropCapture}

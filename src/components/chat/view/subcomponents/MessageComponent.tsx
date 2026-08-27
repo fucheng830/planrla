@@ -125,12 +125,12 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
     <div
       ref={messageRef}
       data-message-timestamp={message.timestamp || undefined}
-      className={`group/msg chat-message ${message.type} ${isGrouped ? 'grouped' : ''} ${message.type === 'user' ? 'flex justify-end px-3 sm:px-0' : 'px-3 sm:px-0'}`}
+      className={`group/msg chat-message mx-auto w-full max-w-3xl ${message.type} ${isGrouped ? 'grouped' : ''} ${message.type === 'user' ? 'flex justify-end px-3 sm:px-0' : 'px-3 sm:px-0'}`}
     >
       {message.type === 'user' ? (
         /* User message bubble on the right */
-        <div className="flex w-full items-end space-x-0 sm:w-auto sm:max-w-[85%] sm:space-x-3 md:max-w-md lg:max-w-lg xl:max-w-xl">
-          <div className="group flex-1 rounded-md rounded-br-sm bg-workbench-accent px-3 py-2 text-white shadow-sm sm:flex-initial sm:px-4">
+        <div className="flex w-full justify-end">
+          <div className="group max-w-[85%] rounded-2xl rounded-br-md bg-workbench-muted px-4 py-2.5 text-workbench-ink shadow-sm sm:max-w-xl">
             <div dir="auto" className="whitespace-pre-wrap break-words text-sm">{String(message.content || '')}</div>
             {message.images && message.images.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -147,7 +147,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
             )}
             {/* User bubble meta: copy / fork / time on one line, all hover-revealed
                 (same pattern as the assistant turn-end meta row). */}
-            <div className="mt-1 flex items-center justify-end gap-1 text-xs text-blue-100">
+            <div className="mt-1 flex items-center justify-end gap-1 text-xs text-workbench-subtle">
               <span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
                 {shouldShowUserCopyControl && (
                   <MessageCopyControl content={userCopyContent} messageType="user" />
@@ -157,7 +157,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
                     type="button"
                     onClick={onForkAtMessage}
                     title={t('messageActions.forkFromHere', { defaultValue: 'Fork from here' })}
-                    className="flex items-center rounded px-1 py-0.5 hover:text-white"
+                    className="flex items-center rounded px-1 py-0.5 hover:text-workbench-accent"
                   >
                     <GitBranch className="h-3 w-3" />
                   </button>
@@ -166,11 +166,6 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
               </span>
             </div>
           </div>
-          {!isGrouped && (
-            <div className="hidden size-8 flex-shrink-0 items-center justify-center rounded-full bg-workbench-accent text-sm text-white sm:flex">
-              U
-            </div>
-          )}
         </div>
       ) : message.isTaskNotification ? (
         /* Compact task notification on the left */
