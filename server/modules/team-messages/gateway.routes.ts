@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { broadcastTeamMessage } from '@/utils/kanban-websocket.js';
+
 import { createTeamMessageStore } from './store.js';
 
 // 消息网关接入(模拟外部渠道 webhook):外部系统 POST 消息进来 → 落库 →
@@ -26,16 +27,22 @@ export function createGatewayIngestRouter(deps: { store: ReturnType<typeof creat
     if (!verifyGatewayToken(req)) {
       return res.status(401).json({ message: 'invalid gateway token' });
     }
-    const { rootId, channel, sender, content, threadKey, taskId } = req.body ?? {};
+    const { rootId, channel, sender, content, threadKey, taskId, kind } = req.body ?? {};
     if (typeof content !== 'string' || !content.trim()) {
       return res.status(400).json({ message: 'content required' });
     }
-    const effectiveChannel = String(channel ?? '其他').slice(0, 30);
-    const effectiveSender = String(sender ?? '客户').trim().slice(0, 60) || '客户';
+    const isTeam = kind === 'team';
+    // team 消息 = 外部来源的队友发言(同步协议/mock),必须带 sender;
+    // customer 消息 = 渠道客户咨询,sender 缺省「客户」。
+    const effectiveSender = String(sender ?? '').trim().slice(0, 60);
+    if (!effectiveSender) {
+      return res.status(400).json({ message: isTeam ? 'team messages require sender (external author)' : 'sender required for customer messages' });
+    }
+    const effectiveChannel = String(channel ?? (isTeam ? '内部' : '其他')).slice(0, 30);
     const message = deps.store.createMessage({
       rootId: String(rootId ?? 'gateway'),
-      kind: 'customer',
-      channel: effectiveChannel,
+      kind: isTeam ? 'team' : 'customer',
+      channel: isTeam ? null : effectiveChannel,
       threadId: normalizeThreadKey(effectiveChannel, effectiveSender, threadKey),
       sender: effectiveSender,
       content: content.trim().slice(0, 4000),
