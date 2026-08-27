@@ -1,6 +1,6 @@
 import { getConnection } from '@/modules/database/connection.js';
 import { projectsDb } from '@/modules/database/repositories/projects.db.js';
-import { normalizeProjectPath } from '@/shared/utils.js';
+import { attributeSessionProjectPath, normalizeProjectPath } from '@/shared/utils.js';
 
 type SessionRow = {
   session_id: string;
@@ -57,7 +57,9 @@ function normalizeSessionRows(rows: SessionRow[]): SessionRow[] {
 
 function normalizeProjectPathForProvider(provider: string, projectPath: string): string {
   void provider;
-  return normalizeProjectPath(projectPath);
+  // Kanban agent worktree cwds (…/.worktree/kanban/<task>) are attributed to
+  // the real project root so the sessions show up under the actual project.
+  return attributeSessionProjectPath(normalizeProjectPath(projectPath));
 }
 
 export const sessionsDb = {

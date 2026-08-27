@@ -54,15 +54,19 @@ export const projectsDb = {
         }
 
         const normalizedProjectName = normalizeProjectDisplayName(normalizedProjectPath, customProjectName);
+        // Defense-in-depth: kanban worktree paths reaching this layer (e.g. a
+        // caller bypassing session attribution) are created pre-archived and
+        // forced back to archived on conflict — they must never revive.
+        const wantArchived = isKanbanWorktreePath(normalizedProjectPath) ? 1 : 0;
         const attemptedId = randomUUID();
         const row = db.prepare(`
         INSERT INTO projects (project_id, project_path, custom_project_name, isArchived)
-            VALUES (?, ?, ?, 0)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(project_path) DO UPDATE SET
-            isArchived = 0
-            WHERE projects.isArchived = 1
+            isArchived = ${wantArchived}
+            WHERE projects.isArchived <> ${wantArchived}
             RETURNING project_id, project_path, custom_project_name, isStarred, isArchived
-        `).get(attemptedId, normalizedProjectPath, normalizedProjectName) as ProjectRepositoryRow | undefined;
+        `).get(attemptedId, normalizedProjectPath, normalizedProjectName, wantArchived) as ProjectRepositoryRow | undefined;
 
         if (row) {
             return {

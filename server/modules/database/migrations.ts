@@ -13,6 +13,8 @@ import {
   VAPID_KEYS_TABLE_SCHEMA_SQL,
   TEAM_MESSAGES_TABLE_SCHEMA_SQL,
 } from '@/modules/database/schema.js';
+import { projectsDb } from '@/modules/database/repositories/projects.db.js';
+import { attributeSessionProjectPath } from '@/shared/utils.js';
 
 const SQLITE_UUID_SQL = `
 lower(hex(randomblob(4))) || '-' ||
@@ -560,6 +562,30 @@ export const runMigrations = (db: Database) => {
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'kind', "TEXT NOT NULL DEFAULT 'team'");
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'channel', 'TEXT');
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'thread_id', 'TEXT');
+
+    // Backfill: kanban agent sessions used to be filed under their worktree
+    // path (…/.worktree/kanban/<task>), registering fake projects. Move them
+    // to the real project root, then drop the now-empty fake project rows.
+    // Idempotent — ingestion attributes new sessions correctly, so this is a
+    // no-op guard after the first run. Non-kanban worktrees (e.g.
+    // .claude/worktrees/…) keep their sessions and therefore their project.
+    const worktreeSessions = db
+      .prepare("SELECT session_id, project_path FROM sessions WHERE project_path LIKE '%.worktree%'")
+      .all() as Array<{ session_id: string; project_path: string }>;
+    for (const session of worktreeSessions) {
+      const rootPath = attributeSessionProjectPath(session.project_path);
+      if (rootPath === session.project_path) continue;
+      // createProjectPath returns the canonical (existing) casing on Windows —
+      // the UPDATE must use it or the sessions FK misses the project row.
+      const canonical = projectsDb.createProjectPath(rootPath).project?.project_path ?? rootPath;
+      db.prepare('UPDATE sessions SET project_path = ? WHERE session_id = ?').run(canonical, session.session_id);
+    }
+    db.prepare(
+      `DELETE FROM projects
+       WHERE project_path LIKE '%.worktree%'
+         AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.project_path = projects.project_path)`
+    ).run();
+
     console.log('Database migrations completed successfully');
   } catch (error: any) {
     console.error('Error running migrations:', error.message);

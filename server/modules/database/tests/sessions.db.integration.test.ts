@@ -82,3 +82,21 @@ test('repository reads normalize SQLite UTC timestamps to ISO strings', async ()
     assert.match(row?.updated_at ?? '', /^\d{4}-\d{2}-\d{2}T/);
   });
 });
+
+test('kanban worktree cwds are attributed to the real project root', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createSession(
+      'session-worktree',
+      'claude',
+      '/workspace/deepseek-harness/.worktree/kanban/1-d295bf21',
+      'Worktree Session',
+    );
+    // The session lands under the real project…
+    assert.deepEqual(
+      sessionsDb.getSessionsByProjectPath('/workspace/deepseek-harness').map((s) => s.session_id),
+      ['session-worktree'],
+    );
+    // …and the worktree path itself never becomes a project.
+    assert.equal(sessionsDb.countSessionsByProjectPath('/workspace/deepseek-harness/.worktree/kanban/1-d295bf21'), 0);
+  });
+});

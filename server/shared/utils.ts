@@ -203,6 +203,23 @@ export function normalizeProjectPath(inputPath: string): string {
   return normalized.replace(/[\\/]+$/, '');
 }
 
+const KANBAN_WORKTREE_MARKER = /[\\/]\.worktree[\\/]kanban[\\/]/i;
+
+/**
+ * Kanban agent worktrees (`<project root>/.worktree/kanban/<task>`) must never
+ * become their own project: sessions spawned inside them belong to the real
+ * project root. Truncates at the FIRST marker so nested
+ * worktree-in-worktree paths also collapse to the real root. Paths without a
+ * kanban worktree segment (e.g. `.claude/worktrees/...`) are returned as-is.
+ */
+export function attributeSessionProjectPath(projectPath: string): string {
+  const match = KANBAN_WORKTREE_MARKER.exec(projectPath);
+  if (!match || match.index === 0) {
+    return projectPath;
+  }
+  return projectPath.slice(0, match.index);
+}
+
 /**
  * Validates that a user-supplied workspace path is safe to use.
  *
