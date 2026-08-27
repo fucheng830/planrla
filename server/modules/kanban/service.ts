@@ -235,6 +235,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     }
     const retriedCount = taskStore.listTaskEvents(taskId).filter((e) => e.type === 'task_retried').length;
     taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+    taskStore.clearProviderSessionId(taskId);
     taskStore.updateTaskStatus(taskId, 'queued');
     recordEvent(taskId, 'task_retried', { attempt: retriedCount + 1 });
     return taskStore.getTask(taskId)!;

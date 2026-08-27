@@ -139,7 +139,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
       db.prepare(`UPDATE tasks SET status = ?, scheduler_admitted = 0, completed_at = ?, updated_at = ? WHERE id = ?`)
         .run(status, now, now, id);
     } else {
-      db.prepare(`UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?`)
+      db.prepare(`UPDATE tasks SET status = ?, completed_at = NULL, updated_at = ? WHERE id = ?`)
         .run(status, now, id);
     }
   }
@@ -227,6 +227,11 @@ export function createTaskStore(deps: TaskStoreDeps) {
   }
 
   /** Removes one task with its stage runs and events in a single transaction. */
+  /** retry 前清掉上一次的 provider 会话:retry 是 fresh 重跑,继续复用旧会话
+     会让 agent 拿着旧上下文操作全新 worktree。 */
+  function clearProviderSessionId(taskId: string): void {
+    db.prepare('UPDATE tasks SET provider_session_id = NULL, updated_at = ? WHERE id = ?').run(new Date().toISOString(), taskId);
+  }
   function deleteTask(taskId: string): void {
     db.transaction(() => {
       db.prepare('DELETE FROM task_events WHERE task_id = ?').run(taskId);
@@ -242,7 +247,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
     return roots.flatMap((row) => listTasks(row.root_id));
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, listAllTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, listStageRuns, listTaskEvents };
+  return { createTask, getTask, listQueuedTasks, listTasks, listAllTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, clearProviderSessionId, listStageRuns, listTaskEvents };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
