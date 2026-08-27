@@ -5,6 +5,10 @@ import { providerCapabilitiesService } from '@/modules/providers/services/provid
 import { providerMcpService } from '@/modules/providers/services/mcp.service.js';
 import { providerModelsService } from '@/modules/providers/services/provider-models.service.js';
 import { providerSkillsService } from '@/modules/providers/services/skills.service.js';
+import { existsSync, statSync } from 'node:fs';
+import { join, resolve as pathResolve } from 'node:path';
+import { homedir } from 'node:os';
+import { projectsDb } from '@/modules/database/repositories/projects.db.js';
 import { sessionsService } from '@/modules/providers/services/sessions.service.js';
 import type {
   LLMProvider,
@@ -582,6 +586,30 @@ router.post(
   }),
 );
 
+/**
+ * GET /api/providers/local-image?path=... — 受控本地图片代理。
+ * Codex/Claude 的 markdown 常用本地磁盘路径引用生成图(.codex/generated_images、
+ * 项目 design 目录等);浏览器无法直接读。允许范围:已注册项目路径、~/.codex、~/.claude。
+ */
+router.get(
+  '/local-image',
+  asyncHandler(async (req: Request, res: Response) => {
+    const raw = String(req.query.path ?? '');
+    if (!raw) throw new AppError('path required', { statusCode: 400 });
+    const normalized = pathResolve(raw.replace(/[\\/]+/g, '/'));
+    const allowed = [
+      ...projectsDb.listProjectPaths(),
+      join(homedir(), ".codex"),
+      join(homedir(), ".claude"),
+    ];
+    const isAllowed = allowed.some((root) => normalized.toLowerCase().startsWith(pathResolve(root).toLowerCase()));
+    if (!isAllowed) throw new AppError("path not allowed", { statusCode: 403 });
+    if (!existsSync(normalized) || !statSync(normalized).isFile()) {
+      throw new AppError("image not found", { statusCode: 404 });
+    }
+    res.sendFile(normalized);
+  }),
+);
 router.get(
   '/sessions/:sessionId/messages',
   asyncHandler(async (req: Request, res: Response) => {

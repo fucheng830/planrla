@@ -45,7 +45,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
       components={markdownPreviewComponents}
-    >
+     urlTransform={(url) => (/^[a-zA-Z]:[\/]/.test(url) || url.startsWith('file://') ? `/api/providers/local-image?path=${encodeURIComponent(url)}` : url)}>
       {content}
     </ReactMarkdown>
   );

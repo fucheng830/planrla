@@ -143,14 +143,33 @@ const markdownComponents = {
   ),
 };
 
+// Codex/Claude 的 markdown 会以本地磁盘路径(Windows 盘符/file://)引用生成图。
+// 浏览器无法直接读本地文件——映射到后端受控代理(/api/providers/local-image)。
+function transformLocalImageUrl(url: string): string {
+  // markdown 管线会先把反斜杠等字符百分号编码(%5C),解码后再判定
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    /* 非法编码时保留原样 */
+  }
+  const isLocalPath = /^[a-zA-Z]:[\\/]/.test(decoded) || decoded.startsWith('file://');
+  if (!isLocalPath) return url;
+  return `/api/providers/local-image?path=${encodeURIComponent(decoded)}`;
+}
+
 function MarkdownInner({ children, className }: MarkdownProps) {
   const content = normalizeInlineCodeFences(String(children ?? ''));
   const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], []);
   const rehypePlugins = useMemo(() => [rehypeKatex], []);
+  const urlTransform = useMemo(
+    () => (url: string) => transformLocalImageUrl(url),
+    [],
+  );
 
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={markdownComponents as any}>
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={markdownComponents as any} urlTransform={urlTransform}>
         {content}
       </ReactMarkdown>
     </div>

@@ -23,6 +23,12 @@ function isKanbanWorktreePath(p: string): boolean {
 }
 
 export const projectsDb = {
+    /** Active project paths (for local-image proxy allow-list). */
+    listProjectPaths(): string[] {
+        const db = getConnection();
+        return (db.prepare('SELECT project_path FROM projects WHERE isArchived = 0').all() as Array<{ project_path: string }>)
+            .map((row) => row.project_path);
+    },
     createProjectPath(projectPath: string, customProjectName: string | null = null): CreateProjectPathResult {
         const db = getConnection();
         let normalizedProjectPath = normalizeProjectPath(projectPath);
