@@ -143,7 +143,13 @@ export function createKanbanClaudeHooks(deps: KanbanClaudeHooksDeps): Record<str
     );
     onActionRequired?.({ requestId, toolName: 'AskUserQuestion', sessionId });
 
-    const decision = await waitForToolApproval(requestId, {
+    // exposeChatApproval is understood by the JS SDK runtime (loose typing
+    // across the .ts → .js boundary). Cast keeps the call site clean.
+    const waitForApproval = waitForToolApproval as (
+      id: string,
+      opts: { timeoutMs?: number; signal?: AbortSignal; exposeChatApproval?: boolean; metadata?: Record<string, unknown>; onCancel?: (reason: string) => void },
+    ) => Promise<any>;
+    const decision = await waitForApproval(requestId, {
       // Auto-continue: wait the configured timeout, then dismiss so the model
       // proceeds on its own. Default 0 = wait indefinitely (original behavior).
       timeoutMs: askUserQuestionAutoContinue

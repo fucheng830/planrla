@@ -23,6 +23,8 @@ type SyncResult = {
   pulled: number;
   skipped: number;
   deleted: number;
+  messagePushed?: number;
+  messagePulled?: number;
   serverTime?: number;
   error?: string;
 };

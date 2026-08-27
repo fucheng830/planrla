@@ -123,6 +123,8 @@ export interface Task {
    * queued; a failed/cancelled dependency blocks until a human intervenes. */
   dependencies?: string[];
   auxFlags: TaskAuxFlags;
+  /** Requirement text carried from the first stage run (sync/list join). */
+  input?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;

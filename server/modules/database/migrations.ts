@@ -556,7 +556,7 @@ export const runMigrations = (db: Database) => {
     db.exec(CRON_PROMPTS_TABLE_SCHEMA_SQL);
     db.exec(CALENDAR_EVENTS_TABLE_SCHEMA_SQL);
     db.exec(TEAM_MESSAGES_TABLE_SCHEMA_SQL);
-    const teamMessageColumns = db.prepare('PRAGMA table_info(team_messages)').all().map((c) => c.name);
+    const teamMessageColumns = (db.prepare('PRAGMA table_info(team_messages)').all() as Array<{ name: string }>).map((c) => c.name);
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'kind', "TEXT NOT NULL DEFAULT 'team'");
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'channel', 'TEXT');
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'thread_id', 'TEXT');
