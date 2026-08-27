@@ -104,6 +104,7 @@
 
 .ds-status {
     display: inline-flex;
+    white-space: nowrap;
     align-items: center;
     gap: 6px;
     border-radius: var(--ds-radius-tag);
