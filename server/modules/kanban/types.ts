@@ -141,6 +141,8 @@ export interface Task {
    * queued; a failed/cancelled dependency blocks until a human intervenes. */
   dependencies?: string[];
   auxFlags: TaskAuxFlags;
+  /** 待处理的验收返工反馈(rework 写入,runner 首次 spawn 消费后清空)。 */
+  reworkFeedback?: string;
   /** Requirement text carried from the first stage run (sync/list join). */
   input?: string;
   createdAt: string;

@@ -28,7 +28,7 @@ function fakeKanban(overrides: { task?: Task | null; nextCalls?: string[]; prevC
     getNextTask: () => overrides.nextTask ?? null,
   };
   return {
-    getKanban: () => ({ service: service as any, taskStore: taskStore as any, scheduler: { schedule: () => {} } }),
+    getKanban: () => ({ service: service as any, taskStore: taskStore as any, templateStore: { getTaskTemplate: () => null } as any, scheduler: { schedule: () => {} } }),
     nextCalls, prevCalls, events,
   };
 }

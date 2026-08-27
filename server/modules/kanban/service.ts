@@ -242,6 +242,25 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     recordEvent(taskId, 'task_retried', { attempt: retriedCount + 1 });
     return taskStore.getTask(taskId)!;
   }
+
+  /** 验收返工:用户拒收已交付(success)的任务。与 retry 的区别:不清
+     provider 会话(agent 延续原会话上下文返工)、worktree 保留,反馈持久化
+     到 rework_feedback,由 runner 在下一次 spawn 时消费为返工指令。 */
+  function rework(rootId: string, taskId: string, feedback: string): Task {
+    const task = requireTask(taskId, rootId);
+    if (task.status !== 'success') {
+      throw new AppError('只有已交付(success)的任务才能发起返工', { code: 'INVALID_STATUS', statusCode: 409 });
+    }
+    const trimmed = feedback.trim();
+    if (!trimmed) {
+      throw new AppError('返工必须附上验收反馈', { code: 'FEEDBACK_REQUIRED', statusCode: 400 });
+    }
+    taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+    taskStore.setReworkFeedback(taskId, trimmed);
+    taskStore.updateTaskStatus(taskId, 'queued');
+    recordEvent(taskId, 'task_reworked', { feedback: trimmed.slice(0, 500) });
+    return taskStore.getTask(taskId)!;
+  }
   function fail(rootId: string, taskId: string): Task {
     requireNonTerminalTask(taskId, rootId);
     clearPendingAskUser(taskId);
@@ -345,7 +364,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tpl;
   }
 
-  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, retry, deleteTask, listTasks, getTask, getNextTask, expandTask };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, retry, rework, deleteTask, listTasks, getTask, getNextTask, expandTask };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;

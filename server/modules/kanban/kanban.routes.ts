@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { asyncHandler } from '@/shared/utils.js';
-import { sessionsService } from '@/modules/providers/services/sessions.service.js';
+import { sessionsService } from '@/modules/providers/index.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import cron from 'node-cron';
@@ -13,6 +13,7 @@ import { broadcastTaskDeleted, broadcastTaskUpdated } from '@/utils/kanban-webso
 import { decomposePrd } from '@/modules/kanban/prd-decompose.js';
 import { createAttachmentStore } from './attachments.js';
 import { getTaskDiff } from '@/modules/kanban/review.js';
+import { acceptDeliverable } from '@/modules/kanban/acceptance.js';
 import type { Task } from '@/modules/kanban/types.js';
 import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notification-orchestrator.js';
 
@@ -251,7 +252,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   router.get('/:taskId/delivery-summary', asyncHandler(async (req: Request, res: Response) => {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });
-    const task = taskStore.getTask(req.params.taskId);
+    const task = taskStore.getTask(String(req.params.taskId));
     if (!task || task.rootId !== rootId) return res.status(404).json({ message: 'task not found' });
     if (!task.providerSessionId) return res.status(404).json({ message: 'no agent session' });
     // 由模板定位 provider(最后 agent 阶段的 agent 名),解析 app 会话后取末尾总结
@@ -315,6 +316,37 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
         if (settled) broadcastTaskUpdated(req.app.locals.wss, rootId, settled);
       });
       res.status(202).json({ task });
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
+
+  // --- 验收(交付物面板的动作闭环)---
+  // 验收通过:任务分支合并进主仓(--no-ff)。守卫与冲突恢复都在 acceptance.ts。
+  router.post('/:taskId/merge', async (req, res) => {
+    const rootId = String(req.body?.rootId ?? '');
+    const taskId = req.params.taskId;
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    try {
+      const result = await acceptDeliverable({ taskStore, resolveRootPath }, rootId, taskId);
+      if (result.task) broadcastTaskUpdated(req.app.locals.wss, rootId, result.task);
+      res.json(result);
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
+
+  // 验收不通过:带反馈重新排队返工(agent 延续原会话,按反馈修改)。
+  router.post('/:taskId/rework', (req, res) => {
+    const rootId = String(req.body?.rootId ?? '');
+    const taskId = req.params.taskId;
+    const feedback = String(req.body?.feedback ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    try {
+      const task = service.rework(rootId, taskId, feedback);
+      scheduler.schedule(rootId);
+      broadcastTaskUpdated(req.app.locals.wss, rootId, task);
+      res.json({ task });
     } catch (e: any) {
       res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
     }

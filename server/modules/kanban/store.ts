@@ -24,6 +24,9 @@ export function createTaskStore(deps: TaskStoreDeps) {
   migrateAddColumn(db, 'tasks', 'dependencies_json', "TEXT NOT NULL DEFAULT '[]'");
   migrateAddColumn(db, 'tasks', 'provider_session_id', 'TEXT');
   migrateAddColumn(db, 'tasks', 'task_type', "TEXT NOT NULL DEFAULT 'feature'");
+  // 验收返工:用户拒收交付时写入;runner 下次 spawn 该任务时消费(只发送
+  // 返工指令,延续原 provider 会话),消费后清空避免污染后续无关重跑。
+  migrateAddColumn(db, 'tasks', 'rework_feedback', 'TEXT');
   db.exec(`CREATE TABLE IF NOT EXISTS task_attachments (
     id TEXT PRIMARY KEY,
     task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -223,6 +226,20 @@ export function createTaskStore(deps: TaskStoreDeps) {
       .run(providerSessionId, new Date().toISOString(), taskId);
   }
 
+  /** 验收返工反馈:写入后由 runner 在下一次 spawn 时消费。 */
+  function setReworkFeedback(taskId: string, feedback: string | null): void {
+    db.prepare('UPDATE tasks SET rework_feedback = ?, updated_at = ? WHERE id = ?')
+      .run(feedback, new Date().toISOString(), taskId);
+  }
+
+  /** 取走并清空待处理的返工反馈(消费一次,避免污染后续无关重跑)。 */
+  function consumeReworkFeedback(taskId: string): string | null {
+    const row = db.prepare('SELECT rework_feedback FROM tasks WHERE id = ?').get(taskId) as { rework_feedback: string | null } | undefined;
+    if (!row?.rework_feedback) return null;
+    setReworkFeedback(taskId, null);
+    return row.rework_feedback;
+  }
+
   /** Stage history of one task in execution order (timeline view). */
   function listStageRuns(taskId: string): StageRun[] {
     const rows = db.prepare('SELECT * FROM stage_runs WHERE task_id = ? ORDER BY created_at ASC, rowid ASC')
@@ -258,7 +275,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
     return roots.flatMap((row) => listTasks(row.root_id));
   }
 
-  return { createTask, getTask, listQueuedTasks, listTasks, listAllTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, clearProviderSessionId, listStageRuns, listTaskEvents };
+  return { createTask, getTask, listQueuedTasks, listTasks, listAllTasks, updateTaskStatus, updateTaskStage, latestStageRun, updateTaskAuxFlags, updateTaskWorktree, setSchedulerAdmitted, insertStageRun, insertTaskEvent, nextTaskNumber, deleteTask, updateProviderSessionId, clearProviderSessionId, setReworkFeedback, consumeReworkFeedback, listStageRuns, listTaskEvents };
 }
 
 export type TaskStore = ReturnType<typeof createTaskStore>;
@@ -278,6 +295,7 @@ interface TaskRow {
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
   pending_ask_user: string | null;
   task_type: string | null;
+  rework_feedback: string | null;
   input?: string | null;
   created_at: string; updated_at: string; completed_at: string | null;
 }
@@ -358,6 +376,7 @@ function rowToTask(row: TaskRow): Task {
       sessionError: row.aux_session_error ?? undefined,
       pendingAskUser: parsePendingAskUser(row.pending_ask_user),
     },
+    reworkFeedback: row.rework_feedback ?? undefined,
     createdAt: row.created_at, updatedAt: row.updated_at,
     completedAt: row.completed_at ?? undefined,
   };
@@ -426,6 +445,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   aux_has_task INTEGER NOT NULL DEFAULT 0,
   aux_session_error TEXT,
   pending_ask_user TEXT,
+  rework_feedback TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   completed_at TEXT

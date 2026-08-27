@@ -148,22 +148,33 @@ export function createRunner(deps: RunnerDeps) {
     // input of its own, so fall back to the task's original (stage 0) input.
     const run = taskStore.latestStageRun(taskId, stageIndex);
     const input = run?.input ?? (stageIndex > 0 ? (taskStore.latestStageRun(taskId, 0)?.input ?? '') : '');
-    const prompt = renderStagePrompt({
-      stage,
-      ctx: {
-        taskId: task.id,
-        taskNumber: task.taskNumber,
-        stageName: stage.name,
-        stageIndex,
-        rootPath,
-        input,
-      },
-    });
+    // 验收返工:feedback 由 rework 写入,这里消费一次。有反馈时只发送返工指令
+    // (provider 会话延续,agent 拿着上一轮上下文按反馈改),不重发整段阶段 prompt。
+    const reworkFeedback = taskStore.consumeReworkFeedback(taskId);
+    const prompt = reworkFeedback
+      ? [
+          '你上一轮交付的工作未通过人工验收,需要返工。',
+          '请在当前工作区继续,根据下面的验收反馈修改实现;完成后重新输出交付总结' + (stage.promptTemplate?.includes('DELIVERY.md') ? ',并同步更新 DELIVERY.md。' : '。'),
+          '',
+          '验收反馈:',
+          reworkFeedback,
+        ].join('\n')
+      : renderStagePrompt({
+          stage,
+          ctx: {
+            taskId: task.id,
+            taskNumber: task.taskNumber,
+            stageName: stage.name,
+            stageIndex,
+            rootPath,
+            input,
+          },
+        });
     const spawnFn = spawnFns[stage.agent];
     if (!spawnFn) throw new Error(`unknown provider: ${stage.agent}`);
 
-    log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}`);
-    recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd });
+    log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}${reworkFeedback ? ' (rework)' : ''}`);
+    recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd, reworked: Boolean(reworkFeedback) });
 
     const writer = new RunnerWriter({
       taskId,

@@ -78,23 +78,69 @@ function displayTask(task: Task, stageCount: number, projects: Project[]): Displ
   };
 }
 
-/** 交付物面板:worktree 分支 + 相对主仓的 diff 统计/文件/补丁摘要。 */
-function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }) {
+/** 交付物面板:worktree 分支 + 相对主仓的 diff 统计/文件/补丁摘要 + 验收动作。 */
+function DeliverablePanel({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
   const [diff, setDiff] = useState<TaskDiffResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deliveryDoc, setDeliveryDoc] = useState<string | null>(null);
   const [deliverySummary, setDeliverySummary] = useState<string | null>(null);
+  const [mode, setMode] = useState<'idle' | 'confirm-merge' | 'rework'>('idle');
+  const [feedback, setFeedback] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
   useEffect(() => {
     let cancelled = false;
     kanbanApi.getDeliveryDoc(task.id, task.rootId).then((c) => { if (!cancelled) setDeliveryDoc(c); });
     kanbanApi.getDeliverySummary(task.id, task.rootId).then((c) => { if (!cancelled) setDeliverySummary(c); });
+    return () => { cancelled = true; };
+  }, [task.id, task.rootId]);
+  useEffect(() => {
+    let cancelled = false;
+    setError(null);
     kanbanApi.getTaskDiff(task.id, task.rootId)
       .then((d) => { if (!cancelled) setDiff(d); })
       .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
     return () => { cancelled = true; };
-  }, [task.id, task.rootId]);
+  }, [task.id, task.rootId, reloadTick]);
   const additions = diff?.files.reduce((sum: number, f: TaskDiffResult["files"][number]) => sum + f.additions, 0) ?? 0;
   const deletions = diff?.files.reduce((sum: number, f: TaskDiffResult["files"][number]) => sum + f.deletions, 0) ?? 0;
+
+  const canAct = task.status === 'success' && Boolean(task.worktreeBranch);
+  const alreadyMerged = Boolean(diff?.mergedIntoRoot);
+
+  const handleMerge = async () => {
+    setBusy(true);
+    try {
+      const out = await kanbanApi.acceptDelivery(task.id, task.rootId);
+      toast.success(out.alreadyMerged ? '该分支已并入主仓,无需重复合并' : `验收通过,已合并进主仓${out.commit ? `(提交 ${out.commit})` : ''}`);
+      setMode('idle');
+      setReloadTick((t) => t + 1);
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRework = async () => {
+    if (!feedback.trim()) {
+      toast.error('请填写验收反馈,agent 需要知道要改什么');
+      return;
+    }
+    setBusy(true);
+    try {
+      await kanbanApi.reworkDelivery(task.id, task.rootId, feedback.trim());
+      toast.success('已按反馈重新排队,agent 正在返工');
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="ds-panel flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -127,6 +173,38 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
             <pre className="ds-mono mt-3 max-h-72 overflow-auto rounded border border-workbench-border bg-workbench-surface p-2 text-[10px] leading-4 text-workbench-subtle">{diff.patch.slice(0, 20000)}</pre>
           </>)}
         </div>
+        {canAct && (
+          <footer className="border-t border-workbench-border p-3">
+            {mode === 'idle' && (
+              <div className="flex items-center justify-end gap-2">
+                {busy && <span className="mr-auto text-xs text-workbench-subtle">处理中…</span>}
+                {!alreadyMerged && <button type="button" disabled={busy} onClick={() => setMode('rework')} className="ds-focus-ring inline-flex h-8 items-center rounded border border-workbench-border bg-workbench-surface px-3 text-xs font-semibold text-workbench-ink hover:bg-workbench-muted disabled:opacity-50">需要返工</button>}
+                {!alreadyMerged
+                  ? <button type="button" disabled={busy} onClick={() => setMode('confirm-merge')} className="ds-focus-ring inline-flex h-8 items-center rounded bg-workbench-accent px-3 text-xs font-semibold text-white hover:brightness-95 disabled:opacity-50">验收通过并合并</button>
+                  : <button type="button" disabled={busy} onClick={() => setMode('rework')} className="ds-focus-ring inline-flex h-8 items-center rounded border border-workbench-border bg-workbench-surface px-3 text-xs font-semibold text-workbench-ink hover:bg-workbench-muted disabled:opacity-50">需要返工</button>}
+              </div>
+            )}
+            {mode === 'confirm-merge' && (
+              <div className="rounded-md border border-workbench-waiting/40 bg-white p-3">
+                <p className="text-xs leading-5 text-workbench-ink">确认验收通过?将把分支 <span className="ds-mono text-workbench-accent">{task.worktreeBranch}</span> 以 merge commit 合并进项目主仓当前分支。主仓需无未提交改动;冲突会自动恢复原状并提示人工处理。</p>
+                <div className="mt-2.5 flex justify-end gap-2">
+                  <button type="button" disabled={busy} onClick={() => setMode('idle')} className="ds-focus-ring inline-flex h-7 items-center rounded border border-workbench-border px-2.5 text-xs text-workbench-subtle hover:bg-workbench-muted disabled:opacity-50">取消</button>
+                  <button type="button" disabled={busy} onClick={() => void handleMerge()} className="ds-focus-ring inline-flex h-7 items-center rounded bg-workbench-accent px-2.5 text-xs font-semibold text-white hover:brightness-95 disabled:opacity-50">{busy ? '合并中…' : '确认合并'}</button>
+                </div>
+              </div>
+            )}
+            {mode === 'rework' && (
+              <div className="rounded-md border border-workbench-waiting/40 bg-white p-3">
+                <p className="mb-2 text-xs font-semibold text-workbench-ink">哪里不满意?agent 将带着这条反馈在原会话里返工</p>
+                <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} autoFocus placeholder="例如:登录按钮在移动端溢出屏幕,请修复布局并补充回归测试" className="ds-focus-ring w-full resize-y rounded border border-workbench-border bg-workbench-surface p-2 text-xs leading-5 text-workbench-ink placeholder:text-workbench-subtle/70" />
+                <div className="mt-2.5 flex justify-end gap-2">
+                  <button type="button" disabled={busy} onClick={() => { setMode('idle'); setFeedback(''); }} className="ds-focus-ring inline-flex h-7 items-center rounded border border-workbench-border px-2.5 text-xs text-workbench-subtle hover:bg-workbench-muted disabled:opacity-50">取消</button>
+                  <button type="button" disabled={busy || !feedback.trim()} onClick={() => void handleRework()} className="ds-focus-ring inline-flex h-7 items-center rounded bg-workbench-accent px-2.5 text-xs font-semibold text-white hover:brightness-95 disabled:opacity-50">{busy ? '提交中…' : '提交返工'}</button>
+                </div>
+              </div>
+            )}
+          </footer>
+        )}
       </div>
     </div>
   );
@@ -381,7 +459,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
         </main>
         <WorkflowRightRail schedules={schedules} agentRows={agentRows} nextTask={nextTask} failedTask={failedTask} refreshAll={refreshAll} />
       </div>
-      {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} />}
+      {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} onChanged={() => void refreshAll()} />}
     </PageShell>
   );
 }

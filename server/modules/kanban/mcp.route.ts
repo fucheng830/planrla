@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import type { KanbanService } from '@/modules/kanban/service.js';
 import type { TaskStore } from '@/modules/kanban/store.js';
+import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import { broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 
@@ -25,7 +26,7 @@ const SERVER_INFO = { name: 'planrla-kanban', version: '0.1.0' } as const;
 
 export interface KanbanMcpDeps {
   /** Lazy getter — keeps getKanban() lazy (called only on tools/call). */
-  getKanban: () => { service: KanbanService; taskStore: TaskStore; scheduler: { schedule: (rootId: string) => void } };
+  getKanban: () => { service: KanbanService; taskStore: TaskStore; templateStore: TemplateStore; scheduler: { schedule: (rootId: string) => void } };
 }
 
 function textResponse(text: string) {

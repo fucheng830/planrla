@@ -153,6 +153,25 @@ export const kanbanApi = {
     const data = (await res.json()) as TaskResponse;
     return data.task;
   },
+  /** 验收通过:把任务分支合并进主仓(--no-ff)。alreadyMerged=true 表示分支早已并入。 */
+  acceptDelivery: async (taskId: string, rootId: string): Promise<{ task: Task; commit?: string; alreadyMerged?: boolean }> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/merge`, { rootId });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `merge failed: ${res.status}`);
+    }
+    return (await res.json()) as { task: Task; commit?: string; alreadyMerged?: boolean };
+  },
+  /** 验收不通过:带反馈重新排队返工(agent 延续原会话按反馈修改)。 */
+  reworkDelivery: async (taskId: string, rootId: string, feedback: string): Promise<Task> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/rework`, { rootId, feedback });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `rework failed: ${res.status}`);
+    }
+    const data = (await res.json()) as TaskResponse;
+    return data.task;
+  },
   // REQ-038: answer a pending AskUserQuestion inline. `answers` is forwarded as
   // updatedInput to resolveToolApproval on the server.
   answerTask: async (taskId: string, rootId: string, answers: unknown): Promise<Task> => {
