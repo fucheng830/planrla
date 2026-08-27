@@ -19,6 +19,8 @@ export interface ScheduleSourcesState {
   reload: () => void;
   /** DELETE a one-time event and refresh (returns ok even when offline). */
   deleteEvent: (eventId: string) => Promise<boolean>;
+  /** DELETE a cron prompt task (定时任务) and refresh the local list. */
+  deleteCron: (cronId: string) => Promise<boolean>;
 }
 
 export function useScheduleSources(projectId: string | null, projectPath?: string): ScheduleSourcesState {
@@ -87,5 +89,16 @@ export function useScheduleSources(projectId: string | null, projectPath?: strin
     [],
   );
 
-  return { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent };
+  const deleteCron = useCallback(async (cronId: string) => {
+    try {
+      const res = await api.delete(`/cron-prompts/${cronId}`);
+      if (!res.ok) return false;
+      setCronTasks((tasks) => tasks.filter((task) => task.id !== cronId));
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  return { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent, deleteCron };
 }

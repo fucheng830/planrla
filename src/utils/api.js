@@ -234,6 +234,12 @@ export const api = {
     body: JSON.stringify(body),
   }),
 
+  // Generic PATCH method for any endpoint
+  patch: (endpoint, body) => authenticatedFetch(`/api${endpoint}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  }),
+
   // Generic DELETE method for any endpoint
   delete: (endpoint, options = {}) => authenticatedFetch(`/api${endpoint}`, {
     method: 'DELETE',

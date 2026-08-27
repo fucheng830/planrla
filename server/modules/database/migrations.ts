@@ -563,6 +563,14 @@ export const runMigrations = (db: Database) => {
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'channel', 'TEXT');
     addColumnToTableIfNotExists(db, 'team_messages', teamMessageColumns, 'thread_id', 'TEXT');
 
+    // 定时任务通知方式(2026-08-27):老库补三列——站内消息/邮件/飞书。
+    // 邮件与飞书目前仅持久化偏好,通道尚未接入(前端置灰标注)。
+    db.exec(CRON_PROMPTS_TABLE_SCHEMA_SQL);
+    const cronPromptColumns = (db.prepare('PRAGMA table_info(cron_prompts)').all() as Array<{ name: string }>).map((c) => c.name);
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_inbox', 'BOOLEAN DEFAULT 1');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_email', 'BOOLEAN DEFAULT 0');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_feishu', 'BOOLEAN DEFAULT 0');
+
     // Backfill: kanban agent sessions used to be filed under their worktree
     // path (…/.worktree/kanban/<task>), registering fake projects. Move them
     // to the real project root, then drop the now-empty fake project rows.

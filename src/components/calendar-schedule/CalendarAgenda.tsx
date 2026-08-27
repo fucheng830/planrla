@@ -13,9 +13,11 @@ type CalendarAgendaProps = {
   onSelect?: (item: AgendaItem) => void;
   /** Delete a one-time calendar event (items carrying eventId). */
   onDeleteEvent?: (eventId: string) => void;
+  /** Delete a cron prompt task (items carrying cronId). */
+  onDeleteCron?: (cronId: string) => void;
 };
 
-export function CalendarAgenda({ year, month, selectedDay, items = [], onAdd, onSelect, onDeleteEvent }: CalendarAgendaProps) {
+export function CalendarAgenda({ year, month, selectedDay, items = [], onAdd, onSelect, onDeleteEvent, onDeleteCron }: CalendarAgendaProps) {
   const weekday = ['日', '一', '二', '三', '四', '五', '六'][new Date(year, month, selectedDay).getDay()];
   return (
     <section className="calendar-agenda" aria-labelledby="calendar-agenda-title">
@@ -45,6 +47,20 @@ export function CalendarAgenda({ year, month, selectedDay, items = [], onAdd, on
               onClick={(event) => {
                 event.stopPropagation();
                 onDeleteEvent(item.eventId!);
+              }}
+            >
+              <X />
+            </button>
+          ) : null}
+          {item.cronId && onDeleteCron ? (
+            <button
+              type="button"
+              className="calendar-agenda-delete"
+              aria-label={`删除定时任务 ${item.title}`}
+              title="删除整个定时任务(不只是今天这条)"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteCron(item.cronId!);
               }}
             >
               <X />

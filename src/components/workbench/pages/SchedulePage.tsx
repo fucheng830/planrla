@@ -5,6 +5,8 @@ import { CalendarMonthGrid } from '../../calendar-schedule/CalendarMonthGrid';
 import { CalendarTaskForms, type CalendarFormResult } from '../../calendar-schedule/CalendarTaskForms';
 import { buildAgendaItems, buildMonthEvents } from '../../calendar-schedule/cronCalendar';
 import { useScheduleSources } from '../../calendar-schedule/useScheduleSources';
+import type { AgendaItem } from '../../calendar-schedule/calendarData';
+import type { CronPromptTaskView } from '../../calendar-schedule/cronCalendar';
 
 type SaveState = { tone: 'idle' | 'success' | 'error'; message?: string };
 
@@ -24,11 +26,10 @@ export function SchedulePage({
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [saveState, setSaveState] = useState<SaveState>({ tone: 'idle' });
+  const [editingCronTask, setEditingCronTask] = useState<CronPromptTaskView | null>(null);
 
-  const { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent } = useScheduleSources(
-    projectId,
-    projectPath,
-  );
+  const { cronTasks, schedules, calendarEvents, loading, error, reload, deleteEvent, deleteCron } =
+    useScheduleSources(projectId, projectPath);
 
   const monthEvents = useMemo(
     () => buildMonthEvents({ year, month, cronTasks, schedules, events: calendarEvents, projectPath }),
@@ -51,6 +52,25 @@ export function SchedulePage({
   const handleFormResult = (result: CalendarFormResult) => {
     setSaveState({ tone: result.tone, message: result.message });
     if (result.reload) reload();
+  };
+
+  const handleSelectAgendaItem = (item: AgendaItem) => {
+    if (!item.cronId) return;
+    const task = cronTasks.find((entry) => entry.id === item.cronId) ?? null;
+    setEditingCronTask(task);
+    if (task) setSaveState({ tone: 'idle' });
+  };
+
+  const handleDeleteCron = async (cronId: string) => {
+    // 正在编辑同一任务时删除,先退出编辑态。
+    if (editingCronTask?.id === cronId) setEditingCronTask(null);
+    const ok = await deleteCron(cronId);
+    setSaveState(
+      ok
+        ? { tone: 'success', message: '定时任务已删除' }
+        : { tone: 'error', message: '删除定时任务失败，请重试' },
+    );
+    if (ok) reload();
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -108,13 +128,20 @@ export function SchedulePage({
               month={month}
               selectedDay={selectedDay}
               items={agendaItems}
-              onAdd={() => setSaveState({ tone: 'idle' })}
+              onAdd={() => {
+                setEditingCronTask(null);
+                setSaveState({ tone: 'idle' });
+              }}
+              onSelect={handleSelectAgendaItem}
               onDeleteEvent={(eventId) => void handleDeleteEvent(eventId)}
+              onDeleteCron={(cronId) => void handleDeleteCron(cronId)}
             />
           </div>
           <CalendarTaskForms
             defaultDate={formatDefaultDate(year, month, selectedDay)}
             projectPath={projectPath}
+            editingTask={editingCronTask}
+            onDoneEdit={() => setEditingCronTask(null)}
             onResult={handleFormResult}
           />
         </div>

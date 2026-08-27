@@ -8,6 +8,7 @@ import {
   cronMatchesDate,
   cronTimeLabel,
   eventDurationLabel,
+  parseRecurringFromExpression,
 } from './cronCalendar';
 
 const cronTask = (overrides: Partial<Parameters<typeof buildMonthEvents>[0]['cronTasks'][number]> = {}) => ({
@@ -105,13 +106,58 @@ test('buildCronExpression maps the recurring form to cron fields', () => {
   assert.equal(buildCronExpression({ repeat: 'daily', time: '18:00', startDate: 'not-a-date' }), null);
 });
 
+test('buildCronExpression supports hourly/minutes/custom repeats with validation', () => {
+  // hourly 只取分钟位
+  assert.equal(buildCronExpression({ repeat: 'hourly', time: '00:45', startDate: '2026-08-25' }), '45 * * * *');
+  // minutes: */n 形态,边界外拒绝
+  assert.equal(buildCronExpression({ repeat: 'minutes', time: '00:00', startDate: '', intervalMinutes: 20 }), '*/20 * * * *');
+  assert.equal(buildCronExpression({ repeat: 'minutes', time: '00:00', startDate: '', intervalMinutes: 0 }), null);
+  assert.equal(buildCronExpression({ repeat: 'minutes', time: '00:00', startDate: '', intervalMinutes: 60 }), null);
+  // custom: 原样保存 + 完整校验
+  assert.equal(buildCronExpression({ repeat: 'custom', time: '18:00', startDate: '', customExpression: '0 9 * * 1-5' }), '0 9 * * 1-5');
+  assert.equal(buildCronExpression({ repeat: 'custom', time: '18:00', startDate: '', customExpression: 'not cron' }), null);
+});
+
+test('parseRecurringFromExpression round-trips the recurring form shapes', () => {
+  const daily = parseRecurringFromExpression('30 14 * * *');
+  assert.equal(daily.repeat, 'daily');
+  assert.equal(daily.time, '14:30');
+  const weekly = parseRecurringFromExpression('15 9 * * 1');
+  assert.equal(weekly.repeat, 'weekly');
+  assert.equal(weekly.weekdayOverride, 1);
+  const monthly = parseRecurringFromExpression('5 10 8 * *');
+  assert.equal(monthly.repeat, 'monthly');
+  assert.equal(monthly.dayOfMonthOverride, 8);
+  const minutes = parseRecurringFromExpression('*/20 * * * *');
+  assert.equal(minutes.repeat, 'minutes');
+  assert.equal(minutes.intervalMinutes, 20);
+  const hourly = parseRecurringFromExpression('45 * * * *');
+  assert.equal(hourly.repeat, 'hourly');
+  const complex = parseRecurringFromExpression('0 9,18 * * 1-5');
+  assert.equal(complex.repeat, 'custom');
+  assert.equal(complex.customExpression, '0 9,18 * * 1-5');
+});
+
+// 编辑回填的覆盖值:不改开始日期直接保存,星期/日期不得漂移。
+test('weekday/dayOfMonth overrides keep edited weekly/monthly tasks anchored', () => {
+  // 表达式是每周一;今天不是周一,但覆盖值来自原表达式 → 重建结果不变。
+  assert.equal(
+    buildCronExpression({ repeat: 'weekly', time: '09:30', startDate: '2026-08-27', weekdayOverride: 1 }),
+    '30 9 * * 1',
+  );
+  assert.equal(
+    buildCronExpression({ repeat: 'monthly', time: '10:05', startDate: '2026-08-27', dayOfMonthOverride: 8 }),
+    '5 10 8 * *',
+  );
+});
+
 test('buildMonthEvents expands project cron tasks and kanban schedules', () => {
   const events = buildMonthEvents({
     year: 2026,
     month: 7,
     cronTasks: [
       cronTask(),
-      // Different project / disabled tasks must not leak in.
+      // 全局可见(eadcc7e):其它项目的任务同样展开;停用的必须不出现。
       cronTask({ id: 'task-2', projectPath: 'C:/other', name: '别的项目' }),
       cronTask({ id: 'task-3', enabled: false, name: '已停用' }),
     ],
@@ -126,7 +172,8 @@ test('buildMonthEvents expands project cron tasks and kanban schedules', () => {
   const weeklyEvents = events.filter((event) => event.title === '每周需求梳理');
   assert.equal(weeklyEvents.length, 5); // Mondays in August 2026 (3/10/17/24/31)
   assert.equal(weeklyEvents[0].day, 3);
-  assert.equal(events.some((event) => event.title === '别的项目'), false);
+  // 定时任务全局可见(eadcc7e):别的项目的任务也要展开;停用的不出现。
+  assert.equal(events.some((event) => event.title === '别的项目'), true);
   assert.equal(events.some((event) => event.title === '已停用'), false);
 });
 

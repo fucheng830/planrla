@@ -15,6 +15,12 @@ export interface CronPromptTask {
   provider: string;
   projectPath: string;
   enabled: boolean;
+  /** 运行后写一条系统消息进关联项目的消息盒子。 */
+  notifyInbox: boolean;
+  /** 偏好持久化,通道尚未接入(邮件)。 */
+  notifyEmail: boolean;
+  /** 偏好持久化,通道尚未接入(飞书)。 */
+  notifyFeishu: boolean;
   lastRunAt: string | null;
   lastSessionId: string | null;
   runCount: number;
@@ -30,6 +36,9 @@ interface CronPromptRow {
   provider: string;
   project_path: string;
   enabled: number;
+  notify_inbox: number | null;
+  notify_email: number | null;
+  notify_feishu: number | null;
   last_run_at: string | null;
   last_session_id: string | null;
   run_count: number;
@@ -45,6 +54,10 @@ const rowToTask = (row: CronPromptRow): CronPromptTask => ({
   provider: row.provider,
   projectPath: row.project_path,
   enabled: Boolean(row.enabled),
+  // 老库 NULL → 按默认语义(站内开、其余关)
+  notifyInbox: row.notify_inbox === null ? true : Boolean(row.notify_inbox),
+  notifyEmail: Boolean(row.notify_email),
+  notifyFeishu: Boolean(row.notify_feishu),
   lastRunAt: row.last_run_at,
   lastSessionId: row.last_session_id,
   runCount: Number(row.run_count ?? 0),
@@ -76,12 +89,15 @@ export const cronPromptsStore = {
     provider: string;
     projectPath: string;
     enabled?: boolean;
+    notifyInbox?: boolean;
+    notifyEmail?: boolean;
+    notifyFeishu?: boolean;
   }): CronPromptTask {
     const db = getConnection();
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, enabled)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, enabled, notify_inbox, notify_email, notify_feishu)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       input.name,
@@ -90,6 +106,9 @@ export const cronPromptsStore = {
       input.provider,
       input.projectPath,
       input.enabled === false ? 0 : 1,
+      input.notifyInbox === false ? 0 : 1,
+      input.notifyEmail ? 1 : 0,
+      input.notifyFeishu ? 1 : 0,
     );
     return this.getById(id)!;
   },
@@ -103,6 +122,9 @@ export const cronPromptsStore = {
       provider: string;
       projectPath: string;
       enabled: boolean;
+      notifyInbox: boolean;
+      notifyEmail: boolean;
+      notifyFeishu: boolean;
     }>
   ): CronPromptTask | null {
     const db = getConnection();
@@ -114,6 +136,9 @@ export const cronPromptsStore = {
     if (fields.provider !== undefined) { sets.push('provider = ?'); values.push(fields.provider); }
     if (fields.projectPath !== undefined) { sets.push('project_path = ?'); values.push(fields.projectPath); }
     if (fields.enabled !== undefined) { sets.push('enabled = ?'); values.push(fields.enabled ? 1 : 0); }
+    if (fields.notifyInbox !== undefined) { sets.push('notify_inbox = ?'); values.push(fields.notifyInbox ? 1 : 0); }
+    if (fields.notifyEmail !== undefined) { sets.push('notify_email = ?'); values.push(fields.notifyEmail ? 1 : 0); }
+    if (fields.notifyFeishu !== undefined) { sets.push('notify_feishu = ?'); values.push(fields.notifyFeishu ? 1 : 0); }
     if (sets.length === 0) return this.getById(id);
     sets.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);

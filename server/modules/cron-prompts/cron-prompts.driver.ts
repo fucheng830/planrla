@@ -12,6 +12,9 @@ import { spawnFns, sessionsService } from '@/modules/providers/index.js';
 import { homedir } from 'node:os';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { LLMProvider, RealtimeClientConnection } from '@/shared/types.js';
+import { broadcastTeamMessage } from '@/utils/kanban-websocket.js';
+import { createTeamMessageStore } from '@/modules/team-messages/index.js';
+import { projectsDb } from '@/modules/database/repositories/projects.db.js';
 
 import { cronPromptsStore, type CronPromptTask } from './cron-prompts.store.js';
 
@@ -65,6 +68,8 @@ export interface CronPromptsDriver {
   stop(): void;
   /** Runs one task immediately (manual "Run now" / API). Returns the app session id. */
   runNow(taskId: string): Promise<{ sessionId: string | null; error?: string }>;
+  /** index.js 注入 wss 提供函数,驱动发出的消息盒子通知才能实时广播。 */
+  setBroadcastSource(source: () => object | undefined): void;
 }
 
 export function createCronPromptsDriver(deps: {
@@ -76,6 +81,38 @@ export function createCronPromptsDriver(deps: {
   const RUN_TIMEOUT_MS = deps.runTimeoutMs ?? 10 * 60 * 1000;
   const scheduled = new Map<string, { stop: () => void }>();
   const running = new Set<string>();
+  const teamMessages = createTeamMessageStore();
+  /** index.js 注入 wss 获取函数(与 kanban setTaskBroadcaster 同模式),
+   *  让运行通知实时刷进已打开的消息盒子。 */
+  let broadcastSource: (() => object | undefined) | undefined;
+
+  /**
+   * 站内消息通知:任务开启 notifyInbox 且关联了已注册项目时,往该项目的
+   * 消息盒子写一条系统消息(cron 表达式 + 会话指引)。全局任务(未关联
+   * 项目)没有落点,静默跳过——会话本身仍会出现在侧边栏。
+   */
+  function sendInboxNotification(task: CronPromptTask, sessionId: string | null): void {
+    if (!task.notifyInbox || !task.projectPath) return;
+    try {
+      const project = projectsDb.getProjectPath(task.projectPath);
+      if (!project) return;
+      const wss = broadcastSource?.();
+      if (!wss) return;
+      const runNo = cronPromptsStore.getById(task.id)?.runCount ?? 0;
+      const message = teamMessages.createMessage({
+        rootId: project.project_id,
+        kind: 'team',
+        channel: '定时任务',
+        sender: 'Cron',
+        content: `定时任务「${task.name}」已触发执行(第 ${runNo} 次,${task.cronExpression})。${sessionId ? `已生成会话,可在侧边栏查看执行结果。` : '⚠️ 本次未成功拉起会话,请检查任务配置或服务端日志。'}`,
+        taskId: null,
+      });
+      broadcastTeamMessage(wss, message.rootId, message);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      log(`[cron-prompts] inbox notify failed (task=${task.name}): ${detail}`);
+    }
+  }
 
   /**
    * Validates + mints the app session synchronously, then lets the provider
@@ -129,6 +166,7 @@ export function createCronPromptsDriver(deps: {
       writer.dispose();
       chatRunRegistry.completeRun(sessionId, { exitCode: 0 });
       cronPromptsStore.recordRun(task.id, sessionId);
+      sendInboxNotification(task, sessionId);
     }
     return sessionId;
   }
@@ -179,6 +217,7 @@ export function createCronPromptsDriver(deps: {
       runTaskGuarded(task);
       return { sessionId: null, started: true };
     },
+    setBroadcastSource(source) { broadcastSource = source; },
   };
 }
 

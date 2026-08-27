@@ -31,7 +31,10 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
       return { error: `invalid cron expression: ${cronExpression}` } as const;
     }
     if (!prompt) return { error: 'prompt is required' } as const;
-    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath } } as const;
+    const notifyInbox = typeof body.notifyInbox === 'boolean' ? body.notifyInbox : true;
+    const notifyEmail = body.notifyEmail === true;
+    const notifyFeishu = body.notifyFeishu === true;
+    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath, notifyInbox, notifyEmail, notifyFeishu } } as const;
   };
 
   router.get('/', (_req, res) => {
@@ -60,6 +63,9 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     if (typeof body.provider === 'string' && body.provider) fields.provider = body.provider;
     if (typeof body.projectPath === 'string') fields.projectPath = body.projectPath.trim().replace(/[\\/]+/g, '/');
     if (typeof body.enabled === 'boolean') fields.enabled = body.enabled;
+    if (typeof body.notifyInbox === 'boolean') fields.notifyInbox = body.notifyInbox;
+    if (typeof body.notifyEmail === 'boolean') fields.notifyEmail = body.notifyEmail;
+    if (typeof body.notifyFeishu === 'boolean') fields.notifyFeishu = body.notifyFeishu;
     const task = cronPromptsStore.update(String(req.params.id), fields);
     if (!task) return res.status(404).json({ error: 'task not found' });
     cronPromptsDriver.reload();

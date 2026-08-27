@@ -20,4 +20,6 @@ export type AgendaItem = {
   tone: CalendarEventTone;
   /** Real calendar_events id — present only on one-time events (deletable). */
   eventId?: string;
+  /** cron_prompts id — present only on 定时任务 rows (editable/deletable). */
+  cronId?: string;
 };

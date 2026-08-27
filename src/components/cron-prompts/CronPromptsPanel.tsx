@@ -91,9 +91,26 @@ function buildCron(state: { mode: ScheduleMode; interval: string; minute: string
 
 type ScheduleState = ReturnType<typeof parseCron>;
 
+/**
+ * 解析时间戳为 epoch 毫秒。SQLite CURRENT_TIMESTAMP 存的是 UTC 的
+ * "YYYY-MM-DD HH:mm:ss" 裸串(无时区标记),直接 Date.parse 会被当本地
+ * 时间解读——东八区用户看到「上次运行 8 小时前」。这里识别裸串并补 UTC。
+ */
+function parseTimestampMs(value: string | null): number {
+  if (!value) return Number.NaN;
+  const naive = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(value);
+  if (naive) {
+    return Date.UTC(
+      Number(naive[1]), Number(naive[2]) - 1, Number(naive[3]),
+      Number(naive[4]), Number(naive[5]), Number(naive[6]),
+    );
+  }
+  return Date.parse(value);
+}
+
 function formatLastRun(iso: string | null): string {
   if (!iso) return '从未运行';
-  const ms = Date.now() - Date.parse(iso);
+  const ms = Date.now() - parseTimestampMs(iso);
   if (!Number.isFinite(ms) || ms < 0) return '刚刚';
   const minutes = Math.floor(ms / 60000);
   if (minutes < 1) return '刚刚';

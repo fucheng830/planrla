@@ -23,7 +23,7 @@ const DEFAULT_CLOUD_URL = 'https://api.planrla.com';
 /** Explicit value wins (trimmed); otherwise persisted config; otherwise the
  *  public default — which is then persisted so the UI reflects it. */
 function resolveCloudUrl(repo: ReturnType<typeof createSyncConfigRepository>, explicit?: string): string {
-  const url = (explicit?.trim() || repo.get('cloud_url') || DEFAULT_CLOUD_URL).replace(//+$/, '');
+  const url = (explicit?.trim() || repo.get('cloud_url') || DEFAULT_CLOUD_URL).replace(/[\/]+$/, '');
   if (!repo.get('cloud_url')) repo.set('cloud_url', url);
   return url;
 }

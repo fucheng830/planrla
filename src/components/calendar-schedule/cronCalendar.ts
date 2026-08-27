@@ -15,6 +15,9 @@ export interface CronPromptTaskView {
   provider: string;
   projectPath: string;
   enabled: boolean;
+  notifyInbox?: boolean;
+  notifyEmail?: boolean;
+  notifyFeishu?: boolean;
   lastRunAt: string | null;
   runCount: number;
 }
@@ -159,7 +162,8 @@ export function buildMonthEvents(options: {
   events?: CalendarEventView[];
   projectPath: string;
 }): CalendarEvent[] {
-  const { year, month, cronTasks, schedules, events = [], projectPath } = options;
+  // projectPath 仍是调用方契约的一部分,但全局化后不再按它过滤。
+  const { year, month, cronTasks, schedules, events = [] } = options;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
   const sources: Array<{ id: string; expression: string; title: string; tone: CalendarEventTone }> = [
@@ -214,6 +218,8 @@ export interface CalendarAgendaSourceItem {
   tone: CalendarEventTone;
   /** Real calendar_events id — present only on one-time events (deletable). */
   eventId?: string;
+  /** cron_prompts id — present only on 定时任务 rows (editable/deletable). */
+  cronId?: string;
 }
 
 export function buildAgendaItems(options: {
@@ -225,7 +231,7 @@ export function buildAgendaItems(options: {
   events?: CalendarEventView[];
   projectPath: string;
 }): CalendarAgendaSourceItem[] {
-  const { year, month, day, cronTasks, schedules, events = [], projectPath } = options;
+  const { year, month, day, cronTasks, schedules, events = [] } = options;
   const date = new Date(year, month, day);
   const dayPrefix = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const items: CalendarAgendaSourceItem[] = [];
@@ -234,6 +240,7 @@ export function buildAgendaItems(options: {
     if (!cronMatchesDate(task.cronExpression, date)) continue;
     items.push({
       id: `cron-${task.id}`,
+      cronId: task.id,
       time: cronTimeLabel(task.cronExpression) ?? '按计划',
       duration: '定时',
       title: task.name,
@@ -273,27 +280,109 @@ export function buildAgendaItems(options: {
 
 // --- recurring form → cron expression ---
 
-export type RecurringRepeat = 'daily' | 'weekly' | 'monthly';
+export type RecurringRepeat = 'daily' | 'weekly' | 'monthly' | 'hourly' | 'minutes' | 'custom';
 
-/** Mirrors the server-side node-cron validation for the shapes this form emits. */
-export function buildCronExpression(options: {
+/** 表单里「自定义表达式 / 每N分钟」需要额外面板状态时的默认值。 */
+export const DEFAULT_INTERVAL_MINUTES = 30;
+
+export interface RecurringFormState {
   repeat: RecurringRepeat;
+  /** 'HH:mm' — daily/weekly/monthly 用整点;hourly 只用分钟位。 */
   time: string;
   startDate: string;
-}): string | null {
+  /** repeat='minutes' 时的间隔(1–59 分钟)。 */
+  intervalMinutes?: number;
+  /** repeat='custom' 时的原始 5 字段表达式。 */
+  customExpression?: string;
+  /**
+   * 编辑回填用:weekly/monthly 的星期(0–6)/日期(1–31)直接来自原表达式,
+   * 覆盖由 startDate 推导的结果——否则「不改日期只改名」也会漂移执行日。
+   * 用户改了开始日期即清空这两个覆盖。
+   */
+  weekdayOverride?: number;
+  dayOfMonthOverride?: number;
+}
+
+/** Mirrors the server-side node-cron validation for the shapes this form emits. */
+export function buildCronExpression(options: RecurringFormState): string | null {
   const [hourRaw, minuteRaw] = options.time.split(':');
   const hour = Number(hourRaw);
   const minute = Number(minuteRaw);
   if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
     return null;
   }
+  if (options.repeat === 'minutes') {
+    const interval = Number(options.intervalMinutes);
+    if (!Number.isInteger(interval) || interval < 1 || interval > 59) return null;
+    return `*/${interval} * * * *`;
+  }
+  if (options.repeat === 'hourly') {
+    if (minute < 0 || minute > 59) return null;
+    return `${minute} * * * *`;
+  }
+  if (options.repeat === 'custom') {
+    const expression = (options.customExpression ?? '').trim();
+    // 复用完整 cron 解析器做形状校验(与后端 node-cron 的公共子集一致)。
+    return expression && parseCronExpression(expression) ? expression : null;
+  }
   const date = new Date(`${options.startDate}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
   if (options.repeat === 'weekly') {
-    return `${minute} ${hour} * * ${date.getDay()}`;
+    const weekday = options.weekdayOverride ?? date.getDay();
+    return `${minute} ${hour} * * ${weekday}`;
   }
   if (options.repeat === 'monthly') {
-    return `${minute} ${hour} ${date.getDate()} * *`;
+    const dayOfMonth = options.dayOfMonthOverride ?? date.getDate();
+    return `${minute} ${hour} ${dayOfMonth} * *`;
   }
   return `${minute} ${hour} * * *`;
+}
+
+/** 把已有表达式反解析回表单状态(无法识别时归入 custom),编辑回填用。 */
+export function parseRecurringFromExpression(expression: string): {
+  repeat: RecurringRepeat;
+  time: string;
+  intervalMinutes: number;
+  customExpression: string;
+  weekdayOverride?: number;
+  dayOfMonthOverride?: number;
+} {
+  const fallbackTime = '18:00';
+  const custom = { repeat: 'custom' as RecurringRepeat, time: fallbackTime, intervalMinutes: DEFAULT_INTERVAL_MINUTES, customExpression: expression };
+  const parts = expression.trim().split(/\s+/);
+  if (parts.length !== 5) return { ...custom, customExpression: expression };
+  const [min, hour, dom, mon, dow] = parts;
+  // */n 形态要赶在纯数字守卫之前识别。
+  const stepMatch = /^\*\/(\d+)$/.exec(min);
+  if (stepMatch && hour === '*' && dom === '*' && dow === '*') {
+    const interval = Number(stepMatch[1]);
+    if (interval >= 1 && interval <= 59) return { repeat: 'minutes', time: fallbackTime, intervalMinutes: interval, customExpression: expression };
+  }
+  if (!/^\d+$/.test(min)) return { ...custom, customExpression: expression };
+  const time = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`;
+  if (hour === '*' && dom === '*' && dow === '*') {
+    return { repeat: 'hourly', time: `00:${String(Math.min(59, Number(min))).padStart(2, '0')}`, intervalMinutes: DEFAULT_INTERVAL_MINUTES, customExpression: expression };
+  }
+  if (/^\d+$/.test(hour) && hour !== '*' && dom === '*' && mon === '*' && dow === '*') {
+    return { repeat: 'daily', time, intervalMinutes: DEFAULT_INTERVAL_MINUTES, customExpression: expression };
+  }
+  if (/^\d+$/.test(hour) && dom === '*' && mon === '*' && /^\d+$/.test(dow) && dow !== '*') {
+    const weekday = Number(dow);
+    return { repeat: 'weekly', time, intervalMinutes: DEFAULT_INTERVAL_MINUTES, customExpression: expression, ...(weekday >= 0 && weekday <= 6 ? { weekdayOverride: weekday } : {}) };
+  }
+  if (/^\d+$/.test(hour) && /^\d+$/.test(dom) && dom !== '0' && mon === '*' && dow === '*') {
+    const dayOfMonth = Number(dom);
+    return { repeat: 'monthly', time, intervalMinutes: DEFAULT_INTERVAL_MINUTES, customExpression: expression, ...(dayOfMonth >= 1 && dayOfMonth <= 31 ? { dayOfMonthOverride: dayOfMonth } : {}) };
+  }
+  return { ...custom, customExpression: expression };
+}
+
+/**
+ * 从当前日期反推出 weekly/monthly 模式下 buildCronExpression 需要的
+ * startDate 占位:编辑已知任务时 dow/dom 已经在表达式里,这里只需保证
+ * 再生成时不会因为 startDate 无效而失败。
+ */
+export function placeholderStartDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }

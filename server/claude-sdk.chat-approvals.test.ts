@@ -14,8 +14,8 @@ test('waitForToolApproval exposes and clears direct-chat approvals', async () =>
   assert.equal(typeof sdk.setChatApprovalListener, 'function');
   assert.equal(typeof sdk.resolveToolApproval, 'function');
 
-  const events = [];
-  sdk.setChatApprovalListener((kind, approval) => events.push({ kind, requestId: approval.requestId }));
+  const events: Array<{ kind: string; requestId: string }> = [];
+  sdk.setChatApprovalListener((kind: string, approval: { requestId: string }) => events.push({ kind, requestId: approval.requestId }));
 
   const decisionPromise = sdk.waitForToolApproval('req-unit-1', {
     exposeChatApproval: true,

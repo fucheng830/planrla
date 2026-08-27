@@ -2060,6 +2060,7 @@ async function startServer() {
 
             // 定时任务 driver：载入已启用任务并注册 node-cron。
             try {
+                cronPromptsDriver.setBroadcastSource(() => app.locals.wss);
                 cronPromptsDriver.start();
             } catch (err) {
                 console.warn(`[cron-prompts] failed to start: ${err?.message || err}`);
