@@ -62,6 +62,17 @@ function getSessionTitle(session: ProjectSession, t: (key: string) => string): s
   return (session.summary as string) || t('mainContent.newSession');
 }
 
+/** Session summaries are auto-generated from the first message and often carry
+ *  raw markdown (links, bold). Keep the header clean: render link labels
+ *  instead of `[label](url)` and drop dangling link fragments. */
+function cleanTitleForDisplay(title: string): string {
+  return title
+    .replace(/\[([^\]]*)\]\([^)]*\)?/g, '$1')
+    .replace(/[*_`#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function MainContentTitle({
   activeTab,
   setActiveTab,
@@ -82,8 +93,8 @@ export default function MainContentTitle({
   const isWorkbenchTitle = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule';
 
   const subtitle = (
-    <div className="flex items-center gap-1.5 text-[11px] leading-tight text-workbench-subtle">
-      <span className="truncate">{selectedProject.displayName}</span>
+    <div className="flex min-w-0 items-center gap-1.5 text-[11px] leading-tight text-workbench-subtle">
+      <span className="min-w-0 truncate">{selectedProject.displayName}</span>
       {branch && (
         <button
           type="button"
@@ -105,7 +116,7 @@ export default function MainContentTitle({
   );
 
   return (
-    <div className="scrollbar-hide flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+    <div className="flex min-w-0 flex-1 items-center gap-2">
       {showSessionIcon && (
         <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
           <SessionProviderLogo provider={selectedSession?.__provider} className="h-4 w-4" />
@@ -115,8 +126,11 @@ export default function MainContentTitle({
       <div className="min-w-0 flex-1">
         {activeTab === 'chat' && selectedSession ? (
           <div className="min-w-0">
-            <h2 className="scrollbar-hide overflow-x-auto whitespace-nowrap text-balance text-sm font-semibold leading-tight text-workbench-ink">
-              {getSessionTitle(selectedSession, t)}
+            <h2
+              className="truncate text-sm font-semibold leading-tight text-workbench-ink"
+              title={getSessionTitle(selectedSession, t)}
+            >
+              {cleanTitleForDisplay(getSessionTitle(selectedSession, t))}
             </h2>
             {subtitle}
           </div>
