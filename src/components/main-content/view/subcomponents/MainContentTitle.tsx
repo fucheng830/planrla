@@ -129,7 +129,9 @@ export default function MainContentTitle({
             <h2 className="text-balance text-sm font-semibold leading-tight text-workbench-ink">
               {getTabTitle(activeTab, t, pluginDisplayName)}
             </h2>
-            {subtitle}
+            {/* 项目总览 aggregates across projects — a single project/branch
+                subtitle would be misleading there. */}
+            {activeTab !== 'overview' && subtitle}
           </div>
         )}
       </div>
