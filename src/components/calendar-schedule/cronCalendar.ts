@@ -145,11 +145,10 @@ export function cronTimeLabel(expression: string): string | null {
 
 // --- month grid / agenda expansion ---
 
-function activeCronTasks(tasks: CronPromptTaskView[], projectPath: string): CronPromptTaskView[] {
-  const normalized = projectPath.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-  return tasks.filter(
-    (task) => task.enabled && task.projectPath.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase() === normalized,
-  );
+// 定时任务全局可见——任务不再归属于某个项目;projectPath 只是发起时给
+// agent 的可选工作目录。
+function activeCronTasks(tasks: CronPromptTaskView[]): CronPromptTaskView[] {
+  return tasks.filter((task) => task.enabled);
 }
 
 export function buildMonthEvents(options: {
@@ -164,7 +163,7 @@ export function buildMonthEvents(options: {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
   const sources: Array<{ id: string; expression: string; title: string; tone: CalendarEventTone }> = [
-    ...activeCronTasks(cronTasks, projectPath).map((task) => ({
+    ...activeCronTasks(cronTasks).map((task) => ({
       id: `cron-${task.id}`,
       expression: task.cronExpression,
       title: task.name,
@@ -231,7 +230,7 @@ export function buildAgendaItems(options: {
   const dayPrefix = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const items: CalendarAgendaSourceItem[] = [];
 
-  for (const task of activeCronTasks(cronTasks, projectPath)) {
+  for (const task of activeCronTasks(cronTasks)) {
     if (!cronMatchesDate(task.cronExpression, date)) continue;
     items.push({
       id: `cron-${task.id}`,

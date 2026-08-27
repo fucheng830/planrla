@@ -9,6 +9,7 @@ import { existsSync } from 'node:fs';
 import * as cron from 'node-cron';
 
 import { spawnFns, sessionsService } from '@/modules/providers/index.js';
+import { homedir } from 'node:os';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { LLMProvider, RealtimeClientConnection } from '@/shared/types.js';
 
@@ -88,13 +89,15 @@ export function createCronPromptsDriver(deps: {
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
-    if (!existsSync(task.projectPath)) {
-      log(`[cron-prompts] projectPath does not exist: ${task.projectPath} (task=${task.name})`);
+    // 全局任务可不关联项目:未填时在用户主目录执行
+    const cwd = task.projectPath || homedir();
+    if (!existsSync(cwd)) {
+      log(`[cron-prompts] projectPath does not exist: ${cwd} (task=${task.name})`);
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
 
-    const { sessionId } = sessionsService.createAppSession(task.provider as LLMProvider, task.projectPath);
+    const { sessionId } = sessionsService.createAppSession(task.provider as LLMProvider, cwd);
     const run = chatRunRegistry.startRun({
       appSessionId: sessionId,
       provider: task.provider as LLMProvider,
@@ -114,8 +117,8 @@ export function createCronPromptsDriver(deps: {
       // cwd, stuck CLI) must not block the caller forever.
       void Promise.resolve(spawnFn(task.prompt, {
         sessionId: undefined,
-        cwd: task.projectPath,
-        projectPath: task.projectPath,
+        cwd: cwd,
+        projectPath: cwd,
         permissionMode: 'bypassPermissions',
       }, writer)).catch((e: unknown) => {
         log(`[cron-prompts] run failed: ${e instanceof Error ? e.message : String(e)}`);

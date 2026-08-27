@@ -27,7 +27,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function CalendarTaskForms({ defaultDate, projectPath, onResult }: CalendarTaskFormsProps) {
+export function CalendarTaskForms({ defaultDate, projectPath = '', onResult }: CalendarTaskFormsProps) {
   return (
     <aside className="calendar-task-forms" aria-label="新建任务面板">
       <RecurringTaskForm defaultDate={defaultDate} projectPath={projectPath} onResult={onResult} />
@@ -36,7 +36,7 @@ export function CalendarTaskForms({ defaultDate, projectPath, onResult }: Calend
   );
 }
 
-function RecurringTaskForm({ defaultDate, projectPath, onResult }: { defaultDate: string; projectPath: string; onResult?: (result: CalendarFormResult) => void }) {
+function RecurringTaskForm({ defaultDate, projectPath = '', onResult }: { defaultDate: string; projectPath?: string; onResult?: (result: CalendarFormResult) => void }) {
   const [name, setName] = useState('');
   const [repeat, setRepeat] = useState<RecurringRepeat>('daily');
   const [time, setTime] = useState('18:00');
@@ -63,7 +63,7 @@ function RecurringTaskForm({ defaultDate, projectPath, onResult }: { defaultDate
         name: name || '未命名定时任务',
         cronExpression,
         prompt: prompt || name || '定时任务',
-        projectPath,
+        ...(projectPath ? { projectPath } : {}),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -130,7 +130,7 @@ function RecurringTaskForm({ defaultDate, projectPath, onResult }: { defaultDate
   );
 }
 
-function OneTimeTaskForm({ defaultDate, projectPath, onResult }: { defaultDate: string; projectPath: string; onResult?: (result: CalendarFormResult) => void }) {
+function OneTimeTaskForm({ defaultDate, projectPath = '', onResult }: { defaultDate: string; projectPath?: string; onResult?: (result: CalendarFormResult) => void }) {
   const [name, setName] = useState('');
   const [dateTime, setDateTime] = useState(`${defaultDate}T16:00`);
   const [duration, setDuration] = useState('60');
@@ -156,7 +156,7 @@ function OneTimeTaskForm({ defaultDate, projectPath, onResult }: { defaultDate: 
         durationMinutes: Number(duration),
         remindMinutes: remind === '0' ? null : Number(remind),
         notes: notes.trim() || null,
-        projectPath,
+        ...(projectPath ? { projectPath } : {}),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;

@@ -21,14 +21,17 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     const cronExpression = typeof body.cronExpression === 'string' ? body.cronExpression.trim() : '';
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
     const provider = typeof body.provider === 'string' && body.provider ? body.provider : 'claude';
-    const projectPath = typeof body.projectPath === 'string' ? body.projectPath.trim() : '';
+    // 全局任务:projectPath 可选——发起时给 agent 的关联工作目录(空则主目录)。
+    // Windows 反斜杠统一规范化为正斜杠(历史上反斜杠丢失导致任务永不执行)。
+    const rawProjectPath = typeof body.projectPath === 'string'
+      ? body.projectPath.trim().replace(/[\\/]+/g, '/')
+      : '';
     if (!name) return { error: 'name is required' } as const;
     if (!cronExpression || !cronLib.validate(cronExpression)) {
       return { error: `invalid cron expression: ${cronExpression}` } as const;
     }
     if (!prompt) return { error: 'prompt is required' } as const;
-    if (!projectPath) return { error: 'projectPath is required' } as const;
-    return { value: { name, cronExpression, prompt, provider, projectPath } } as const;
+    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath } } as const;
   };
 
   router.get('/', (_req, res) => {
@@ -55,7 +58,7 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     }
     if (typeof body.prompt === 'string' && body.prompt.trim()) fields.prompt = body.prompt.trim();
     if (typeof body.provider === 'string' && body.provider) fields.provider = body.provider;
-    if (typeof body.projectPath === 'string' && body.projectPath.trim()) fields.projectPath = body.projectPath.trim();
+    if (typeof body.projectPath === 'string') fields.projectPath = body.projectPath.trim().replace(/[\\/]+/g, '/');
     if (typeof body.enabled === 'boolean') fields.enabled = body.enabled;
     const task = cronPromptsStore.update(String(req.params.id), fields);
     if (!task) return res.status(404).json({ error: 'task not found' });
