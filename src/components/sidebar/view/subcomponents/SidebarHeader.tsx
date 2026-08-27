@@ -66,10 +66,12 @@ export default function SidebarHeader({
   const completedBadgeText = completedSessionsCount > 99 ? '99+' : String(completedSessionsCount);
 
   const LogoBlock = () => (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <img src="/logo.svg" alt="Planrla" className="h-7 w-7 flex-shrink-0" />
-      <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">{t('app.title')}</h1>
-    </div>
+    <img
+      src="/logo.svg"
+      alt="Planrla"
+      title={t('app.title')}
+      className="h-7 w-7 flex-shrink-0"
+    />
   );
 
   const LogoLink = () =>
