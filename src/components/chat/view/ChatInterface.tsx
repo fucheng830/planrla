@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import PermissionContext from '../../../contexts/PermissionContext';
 import { ComposerProvider } from '../../../contexts/ComposerContext';
-import { QuickSettingsPanel } from '../../quick-settings-panel';
 import type { ChatInterfaceProps, Provider  } from '../types/types';
 import { useChatProviderState } from '../hooks/useChatProviderState';
 import { useChatSessionState } from '../hooks/useChatSessionState';
@@ -568,7 +567,8 @@ function ChatInterface({
         />
       </div>
 
-      <QuickSettingsPanel />
+      {/* QuickSettingsPanel(右侧浮动把手+面板)已下线:chat 内设置统一走顶部
+          工具条与右上角 Settings;模块保留,需要时可重新挂载 */}
 
       <CommandResultModal
         payload={commandModalPayload}
