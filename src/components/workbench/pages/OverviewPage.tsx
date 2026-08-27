@@ -139,8 +139,8 @@ export function OverviewPage({
   return (
     <PageShell>
       <PageToolbar
-        title={project.displayName}
-        description="项目目标、AI 推进状态与交付风险的总览"
+        title="项目总览"
+        description="全部项目的目标、AI 推进状态与交付风险的总览"
         actions={
           <>
             <FilterChip label="进入研发流程" onClick={onOpenWorkflow} />
