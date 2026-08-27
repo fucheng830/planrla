@@ -42,6 +42,24 @@ export function createTeamMessageRouter() {
       taskId: taskId ? String(taskId) : null,
     });
     broadcastTeamMessage((req.app as any).locals?.wss, message.rootId, message);
+    // 出站转发:客户消息的我方回复推给网关(真实渠道下发由网关适配)。best-effort。
+    if (isCustomer && asMember && process.env.MESSAGE_GATEWAY_OUTBOUND_URL) {
+      void fetch(process.env.MESSAGE_GATEWAY_OUTBOUND_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.MESSAGE_GATEWAY_TOKEN ? { 'x-gateway-token': process.env.MESSAGE_GATEWAY_TOKEN } : {}),
+        },
+        body: JSON.stringify({
+          event: 'message.outbound',
+          rootId: message.rootId,
+          channel: message.channel,
+          threadKey: message.threadId,
+          sender: message.sender,
+          content: message.content,
+        }),
+      }).catch(() => { /* gateway may be absent in dev */ });
+    }
     res.status(201).json({ message });
   });
 

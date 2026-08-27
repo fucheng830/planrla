@@ -75,7 +75,7 @@ import pluginsRoutes from './routes/plugins.js';
 import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
-import { createTeamMessageRouter } from './modules/team-messages/index.js';
+import { createTeamMessageRouter, createGatewayIngestRouter, createTeamMessageStore } from './modules/team-messages/index.js';
 import { startSyncScheduler } from './modules/sync/sync.client.js';
 import { autostartRelay, relayRouter } from './modules/relay-client/index.js';
 import { getKanban } from './modules/kanban/assembly.js';
@@ -382,6 +382,9 @@ app.use('/api/sync', authenticateToken, syncRoutes);
 
 // 团队消息 feed(message hub 团队消息 category)
 app.use('/api/team-messages', authenticateToken, createTeamMessageRouter());
+
+// 消息网关接入(模拟外部渠道 webhook):自身 token 校验,不走 JWT。
+app.use('/api/gateway', createGatewayIngestRouter({ store: createTeamMessageStore() }));
 
 // 直接聊天会话等待中的工具审批(message hub 待处理 category)
 app.get('/api/providers/chat-approvals', authenticateToken, (_req, res) => {
