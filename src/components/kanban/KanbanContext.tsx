@@ -21,8 +21,8 @@ interface KanbanContextValue {
   createTask: (
     taskTemplateId: string,
     input: string,
-    options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string },
-  ) => Promise<void>;
+    options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string; taskType?: 'feature' | 'bug' },
+  ) => Promise<Task | undefined>;
   moveTask: (taskId: string, action: string) => Promise<void>;
   jumpTask: (taskId: string, targetIndex: number) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -141,15 +141,16 @@ export function KanbanProvider({ children, rootId }: { children: ReactNode; root
     async (
       taskTemplateId: string,
       input: string,
-      options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string },
+      options?: { priority?: TaskPriority; dependencies?: string[]; rootId?: string; taskType?: 'feature' | 'bug' },
     ) => {
       // rootId override: cross-project creation (每个需求必须关联项目);
       // defaults to the mounted project.
       const effectiveRootId = options?.rootId || rootId;
-      if (!effectiveRootId) return;
+      if (!effectiveRootId) return undefined;
       try {
         const t = await kanbanApi.createTask(effectiveRootId, taskTemplateId, input, options);
         setTasks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
+        return t;
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'createTask failed');
         // A 404 here usually means the template was deleted server-side and our

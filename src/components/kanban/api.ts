@@ -1,7 +1,7 @@
 import type {
   Task, TaskPriority, TaskTemplate, TaskListResponse, TaskResponse,
   TemplateListResponse, TemplateResponse,
-  KanbanSchedule, TaskDiffResult, StageRun, TaskEvent,
+  KanbanSchedule, TaskDiffResult, StageRun, TaskEvent, TaskAttachment,
 } from './types';
 
 import { api } from '@/utils/api';
@@ -27,7 +27,7 @@ export const kanbanApi = {
     rootId: string,
     taskTemplateId: string,
     input: string,
-    options?: { priority?: TaskPriority; dependencies?: string[] },
+    options?: { priority?: TaskPriority; dependencies?: string[]; taskType?: 'feature' | 'bug' },
   ): Promise<Task> => {
     const res = await api.post('/tasks', { rootId, taskTemplateId, input, ...options });
     if (!res.ok) {
@@ -85,6 +85,39 @@ export const kanbanApi = {
     const data = (await res.json()) as TaskResponse;
     return data.task;
   },
+  /** 上传任务附件(base64 JSON,免 multipart 依赖)。 */
+  uploadAttachment: async (taskId: string, filename: string, file: File): Promise<TaskAttachment> => {
+    const dataB64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+      reader.onerror = () => reject(new Error('read failed'));
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/attachments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ filename, dataB64 }),
+    });
+    if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+    return ((await res.json()) as { attachment: TaskAttachment }).attachment;
+  },
+
+  listAttachments: async (taskId: string): Promise<TaskAttachment[]> => {
+    const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/attachments`);
+    if (!res.ok) throw new Error(`list failed: ${res.status}`);
+    return ((await res.json()) as { attachments: TaskAttachment[] }).attachments ?? [];
+  },
+
+  attachmentDownloadUrl: (taskId: string, attachmentId: string): string =>
+    `/api/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}/download`,
+
+  deleteAttachment: async (taskId: string, attachmentId: string): Promise<void> => {
+    const rootIdHint = '';
+    void rootIdHint;
+    const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new Error(`delete failed: ${res.status}`);
+  },
+
   deleteTask: async (taskId: string, rootId: string): Promise<void> => {
     const res = await api.delete(`/tasks/${encodeURIComponent(taskId)}?rootId=${encodeURIComponent(rootId)}`);
     if (!res.ok) throw new Error(`deleteTask failed: ${res.status}`);

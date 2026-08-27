@@ -9,6 +9,7 @@ import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import { broadcastTaskDeleted, broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 import { decomposePrd } from '@/modules/kanban/prd-decompose.js';
+import { createAttachmentStore } from './attachments.js';
 import { getTaskDiff } from '@/modules/kanban/review.js';
 import type { Task } from '@/modules/kanban/types.js';
 import { notifyUserIfEnabled, createNotificationEvent } from '@/services/notification-orchestrator.js';
@@ -44,7 +45,42 @@ export interface KanbanRouterDeps {
 
 export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   const router = Router();
+  const attachments = createAttachmentStore();
+
+  // 附件:上传(base64)/列表/下载/删除 + 看板徽章计数汇总
+  // rootId 省略或 'all' = 全局看板聚合(全部任务)。
+  router.post('/attachments-summary', (req, res) => {
+    const rootId = String(req.body?.rootId ?? '');
+    res.json({ counts: attachments.countsByTask(rootId || null) });
+  });
   const { service, taskStore, templateStore, scheduler, scheduleStore, cronDriver, resolveRootPath, runner, resolveToolApproval, decomposePrdFn = decomposePrd } = deps;
+
+  // --- attachments (task files) ---
+  const taskBase = (taskId: string) => `/${encodeURIComponent(taskId)}/attachments`;
+  router.post(`/:taskId/attachments`, (req, res) => {
+    const taskId = String(req.params.taskId ?? '');
+    try {
+      const meta = attachments.add(taskId, String(req.body?.filename ?? ''), String(req.body?.dataB64 ?? ''));
+      res.status(201).json({ attachment: { id: meta.id, filename: meta.filename, size: meta.size } });
+    } catch (e: any) {
+      res.status(e.statusCode ?? 500).json({ message: e.message, code: e.code });
+    }
+  });
+  router.get(`/:taskId/attachments`, (req, res) => {
+    res.json({ attachments: attachments.list(String(req.params.taskId)) });
+  });
+  router.get(`/:taskId/attachments/:aid/download`, (req, res) => {
+    const found = attachments.resolveDownloadable(String(req.params.taskId), String(req.params.aid));
+    if (!found) return res.status(404).json({ message: 'not found' });
+    res.setHeader('content-type', 'application/octet-stream');
+    res.setHeader('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(found.meta.filename)}`);
+    res.sendFile(found.abs);
+  });
+  router.delete(`/:taskId/attachments/:aid`, (req, res) => {
+    const ok = attachments.remove(String(req.params.taskId), String(req.params.aid));
+    if (!ok) return res.status(404).json({ message: 'not found' });
+    res.status(204).end();
+  });
 
   // --- templates (W4) ---
   router.get('/templates', (_req, res) => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Plus, Search } from 'lucide-react';
+import { ChevronDown, Paperclip, Plus, Search, X } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
 import type { TaskTemplate } from '../../kanban/types';
@@ -8,22 +8,35 @@ export type CreateTaskCardProps = {
   projects: Project[];
   templates: TaskTemplate[];
   defaultProjectId: string;
-  /** 创建成功回调(参数=落点项目 id),失败在内部 toast。 */
-  onCreate: (input: string, projectId: string, templateId: string, priority: 'high' | 'medium' | 'low') => Promise<void>;
+  /** 创建成功回调。taskType 区分新需求/Bug 修复;files 随需求上传为附件。 */
+  onCreate: (
+    input: string,
+    projectId: string,
+    templateId: string,
+    priority: 'high' | 'medium' | 'low',
+    taskType?: 'feature' | 'bug',
+    files?: File[],
+  ) => Promise<void>;
   onClose: () => void;
 };
 
 type Priority = 'high' | 'medium' | 'low';
+type TaskKind = 'feature' | 'bug';
 
 const PRIORITY_LABEL: Record<Priority, string> = { high: '高', medium: '中', low: '低' };
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILES = 5;
 
-/** 创建任务卡片(B 方案):需求大输入框为视觉主体;项目用可搜索选择器,
- *  带名称+路径副标题,杂项自然沉底;模板/优先级收进「高级」折叠。 */
+/** 创建任务卡片(B 方案):需求大输入框为视觉主体;任务分「新需求 / Bug 修复」
+ *  两类;项目用可搜索选择器;支持随需求上传附件(≤8MB/个,≤5 个)。 */
 export function CreateTaskCard({ projects, templates, defaultProjectId, onCreate, onClose }: CreateTaskCardProps) {
   const [input, setInput] = useState('');
   const [projectId, setProjectId] = useState(defaultProjectId);
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [priority, setPriority] = useState<Priority>('medium');
+  const [taskType, setTaskType] = useState<TaskKind>('feature');
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [projectQuery, setProjectQuery] = useState('');
   const [projectOpen, setProjectOpen] = useState(false);
@@ -45,29 +58,64 @@ export function CreateTaskCard({ projects, templates, defaultProjectId, onCreate
 
   const filteredProjects = useMemo(() => {
     const q = projectQuery.trim().toLowerCase();
-    const base = q
-      ? projects.filter((p) => {
-        const name = (p.displayName || '').toLowerCase();
-        const fp = (p.fullPath || p.path || '').toLowerCase();
-        return name.includes(q) || fp.includes(q);
-      })
-      : projects;
-    // 最近活跃在前(projects 数组本身大致按注册序),稳定排序即可
-    return base;
+    if (!q) return projects;
+    return projects.filter((p) => {
+      const name = (p.displayName || '').toLowerCase();
+      const fp = (p.fullPath || p.path || '').toLowerCase();
+      return name.includes(q) || fp.includes(q);
+    });
   }, [projectQuery, projects]);
+
+  const addFiles = (incoming: FileList | null) => {
+    if (!incoming || incoming.length === 0) return;
+    let error: string | null = null;
+    setFiles((prev) => {
+      const next = [...prev];
+      for (const file of Array.from(incoming)) {
+        if (file.size > MAX_FILE_BYTES) { error = `${file.name} 超过 8MB,已跳过`; continue; }
+        if (next.length >= MAX_FILES) { error = `最多 ${MAX_FILES} 个附件`; break; }
+        if (!next.some((f) => f.name === file.name && f.size === file.size)) next.push(file);
+      }
+      return next;
+    });
+    setFileError(error);
+  };
+
+  const removeFile = (name: string) => {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setFileError(null);
+  };
 
   const submit = async () => {
     const text = input.trim();
     if (!text || !projectId || !templateId) return;
     setSubmitting(true);
     try {
-      await onCreate(text, projectId, templateId, priority);
+      await onCreate(text, projectId, templateId, priority, taskType, files);
       setInput('');
       onClose();
     } finally {
       setSubmitting(false);
     }
   };
+
+  const kindButton = (kind: TaskKind, label: string) => (
+    <button
+      key={kind}
+      type="button"
+      onClick={() => setTaskType(kind)}
+      aria-pressed={taskType === kind}
+      className={`ds-focus-ring inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border text-sm font-medium transition-colors ${
+        taskType === kind
+          ? kind === 'bug'
+            ? 'bg-workbench-danger-soft border-workbench-danger/50 text-workbench-danger'
+            : 'border-workbench-accent bg-workbench-accent/10 text-workbench-accent'
+          : 'border-workbench-border bg-workbench-surface text-workbench-subtle hover:bg-workbench-muted'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -78,16 +126,51 @@ export function CreateTaskCard({ projects, templates, defaultProjectId, onCreate
         </header>
 
         <div className="space-y-4 p-4">
+          {/* 类型:新需求 / Bug 修复 */}
+          <div className="flex gap-2" role="group" aria-label="任务类型">
+            {kindButton('feature', '新需求')}
+            {kindButton('bug', 'Bug 修复')}
+          </div>
+
           {/* 需求描述:视觉主体 */}
           <textarea
             autoFocus
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) void submit(); }}
-            placeholder="描述这条需求…(⌘/Ctrl + Enter 创建)"
+            placeholder={taskType === 'bug'
+              ? 'Bug 描述:复现步骤、期望与实际行为…(Cmd/Ctrl + Enter 创建)'
+              : '描述这条需求…(Cmd/Ctrl + Enter 创建)'}
             rows={4}
             className="ds-focus-ring placeholder:text-workbench-faint w-full resize-none rounded-md border border-workbench-border bg-workbench-surface px-3 py-2.5 text-sm leading-relaxed text-workbench-ink"
           />
+
+          {/* 附件 */}
+          <div>
+            <label className="ds-focus-ring inline-flex h-8 cursor-pointer items-center gap-1.5 rounded border border-workbench-border bg-workbench-surface px-3 text-xs text-workbench-subtle hover:text-workbench-ink">
+              <Paperclip className="size-3.5" aria-hidden="true" />上传附件
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }}
+              />
+            </label>
+            <span className="text-workbench-faint ml-2 text-[11px]">单个 ≤ 8MB · 最多 5 个</span>
+            {files.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {files.map((f) => (
+                  <li key={f.name + '-' + f.size} className="flex items-center justify-between rounded border border-workbench-border bg-workbench-surface px-2 py-1">
+                    <span className="min-w-0 truncate text-xs text-workbench-ink">{f.name} <span className="text-workbench-faint">({Math.max(1, Math.round(f.size / 1024))} KB)</span></span>
+                    <button type="button" onClick={() => removeFile(f.name)} aria-label={'移除 ' + f.name} className="text-workbench-faint rounded p-0.5 hover:text-workbench-danger">
+                      <X className="size-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {fileError && <p className="mt-1.5 text-[11px] text-workbench-danger">{fileError}</p>}
+          </div>
 
           {/* 项目搜索式选择器 */}
           <div className="relative">

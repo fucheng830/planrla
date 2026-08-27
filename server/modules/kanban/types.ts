@@ -83,6 +83,23 @@ export interface TaskAuxFlags {
 
 export type TaskPriority = 'high' | 'medium' | 'low';
 
+export type TaskType = 'feature' | 'bug';
+export const TASK_TYPES: readonly TaskType[] = ['feature', 'bug'];
+
+export function isTaskType(v: unknown): v is TaskType {
+  return v === 'feature' || v === 'bug';
+}
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  filename: string;
+  /** Absolute path on the machine that owns the file (local disk storage). */
+  storedPath: string;
+  size: number;
+  createdAt: string;
+}
+
 export const TASK_PRIORITIES: readonly TaskPriority[] = ['high', 'medium', 'low'];
 
 export function isTaskPriority(value: unknown): value is TaskPriority {
@@ -97,6 +114,7 @@ export function taskPriorityRank(priority: TaskPriority | undefined): number {
 }
 
 export interface Task {
+  taskType?: TaskType;
   id: string;
   taskNumber: number;
   rootId: string;

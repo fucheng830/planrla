@@ -18,6 +18,7 @@ export type PortableTaskPayload = {
   priority: string;
   labels: string[];
   dependencies: string[];
+  taskType?: 'feature' | 'bug';
   title?: string;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +41,7 @@ type TaskRow = {
   labels_json: string;
   priority: string | null;
   dependencies_json: string | null;
+  task_type: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -52,7 +54,7 @@ type TaskRow = {
 export function serializeChangedTasks(db: DB, sinceMs: number, limit = 500): SerializedTask[] {
   const rows = db.prepare(
     `SELECT id, task_number, root_id, status, labels_json, priority, dependencies_json,
-            created_at, updated_at, completed_at
+            task_type, created_at, updated_at, completed_at
      FROM tasks
      WHERE strftime('%s', updated_at) * 1000 > ?
      ORDER BY updated_at DESC
@@ -72,6 +74,7 @@ function rowToSerialized(r: TaskRow): SerializedTask {
       priority: r.priority ?? 'medium',
       labels: safeParseArray(r.labels_json),
       dependencies: safeParseArray(r.dependencies_json),
+      taskType: r.task_type === 'bug' ? 'bug' : 'feature',
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       completedAt: r.completed_at,
@@ -137,13 +140,14 @@ export function applyCloudTasks(db: DB, tasks: CloudTask[]): { applied: number; 
         // LWW: cloud wins — update portable fields only, leave runtime fields alone.
         db.prepare(
           `UPDATE tasks SET status = ?, priority = ?, labels_json = ?, dependencies_json = ?,
-                            completed_at = ?, updated_at = ?
+                            task_type = ?, completed_at = ?, updated_at = ?
            WHERE id = ?`,
         ).run(
           payload.status,
           payload.priority,
           JSON.stringify(payload.labels),
           JSON.stringify(payload.dependencies),
+          payload.taskType,
           payload.completedAt ?? null,
           payload.updatedAt,
           t.id,
@@ -156,8 +160,8 @@ export function applyCloudTasks(db: DB, tasks: CloudTask[]): { applied: number; 
           `INSERT INTO tasks
             (id, task_number, root_id, task_template_id, task_template_name, create_worktree,
              current_stage_index, status, scheduler_admitted, labels_json, priority,
-             dependencies_json, created_at, updated_at, completed_at)
-           VALUES (?, ?, ?, '', NULL, 0, 0, ?, 0, ?, ?, ?, ?, ?, ?)`,
+             dependencies_json, task_type, created_at, updated_at, completed_at)
+           VALUES (?, ?, ?, '', NULL, 0, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           t.id,
           nextNum,
@@ -166,6 +170,7 @@ export function applyCloudTasks(db: DB, tasks: CloudTask[]): { applied: number; 
           JSON.stringify(payload.labels),
           payload.priority,
           JSON.stringify(payload.dependencies),
+          payload.taskType,
           payload.createdAt,
           payload.updatedAt,
           payload.completedAt ?? null,
@@ -191,6 +196,7 @@ function normalizePayload(raw: unknown): PortableTaskPayload {
     priority: typeof p.priority === 'string' ? p.priority : 'medium',
     labels: Array.isArray(p.labels) ? p.labels.filter((x): x is string => typeof x === 'string') : [],
     dependencies: Array.isArray(p.dependencies) ? p.dependencies.filter((x): x is string => typeof x === 'string') : [],
+    taskType: p.taskType === 'bug' ? 'bug' : 'feature',
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
     updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
     completedAt: p.completedAt ?? null,

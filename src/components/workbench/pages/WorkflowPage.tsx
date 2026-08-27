@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   List,
   MessageCircle,
+  Paperclip,
   Play,
   ShieldAlert,
   UserRound,
@@ -40,6 +41,8 @@ const taskStatus = (task: Task): { state: WorkbenchStatusState; label: string } 
 
 type DisplayTask = {
   id: string;
+  isBug?: boolean;
+  attachments?: number;
   taskNumber: number;
   stageIndex: number;
   title: string;
@@ -56,6 +59,7 @@ function displayTask(task: Task, stageCount: number, projects: Project[]): Displ
   const status = taskStatus(task);
   return {
     id: task.id,
+    isBug: task.taskType === 'bug',
     taskNumber: task.taskNumber,
     stageIndex: Math.min(task.currentStageIndex, Math.max(0, stageCount - 1)),
     title: task.input?.trim() || task.taskTemplateName || `任务 #${task.taskNumber}`,
@@ -118,7 +122,7 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
     </div>
   );
 }
-function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel, onShowDeliverable }: { task: DisplayTask; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void }) {
+function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void }) {
   return (
     <article
       className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
@@ -126,6 +130,8 @@ function WorkflowTaskCard({ task, onAdvance, onRetry, onCancel, onShowDeliverabl
     >
       <div className="flex items-center gap-1.5 overflow-hidden">
         <span className="ds-mono flex-shrink-0 text-[10px] text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</span>
+          <span className={`flex-shrink-0 rounded px-1 py-0.5 text-[10px] font-medium ${task.isBug ? 'bg-workbench-danger-soft text-workbench-danger' : 'bg-workbench-accent/10 text-workbench-accent'}`}>{task.isBug ? 'Bug' : '需求'}</span>
+          {(attachmentCount ?? 0) > 0 && <span className="flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle" title="附件数"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</span>}
           {task.projectName && <span className="truncate rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle">{task.projectName}</span>}
         <WorkbenchStatus state={task.status} label={task.statusLabel} />
       </div>
@@ -214,6 +220,11 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const refreshAll = useCallback(async () => {
     try {
       setAllTasks(await kanbanApi.listAllTasks());
+      // 附件计数(按任务聚合),失败不打扰看板
+      fetch('/api/tasks/attachments-summary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d) setAttachmentCounts(d.counts ?? {}); })
+        .catch(() => {});
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -232,17 +243,14 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const [view, setView] = useState<'board' | 'list'>('board');
   const [showRules, setShowRules] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTemplateId] = useState<string>('');
+  const [selectedProjectId] = useState<string>('');
   const [deliverableTask, setDeliverableTask] = useState<Task | null>(null);
+  const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
 
   // 每个需求必须关联一个项目:默认当前项目,可切换到其它项目(任务落到
   // 该项目的看板/工作树)。rootId 决定 agent 的工作目录。
   const targetProjectId = selectedProjectId || (selectableProjects[0]?.projectId ?? '');
-  const targetProject = selectableProjects.find((p) => p.projectId === targetProjectId);
-  const createTargetLabel = targetProject
-    ? (targetProject.displayName || targetProject.fullPath || targetProject.path || targetProjectId)
-    : projectName;
 
   // Columns follow the active template's real stages; WORKFLOW_STAGES is only
   // a fallback for the brief window before templates load.
@@ -292,10 +300,22 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
           templates={templates}
           defaultProjectId={targetProjectId}
           onClose={() => setShowCreate(false)}
-          onCreate={async (input, projectId, templateId, priority) => {
-            await createTask(templateId, input, { rootId: projectId, priority });
+          onCreate={async (input, projectId, templateId, priority, taskType, files) => {
+            const created = await createTask(templateId, input, { rootId: projectId, priority, taskType });
+            if (created && files && files.length > 0) {
+              for (const file of files) {
+                try {
+                  await kanbanApi.uploadAttachment(created.id, file.name, file);
+                  toast.success(`附件已上传:${file.name}`);
+                } catch (e) {
+                  toast.error(`附件上传失败:${file.name} — ${e instanceof Error ? e.message : String(e)}`);
+                }
+              }
+            }
             const label = selectableProjects.find((p) => p.projectId === projectId)?.displayName ?? '';
-            toast.success(`已创建到「${label || projectName}」的需求设计列`);
+            toast.success(taskType === 'bug'
+              ? `Bug 已创建到「${label || projectName}」,agent 开始复现排查`
+              : `已创建到「${label || projectName}」的需求设计列`);
             await refreshAll();
           }}
         />
@@ -317,7 +337,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
                     ) : (
                       <>
                         {column.tasks.map((task) => (
-                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} />
+                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} attachmentCount={attachmentCounts[task.id]} />
                         ))}
                       </>
                     )}

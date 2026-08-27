@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { TaskStore } from '@/modules/kanban/store.js';
 import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { Task, TaskPriority, TaskTemplate, TaskStatus, StageStatus } from '@/modules/kanban/types.js';
-import { isTaskPriority, isTerminalTaskStatus, taskPriorityRank } from '@/modules/kanban/types.js';
+import { isTaskPriority, isTaskType, isTerminalTaskStatus, taskPriorityRank, type TaskType } from '@/modules/kanban/types.js';
 import { AppError } from '@/shared/utils.js';
 
 export interface KanbanServiceDeps {
@@ -38,6 +38,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     input: string;
     priority?: TaskPriority;
     dependencies?: string[];
+    taskType?: TaskType;
   }): Task {
     const tpl = requireTemplate(input.taskTemplateId);
     const firstStage = tpl.stages[0]?.snapshot;
@@ -70,6 +71,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       taskTemplateId: tpl.id, taskTemplateName: tpl.name,
       createWorktree: true, currentStageIndex: 0,
       status: firstStatus, schedulerAdmitted: false,
+      taskType: isTaskType(input.taskType) ? input.taskType : 'feature',
       labels: [], priority, dependencies,
       auxFlags: { askUserWaiting: false, hasPlan: false, hasTodos: false, hasTask: false, pendingAskUser: null },
       createdAt: now, updatedAt: now,

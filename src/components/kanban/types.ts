@@ -10,6 +10,9 @@
 //   - Task: worktreeBranchMode, worktreeRootId
 //   - StageTemplate: createdAt/updatedAt are required on the server
 
+export type TaskType = 'feature' | 'bug';
+export type TaskAttachment = { id: string; taskId: string; filename: string; size: number; createdAt: string };
+
 export type TaskStatus =
   | 'pending' | 'queued' | 'running' | 'waiting_user'
   | 'paused' | 'success' | 'fail' | 'cancelled';
@@ -95,6 +98,7 @@ export interface TaskTemplate {
 
 export interface Task {
   id: string;
+  taskType?: TaskType;
   taskNumber: number;
   rootId: string;
   taskTemplateId: string;

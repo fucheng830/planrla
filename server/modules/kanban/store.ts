@@ -23,18 +23,28 @@ export function createTaskStore(deps: TaskStoreDeps) {
   migrateAddColumn(db, 'tasks', 'priority', "TEXT NOT NULL DEFAULT 'medium'");
   migrateAddColumn(db, 'tasks', 'dependencies_json', "TEXT NOT NULL DEFAULT '[]'");
   migrateAddColumn(db, 'tasks', 'provider_session_id', 'TEXT');
+  migrateAddColumn(db, 'tasks', 'task_type', "TEXT NOT NULL DEFAULT 'feature'");
+  db.exec(`CREATE TABLE IF NOT EXISTS task_attachments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    stored_path TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);`);
 
   const createTask = db.transaction((input: CreateTaskInput): Task => {
     const t = input.task;
     db.prepare(`INSERT INTO tasks
-      (id, task_number, root_id, task_template_id, task_template_name,
+      (id, task_number, root_id, task_template_id, task_template_name, task_type,
        create_worktree, worktree_branch_mode, worktree_branch, worktree_path,
        current_stage_index, status, scheduler_admitted, main_session_key,
        worktree_root_id, labels_json, priority, dependencies_json, provider_session_id,
        aux_ask_user_waiting, aux_has_plan, aux_has_todos, aux_has_task, aux_session_error,
        pending_ask_user,
        created_at, updated_at, completed_at)
-      VALUES (@id,@taskNumber,@rootId,@taskTemplateId,@taskTemplateName,
+      VALUES (@id,@taskNumber,@rootId,@taskTemplateId,@taskTemplateName,@taskType,
         @createWorktree,@worktreeBranchMode,@worktreeBranch,@worktreePath,
         @currentStageIndex,@status,@schedulerAdmitted,@mainSessionKey,
         @worktreeRootId,@labelsJson,@priority,@dependenciesJson,@providerSessionId,
@@ -53,6 +63,7 @@ export function createTaskStore(deps: TaskStoreDeps) {
         worktreeRootId: t.worktreeRootId ?? null,
         labelsJson: JSON.stringify(t.labels ?? []),
         priority: t.priority ?? 'medium',
+        taskType: t.taskType ?? 'feature',
         dependenciesJson: JSON.stringify(t.dependencies ?? []),
         providerSessionId: t.providerSessionId ?? null,
         askUserWaiting: t.auxFlags.askUserWaiting ? 1 : 0,
@@ -266,6 +277,7 @@ interface TaskRow {
   aux_ask_user_waiting: number; aux_has_plan: number;
   aux_has_todos: number; aux_has_task: number; aux_session_error: string | null;
   pending_ask_user: string | null;
+  task_type: string | null;
   input?: string | null;
   created_at: string; updated_at: string; completed_at: string | null;
 }
@@ -323,6 +335,7 @@ function rowToTask(row: TaskRow): Task {
     id: row.id, taskNumber: row.task_number, rootId: row.root_id,
     taskTemplateId: row.task_template_id,
     input: row.input ?? undefined,
+    taskType: row.task_type === 'bug' ? 'bug' : 'feature',
     taskTemplateName: row.task_template_name ?? undefined,
     createWorktree: Boolean(row.create_worktree),
     worktreeBranchMode: row.worktree_branch_mode ?? undefined,
