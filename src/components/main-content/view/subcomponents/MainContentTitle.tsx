@@ -79,6 +79,7 @@ export default function MainContentTitle({
 
   const showSessionIcon = activeTab === 'chat' && Boolean(selectedSession);
   const showChatNewSession = activeTab === 'chat' && !selectedSession;
+  const isWorkbenchTitle = activeTab === 'overview' || activeTab === 'inbox' || activeTab === 'workflow' || activeTab === 'schedule';
 
   const subtitle = (
     <div className="flex items-center gap-1.5 text-[11px] leading-tight text-workbench-subtle">
@@ -129,9 +130,9 @@ export default function MainContentTitle({
             <h2 className="text-balance text-sm font-semibold leading-tight text-workbench-ink">
               {getTabTitle(activeTab, t, pluginDisplayName)}
             </h2>
-            {/* 项目总览 aggregates across projects — a single project/branch
-                subtitle would be misleading there. */}
-            {activeTab !== 'overview' && subtitle}
+            {/* Workbench pages are aggregate/cross-source views — a single
+                project/branch subtitle misleads there. */}
+            {!isWorkbenchTitle && subtitle}
           </div>
         )}
       </div>
