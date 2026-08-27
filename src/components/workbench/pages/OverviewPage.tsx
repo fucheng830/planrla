@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Bot, CheckCircle2, Clock, MessageSquare, Plus, Users } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
 import { api } from '../../../utils/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import { useKanban } from '../../kanban';
+import { kanbanApi } from '../../kanban/api';
 import { WorkbenchStatus } from '../WorkbenchStatus';
+import type { Task, TaskTemplate } from '../../kanban/types';
 
 import { FilterChip, MetricCard, PageShell, PageToolbar } from './PageShell';
 import type { ChatApprovalInfo } from './InboxPage';
@@ -61,20 +63,67 @@ function useOverviewSources(): { runningSessions: RunningSessionInfo[]; chatAppr
 
 export function OverviewPage({
   project,
+  projects = [],
   onOpenWorkflow,
   onOpenInbox,
 }: {
   project: Project;
+  projects?: Project[];
   onOpenWorkflow: () => void;
   onOpenInbox: () => void;
 }) {
-  const { tasks, templates, loading, error } = useKanban();
+  const { templates } = useKanban();
+  const { subscribe } = useWebSocket();
+  // 全局:统计跨项目聚合(与研发看板同源)
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const refreshAll = useCallback(async () => {
+    try {
+      setAllTasks(await kanbanApi.listAllTasks());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => { void refreshAll(); }, [refreshAll]);
+  useEffect(() => subscribe((event) => {
+    if (event.type === 'kanban-task-updated' || event.type === 'kanban-task-deleted' || event.kind === 'websocket_reconnected') void refreshAll();
+  }), [refreshAll, subscribe]);
+  const tasks = allTasks;
   const { runningSessions, chatApprovals } = useOverviewSources();
 
-  const stageNames = useMemo(
-    () => templates[0]?.stages.map((s) => s.snapshot.name) ?? [...FALLBACK_STAGES],
-    [templates],
-  );
+  // 跨项目聚合:按模板分组做阶段流(不同项目可能挂不同模板)。
+  const templateGroups = useMemo(() => {
+    const byTemplate = new Map<string, Task[]>();
+    for (const task of tasks.filter((t) => t.status !== 'cancelled')) {
+      const list = byTemplate.get(task.taskTemplateId) ?? [];
+      list.push(task);
+      byTemplate.set(task.taskTemplateId, list);
+    }
+    return [...byTemplate.entries()].map(([templateId, groupTasks]) => {
+      const stages = templates.find((t) => t.id === templateId)?.stages.map((s) => s.snapshot.name)
+        ?? (templateId === '' ? [] : [...FALLBACK_STAGES]);
+      const stageCount = Math.max(1, stages.length);
+      const stageStats: StageStat[] = stages.map((name) => ({ name, total: 0, done: 0, active: 0, waiting: 0 }));
+      for (const task of groupTasks) {
+        const reached = task.status === 'success' ? stageCount : task.currentStageIndex;
+        for (let i = 0; i < stageCount; i += 1) {
+          if (reached < i) break;
+          const stat = stageStats[i];
+          stat.total += 1;
+          if (reached > i || task.status === 'success') stat.done += 1;
+          else {
+            stat.active += 1;
+            if (task.status === 'waiting_user') stat.waiting += 1;
+          }
+        }
+      }
+      return { templateId, name: templates.find((t) => t.id === templateId)?.name ?? '研发流程', stageStats, count: groupTasks.length };
+    }).filter((g) => g.stageStats.length > 0);
+  }, [tasks, templates]);
 
   const stats = useMemo(() => {
     const live = tasks.filter((t) => t.status !== 'cancelled');
@@ -85,26 +134,8 @@ export function OverviewPage({
     const progress = live.length > 0 ? Math.round((done.length / live.length) * 100) : 0;
     // AI 处理占比:AI 正在处理/已完成的任务占全部任务的比例。
     const aiShare = live.length > 0 ? Math.round(((running.length + done.length) / live.length) * 100) : 0;
-
-    // Stage flow against the real template stages: a task "reaches" stage i
-    // once currentStageIndex >= i (success counts as all stages passed).
-    const stageCount = stageNames.length;
-    const stageStats: StageStat[] = stageNames.map((name) => ({ name, total: 0, done: 0, active: 0, waiting: 0 }));
-    for (const task of live) {
-      const reached = task.status === 'success' ? stageCount : task.currentStageIndex;
-      for (let i = 0; i < stageCount; i += 1) {
-        if (reached < i) break;
-        const stat = stageStats[i];
-        stat.total += 1;
-        if (reached > i || task.status === 'success') stat.done += 1;
-        else {
-          stat.active += 1;
-          if (task.status === 'waiting_user') stat.waiting += 1;
-        }
-      }
-    }
-    return { running, waiting, failed, done, progress, aiShare, stageStats };
-  }, [stageNames, tasks]);
+    return { running, waiting, failed, done, progress, aiShare };
+  }, [tasks]);
 
   const waitingTotal = stats.waiting.length + chatApprovals.length;
   const agentsRunning = stats.running.length + runningSessions.length;
@@ -123,7 +154,7 @@ export function OverviewPage({
         id: t.id,
         title: `REQ-${String(t.taskNumber).padStart(3, '0')} ${taskTitle(t.input, t.taskTemplateName, t.taskNumber)}`,
         kind: 'waiting' as const,
-        detail: question ?? '看板任务等待确认后继续推进',
+        detail: `${projects.find((p) => p.projectId === t.rootId)?.displayName ?? ''} · ${question ?? '看板任务等待确认后继续推进'}`,
       };
     }),
     ...stats.failed.slice(0, 2).map((t) => ({
@@ -170,30 +201,36 @@ export function OverviewPage({
       <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
         <section className="ds-panel p-4" aria-label="研发流程">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-workbench-ink">研发流程推进</h2>
+            <h2 className="text-sm font-semibold text-workbench-ink">研发流程推进(全部项目)</h2>
             <button type="button" onClick={onOpenWorkflow} className="ds-focus-ring inline-flex items-center gap-1 text-xs font-medium text-workbench-accent hover:underline">
               查看看板 <ArrowRight className="size-3" aria-hidden="true" />
             </button>
           </div>
-          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(stageNames.length, 5)}, minmax(0, 1fr))` }}>
-            {stats.stageStats.map((stage, index) => {
-              const isCurrent = stage.active > 0;
-              const percent = stage.total > 0 ? Math.round((stage.done / stage.total) * 100) : 0;
-              return (
-                <div
-                  key={`${stage.name}-${index}`}
-                  className={`rounded-md border p-3 ${isCurrent ? 'border-workbench-accent/50 bg-workbench-accent/5' : 'border-workbench-border bg-workbench-surface'}`}
-                >
-                  <p className="truncate text-xs font-medium text-workbench-subtle">{stage.name}</p>
-                  <p className="mt-1.5 text-lg font-semibold text-workbench-ink">{stage.done}/{stage.total}</p>
-                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-workbench-muted">
-                    <div className="h-full rounded-full bg-workbench-accent" style={{ width: `${percent}%` }} />
-                  </div>
-                  {stage.waiting > 0 && <p className="mt-1.5 text-[10px] text-workbench-waiting">{stage.waiting} 项等待确认</p>}
-                </div>
-              );
-            })}
-          </div>
+          {templateGroups.length === 0 && <p className="py-6 text-center text-sm text-workbench-subtle">暂无任务</p>}
+          {templateGroups.map((group) => (
+            <div key={group.templateId} className="mb-4 last:mb-0">
+              <p className="mb-2 text-xs font-medium text-workbench-subtle">{group.name} · {group.count} 个任务</p>
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(group.stageStats.length, 5)}, minmax(0, 1fr))` }}>
+                {group.stageStats.map((stage, index) => {
+                  const isCurrent = stage.active > 0;
+                  const percent = stage.total > 0 ? Math.round((stage.done / stage.total) * 100) : 0;
+                  return (
+                    <div
+                      key={`${group.templateId}-${index}`}
+                      className={`rounded-md border p-3 ${isCurrent ? 'border-workbench-accent/50 bg-workbench-accent/5' : 'border-workbench-border bg-workbench-surface'}`}
+                    >
+                      <p className="truncate text-xs font-medium text-workbench-subtle">{stage.name}</p>
+                      <p className="mt-1.5 text-lg font-semibold text-workbench-ink">{stage.done}/{stage.total}</p>
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-workbench-muted">
+                        <div className="h-full rounded-full bg-workbench-accent" style={{ width: `${percent}%` }} />
+                      </div>
+                      {stage.waiting > 0 && <p className="mt-1.5 text-[10px] text-workbench-waiting">{stage.waiting} 项等待确认</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </section>
 
         <section className="ds-panel p-4" aria-label="风险与待处理">
@@ -249,6 +286,7 @@ export function OverviewPage({
               <li key={task.id} className="rounded-md border border-workbench-border bg-workbench-surface p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-sm font-medium text-workbench-ink">REQ-{String(task.taskNumber).padStart(3, '0')} {taskTitle(task.input, task.taskTemplateName, task.taskNumber)}</span>
+                  {projects.find((p) => p.projectId === task.rootId)?.displayName && <span className="flex-shrink-0 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle">{projects.find((p) => p.projectId === task.rootId)?.displayName}</span>}
                   <WorkbenchStatus state="running" label={task.status === 'queued' ? '排队中' : '运行中'} />
                 </div>
                 <p className="mt-1.5 truncate text-xs text-workbench-subtle">

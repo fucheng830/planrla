@@ -202,6 +202,7 @@ function MainContent({
               <ErrorBoundary showDetails>
                 <OverviewPage
                   project={selectedProject}
+                  projects={projects}
                   onOpenWorkflow={() => setActiveTab('workflow')}
                   onOpenInbox={() => setActiveTab('inbox')}
                 />
