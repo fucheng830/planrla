@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import cron from 'node-cron';
 
 import type { KanbanService } from '@/modules/kanban/service.js';
@@ -205,6 +207,21 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     });
   });
 
+  // 交付物文档:交付阶段 agent 写入 worktree 根的 DELIVERY.md(可能已被
+  // onTerminal 清理——此时 404,前端降级隐藏)。
+  router.get('/:taskId/delivery-doc', (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(req.params.taskId);
+    if (!task || task.rootId !== rootId) return res.status(404).json({ message: 'task not found' });
+    if (!task.worktreePath) return res.status(404).json({ message: 'no worktree' });
+    try {
+      const content = readFileSync(join(task.worktreePath, 'DELIVERY.md'), 'utf8');
+      res.json({ content });
+    } catch {
+      res.status(404).json({ message: 'DELIVERY.md not found' });
+    }
+  });
   // Review loop (diff view): everything the task worktree changed relative
   // to its branch point, as a unified patch + per-file numstat.
   router.get('/:taskId/diff', async (req, res) => {

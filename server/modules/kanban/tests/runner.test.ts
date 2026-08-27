@@ -30,6 +30,7 @@ import type { TaskTemplate } from '@/modules/kanban/types.js';
 const NOW = '2026-01-01T00:00:00.000Z';
 
 interface SetupOpts {
+  scheduler?: { schedule(rootId: string): void };
   mockSpawn: any;
   spawnFns?: Record<string, any>;
   worktreeSetup?: any;
@@ -51,6 +52,7 @@ function setup(opts: SetupOpts) {
     auxBridge,
     resolveRootPath,
     spawnFns: opts.spawnFns ?? { claude: opts.mockSpawn },
+    scheduler: opts.scheduler,
     worktreeSetup: opts.worktreeSetup,
     stageTimeoutMs: opts.stageTimeoutMs,
     log: () => {},
@@ -308,12 +310,40 @@ test('runAgentStage fails task on timeout when spawnFn hangs (no complete/error)
   await runner.runAgentStage('r1', task.id, 1);
 
   const got = taskStore.getTask(task.id);
-  assert.equal(got!.status, 'fail', 'task must leave running and be marked failed on hang');
+  // Timeout without a scheduler dep: the auto-retry still flips the task to
+  // queued (audit event kept) — it just will not be respawned until some
+  // later schedule() tick picks it up.
+  assert.equal(got!.status, 'queued', 'timeout auto-retries even without scheduler');
   assert.match(
     String(got!.auxFlags.sessionError ?? ''),
     /timed ?out|timeout/i,
     'sessionError must record the timeout reason',
   );
+  db.close();
+});
+
+test('runAgentStage timeout with scheduler: auto-retries once (queued, audited), second timeout fails', { timeout: 4000 }, async () => {
+  let scheduled = 0;
+  const hangingSpawn = () => new Promise<void>(() => {});
+  const { db, taskStore, templateStore, service, runner } = setup({
+    mockSpawn: hangingSpawn,
+    stageTimeoutMs: 50,
+    scheduler: { schedule: () => { scheduled += 1; } },
+  });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id); // → stage 1 (agent)
+
+  await runner.runAgentStage('r1', task.id, 1);
+  const afterFirst = taskStore.getTask(task.id)!;
+  assert.equal(afterFirst.status, 'queued', 'first timeout auto-retries to queued');
+  assert.equal(scheduled, 1, 'scheduler woken once');
+  assert.ok(taskStore.listTaskEvents(task.id).some((e) => e.type === 'task_auto_retried'), 'audit event');
+
+  // 第二次超时:不再自动重试,落入 fail(防烧钱循环)
+  taskStore.updateTaskStatus(task.id, 'running');
+  await runner.runAgentStage('r1', task.id, 1);
+  assert.equal(taskStore.getTask(task.id)!.status, 'fail', 'second timeout fails for human');
   db.close();
 });
 

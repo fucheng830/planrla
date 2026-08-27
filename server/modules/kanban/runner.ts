@@ -46,6 +46,9 @@ export interface RunnerDeps {
   spawnFns?: Record<string, SpawnFn>;
   /** W4: kanban-level worktree orchestrator (lazy, idempotent). Optional for back-compat. */
   worktreeSetup?: WorktreeSetup;
+  /** Timeout auto-retry re-enqueues the task and wakes the scheduler. Optional:
+   *  tests without a scheduler skip the auto-retry path. */
+  scheduler?: { schedule(rootId: string): void } | (() => { schedule(rootId: string): void } | undefined);
   /** W4: kanban MCP base URL, injected as an mcpServer so the agent can self-drive
    *  via task_next/task_status. If unset, no kanban MCP is injected. */
   mcpBaseUrl?: string;
@@ -70,6 +73,7 @@ export function createRunner(deps: RunnerDeps) {
     spawnFns = defaultSpawnFns,
     worktreeSetup,
     mcpBaseUrl,
+    scheduler: schedulerDep,
     stageTimeoutMs = Number(process.env.KANBAN_STAGE_TIMEOUT_MS) || 60 * 60 * 1000,
     onTaskChanged,
     log = () => {},
@@ -229,6 +233,21 @@ export function createRunner(deps: RunnerDeps) {
       // so we must fail the task ourselves to keep the board from wedging.
       taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
       recordEvent(taskId, 'agent_stage_failed', { stageIndex, error: String(e?.message ?? e) });
+      // 失败自动分级(确定性规则,非 LLM):超时类失败且本任务从未自动重试过
+      // → 直接重排一次;语义类失败照常转人工。防止环境抖动把长研究烧成 fail。
+      const errMsg = String(e?.message ?? e);
+      const isTimeout = errMsg.includes('timed out');
+      const alreadyAutoRetried = taskStore.listTaskEvents(taskId).some((e2) => e2.type === 'task_auto_retried');
+      if (isTimeout && !alreadyAutoRetried) {
+        recordEvent(taskId, 'task_auto_retried', { stageIndex, error: errMsg });
+        taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+        taskStore.clearProviderSessionId(taskId);
+        taskStore.updateTaskStatus(taskId, 'queued');
+        const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
+        scheduler?.schedule(rootId);
+        log(`[kanban-runner] timeout auto-retry task=${taskId} stage=${stageIndex}`);
+        return;
+      }
       try {
         service.fail(rootId, taskId);
       } catch (failErr) {

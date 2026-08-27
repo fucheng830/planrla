@@ -96,6 +96,13 @@ export const kanbanApi = {
     if (!res.ok) throw new Error(`expand failed: ${res.status}`);
     return (await res.json()) as { created: Task[]; cancelled: Task };
   },
+  /** 交付阶段写入的 DELIVERY.md(worktree 根)。 */
+  getDeliveryDoc: async (taskId: string, rootId: string): Promise<string | null> => {
+    const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/delivery-doc?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { content?: string | null };
+    return data.content ?? null;
+  },
   /** Retry a failed task from its failed stage (fail → queued). */
   retryTask: async (taskId: string, rootId: string): Promise<Task> => {
     const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/retry`, { rootId });

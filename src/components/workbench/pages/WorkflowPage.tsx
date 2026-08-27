@@ -75,8 +75,10 @@ function displayTask(task: Task, stageCount: number, projects: Project[]): Displ
 function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }) {
   const [diff, setDiff] = useState<TaskDiffResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deliveryDoc, setDeliveryDoc] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
+    kanbanApi.getDeliveryDoc(task.id, task.rootId).then((c) => { if (!cancelled) setDeliveryDoc(c); });
     kanbanApi.getTaskDiff(task.id, task.rootId)
       .then((d) => { if (!cancelled) setDiff(d); })
       .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
@@ -97,6 +99,7 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
           {!error && !diff && <p className="text-xs text-workbench-subtle">正在加载 diff…</p>}
           {diff && (<>
             <p className="text-xs text-workbench-subtle">{diff.files.length} 个文件改动 · <span className="text-workbench-success">+{additions}</span> / <span className="text-workbench-danger">-{deletions}</span>{diff.truncated && ' (已截断)'} · worktree {diff.worktreePath}</p>
+            {deliveryDoc && <pre className="mb-3 whitespace-pre-wrap rounded border border-workbench-accent/30 bg-workbench-accent/5 p-3 text-xs leading-5 text-workbench-ink">{deliveryDoc}</pre>}
             <ul className="mt-3 space-y-1">
               {diff.files.map((f: TaskDiffResult["files"][number]) => (
                 <li key={f.path} className="flex items-center justify-between gap-2 rounded border border-workbench-border bg-workbench-surface px-2 py-1.5 text-xs">
