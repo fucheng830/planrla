@@ -16,8 +16,10 @@ export function verifyGatewayToken(req: any): boolean {
 
 /** Stable thread key so the same contact+channel groups into one conversation. */
 export function normalizeThreadKey(channel: string, sender: string, threadKey?: unknown): string {
+  // Explicit keys pass through verbatim (sync protocol / mocks pin the
+  // conversation id); auto keys derive from channel+sender.
   const explicit = typeof threadKey === 'string' && threadKey.trim();
-  return explicit ? `gw:${explicit.trim().slice(0, 120)}` : `gw:${channel}:${sender}`;
+  return explicit ? explicit.trim().slice(0, 120) : `gw:${channel}:${sender}`;
 }
 
 export function createGatewayIngestRouter(deps: { store: ReturnType<typeof createTeamMessageStore> }) {

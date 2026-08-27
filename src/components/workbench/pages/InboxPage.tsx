@@ -179,11 +179,15 @@ export function InboxPage({ project }: { project: Project }) {
       toast.success('已回复客户');
       return true;
     }
-    if (session.source !== '团队消息') return false;
-    const res = await api.post('/team-messages', { rootId: project.projectId, content: text });
-    if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
-    toast.success('已发送到团队');
-    return true;
+    if (session.source === '团队消息') {
+      // team-thread-<threadId|sender:xxx> — reply appends into the same thread.
+      const threadId = session.id.replace(/^team-thread-/, '');
+      const res = await api.post('/team-messages', { rootId: project.projectId, content: text, kind: 'team', asMember: true, channel: '内部', threadId });
+      if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
+      toast.success('已回复');
+      return true;
+    }
+    return false;
   }, [project.displayName, project.projectId]);
 
   /** Real agent execution history for the active kanban thread — stage runs
@@ -300,25 +304,49 @@ export function InboxPage({ project }: { project: Project }) {
         binding: { status: channel ?? undefined, created: formatRelativeTime(items[0].createdAt) },
       };
     });
-    const teamSessions = teamMessages
-      .filter((message) => (message.kind ?? 'team') === 'team')
-      .map((message): MessageSession => {
-        const task = message.taskId ? tasks.find((t) => t.id === message.taskId) : undefined;
+    // Team conversations group by threadId (fallback: sender) so each
+    // teammate renders as one dialogue thread, matching customer threads.
+    const teamGroups = new Map<string, TeamMessageInfo[]>();
+    for (const message of teamMessages) {
+      if ((message.kind ?? 'team') !== 'team') continue;
+      const key = message.threadId ?? `sender:${message.sender}`;
+      const bucket = teamGroups.get(key) ?? [];
+      bucket.push(message);
+      teamGroups.set(key, bucket);
+    }
+    // My outbound replies were stored with threadId too — attribute them to
+    // the teammate thread they answer via thread match; standalone sends keep
+    // their own sender (me).
+    const myName = 'planrla';
+    const teamSessions = [...teamGroups.entries()]
+      .map(([key, items]): MessageSession | null => {
+        const sorted = [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        const last = sorted[sorted.length - 1];
+        const isSoloSelfThread = key.startsWith('sender:') && last.sender === myName && items.length === 1;
+        if (isSoloSelfThread) return null; // hide my own lone sends from the list
+        const task = last.taskId ? tasks.find((t) => t.id === last.taskId) : undefined;
+        const mention = sorted.some((m) => /@所有人|@me\b|@我/.test(m.content));
         return {
-          id: `team-${message.id}`,
-          sender: message.sender,
+          id: `team-thread-${key}`,
+          sender: key.startsWith('sender:') ? key.slice(7) : (sorted.find((m) => m.sender !== myName)?.sender ?? key),
           source: '团队消息',
           category: '团队消息',
-          preview: message.content,
-          time: formatRelativeTime(message.createdAt),
+          preview: `${last.sender}:${last.content}`.slice(0, 60),
+          time: formatRelativeTime(last.createdAt),
           avatar: UsersIcon,
-          tone: 'blue',
-          body: message.content,
+          tone: mention ? 'amber' : 'blue',
+          unread: mention ? 1 : undefined,
+          body: sorted
+            .slice(-8)
+            .map((m) => m.content.replace(/@所有人/g, '⚡$&'))
+            .join('\n'),
+          statusLabel: mention ? '@了我' : `沟通中 · ${items.length} 条`,
           binding: task
-            ? { task: `REQ-${String(task.taskNumber).padStart(3, '0')}`, status: task.status }
+            ? { task: `REQ-${String(task.taskNumber).padStart(3, '0')} ${task.input?.trim().slice(0, 20) || ''}`.trim(), status: task.status }
             : undefined,
         };
-      });
+      })
+      .filter((s): s is MessageSession => s !== null);
     // Background-task registry rows (a2a/chat/bash — kanban already covered).
     // Chat rows carry a raw session id as title — resolve the real session
     // title/summary from the project list so threads show actual content.
