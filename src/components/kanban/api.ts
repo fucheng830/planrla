@@ -96,6 +96,16 @@ export const kanbanApi = {
     if (!res.ok) throw new Error(`expand failed: ${res.status}`);
     return (await res.json()) as { created: Task[]; cancelled: Task };
   },
+  /** Retry a failed task from its failed stage (fail → queued). */
+  retryTask: async (taskId: string, rootId: string): Promise<Task> => {
+    const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/retry`, { rootId });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? `retry failed: ${res.status}`);
+    }
+    const data = (await res.json()) as TaskResponse;
+    return data.task;
+  },
   // REQ-038: answer a pending AskUserQuestion inline. `answers` is forwarded as
   // updatedInput to resolveToolApproval on the server.
   answerTask: async (taskId: string, rootId: string, answers: unknown): Promise<Task> => {

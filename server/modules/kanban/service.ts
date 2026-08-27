@@ -226,6 +226,19 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return taskStore.getTask(taskId)!;
   }
 
+  /** Retry a failed task from its failed stage: fail → queued, the scheduler
+     respawns the agent for the current stage. Retry count is audited. */
+  function retry(rootId: string, taskId: string): Task {
+    const task = requireTask(taskId, rootId);
+    if (task.status !== 'fail') {
+      throw new AppError('只能 retry 处于 fail 状态的任务', { code: 'INVALID_STATUS', statusCode: 400 });
+    }
+    const retriedCount = taskStore.listTaskEvents(taskId).filter((e) => e.type === 'task_retried').length;
+    taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+    taskStore.updateTaskStatus(taskId, 'queued');
+    recordEvent(taskId, 'task_retried', { attempt: retriedCount + 1 });
+    return taskStore.getTask(taskId)!;
+  }
   function fail(rootId: string, taskId: string): Task {
     requireNonTerminalTask(taskId, rootId);
     clearPendingAskUser(taskId);
@@ -329,7 +342,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     return tpl;
   }
 
-  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, deleteTask, listTasks, getTask, getNextTask, expandTask };
+  return { createTask, next, prev, jump, pause, resume, complete, cancel, fail, retry, deleteTask, listTasks, getTask, getNextTask, expandTask };
 }
 
 export type KanbanService = ReturnType<typeof createKanbanService>;

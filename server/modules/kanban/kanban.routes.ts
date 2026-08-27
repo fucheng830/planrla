@@ -238,7 +238,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     }
   });
 
-  const moves = ['next', 'prev', 'pause', 'resume', 'complete', 'cancel', 'fail'] as const;
+  const moves = ['next', 'prev', 'pause', 'resume', 'complete', 'cancel', 'fail', 'retry'] as const;
   for (const action of moves) {
     router.post(`/:taskId/${action}`, (req, res) => handleMove(req, res, action));
   }
