@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 import { cn } from '../../lib/utils';
+import { IS_PLATFORM } from '../../constants/config';
 
 export type WorkbenchRailItem = {
   id: string;
@@ -28,8 +29,22 @@ type WorkbenchRailProps = {
 };
 
 export function WorkbenchRail({ items, footerItems, activeId, onSelect, className }: WorkbenchRailProps) {
+  const logo = (
+    <img src="/logo.svg" alt="Planrla" title="Planrla" className="size-7" draggable={false} />
+  );
   return (
     <nav aria-label="Workbench navigation" className={cn('flex w-12 flex-col items-center gap-1 border-r border-workbench-border bg-workbench-surface py-3', className)}>
+      {IS_PLATFORM ? (
+        <a
+          href="https://planrla.com/dashboard"
+          className="mb-2 flex size-9 items-center justify-center rounded-md transition-opacity hover:opacity-80"
+          title="Planrla"
+        >
+          {logo}
+        </a>
+      ) : (
+        <div className="mb-2 flex size-9 items-center justify-center">{logo}</div>
+      )}
       {items.map(({ id, label, icon: Icon, badge }) => {
         const isActive = id === activeId;
         return (

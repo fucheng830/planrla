@@ -131,7 +131,6 @@ export default function SidebarHeader({
           <div className="space-y-2">
             {/* Row 1: compact search + action buttons */}
             <div className="flex items-center gap-1.5">
-              {!hasCustomTitleBar && <LogoLink />}
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
                 <Input
@@ -208,7 +207,6 @@ export default function SidebarHeader({
           </div>
         ) : (
           <div className={cn('flex items-center gap-2', hasCustomTitleBar ? 'justify-end' : 'justify-between')}>
-            {!hasCustomTitleBar && <LogoLink />}
             <ActionButtons />
           </div>
         )}
