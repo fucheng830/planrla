@@ -17,6 +17,7 @@ import {
 import { useKanban } from '../../kanban';
 import type { Task, TaskPriority } from '../../kanban/types';
 import type { Project } from '../../../types/app';
+import { toast } from 'sonner';
 import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
@@ -139,6 +140,8 @@ function WorkflowRightRail({ schedules, agentRows, nextTask, failedTask }: { sch
 }
 
 export function WorkflowPage({ projectName, projects = [] }: { projectName: string; projects?: Project[] }) {
+  // 排除 kanban worktree 假项目(历史污染),任务不允许直接挂到 worktree
+  const selectableProjects = projects.filter((p) => !(p.fullPath || p.path || '').includes('.worktree'));
   const { tasks, templates, schedules, nextTask, loading, error, moveTask, createTask } = useKanban();
   const [view, setView] = useState<'board' | 'list'>('board');
   const [showRules, setShowRules] = useState(false);
@@ -149,8 +152,8 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
 
   // 每个需求必须关联一个项目:默认当前项目,可切换到其它项目(任务落到
   // 该项目的看板/工作树)。rootId 决定 agent 的工作目录。
-  const targetProjectId = selectedProjectId || (projects[0]?.projectId ?? '');
-  const targetProject = projects.find((p) => p.projectId === targetProjectId);
+  const targetProjectId = selectedProjectId || (selectableProjects[0]?.projectId ?? '');
+  const targetProject = selectableProjects.find((p) => p.projectId === targetProjectId);
   const createTargetLabel = targetProject
     ? (targetProject.displayName || targetProject.fullPath || targetProject.path || targetProjectId)
     : projectName;
@@ -184,6 +187,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
     if (!activeTemplate || !targetProjectId) return;
     // 跨项目创建:rootId 决定任务归属与 agent 的 worktree 位置
     await createTask(activeTemplate.id, createInput.trim() || '新的研发任务', { rootId: targetProjectId });
+    toast.success(`任务已创建到「${createTargetLabel === projectName ? '当前项目' : createTargetLabel}」的看板`);
     setCreateInput('');
     setShowCreate(false);
   };
@@ -202,7 +206,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
       />
 
       {showRules && <section className="ds-panel flex flex-wrap items-center gap-4 p-3 text-xs text-workbench-subtle" aria-label="流程规则"><span className="font-semibold text-workbench-ink">工程化约束</span><span>需求确认后才能进入技术方案</span><span>测试失败自动暂停并通知协作者</span><span>交付前必须生成验证记录</span></section>}
-      {showCreate && <section className="ds-panel flex flex-wrap items-center gap-2 p-3" aria-label="创建任务"><select value={targetProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="ds-focus-ring h-8 rounded border border-workbench-border bg-workbench-surface px-2 text-xs text-workbench-ink" aria-label="关联项目">{projects.map((p) => <option key={p.projectId} value={p.projectId}>{p.displayName || p.fullPath || p.path || p.projectId.slice(0, 8)}</option>)}</select>
+      {showCreate && <section className="ds-panel flex flex-wrap items-center gap-2 p-3" aria-label="创建任务"><select value={targetProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="ds-focus-ring h-8 rounded border border-workbench-border bg-workbench-surface px-2 text-xs text-workbench-ink" aria-label="关联项目">{selectableProjects.map((p) => <option key={p.projectId} value={p.projectId}>{p.displayName || p.fullPath || p.path || p.projectId.slice(0, 8)}</option>)}</select>
           {templates.length > 1 && <select value={activeTemplate?.id ?? ''} onChange={(event) => setSelectedTemplateId(event.target.value)} className="ds-focus-ring h-8 rounded border border-workbench-border bg-workbench-surface px-2 text-xs text-workbench-ink" aria-label="选择模板">{templates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}</select>}<input value={createInput} onChange={(event) => setCreateInput(event.target.value)} placeholder="输入需求描述,回车创建" onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateTask(); }} className="ds-focus-ring h-8 min-w-[240px] flex-1 rounded border border-workbench-border bg-workbench-surface px-3 text-sm text-workbench-ink" /><button type="button" onClick={() => void handleCreateTask()} disabled={!activeTemplate || !targetProjectId} className="ds-focus-ring h-8 rounded bg-workbench-accent px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">创建</button></section>}
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">

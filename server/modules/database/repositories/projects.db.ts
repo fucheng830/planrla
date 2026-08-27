@@ -15,6 +15,13 @@ function normalizeProjectDisplayName(projectPath: string, customProjectName: str
     return directoryName || projectPath;
 }
 
+export /** Kanban agent worktrees must never surface as user projects — sessions
+ * inside them still record the path (sessions FK), but the project row is
+ * created pre-archived and never revived, keeping the sidebar clean. */
+function isKanbanWorktreePath(p: string): boolean {
+    return /[\\/].worktree[\\/]kanban[\\/]/i.test(p);
+}
+
 export const projectsDb = {
     createProjectPath(projectPath: string, customProjectName: string | null = null): CreateProjectPathResult {
         const db = getConnection();

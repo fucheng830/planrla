@@ -169,6 +169,20 @@ function buildKanban() {
       }
     },
   });
+
+  // Zombie recovery: agent runners are child processes — a backend restart
+  // kills them mid-stage and nothing would ever resume or fail the task.
+  // Requeue running tasks so the scheduler respawns the current stage.
+  try {
+    for (const task of taskStore.listAllTasks()) {
+      if (task.status !== 'running') continue;
+      taskStore.updateTaskStatus(task.id, 'queued');
+      taskStore.setSchedulerAdmitted(task.id, false);
+      scheduler.schedule(task.rootId);
+    }
+  } catch (e) {
+    console.error('[kanban] zombie requeue failed:', e);
+  }
   // W4-extras: cron-driven schedules. scheduleStore persists schedules; cronDriver
   // registers them with node-cron.
   const scheduleStore = createScheduleStore({ db });

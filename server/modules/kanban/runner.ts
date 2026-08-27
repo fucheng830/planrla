@@ -70,7 +70,7 @@ export function createRunner(deps: RunnerDeps) {
     spawnFns = defaultSpawnFns,
     worktreeSetup,
     mcpBaseUrl,
-    stageTimeoutMs = Number(process.env.KANBAN_STAGE_TIMEOUT_MS) || 30 * 60 * 1000,
+    stageTimeoutMs = Number(process.env.KANBAN_STAGE_TIMEOUT_MS) || 60 * 60 * 1000,
     onTaskChanged,
     log = () => {},
   } = deps;
