@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Edit3, FolderTree, Star, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderTree, Star, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { cn } from '../../../../lib/utils';
@@ -258,9 +258,6 @@ export default function SidebarProjectItem({
           className={cn(
             'hidden md:flex w-full justify-between rounded-md p-2 h-auto font-normal hover:bg-workbench-muted',
             isSelected && 'bg-workbench-muted text-workbench-ink',
-            isStarred &&
-              !isSelected &&
-              'bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20',
           )}
           onClick={selectAndToggleProject}
           onKeyDown={(event) => {
@@ -270,31 +267,8 @@ export default function SidebarProjectItem({
             }
           }}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <button
-              type="button"
-              aria-label={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
-              className={cn(
-                'w-6 h-6 flex items-center justify-center rounded cursor-pointer transition-all duration-200',
-                isStarred
-                  ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                  : 'opacity-40 hover:opacity-100 hover:bg-accent',
-              )}
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleStarProject();
-              }}
-              title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
-            >
-              <Star
-                className={cn(
-                  'w-3 h-3 transition-colors',
-                  isStarred
-                    ? 'text-yellow-600 dark:text-yellow-400 fill-current'
-                    : 'text-muted-foreground',
-                )}
-              />
-            </button>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Folder className={cn('h-3.5 w-3.5 flex-shrink-0', isSelected ? 'text-workbench-accent' : 'text-workbench-subtle')} aria-hidden="true" />
             <div className="min-w-0 flex-1 text-left">
               {isEditing ? (
                 <div className="space-y-1">
@@ -319,19 +293,8 @@ export default function SidebarProjectItem({
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="truncate text-sm font-semibold text-workbench-ink" title={project.displayName}>
-                    {project.displayName}
-                  </div>
-                  <div className="truncate text-xs text-workbench-subtle">
-                    {sessionCountDisplay}
-                    {project.fullPath !== project.displayName && (
-                      <span className="ml-1 opacity-60" title={project.fullPath}>
-                        {' - '}
-                        {project.fullPath.length > 25 ? `...${project.fullPath.slice(-22)}` : project.fullPath}
-                      </span>
-                    )}
-                  </div>
+                <div className="truncate text-sm font-medium text-workbench-ink" title={project.displayName}>
+                  {project.displayName}
                 </div>
               )}
             </div>
@@ -365,6 +328,26 @@ export default function SidebarProjectItem({
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  aria-label={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
+                  className={cn(
+                    'touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100',
+                    !isStarred && 'opacity-0',
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleStarProject();
+                  }}
+                  title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
+                >
+                  <Star
+                    className={cn(
+                      'h-3 w-3 transition-colors',
+                      isStarred ? 'text-yellow-600 dark:text-yellow-400 fill-current' : 'text-muted-foreground',
+                    )}
+                  />
+                </button>
                 <button
                   type="button"
                   aria-label={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
