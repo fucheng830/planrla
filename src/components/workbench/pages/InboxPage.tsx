@@ -395,37 +395,8 @@ export function InboxPage({ project }: { project: Project }) {
     return [...mapped, ...customerSessions, ...teamSessions, ...bgSessions, ...approvalSessions];
   }, [backgroundTasks, chatApprovals, cronTasks, project.displayName, project.sessions, runningSessions, tasks, teamMessages, templates]);
 
-  const [registerOpen, setRegisterOpen] = useState(false);
   const [contactName, setContactName] = useState('');
   const [customerChannel, setCustomerChannel] = useState('企业微信');
-  const [inquiryText, setInquiryText] = useState('');
-  const [submittingInquiry, setSubmittingInquiry] = useState(false);
-
-  const submitCustomerInquiry = async () => {
-    if (!contactName.trim() || !inquiryText.trim()) {
-      toast.error('请填写客户称呼和咨询内容');
-      return;
-    }
-    setSubmittingInquiry(true);
-    try {
-      const res = await api.post('/team-messages', {
-        rootId: project.projectId,
-        kind: 'customer',
-        sender: contactName.trim(),
-        channel: customerChannel,
-        content: inquiryText.trim(),
-      });
-      if (!res.ok) throw new Error(`team-messages failed: ${res.status}`);
-      toast.success('客户咨询已登记');
-      setContactName('');
-      setInquiryText('');
-      setRegisterOpen(false);
-    } catch (e) {
-      toast.error(`登记失败:${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setSubmittingInquiry(false);
-    }
-  };
 
   return (
     <MessageHubPage
@@ -435,76 +406,7 @@ export function InboxPage({ project }: { project: Project }) {
       onApprovalAction={MOCK_MODE ? undefined : handleApprovalAction}
       onSendMessage={MOCK_MODE ? undefined : handleSendMessage}
       loadSessionDetail={MOCK_MODE ? undefined : loadSessionDetail}
-      inboxAction={MOCK_MODE ? undefined : (
-        <button
-          type="button"
-          onClick={() => setRegisterOpen(true)}
-          className="ds-focus-ring inline-flex h-6 items-center rounded-full border border-workbench-border bg-workbench-surface px-2.5 text-[11px] font-medium text-workbench-subtle transition-colors hover:border-workbench-accent/60 hover:text-workbench-ink"
-        >
-          登记客户咨询
-        </button>
-      )}
     >
-      {registerOpen && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-label="登记客户咨询"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setRegisterOpen(false);
-          }}
-        >
-          <div className="w-full max-w-md rounded-lg border border-workbench-border bg-white p-5 shadow-xl">
-            <h3 className="text-sm font-semibold text-workbench-ink">登记客户咨询</h3>
-            <p className="mt-1 text-xs text-workbench-subtle">记录外部客户的咨询,沟通往来在客户消息线程中追踪。</p>
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-workbench-subtle">客户称呼 *</span>
-                <input
-                  value={contactName}
-                  onChange={(event) => setContactName(event.target.value)}
-                  placeholder="例如:王先生"
-                  autoFocus
-                  className="ds-focus-ring h-8 w-full rounded border border-workbench-border bg-white px-2.5 text-sm text-workbench-ink"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-workbench-subtle">渠道</span>
-                <select
-                  value={customerChannel}
-                  onChange={(event) => setCustomerChannel(event.target.value)}
-                  className="ds-focus-ring h-8 w-full rounded border border-workbench-border bg-white px-2 text-sm text-workbench-ink"
-                >
-                  {['企业微信', '飞书', 'Slack', '钉钉', '电话', '官网', '其他'].map((channelOption) => (
-                    <option key={channelOption} value={channelOption}>{channelOption}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-workbench-subtle">咨询内容 *</span>
-                <textarea
-                  value={inquiryText}
-                  onChange={(event) => setInquiryText(event.target.value)}
-                  rows={4}
-                  placeholder="客户的问题或诉求…"
-                  className="ds-focus-ring w-full resize-none rounded border border-workbench-border bg-white p-2.5 text-sm text-workbench-ink"
-                />
-              </label>
-            </div>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button type="button" onClick={() => setRegisterOpen(false)} className="ds-focus-ring h-8 rounded border border-workbench-border px-3 text-xs text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink">取消</button>
-              <button
-                type="button"
-                disabled={submittingInquiry}
-                onClick={() => void submitCustomerInquiry()}
-                className="ds-focus-ring h-8 rounded bg-workbench-accent px-4 text-xs font-semibold text-white disabled:opacity-50"
-              >
-                {submittingInquiry ? '提交中…' : '登记'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MessageHubPage>
   );
 }
