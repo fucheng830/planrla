@@ -148,7 +148,7 @@ function MainContent({
         onMenuClick={onMenuClick}
       />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden bg-workbench-canvas">
+      <div className={`flex min-h-0 flex-1 overflow-hidden ${activeTab === 'chat' ? 'bg-white' : 'bg-workbench-canvas'}`}>
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
           <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files' || activeTab === 'git') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>
