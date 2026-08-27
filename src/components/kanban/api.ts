@@ -136,6 +136,13 @@ export const kanbanApi = {
     const data = (await res.json()) as { content?: string | null };
     return data.content ?? null;
   },
+  /** 交付说明:任务最后一次 agent 会话的收尾总结文本(交付报告本体)。 */
+  getDeliverySummary: async (taskId: string, rootId: string): Promise<string | null> => {
+    const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/delivery-summary?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { content?: string | null };
+    return data.content ?? null;
+  },
   /** Retry a failed task from its failed stage (fail → queued). */
   retryTask: async (taskId: string, rootId: string): Promise<Task> => {
     const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/retry`, { rootId });

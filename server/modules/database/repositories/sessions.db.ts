@@ -158,6 +158,15 @@ export const sessionsDb = {
    * stays NULL until the provider runtime announces its own id and
    * `assignProviderSessionId` records the mapping.
    */
+    /** Resolve the app-facing session id from a provider-native session id.
+     *  Returns null when unknown. */
+    getAppSessionIdByProviderSessionId(provider: string, providerSessionId: string): string | null {
+        const db = getConnection();
+        const row = db.prepare(
+            'SELECT session_id FROM sessions WHERE provider = ? AND provider_session_id = ? LIMIT 1'
+        ).get(provider, providerSessionId) as { session_id: string } | undefined;
+        return row?.session_id ?? null;
+    },
   createAppSession(sessionId: string, provider: string, projectPath: string): string {
     const db = getConnection();
     const normalizedProjectPath = normalizeProjectPathForProvider(provider, projectPath);

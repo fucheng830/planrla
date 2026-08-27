@@ -1,4 +1,6 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
+import { asyncHandler } from '@/shared/utils.js';
+import { sessionsService } from '@/modules/providers/services/sessions.service.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import cron from 'node-cron';
@@ -157,7 +159,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
       return res.status(400).json({ message: 'rootId and taskTemplateId required' });
     }
     try {
-      const task = service.createTask({ rootId, taskTemplateId, input: input ?? '', priority, dependencies });
+      const task = service.createTask({ rootId, taskTemplateId, input: input ?? '', priority, dependencies, taskType: req.body?.taskType });
       scheduler.schedule(rootId);
       broadcastTaskUpdated(req.app.locals.wss, rootId, task);
       try {
@@ -245,6 +247,33 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
 
   // 交付物文档:交付阶段 agent 写入 worktree 根的 DELIVERY.md(可能已被
   // onTerminal 清理——此时 404,前端降级隐藏)。
+  /** 交付说明:任务最后一次 agent 会话的收尾总结文本(交付报告本体)。 */
+  router.get('/:taskId/delivery-summary', asyncHandler(async (req: Request, res: Response) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(req.params.taskId);
+    if (!task || task.rootId !== rootId) return res.status(404).json({ message: 'task not found' });
+    if (!task.providerSessionId) return res.status(404).json({ message: 'no agent session' });
+    // 由模板定位 provider(最后 agent 阶段的 agent 名),解析 app 会话后取末尾总结
+    const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+    const agentName = tpl?.stages[task.currentStageIndex]?.snapshot.agent ?? tpl?.stages.find((s) => s.snapshot.role === 'agent')?.snapshot.agent ?? 'claude';
+    const candidates = [agentName, 'claude', 'codex'];
+    let appSessionId: string | null = null;
+    for (const p of candidates) {
+      appSessionId = sessionsService.resolveAppSessionIdByProviderSessionId(p, task.providerSessionId);
+      if (appSessionId) break;
+    }
+    if (!appSessionId) return res.status(404).json({ message: 'app session not found' });
+    const history = await sessionsService.fetchHistory(appSessionId, {} as never);
+    const messages = (history.messages ?? []) as Array<{ kind?: string; role?: string; content?: string }>;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const m = messages[i];
+      if ((m.kind === 'text' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim()) {
+        return res.json({ content: m.content });
+      }
+    }
+    return res.status(404).json({ message: 'no summary message found' });
+  }));
   router.get('/:taskId/delivery-doc', (req, res) => {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });

@@ -26,6 +26,7 @@ import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
 import { CreateTaskCard } from './CreateTaskCard';
+import { Markdown } from '../../chat/view/subcomponents/Markdown';
 import { WORKFLOW_STAGES } from './workflowModel';
 
 type AgentRow = { name: string; detail: string; state: 'running' | 'idle' | 'waiting'; label: string };
@@ -82,9 +83,11 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
   const [diff, setDiff] = useState<TaskDiffResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deliveryDoc, setDeliveryDoc] = useState<string | null>(null);
+  const [deliverySummary, setDeliverySummary] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     kanbanApi.getDeliveryDoc(task.id, task.rootId).then((c) => { if (!cancelled) setDeliveryDoc(c); });
+    kanbanApi.getDeliverySummary(task.id, task.rootId).then((c) => { if (!cancelled) setDeliverySummary(c); });
     kanbanApi.getTaskDiff(task.id, task.rootId)
       .then((d) => { if (!cancelled) setDiff(d); })
       .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
@@ -102,7 +105,13 @@ function DeliverablePanel({ task, onClose }: { task: Task; onClose: () => void }
         </header>
         <div className="min-h-0 flex-1 overflow-auto p-4 text-sm">
           {error && <p className="rounded border border-workbench-danger/30 bg-workbench-danger/10 p-3 text-xs text-workbench-danger">{error}(worktree 可能已被清理)</p>}
-          {!error && !diff && <p className="text-xs text-workbench-subtle">正在加载 diff…</p>}
+          {deliverySummary && (
+            <div className="mb-3 rounded-md border border-workbench-accent/40 bg-white p-3">
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-workbench-ink">交付说明</p>
+              <Markdown className="prose prose-sm max-w-none text-xs">{deliverySummary}</Markdown>
+            </div>
+          )}
+          {!error && !diff && !deliverySummary && <p className="text-xs text-workbench-subtle">正在加载交付物…</p>}
           {diff && (<>
             <p className="text-xs text-workbench-subtle">{diff.files.length} 个文件改动 · <span className="text-workbench-success">+{additions}</span> / <span className="text-workbench-danger">-{deletions}</span>{diff.truncated && ' (已截断)'} · worktree {diff.worktreePath}</p>
             {diff.mergedIntoRoot && <p className="mb-3 rounded border border-workbench-success/30 bg-workbench-success/10 p-3 text-xs text-workbench-success">交付物已全部合并进主仓,无未合并改动。</p>}

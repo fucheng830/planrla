@@ -294,8 +294,14 @@ export const sessionsService = {
    * and every returned message is remapped back to the app session id so
    * provider ids never reach the frontend.
    */
-  async fetchHistory(
-    sessionId: string,
+
+  /** Resolve the app-facing session id from a provider-native session id. */
+  resolveAppSessionIdByProviderSessionId(provider: string, providerSessionId: string): string | null {
+    return sessionsDb.getAppSessionIdByProviderSessionId(provider, providerSessionId);
+  },
+
+
+  async fetchHistory(    sessionId: string,
     options: Pick<FetchHistoryOptions, 'limit' | 'offset'> = {},
   ): Promise<FetchHistoryResult> {
     const session = sessionsDb.getSessionById(sessionId);
