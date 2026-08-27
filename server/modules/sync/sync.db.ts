@@ -31,7 +31,9 @@ export type SyncConfigKey =
   | 'instance_id'
   | 'instance_name'
   | 'instance_token'
-  | 'last_pull_at';
+  | 'last_pull_at'
+  | 'last_msg_push_at'
+  | 'last_msg_pull_at';
 
 export type SyncConfig = Partial<Record<SyncConfigKey, string>>;
 

@@ -87,5 +87,30 @@ export function createTeamMessageStore(deps: { db?: Database } = {}) {
     db.prepare('DELETE FROM team_messages WHERE id = ? AND root_id = ?').run(id, rootId);
   }
 
-  return { listMessages, createMessage, deleteMessage };
+  /** Team-kind messages created after `sinceMs`, across all project roots —
+   *  the sync push feed. */
+  function listMessagesSince(sinceMs: number): TeamMessage[] {
+    const sinceIso = new Date(sinceMs).toISOString();
+    const rows = db.prepare(
+      "SELECT * FROM team_messages WHERE kind = 'team' AND created_at > ? ORDER BY created_at ASC LIMIT 500",
+    ).all(sinceIso) as TeamMessageRow[];
+    return rows.map(rowToMessage);
+  }
+
+  /** Ingests a teammate's message from the sync relay. Preserves the origin
+   *  id/author/timestamp; INSERT OR IGNORE makes redelivery a no-op.
+   *  Returns true when the row is new (caller broadcasts it). */
+  function ingestRemoteMessage(input: {
+    id: string; rootId: string; channel?: string | null; threadId?: string | null;
+    sender: string; content: string; taskId?: string | null; createdAt: number;
+  }): boolean {
+    const createdAt = new Date(input.createdAt).toISOString();
+    const r = db.prepare(
+      "INSERT OR IGNORE INTO team_messages (id, root_id, kind, channel, thread_id, sender, content, task_id, created_at) VALUES (?, ?, 'team', ?, ?, ?, ?, ?, ?)",
+    ).run(input.id, input.rootId, input.channel ?? null, input.threadId ?? null,
+          input.sender.slice(0, 60), input.content.slice(0, 4000), input.taskId ?? null, createdAt);
+    return r.changes > 0;
+  }
+
+  return { listMessages, createMessage, deleteMessage, listMessagesSince, ingestRemoteMessage };
 }

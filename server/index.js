@@ -76,11 +76,11 @@ import providerRoutes from './modules/providers/provider.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
 import { createTeamMessageRouter, createGatewayIngestRouter, createTeamMessageStore } from './modules/team-messages/index.js';
-import { startSyncScheduler } from './modules/sync/sync.client.js';
+import { startSyncScheduler, setMessageBroadcastListener } from './modules/sync/sync.client.js';
 import { autostartRelay, relayRouter } from './modules/relay-client/index.js';
 import { getKanban } from './modules/kanban/assembly.js';
 import { createKanbanMcpRouter } from './modules/kanban/mcp.route.js';
-import { broadcastTaskUpdated } from './utils/kanban-websocket.js';
+import { broadcastTaskUpdated, broadcastTeamMessage } from './utils/kanban-websocket.js';
 import { broadcastBackgroundTaskChanged } from './utils/background-task-websocket.js';
 import {
   backgroundTaskRegistry,
@@ -192,6 +192,8 @@ app.locals.wss = wss;
 // REQ-034: runner/scheduler-driven kanban task changes (status transitions,
 // aux flags) broadcast over WS so the board updates in realtime.
 getKanban().setTaskBroadcaster((rootId, task) => broadcastTaskUpdated(wss, rootId, task));
+// 同步拉到的团队消息实时进消息盒子(kanban setTaskBroadcaster 同模式)。
+setMessageBroadcastListener((rootId, message) => broadcastTeamMessage(wss, rootId, message));
 
 // 直接聊天会话的工具审批:等待/解除时广播,消息盒子实时增删待处理线程。
 setChatApprovalListener((kind, approval) => {
