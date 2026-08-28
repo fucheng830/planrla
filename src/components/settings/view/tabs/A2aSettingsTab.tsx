@@ -332,7 +332,7 @@ export default function A2aSettingsTab() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-foreground">{peer.name}</span>
-                    <span className="rounded bg-blue-500/10 px-1 py-px text-[9px] text-blue-600">自动发现</span>
+                    <span className="rounded bg-primary/10 px-1 py-px text-[9px] text-primary">自动发现</span>
                   </div>
                   <p className="truncate text-[11px] text-muted-foreground">{peer.ip}:{peer.port} · v{peer.version || '?'}</p>
                 </div>

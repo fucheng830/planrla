@@ -44,7 +44,7 @@ export function AuxBadges({ flags }: { flags: TaskAuxFlags }) {
       )}
       {flags.hasPlan && (
         <Icon title={t('aux.plan')}>
-          <ClipboardList className="h-3 w-3 text-blue-500" />
+          <ClipboardList className="h-3 w-3 text-primary" />
         </Icon>
       )}
       {flags.hasTodos && (

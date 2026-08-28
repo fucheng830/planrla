@@ -25,7 +25,7 @@ export const UpdateNotification = ({ state, onDownload, onQuitInstall, onClose }
       {content.progressPercent !== undefined && (
         <div className="mb-2 h-1.5 w-full rounded bg-slate-700">
           <div
-            className="h-1.5 rounded bg-blue-500"
+            className="h-1.5 rounded bg-primary"
             style={{ width: `${content.progressPercent}%` }}
           />
         </div>
@@ -34,7 +34,7 @@ export const UpdateNotification = ({ state, onDownload, onQuitInstall, onClose }
         <button
           type="button"
           onClick={onPrimary}
-          className="mr-2 rounded bg-blue-600 px-3 py-1 text-sm hover:bg-blue-500"
+          className="mr-2 rounded bg-primary px-3 py-1 text-sm hover:bg-primary/90"
         >
           {content.primaryAction.label}
         </button>

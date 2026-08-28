@@ -104,7 +104,7 @@ export default function FolderBrowserModal({
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
-              <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <FolderOpen className="h-4 w-4 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('projectWizard.folderBrowser.title')}</h3>
           </div>
@@ -114,7 +114,7 @@ export default function FolderBrowserModal({
               onClick={() => setShowHiddenFolders((previous) => !previous)}
               className={`rounded-md p-2 transition-colors ${
                 showHiddenFolders
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                  ? 'bg-blue-50 text-primary dark:bg-blue-900/30'
                   : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300'
               }`}
               title={showHiddenFolders ? t('projectWizard.folderBrowser.hideHidden') : t('projectWizard.folderBrowser.showHidden')}
@@ -125,7 +125,7 @@ export default function FolderBrowserModal({
               onClick={() => setShowNewFolderInput((previous) => !previous)}
               className={`rounded-md p-2 transition-colors ${
                 showNewFolderInput
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                  ? 'bg-blue-50 text-primary dark:bg-blue-900/30'
                   : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300'
               }`}
               title={t('projectWizard.folderBrowser.createNewFolder')}
@@ -208,7 +208,7 @@ export default function FolderBrowserModal({
                       onClick={() => loadFolders(folder.path)}
                       className="flex flex-1 items-center gap-3 rounded-lg px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <FolderPlus className="h-5 w-5 text-blue-500" />
+                      <FolderPlus className="h-5 w-5 text-primary" />
                       <span className="font-medium text-gray-900 dark:text-white">
                         {folder.name}
                       </span>

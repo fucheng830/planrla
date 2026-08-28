@@ -13,7 +13,7 @@ const TYPE_LABEL: Record<BackgroundTaskType, string> = {
 };
 
 const TYPE_COLOR: Record<BackgroundTaskType, string> = {
-  kanban: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  kanban: 'bg-primary/10 text-primary',
   a2a: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   chat: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
   bash: 'bg-slate-500/10 text-slate-600 dark:text-slate-300',

@@ -26,8 +26,8 @@ const agentConfig: Record<AgentProvider, AgentVisualConfig> = {
     bgClass: 'bg-blue-50 dark:bg-blue-900/20',
     borderClass: 'border-blue-200 dark:border-blue-800',
     textClass: 'text-blue-900 dark:text-blue-100',
-    subtextClass: 'text-blue-700 dark:text-blue-300',
-    buttonClass: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
+    subtextClass: 'text-primary',
+    buttonClass: 'bg-primary hover:bg-primary/90 active:bg-blue-800',
   },
   cursor: {
     name: 'Cursor',

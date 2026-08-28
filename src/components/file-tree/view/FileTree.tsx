@@ -253,7 +253,7 @@ export default function FileTree({ selectedProject, onFileOpen, compact, headerP
             style={{ paddingLeft: `${(operations.newItemParent.split('/').length - 1) * 16 + 4}px` }}
           >
             {operations.newItemType === 'directory' ? (
-              <Folder className={cn(ICON_SIZE_CLASS, 'text-blue-500')} />
+              <Folder className={cn(ICON_SIZE_CLASS, 'text-primary')} />
             ) : (
               <span className="ml-[18px]">{renderFileIcon(operations.newItemName)}</span>
             )}

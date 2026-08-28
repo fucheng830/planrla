@@ -71,7 +71,7 @@ function TreeItemIcon({
           )}
         />
         {isOpen ? (
-          <FolderOpen className="h-4 w-4 flex-shrink-0 text-blue-500" />
+          <FolderOpen className="h-4 w-4 flex-shrink-0 text-primary" />
         ) : (
           <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
         )}

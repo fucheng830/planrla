@@ -7,7 +7,7 @@ import type { SessionTaskStatus, SessionTaskStatusTone } from './taskStatus';
 
 const taskStatusBadgeClassNames: Record<SessionTaskStatusTone, string> = {
   muted: 'bg-muted text-muted-foreground',
-  info: 'bg-blue-500/10 text-blue-600 dark:text-blue-300',
+  info: 'bg-primary/10 text-primary',
   warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
   success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   danger: 'bg-red-500/10 text-red-700 dark:text-red-300',

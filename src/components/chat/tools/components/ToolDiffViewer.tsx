@@ -75,7 +75,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
         {onFileClick ? (
           <button
             onClick={onFileClick}
-            className="cursor-pointer truncate font-mono text-[11px] text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            className="cursor-pointer truncate font-mono text-[11px] text-primary transition-colors hover:text-primary/80"
           >
             {filePath}
           </button>
@@ -162,7 +162,7 @@ export const ToolDiffViewer: React.FC<ToolDiffViewerProps> = ({
                       setComment(diffLine.lineNum, commentDraft);
                       setOpenCommentLine(null);
                     }}
-                    className="rounded bg-blue-600 px-2 py-0.5 text-[10px] text-white hover:bg-blue-700"
+                    className="rounded bg-primary px-2 py-0.5 text-[10px] text-white hover:bg-primary/90"
                   >
                     {t('diffComments.save')}
                   </button>

@@ -88,7 +88,7 @@ export function TaskCard({ task }: { task: Task }) {
               className={`rounded px-1 py-0.5 font-medium ${
                 task.priority === 'high'
                   ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  : 'bg-primary/10 text-primary'
               }`}
             >
               {t(`priority.${task.priority}`)}

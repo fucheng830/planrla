@@ -54,14 +54,14 @@ export default function SidebarFooter({
               onClick={onShowVersionModal}
             >
               <div className="relative flex-shrink-0">
-                <ArrowUpCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                <ArrowUpCircle className="h-4 w-4 text-primary" />
+                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-blue-600 dark:text-blue-300">
+                <span className="block truncate text-sm font-medium text-primary">
                   {releaseInfo?.title || `v${latestVersion}`}
                 </span>
-                <span className="text-[10px] text-blue-500/70 dark:text-blue-400/60">
+                <span className="text-[10px] text-primary/70">
                   {t('version.updateAvailable')}
                 </span>
               </div>
@@ -75,14 +75,14 @@ export default function SidebarFooter({
               onClick={onShowVersionModal}
             >
               <div className="relative flex-shrink-0">
-                <ArrowUpCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                <ArrowUpCircle className="h-4 w-4 text-primary" />
+                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <span className="block truncate text-sm font-medium text-blue-600 dark:text-blue-300">
+                <span className="block truncate text-sm font-medium text-primary">
                   {releaseInfo?.title || `v${latestVersion}`}
                 </span>
-                <span className="text-xs text-blue-500/70 dark:text-blue-400/60">
+                <span className="text-xs text-primary/70">
                   {t('version.updateAvailable')}
                 </span>
               </div>

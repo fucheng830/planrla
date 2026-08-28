@@ -33,7 +33,7 @@ export function AiEditControls({ slot }: AiEditControlsProps) {
   if (slot.awaitingInstruction) {
     return (
       <div className="flex items-center gap-1.5 rounded-md border border-blue-300/60 bg-blue-50/80 px-2 py-1 dark:border-blue-700/40 dark:bg-blue-900/15">
-        <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-blue-500 dark:text-blue-400" />
+        <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
         <input
           ref={inputRef}
           type="text"
@@ -74,7 +74,7 @@ export function AiEditControls({ slot }: AiEditControlsProps) {
 
   if (slot.status === 'running') {
     return (
-      <div className="flex items-center gap-1.5 rounded-md bg-blue-50/80 px-2 py-1 text-xs text-blue-600 dark:bg-blue-900/15 dark:text-blue-300">
+      <div className="flex items-center gap-1.5 rounded-md bg-blue-50/80 px-2 py-1 text-xs text-primary dark:bg-blue-900/15">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         <span>{t('ai.running')}</span>
         <Button size="sm" variant="ghost" className="ml-1 h-6 px-2 text-xs" onClick={slot.cancelRun}>

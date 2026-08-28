@@ -146,14 +146,14 @@ function ClaudePermissions({
             <div className="font-medium text-blue-900 dark:text-blue-100">
               {t('permissions.autoContinue.label')}
             </div>
-            <div className="text-sm text-blue-700 dark:text-blue-300">
+            <div className="text-sm text-primary">
               {t('permissions.autoContinue.description')}
             </div>
           </div>
         </label>
         {askUserQuestionAutoContinue && (
           <div className="mt-3 flex items-center gap-2 pl-7">
-            <span className="text-sm text-blue-700 dark:text-blue-300">
+            <span className="text-sm text-primary">
               {t('permissions.autoContinue.timeoutLabel')}
             </span>
             <select

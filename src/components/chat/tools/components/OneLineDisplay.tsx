@@ -38,7 +38,7 @@ const dotColorMap: Record<string, string> = {
   task: 'bg-violet-500 dark:bg-violet-400',
   agent: 'bg-purple-500 dark:bg-purple-400',
   plan: 'bg-indigo-500 dark:bg-indigo-400',
-  question: 'bg-blue-500 dark:bg-blue-400',
+  question: 'bg-primary',
   default: 'bg-border',
 };
 

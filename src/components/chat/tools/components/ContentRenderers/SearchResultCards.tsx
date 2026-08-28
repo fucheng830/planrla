@@ -62,7 +62,7 @@ export const SearchResultCards: React.FC<SearchResultCardsProps> = memo(({
             type="button"
             onClick={handleClick}
             disabled={!handleClick}
-            className="group flex w-full flex-col gap-0.5 rounded border border-gray-200/70 bg-gray-50/60 px-2.5 py-1.5 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50 disabled:cursor-default dark:border-gray-700/60 dark:bg-gray-800/40 dark:hover:border-blue-500/60 dark:hover:bg-blue-950/20"
+            className="group flex w-full flex-col gap-0.5 rounded border border-gray-200/70 bg-gray-50/60 px-2.5 py-1.5 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50 disabled:cursor-default dark:border-gray-700/60 dark:bg-gray-800/40 dark:hover:border-primary/60 dark:hover:bg-blue-950/20"
             title={match.projectPath ? `Open session — ${match.projectPath}` : 'Open session'}
           >
             <div className="flex items-center gap-1.5">

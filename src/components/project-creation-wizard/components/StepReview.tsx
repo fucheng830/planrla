@@ -77,7 +77,7 @@ export default function StepReview({
             <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
               {t('projectWizard.step3.cloningRepository', { defaultValue: 'Cloning repository...' })}
             </p>
-            <code className="block whitespace-pre-wrap break-all font-mono text-xs text-blue-700 dark:text-blue-300">
+            <code className="block whitespace-pre-wrap break-all font-mono text-xs text-primary">
               {cloneProgress}
             </code>
           </div>

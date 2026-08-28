@@ -39,7 +39,7 @@ export default function TerminalTabsBar({ terminals, activeTerminalId, onSwitch,
           >
             {/* Active tab top accent line */}
             {isActive && (
-              <span className="absolute inset-x-0 top-0 h-0.5 bg-blue-500" />
+              <span className="absolute inset-x-0 top-0 h-0.5 bg-primary" />
             )}
             <span className="truncate">{terminal.title}</span>
             <button
