@@ -10,10 +10,15 @@ import type { TaskTemplate } from '@/modules/kanban/types.js';
 /** 内置模板当前 seed 版本。改模板文案时 +1,并补一条迁移映射(见 MIGRATIONS)。 */
 export const SDLC_DEFAULT_SEED_VERSION = 2;
 
-// --- v1(历史)各 stage promptTemplate 原文,迁移指纹:磁盘值 === 此处才判「未自改」 ---
-const V1_PROMPTS: Record<string, string> = {
-  ss3: '{{input}}\n\n运行测试与验证,输出验证记录。',
-  ss4: '{{input}}\n\n整理交付说明并写入 worktree 根目录的 DELIVERY.md:完成内容、改动文件清单、使用/合并方式、遗留事项。这是交付物的一部分。',
+// --- v1(历史)各 stage promptTemplate 原文,迁移指纹:磁盘值命中其一才判「未自改」。
+// 同一 stage 可能有多个历史变体(如 ss4 曾以单括号 {input} 写盘),都要收录,
+// 否则真实存量环境会被误判为「用户自改」而跳过升级。 ---
+const V1_PROMPTS: Record<string, string[]> = {
+  ss3: ['{{input}}\n\n运行测试与验证,输出验证记录。'],
+  ss4: [
+    '{{input}}\n\n整理交付说明并写入 worktree 根目录的 DELIVERY.md:完成内容、改动文件清单、使用/合并方式、遗留事项。这是交付物的一部分。',
+    '{input}\n\n整理交付说明并写入 worktree 根目录的 DELIVERY.md:完成内容、改动文件清单、使用/合并方式、遗留事项。这是交付物的一部分。',
+  ],
 };
 
 // --- v2 各 stage promptTemplate(可视化验证截图留证,REQ:截图留证工程化)---
@@ -80,7 +85,7 @@ export function preserveSeedVersion(body: TaskTemplate, disk: TaskTemplate | nul
  * seedVersion 迁移映射:fromVersion → 逐 stage { from 指纹, to 新文案 }。
  * 未来升 v3 时:SDLC_DEFAULT_SEED_VERSION +1,在此追加 `2: {...}` 条目。
  */
-const MIGRATIONS: Record<number, Record<string, { from: string; to: string }>> = {
+const MIGRATIONS: Record<number, Record<string, { from: string[]; to: string }>> = {
   1: {
     ss3: { from: V1_PROMPTS.ss3, to: V2_PROMPTS.ss3 },
     ss4: { from: V1_PROMPTS.ss4, to: V2_PROMPTS.ss4 },
@@ -110,7 +115,7 @@ export function migrateSdlcDefaultSeed(disk: TaskTemplate, now = new Date().toIS
     for (let from = fromVersion; from < SDLC_DEFAULT_SEED_VERSION; from++) {
       const step = MIGRATIONS[from]?.[sid];
       if (!step) continue;
-      if (prompt === step.from) {
+      if (prompt !== undefined && step.from.includes(prompt)) {
         prompt = step.to;
         upgraded.push(sid);
       } else if (prompt !== undefined) {

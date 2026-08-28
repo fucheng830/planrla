@@ -76,6 +76,17 @@ test('migration upgrades untouched v1 stages and stamps seedVersion', () => {
   assert.equal(snap(tpl, 'ss2').promptTemplate, snap(v1DiskTemplate(), 'ss2').promptTemplate);
 });
 
+test('migration recognizes historical on-disk variants (ss4 with single-brace {input}) as unedited', () => {
+  const disk = v1DiskTemplate();
+  const ss4 = disk.stages.find((s) => s.snapshot.id === 'ss4')!;
+  ss4.snapshot.promptTemplate = ss4.snapshot.promptTemplate!.replace('{{input}}', '{input}');
+  const { tpl, upgraded, skipped } = migrateSdlcDefaultSeed(disk, NOW);
+  assert.deepEqual(upgraded.sort(), ['ss3', 'ss4'], 'legacy variant must still upgrade');
+  assert.deepEqual(skipped, []);
+  const v2 = buildSdlcDefaultTemplate(NOW);
+  assert.equal(snap(tpl, 'ss4').promptTemplate, snap(v2, 'ss4').promptTemplate);
+});
+
 test('migration keeps user-edited prompts and reports them as skipped', () => {
   const disk = v1DiskTemplate();
   const custom = '{{input}}\n\n按团队规范跑测试。';
