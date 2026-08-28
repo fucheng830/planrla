@@ -278,7 +278,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
   router.get('/:taskId/delivery-doc', (req, res) => {
     const rootId = String(req.query.rootId ?? '');
     if (!rootId) return res.status(400).json({ message: 'rootId required' });
-    const task = taskStore.getTask(req.params.taskId);
+    const task = taskStore.getTask(String(req.params.taskId));
     if (!task || task.rootId !== rootId) return res.status(404).json({ message: 'task not found' });
     if (!task.worktreePath) return res.status(404).json({ message: 'no worktree' });
     try {
@@ -287,6 +287,25 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     } catch {
       res.status(404).json({ message: 'DELIVERY.md not found' });
     }
+  });
+  /** 任务 → agent 对话:解析任务 provider 会话对应的 app 会话 id,
+   * 供看板卡「查看对话」跳转 /session/:appSessionId 实时观看。 */
+  router.get('/:taskId/session', (req, res) => {
+    const rootId = String(req.query.rootId ?? '');
+    if (!rootId) return res.status(400).json({ message: 'rootId required' });
+    const task = taskStore.getTask(String(req.params.taskId));
+    if (!task || task.rootId !== rootId) return res.status(404).json({ message: 'task not found' });
+    if (!task.providerSessionId) return res.status(404).json({ message: 'no agent session' });
+    const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+    const agentStages = tpl?.stages.filter((s) => s.snapshot.role === 'agent') ?? [];
+    const candidates = [
+      ...new Set([...agentStages.map((s) => s.snapshot.agent).filter((a): a is string => Boolean(a)), 'claude', 'codex']),
+    ];
+    for (const provider of candidates) {
+      const appSessionId = sessionsService.resolveAppSessionIdByProviderSessionId(provider, task.providerSessionId);
+      if (appSessionId) return res.json({ appSessionId, provider });
+    }
+    return res.status(404).json({ message: 'app session not found' });
   });
   // Review loop (diff view): everything the task worktree changed relative
   // to its branch point, as a unified patch + per-file numstat.

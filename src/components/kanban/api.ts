@@ -143,6 +143,12 @@ export const kanbanApi = {
     const data = (await res.json()) as { content?: string | null };
     return data.content ?? null;
   },
+  /** 任务 → agent 对话:解析 app 会话 id(看板卡「查看对话」跳转用)。 */
+  getTaskSession: async (taskId: string, rootId: string): Promise<{ appSessionId: string; provider: string } | null> => {
+    const res = await api.get(`/tasks/${encodeURIComponent(taskId)}/session?rootId=${encodeURIComponent(rootId)}`);
+    if (!res.ok) return null;
+    return (await res.json()) as { appSessionId: string; provider: string };
+  },
   /** Retry a failed task from its failed stage (fail → queued). */
   retryTask: async (taskId: string, rootId: string): Promise<Task> => {
     const res = await api.post(`/tasks/${encodeURIComponent(taskId)}/retry`, { rootId });

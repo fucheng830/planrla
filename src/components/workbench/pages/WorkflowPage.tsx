@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleDot,
   FileWarning,
+  MessageSquare,
   Plus,
   KanbanSquare,
   List,
@@ -12,6 +13,7 @@ import {
   Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
@@ -205,7 +207,7 @@ function DeliverablePanel({ task, onClose, onChanged }: { task: Task; onClose: (
     </div>
   );
 }
-function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void }) {
+function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable, onOpenSession }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void; onOpenSession?: (task: Task) => void }) {
   return (
     <article
       className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
@@ -227,6 +229,9 @@ function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel,
       </div>
       {task.status === 'complete' && task.source?.worktreeBranch && (
         <button type="button" onClick={(e) => { e.stopPropagation(); onShowDeliverable?.(task.source!); }} className="ds-focus-ring mt-2 inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted">查看交付物</button>
+      )}
+      {task.status === 'running' && task.source?.providerSessionId && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onOpenSession?.(task.source!); }} className="ds-focus-ring mt-2 inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted"><MessageSquare className="size-3" />查看对话</button>
       )}
       {task.status === 'failed' && task.source && (
         <div className="mt-2 flex gap-1.5">
@@ -256,6 +261,7 @@ function WorkflowRightRail({ schedules, agentRows }: { schedules: ReturnType<typ
 }
 
 export function WorkflowPage({ projectName, projects = [] }: { projectName: string; projects?: Project[] }) {
+  const navigate = useNavigate();
   // 排除 kanban worktree 假项目(历史污染),任务不允许直接挂到 worktree
   const selectableProjects = projects.filter((p) => !(p.fullPath || p.path || '').includes('.worktree'));
   const { templates, schedules, createTask } = useKanban();
@@ -287,6 +293,19 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const moveTask = useCallback(async (taskId: string, action: string, rootId: string) => {
     await kanbanApi.move(taskId, rootId, action);
   }, []);
+  /** 任务卡「查看对话」:解析任务的 agent 会话并跳到 /session/:id 实时观看。 */
+  const openTaskSession = useCallback(async (task: Task) => {
+    try {
+      const session = await kanbanApi.getTaskSession(task.id, task.rootId);
+      if (session?.appSessionId) {
+        navigate(`/session/${session.appSessionId}`);
+      } else {
+        toast.error('还没找到该任务的对话会话(可能尚未建档)');
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }, [navigate]);
   const tasks = allTasks;
   const [view, setView] = useState<'board' | 'list'>('board');
   const [showRules, setShowRules] = useState(false);
@@ -383,7 +402,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
                     ) : (
                       <>
                         {column.tasks.map((task) => (
-                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} attachmentCount={attachmentCounts[task.id]} />
+                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onOpenSession={task.source ? (src) => void openTaskSession(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} attachmentCount={attachmentCounts[task.id]} />
                         ))}
                       </>
                     )}

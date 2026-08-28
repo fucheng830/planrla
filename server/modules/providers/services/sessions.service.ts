@@ -142,6 +142,15 @@ async function readForkHistory(
   }
 }
 
+/** Optional extra source of running sessions for non-chat spawns (kanban). */
+export type ExternalRunningSessionsSource = () => Array<{
+  sessionId: string;
+  provider: LLMProvider;
+  startedAt: number;
+  lastSeq: number;
+}>;
+let externalRunningSource: ExternalRunningSessionsSource | null = null;
+
 export const sessionsService = {
   /**
    * Lists provider ids that can load session history and normalize live messages.
@@ -155,6 +164,11 @@ export const sessionsService = {
    *
    * This is intentionally status-only: callers that only need sidebar activity
    * indicators should not attach to chat streams or request replayed messages.
+   *
+   * Runs spawned outside the chat websocket (kanban agent stages) never enter
+   * chatRunRegistry — they are merged in from the registered external source
+   * (see registerExternalRunningSessions) so the sidebar / inbox still show
+   * them as running.
    */
   listRunningSessions(): Array<{
     sessionId: string;
@@ -162,7 +176,25 @@ export const sessionsService = {
     startedAt: number;
     lastSeq: number;
   }> {
-    return chatRunRegistry.listRunningRuns();
+    const runs = chatRunRegistry.listRunningRuns();
+    let external: Array<{ sessionId: string; provider: LLMProvider; startedAt: number; lastSeq: number }> = [];
+    try {
+      external = externalRunningSource?.() ?? [];
+    } catch (error) {
+      console.warn('[sessionsService] external running source failed:', error);
+    }
+    const seen = new Set(runs.map((run) => run.sessionId));
+    return [...runs, ...external.filter((item) => !seen.has(item.sessionId))];
+  },
+
+  /**
+   * Registers a provider of "running sessions" for runs spawned outside the
+   * chat websocket. The kanban assembly uses this so agent-stage sessions
+   * surface as running; returning [] keeps the chat-only behavior. Must be
+   * idempotent-safe (last registration wins).
+   */
+  registerExternalRunningSessions(source: ExternalRunningSessionsSource | null): void {
+    externalRunningSource = source;
   },
 
   /**

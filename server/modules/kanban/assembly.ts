@@ -17,6 +17,8 @@ import { resolveToolApproval } from '@/claude-sdk.js';
 import type { Task, TaskTemplate } from '@/modules/kanban/types.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 import { recordTombstone } from '@/modules/sync/index.js';
+import { sessionsService } from '@/modules/providers/index.js';
+import type { LLMProvider } from '@/shared/types.js';
 
 let cached: ReturnType<typeof buildKanban> | null = null;
 
@@ -69,6 +71,33 @@ function buildKanban() {
   // 自动创建 kanban-templates 子目录(见 TPL_SUBDIR)
   const templateDir = path.join(os.homedir(), '.planrla');
   const templateStore = createTemplateStore({ dir: templateDir });
+  // kanban agent 会话不经 chat websocket,chatRunRegistry 看不到它们——把
+  // running 任务的 provider 会话注册进 /sessions/running 聚合,侧栏/消息盒子
+  // 才能显示运行中状态(解析不到 app 会话时静默跳过,如会话尚未被同步建档)。
+  sessionsService.registerExternalRunningSessions(() => {
+    const out: Array<{ sessionId: string; provider: LLMProvider; startedAt: number; lastSeq: number }> = [];
+    for (const task of taskStore.listAllTasks()) {
+      if (task.status !== 'running' || !task.providerSessionId) continue;
+      const tpl = templateStore.getTaskTemplate(task.taskTemplateId);
+      const agentStages = tpl?.stages.filter((s) => s.snapshot.role === 'agent') ?? [];
+      const candidates = [
+        ...new Set([...agentStages.map((s) => s.snapshot.agent).filter(Boolean), 'claude', 'codex'] as LLMProvider[]),
+      ];
+      for (const provider of candidates) {
+        const appSessionId = sessionsService.resolveAppSessionIdByProviderSessionId(provider, task.providerSessionId!);
+        if (appSessionId) {
+          out.push({
+            sessionId: appSessionId,
+            provider,
+            startedAt: Date.parse(task.updatedAt) || Date.now(),
+            lastSeq: 0,
+          });
+          break;
+        }
+      }
+    }
+    return out;
+  });
   // First run: seed a default SDLC template so task creation works out of the
   // box — an empty template dir leaves the workflow board unable to create
   // anything. All stages default to manual advance; agent stages only run

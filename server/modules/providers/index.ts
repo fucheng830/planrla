@@ -2,6 +2,7 @@ export { sessionSynchronizerService } from './services/session-synchronizer.serv
 export { providerSkillsService } from './services/skills.service.js';
 export { providerMcpService } from './services/mcp.service.js';
 export { sessionsService } from './services/sessions.service.js';
+export type { ExternalRunningSessionsSource } from './services/sessions.service.js';
 export { providerModelsService } from './services/provider-models.service.js';
 export { providerAuthService } from './services/provider-auth.service.js';
 export { CLAUDE_FALLBACK_MODELS } from './list/claude/claude-models.provider.js';

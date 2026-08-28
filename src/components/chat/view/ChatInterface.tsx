@@ -249,6 +249,18 @@ function ChatInterface({
     [setInput],
   );
 
+  // kanban/后台 agent 的会话不经 chat websocket 推流:processing 期间(状态来自
+  // /sessions/running 轮询,已聚合 kanban 任务)低频重拉 messages,让打开的对话页
+  // 准实时跟随 jsonl 落盘进度。fetchHistory 服务端实时读盘,重拉幂等且会清掉被
+  // 服务端覆盖的 realtime 行,与正常聊天的 WS 推送共存无冲突。
+  useEffect(() => {
+    if (!currentSessionId || !isProcessing) return;
+    const timer = window.setInterval(() => {
+      void sessionStore.refreshFromServer(currentSessionId);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [currentSessionId, isProcessing, sessionStore]);
+
   // On WebSocket reconnect, re-fetch the current session's messages from the
   // server so missed streaming events are shown, then re-subscribe — the
   // `chat_subscribed` ack restores or clears the activity indicator, replays
