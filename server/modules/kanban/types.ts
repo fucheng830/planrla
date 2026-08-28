@@ -56,6 +56,9 @@ export interface TaskTemplate {
   description?: string;
   maxConcurrency: number;
   stages: TaskTemplateStage[];
+  /** 内置模板的 seed 版本标记(仅 sdlc-default 使用)。磁盘值落后于代码内置
+   * 版本时,启动时做定向迁移(见 sdlc-default-template.ts);缺失视为 v1。 */
+  seedVersion?: number;
   createdAt: string;
   updatedAt: string;
 }

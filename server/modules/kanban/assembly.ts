@@ -9,12 +9,13 @@ import { createKanbanCron } from '@/modules/kanban/cron-driver.js';
 import { createKanbanService } from '@/modules/kanban/service.js';
 import { createScheduler } from '@/modules/kanban/scheduler.js';
 import { createKanbanRouter } from '@/modules/kanban/kanban.routes.js';
+import { SDLC_DEFAULT_SEED_VERSION, buildSdlcDefaultTemplate, migrateSdlcDefaultSeed } from '@/modules/kanban/sdlc-default-template.js';
 import { createAuxBridge } from '@/modules/kanban/aux-bridge.js';
 import { createRunner } from '@/modules/kanban/runner.js';
 import { createWorktreeGit } from '@/modules/kanban/git-worktree.js';
 import { createWorktreeSetup } from '@/modules/kanban/worktree-setup.js';
 import { resolveToolApproval } from '@/claude-sdk.js';
-import type { Task, TaskTemplate } from '@/modules/kanban/types.js';
+import type { Task } from '@/modules/kanban/types.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
 import { recordTombstone } from '@/modules/sync/index.js';
 import { sessionsService } from '@/modules/providers/index.js';
@@ -102,25 +103,20 @@ function buildKanban() {
   // box — an empty template dir leaves the workflow board unable to create
   // anything. All stages default to manual advance; agent stages only run
   // after a human explicitly moves a task into them.
+  //
+  // 已有磁盘模板环境走 seedVersion 定向迁移(模板定义单源在
+  // sdlc-default-template.ts):只升级仍等于旧版原文的 stage prompt,用户
+  // 自改过的 stage 原样保留并在日志点名,保证幂等。
   if (templateStore.listTaskTemplates().length === 0) {
-    const now = new Date().toISOString();
-    const stage = (id: string, name: string, role: 'user' | 'agent', promptTemplate?: string): TaskTemplate['stages'][number]['snapshot'] => ({
-      id, name, role, autoAdvance: role === 'agent', ...(role === 'agent' ? { agent: 'claude', agentCanControlStage: true } : {}), ...(promptTemplate ? { promptTemplate } : {}), createdAt: now, updatedAt: now,
-    });
-    templateStore.saveTaskTemplate({
-      id: 'sdlc-default',
-      name: '研发流程(需求 → 交付)',
-      maxConcurrency: 1,
-      createdAt: now,
-      updatedAt: now,
-      stages: [
-        { id: 'st0', position: 0, snapshot: stage('ss0', '需求设计', 'user') },
-        { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求:\n{{input}}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
-        { id: 'st2', position: 2, snapshot: stage('ss2', '开工', 'agent', '{{input}}\n\n按已确认的技术方案实施开发。') },
-        { id: 'st3', position: 3, snapshot: stage('ss3', '测试验证', 'agent', '{{input}}\n\n运行测试与验证,输出验证记录。') },
-        { id: 'st4', position: 4, snapshot: stage('ss4', '交付', 'agent', '{{input}}\n\n整理交付说明并写入 worktree 根目录的 DELIVERY.md:完成内容、改动文件清单、使用/合并方式、遗留事项。这是交付物的一部分。') },
-      ],
-    });
+    templateStore.saveTaskTemplate(buildSdlcDefaultTemplate(new Date().toISOString()));
+  } else {
+    const existingSdlc = templateStore.getTaskTemplate('sdlc-default');
+    if (existingSdlc && (existingSdlc.seedVersion ?? 1) < SDLC_DEFAULT_SEED_VERSION) {
+      const { tpl, upgraded, skipped } = migrateSdlcDefaultSeed(existingSdlc);
+      templateStore.saveTaskTemplate(tpl);
+      console.log(`[kanban-seed] sdlc-default migrated to seedVersion ${SDLC_DEFAULT_SEED_VERSION}`
+        + ` (upgraded: ${upgraded.join(',') || 'none'}; kept user edits: ${skipped.join(',') || 'none'})`);
+    }
   }
   templateStoreRef = templateStore;
   const resolveRootPath = (rootId: string): string | null => projectsDb.getProjectPathById(rootId);
