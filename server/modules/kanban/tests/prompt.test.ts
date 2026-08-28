@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { substitute, renderStagePrompt, buildMcpPreamble } from '@/modules/kanban/prompt.js';
+import { buildSdlcDefaultTemplate } from '@/modules/kanban/sdlc-default-template.js';
 import type { StageTemplate } from '@/modules/kanban/types.js';
 
 function baseStage(over: Partial<StageTemplate> = {}): StageTemplate {
@@ -75,4 +77,21 @@ test('renderStagePrompt omits goal preamble when no goalCondition', () => {
   const out = renderStagePrompt({ stage: goalBaseStage as any, ctx: goalBaseCtx });
   assert.doesNotMatch(out, /你的目标/);
   assert.doesNotMatch(out, /task_complete/);
+});
+
+// --- 截图留证:内置模板「测试验证」阶段渲染产物必须可见截图要求 ---
+
+test('renderStagePrompt renders v2 ss3 with screenshot evidence rules and concrete task number', () => {
+  const tpl = buildSdlcDefaultTemplate(NOW);
+  const ss3 = tpl.stages.find((s) => s.snapshot.id === 'ss3')!.snapshot;
+  const out = renderStagePrompt({
+    stage: ss3,
+    ctx: { taskId: 't-9', taskNumber: 7, stageName: ss3.name, stageIndex: 3, rootPath: '/repo', input: 'REQ-007 悬浮气泡' },
+  });
+  assert.match(out, /可视化验证要求\(强制\)/);
+  assert.match(out, /debug\/ui-acceptance\//);
+  assert.match(out, /task7-hover-popover\.png/, '{{task_number}} must render as the concrete task number');
+  assert.match(out, /playwright/);
+  assert.match(out, /REQ-007 悬浮气泡/, 'input substituted');
+  assert.match(out, /task_next/, 'agentCanControlStage default keeps MCP preamble');
 });
