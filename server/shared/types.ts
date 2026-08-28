@@ -174,9 +174,35 @@ export type MessageKind =
   | 'session_created'
   | 'interactive_prompt'
   | 'task_notification'
+  // REQ-052: context compaction boundary (live SDK `compact_boundary` system
+  // event). History reads surface the boundary as the `isCompactSummary` row
+  // instead; this kind only flows on the realtime channel.
+  | 'compact_boundary'
   // Claude SDK hook liveness signal (UserPromptSubmit/Stop). Kanban runner
   // only — the chat frontend persists unknown kinds, so it is never sent there.
   | 'hook_event';
+
+/**
+ * REQ-052 compaction viewport selector for history reads.
+ *
+ * - `all` (default) keeps the legacy whole-transcript behavior so existing
+ *   consumers (session-query MCP, kanban digest, REQ-049 fork snapshots) never
+ *   change meaning implicitly.
+ * - `active` returns only the messages after the last compaction boundary,
+ *   boundary summary row included — the chat main viewport.
+ * - `archived` returns one compacted-away epoch (`epoch` selects which, latest
+ *   when omitted) for the "历史消息查询" archive viewer.
+ */
+export type CompactionView = 'active' | 'archived' | 'all';
+
+/** One compaction epoch as reported by the compactions listing endpoint. */
+export type CompactionEpochInfo = {
+  epoch: number;
+  boundaryTimestamp: string;
+  /** Exact archived count when known (compactions endpoint); null in history meta. */
+  archivedMessages: number | null;
+  trigger: string | null;
+};
 
 /**
  * Event kinds added by the chat gateway layer on top of provider message kinds.
@@ -238,6 +264,10 @@ export type NormalizedMessage = {
   isLocalCommand?: boolean;
   isLocalCommandStdout?: boolean;
   isCompactSummary?: boolean;
+  /** REQ-052 compact_boundary live frames: 'auto' | 'manual' | null. */
+  compactTrigger?: string | null;
+  /** REQ-052 compact_boundary live frames: context tokens before compaction. */
+  preTokens?: number | null;
   images?: unknown;
   toolName?: string;
   toolInput?: unknown;
@@ -285,6 +315,10 @@ export type FetchHistoryOptions = {
   limit?: number | null;
   offset?: number;
   providerSessionId?: string;
+  /** REQ-052 compaction viewport (default `all` = legacy whole transcript). */
+  view?: CompactionView;
+  /** REQ-052 epoch selector for `view: 'archived'` (1-based, default latest). */
+  epoch?: number;
 };
 
 /**
@@ -299,6 +333,15 @@ export type FetchHistoryResult = {
   offset: number;
   limit: number | null;
   tokenUsage?: unknown;
+  /**
+   * REQ-052: the viewport actually applied. Absent when the provider does not
+   * implement compaction-aware reads — clients must degrade to legacy behavior.
+   */
+  view?: CompactionView;
+  /** REQ-052: true when messages exist before the last compaction boundary. */
+  hasArchived?: boolean;
+  /** REQ-052: active/archived epoch metadata (latest epoch for `active`). */
+  compaction?: CompactionEpochInfo;
 };
 
 // ---------------------------

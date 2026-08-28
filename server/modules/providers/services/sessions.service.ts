@@ -7,6 +7,7 @@ import { chatRunRegistry } from '@/modules/websocket/index.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import { filterSilentRenameTurns } from '@/shared/rename-command-filter.js';
 import type {
+  CompactionEpochInfo,
   FetchHistoryOptions,
   FetchHistoryResult,
   LLMProvider,
@@ -334,7 +335,7 @@ export const sessionsService = {
 
 
   async fetchHistory(    sessionId: string,
-    options: Pick<FetchHistoryOptions, 'limit' | 'offset'> = {},
+    options: Pick<FetchHistoryOptions, 'limit' | 'offset' | 'view' | 'epoch'> = {},
   ): Promise<FetchHistoryResult> {
     const session = sessionsDb.getSessionById(sessionId);
     if (!session) {
@@ -366,6 +367,10 @@ export const sessionsService = {
     const result = await providerRegistry.resolveProvider(provider).sessions.fetchHistory(sessionId, {
       limit: options.limit ?? null,
       offset: options.offset ?? 0,
+      // REQ-052: compaction viewport; providers that ignore it return the
+      // legacy whole transcript and simply omit the view fields.
+      view: options.view,
+      epoch: options.epoch,
       projectPath: session.project_path ?? '',
       providerSessionId: session.provider_session_id,
     });
@@ -382,6 +387,34 @@ export const sessionsService = {
         sessionId,
       })),
     };
+  },
+
+  /**
+   * REQ-052: compaction epochs for the archive viewer. Unsupported providers
+   * report `supported: false` instead of throwing so the frontend can hide the
+   * entry point rather than show a broken panel.
+   */
+  async listCompactions(sessionId: string): Promise<{ supported: boolean; compactions: CompactionEpochInfo[] }> {
+    const session = sessionsDb.getSessionById(sessionId);
+    if (!session) {
+      throw new AppError(`Session "${sessionId}" was not found.`, {
+        code: 'SESSION_NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+    if (!session.provider_session_id) {
+      return { supported: false, compactions: [] };
+    }
+
+    const provider = providerRegistry.resolveProvider(session.provider as LLMProvider).sessions;
+    if (typeof provider.listCompactions !== 'function') {
+      return { supported: false, compactions: [] };
+    }
+
+    const compactions = await provider.listCompactions(sessionId, {
+      providerSessionId: session.provider_session_id,
+    });
+    return { supported: true, compactions };
   },
 
   /**

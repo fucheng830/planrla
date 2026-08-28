@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { History, X } from 'lucide-react';
 
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import PermissionContext from '../../../contexts/PermissionContext';
@@ -25,6 +26,7 @@ import {
 import ChatMessagesPane from './subcomponents/ChatMessagesPane';
 import ChatComposer from './subcomponents/ChatComposer';
 import CommandResultModal from './subcomponents/CommandResultModal';
+import ArchiveMessagesPanel from './subcomponents/ArchiveMessagesPanel';
 import { toCandidateSession } from '../utils/candidateSession';
 
 
@@ -54,6 +56,7 @@ function ChatInterface({
 }: ChatInterfaceProps) {
   const { subscribe } = useWebSocket();
   const { t } = useTranslation('chat');
+  const { t: tc } = useTranslation('common');
 
   const sessionStore = useSessionStore();
   const streamTimerRef = useRef<number | null>(null);
@@ -128,6 +131,8 @@ function ChatInterface({
     isLoadingAllMessages,
     loadAllJustFinished,
     showLoadAllOverlay,
+    hasArchivedMessages,
+    compactionInfo,
     createDiff,
     scrollContainerRef,
     virtuaRef,
@@ -241,6 +246,30 @@ function ChatInterface({
     setPendingPermissionRequests,
   });
 
+  // REQ-052: archive (history) panel + live compact banner. The realtime
+  // handler clears the realtime buffer itself and debounce-refetches the
+  // active view; here we only surface the banner for the viewed session.
+  const [archivePanelOpen, setArchivePanelOpen] = useState(false);
+  const [compactNoticeSessionId, setCompactNoticeSessionId] = useState<string | null>(null);
+
+  const handleCompactBoundary = useCallback((sessionId: string) => {
+    const viewedSessionId = selectedSession?.id || currentSessionId;
+    if (sessionId !== viewedSessionId) return;
+    setCompactNoticeSessionId(sessionId);
+  }, [selectedSession?.id, currentSessionId]);
+
+  useEffect(() => {
+    if (!compactNoticeSessionId) return;
+    const timer = window.setTimeout(() => setCompactNoticeSessionId(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [compactNoticeSessionId]);
+
+  useEffect(() => {
+    // Session switch dismisses a stale banner / closes the archive panel.
+    setCompactNoticeSessionId(null);
+    setArchivePanelOpen(false);
+  }, [selectedSession?.id]);
+
   // REQ-027 ④: composer 注入路径 —— 供 diff 行级评论「复制为消息」等使用
   const insertTextToComposer = useCallback(
     (text: string) => {
@@ -312,6 +341,7 @@ function ChatInterface({
     onSilentRunCompleted,
     onWebSocketReconnect: handleWebSocketReconnect,
     sessionStore,
+    onCompactBoundary: handleCompactBoundary,
   });
 
   useEffect(() => {
@@ -448,6 +478,22 @@ function ChatInterface({
     <ComposerProvider value={{ insertText: insertTextToComposer }}>
       <PermissionContext.Provider value={permissionContextValue}>
         <div className="flex h-full flex-col">
+        {/* REQ-052: live compaction banner — the main viewport already swapped
+            to the compacted view via the handler's debounced active re-fetch. */}
+        {compactNoticeSessionId && (
+          <div className="flex items-center gap-2 border-b border-workbench-border bg-workbench-muted/60 px-4 py-2 text-xs text-workbench-ink">
+            <History className="h-3.5 w-3.5 flex-shrink-0 text-workbench-accent" />
+            <span className="flex-1">{tc('compaction.banner')}</span>
+            <button
+              type="button"
+              onClick={() => setCompactNoticeSessionId(null)}
+              className="ds-focus-ring rounded p-0.5 text-workbench-subtle hover:text-workbench-ink"
+              aria-label={tc('buttons.close', { defaultValue: 'Close' })}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         <ChatMessagesPane
           scrollContainerRef={scrollContainerRef}
           virtuaRef={virtuaRef}
@@ -497,6 +543,8 @@ function ChatInterface({
           showThinking={showThinking}
           selectedProject={selectedProject}
           onForkAtMessage={onForkAtMessage}
+          archivedCount={hasArchivedMessages ? compactionInfo?.archivedMessages ?? null : null}
+          onViewArchivedHistory={hasArchivedMessages ? () => setArchivePanelOpen(true) : undefined}
         />
 
         <ChatComposer
@@ -592,6 +640,16 @@ function ChatInterface({
         currentSessionId={currentSessionId || selectedSession?.id || null}
         onSelectProviderModel={selectProviderModel}
       />
+
+      {/* REQ-052: 「历史消息查询」— self-contained, never writes the main slot. */}
+      {(selectedSession?.id || currentSessionId) && (
+        <ArchiveMessagesPanel
+          sessionId={selectedSession?.id || currentSessionId || ''}
+          open={archivePanelOpen}
+          onClose={() => setArchivePanelOpen(false)}
+          archivedCount={compactionInfo?.archivedMessages ?? undefined}
+        />
+      )}
 
       <Dialog open={showPermissionAck} onOpenChange={handleAckOpenChange}>
         <DialogContent

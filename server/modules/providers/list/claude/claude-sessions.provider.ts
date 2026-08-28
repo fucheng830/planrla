@@ -4,7 +4,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 
 import type { IProviderSessions } from '@/shared/interfaces.js';
-import type { AnyRecord, FetchHistoryOptions, FetchHistoryResult, NormalizedMessage } from '@/shared/types.js';
+import type { AnyRecord, CompactionEpochInfo, CompactionView, FetchHistoryOptions, FetchHistoryResult, NormalizedMessage } from '@/shared/types.js';
 import { createNormalizedMessage, generateMessageId, readObjectRecord, sliceTailPage, truncateJsonlByTimestamp } from '@/shared/utils.js';
 import { sessionsDb } from '@/modules/database/index.js';
 
@@ -16,24 +16,6 @@ type ClaudeToolResult = {
   subagentTools?: unknown;
   toolUseResult?: unknown;
 };
-
-type ClaudeHistoryResult =
-  | AnyRecord[]
-  | {
-    messages?: AnyRecord[];
-    total?: number;
-    hasMore?: boolean;
-  };
-
-type ClaudeHistoryMessagesResult =
-  | AnyRecord[]
-  | {
-    messages: AnyRecord[];
-    total: number;
-    hasMore: boolean;
-    offset?: number;
-    limit?: number | null;
-  };
 
 async function parseAgentTools(filePath: string): Promise<AnyRecord[]> {
   const tools: AnyRecord[] = [];
@@ -101,19 +83,24 @@ async function parseAgentTools(filePath: string): Promise<AnyRecord[]> {
   return tools;
 }
 
+/**
+ * Streams the raw transcript rows for one provider session in FILE ORDER.
+ *
+ * REQ-052: timestamp sorting is applied later, after compaction boundaries
+ * have been located — boundary detection must never depend on the sort because
+ * same-millisecond rows can reorder around a boundary and shift it by one.
+ */
 async function getSessionMessages(
   sessionId: string,
   providerSessionId: string,
-  limit: number | null,
-  offset: number,
-): Promise<ClaudeHistoryMessagesResult> {
+): Promise<AnyRecord[]> {
   try {
     // The DB row is keyed by the app-facing session id, while the JSONL rows
     // on disk carry the provider-native id — both ids are needed here.
     const jsonLPath = sessionsDb.getSessionById(sessionId)?.jsonl_path;
 
     if (!jsonLPath) {
-      return { messages: [], total: 0, hasMore: false };
+      return [];
     }
 
     const projectDir = path.dirname(jsonLPath);
@@ -175,31 +162,36 @@ async function getSessionMessages(
       }
     }
 
-    const sortedMessages = messages.sort(
-      (a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime(),
-    );
-    const total = sortedMessages.length;
-
-    if (limit === null) {
-      return sortedMessages;
-    }
-
-    const startIndex = Math.max(0, total - offset - limit);
-    const endIndex = total - offset;
-    const paginatedMessages = sortedMessages.slice(startIndex, endIndex);
-    const hasMore = startIndex > 0;
-
-    return {
-      messages: paginatedMessages,
-      total,
-      hasMore,
-      offset,
-      limit,
-    };
+    return messages;
   } catch (error) {
     console.error(`Error reading messages for session ${sessionId}:`, error);
-    return limit === null ? [] : { messages: [], total: 0, hasMore: false };
+    return [];
   }
+}
+
+/**
+ * REQ-052: locates compaction boundaries (Claude's synthetic `isCompactSummary`
+ * rows) in FILE ORDER. Returns raw array indices, oldest first.
+ */
+function findBoundaryIndices(rawMessages: AnyRecord[]): number[] {
+  const indices: number[] = [];
+  rawMessages.forEach((raw, index) => {
+    if (raw.isCompactSummary === true) {
+      indices.push(index);
+    }
+  });
+  return indices;
+}
+
+/** Stable timestamp sort — equal timestamps keep transcript file order. */
+function sortByTimestamp(rows: AnyRecord[]): AnyRecord[] {
+  return [...rows].sort(
+    (a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime(),
+  );
+}
+
+function boundaryTimestampOf(raw: AnyRecord): string {
+  return typeof raw.timestamp === 'string' ? raw.timestamp : new Date(0).toISOString();
 }
 
 /**
@@ -317,20 +309,21 @@ async function readJsonlFileRaw(filePath: string): Promise<AnyRecord[]> {
   return records;
 }
 
+type NormalizedSegment = { messages: NormalizedMessage[]; total: number };
+
 /**
- * Shared normalization + pagination for `fetchHistory` and the fork snapshot
- * reader. Accepts a bound `normalizeMessage` so both paths produce identical
- * frontend-facing message shapes for the same raw transcript.
+ * Normalizes one raw segment (tool results attached, page total counted the
+ * same way as every provider: `tool_result` kinds attach to their `tool_use`
+ * and never count twice). Segment rows are timestamp-sorted first so the
+ * visible ordering matches the legacy whole-transcript behavior.
  */
-async function normalizeClaudeRawMessages(
-  rawMessages: AnyRecord[],
+function normalizeRawSegment(
+  rawSegment: AnyRecord[],
   sessionId: string,
-  limit: number | null,
-  offset: number,
   normalizeMessage: (rawMessage: unknown, sessionId: string | null) => NormalizedMessage[],
-): Promise<FetchHistoryResult> {
+): NormalizedSegment {
   const toolResultMap = new Map<string, ClaudeToolResult>();
-  for (const raw of rawMessages) {
+  for (const raw of rawSegment) {
     if (raw.message?.role === 'user' && Array.isArray(raw.message?.content)) {
       for (const part of raw.message.content) {
         if (part.type === 'tool_result' && part.tool_use_id) {
@@ -346,7 +339,7 @@ async function normalizeClaudeRawMessages(
   }
 
   const normalized: NormalizedMessage[] = [];
-  for (const raw of rawMessages) {
+  for (const raw of sortByTimestamp(rawSegment)) {
     normalized.push(...normalizeMessage(raw, sessionId));
   }
 
@@ -374,8 +367,114 @@ async function normalizeClaudeRawMessages(
       total += 1;
     }
   }
+
+  return { messages: normalized, total };
+}
+
+/**
+ * REQ-052: raw index bounds of one archive epoch. Epoch k = the rows after
+ * epoch k-1's boundary through epoch k's boundary summary row inclusive (the
+ * summary is the archived epoch's closing message).
+ */
+function epochSegmentBounds(boundaryIndices: number[], epoch: number): { start: number; end: number } | null {
+  if (epoch < 1 || epoch > boundaryIndices.length) {
+    return null;
+  }
+  const end = boundaryIndices[epoch - 1];
+  const start = epoch === 1 ? 0 : boundaryIndices[epoch - 2] + 1;
+  return { start, end: end + 1 };
+}
+
+function buildEpochInfo(rawMessages: AnyRecord[], boundaryIndices: number[], epoch: number): CompactionEpochInfo {
+  const raw = rawMessages[boundaryIndices[epoch - 1]];
+  return {
+    epoch,
+    boundaryTimestamp: boundaryTimestampOf(raw),
+    archivedMessages: null,
+    trigger: null,
+  };
+}
+
+/** Best-effort cache write; a failed cache row can never break a history read. */
+function cacheEpochs(
+  rawMessages: AnyRecord[],
+  boundaryIndices: number[],
+  cacheSessionId: string | null,
+): void {
+  if (!cacheSessionId) {
+    return;
+  }
+  try {
+    boundaryIndices.forEach((rawIndex, i) => {
+      const raw = rawMessages[rawIndex];
+      sessionsDb.upsertCompactionEpoch({
+        sessionId: cacheSessionId,
+        epoch: i + 1,
+        boundaryUuid: typeof raw.uuid === 'string' ? raw.uuid : null,
+        boundaryTimestamp: boundaryTimestampOf(raw),
+        trigger: null,
+        preTokens: null,
+        archivedMessages: null,
+      });
+    });
+  } catch {
+    // Cache only — filtering decisions always re-derive from the transcript.
+  }
+}
+
+/**
+ * Shared normalization + pagination for `fetchHistory` and the fork snapshot
+ * reader. Accepts a bound `normalizeMessage` so both paths produce identical
+ * frontend-facing message shapes for the same raw transcript.
+ *
+ * REQ-052: boundaries are located in FILE ORDER first, then the requested
+ * viewport (`view`) selects which raw segment is normalized — the archived
+ * past is only read when someone actually asks for it.
+ */
+function normalizeClaudeRawMessages(
+  rawMessages: AnyRecord[],
+  sessionId: string,
+  limit: number | null,
+  offset: number,
+  normalizeMessage: (rawMessage: unknown, sessionId: string | null) => NormalizedMessage[],
+  viewOptions: { view?: CompactionView; epoch?: number; cacheSessionId?: string | null } = {},
+): FetchHistoryResult {
+  const view: CompactionView = viewOptions.view ?? 'all';
   const normalizedOffset = Math.max(0, offset);
   const normalizedLimit = limit === null ? null : Math.max(0, limit);
+
+  const boundaryIndices = findBoundaryIndices(rawMessages);
+  const lastBoundaryIndex = boundaryIndices.length > 0 ? boundaryIndices[boundaryIndices.length - 1] : -1;
+  const hasArchived = boundaryIndices.length > 0;
+
+  let segment: AnyRecord[];
+  let epochInfo: CompactionEpochInfo | undefined;
+  let cacheThisScan = false;
+
+  if (view === 'archived') {
+    // Out-of-range epochs yield an empty page; the viewer clamps via the
+    // compactions listing so this only happens on concurrent truncation.
+    const requestedEpoch = viewOptions.epoch ?? boundaryIndices.length;
+    const bounds = epochSegmentBounds(boundaryIndices, requestedEpoch);
+    segment = bounds ? rawMessages.slice(bounds.start, bounds.end) : [];
+    epochInfo = bounds ? { ...buildEpochInfo(rawMessages, boundaryIndices, requestedEpoch), archivedMessages: null } : undefined;
+  } else {
+    const start = view === 'active' && lastBoundaryIndex !== -1 ? lastBoundaryIndex : 0;
+    segment = rawMessages.slice(start);
+    if (hasArchived) {
+      epochInfo = buildEpochInfo(rawMessages, boundaryIndices, boundaryIndices.length);
+      cacheThisScan = true;
+    }
+  }
+
+  const { messages: normalized, total } = normalizeRawSegment(segment, sessionId, normalizeMessage);
+  if (view === 'archived' && epochInfo) {
+    epochInfo.archivedMessages = total;
+  }
+  if (cacheThisScan) {
+    cacheEpochs(rawMessages, boundaryIndices, viewOptions.cacheSessionId ?? null);
+  }
+
   const { page, hasMore } = sliceTailPage(normalized, normalizedLimit, normalizedOffset);
 
   return {
@@ -384,6 +483,9 @@ async function normalizeClaudeRawMessages(
     hasMore,
     offset: normalizedOffset,
     limit: normalizedLimit,
+    view,
+    hasArchived,
+    ...(epochInfo ? { compaction: epochInfo } : {}),
   };
 }
 
@@ -403,6 +505,23 @@ export class ClaudeSessionsProvider implements IProviderSessions {
     }
     if (raw.type === 'content_block_stop') {
       return [createNormalizedMessage({ kind: 'stream_end', sessionId, provider: PROVIDER })];
+    }
+
+    /**
+     * REQ-052: the SDK announces context compaction as a system event. Surface
+     * it so the chat UI can swap to the compacted viewport live; history reads
+     * instead detect the boundary from the `isCompactSummary` transcript row.
+     */
+    if (raw.type === 'system' && raw.subtype === 'compact_boundary') {
+      const metadata = readObjectRecord(raw.compact_metadata);
+      return [createNormalizedMessage({
+        kind: 'compact_boundary',
+        sessionId,
+        provider: PROVIDER,
+        timestamp: raw.timestamp || new Date().toISOString(),
+        compactTrigger: typeof metadata?.trigger === 'string' ? metadata.trigger : null,
+        preTokens: typeof metadata?.pre_tokens === 'number' ? metadata.pre_tokens : null,
+      })];
     }
 
     const messages: NormalizedMessage[] = [];
@@ -648,34 +767,86 @@ export class ClaudeSessionsProvider implements IProviderSessions {
   /**
    * Loads Claude JSONL history for a project/session and returns normalized
    * messages, preserving the existing pagination behavior from projects.js.
+   *
+   * REQ-052: `options.view` selects the compaction viewport (`all` default
+   * keeps the legacy whole-transcript contract; `active`/`archived` read only
+   * the requested segment).
    */
   async fetchHistory(
     sessionId: string,
     options: FetchHistoryOptions = {},
   ): Promise<FetchHistoryResult> {
-    const { limit = null, offset = 0 } = options;
+    const { limit = null, offset = 0, view = 'all', epoch } = options;
     const providerSessionId = options.providerSessionId ?? sessionId;
 
-    let result: ClaudeHistoryResult;
+    let rawMessages: AnyRecord[];
     try {
-      // Load full history first so `total` reflects frontend-normalized messages,
-      // not raw JSONL records.
-      result = await getSessionMessages(sessionId, providerSessionId, null, 0);
+      // Load raw rows in file order first so `total` reflects frontend-normalized
+      // messages, not raw JSONL records.
+      rawMessages = await getSessionMessages(sessionId, providerSessionId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[ClaudeProvider] Failed to load session ${sessionId}:`, message);
       return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
     }
 
-    const rawMessages = Array.isArray(result) ? result : (result.messages || []);
-    return normalizeClaudeRawMessages(rawMessages, sessionId, limit, offset, this.normalizeMessage.bind(this));
+    return normalizeClaudeRawMessages(rawMessages, sessionId, limit, offset, this.normalizeMessage.bind(this), {
+      view,
+      epoch,
+      cacheSessionId: sessionId,
+    });
+  }
+
+  /**
+   * REQ-052: one transcript scan resolving every compaction epoch with exact
+   * archived counts; also refreshes the session_compactions cache so the
+   * archive viewer and the purged-history detector share one baseline.
+   */
+  async listCompactions(
+    sessionId: string,
+    options: Pick<FetchHistoryOptions, 'providerSessionId'> = {},
+  ): Promise<CompactionEpochInfo[]> {
+    const providerSessionId = options.providerSessionId ?? sessionId;
+    const rawMessages = await getSessionMessages(sessionId, providerSessionId);
+    const boundaryIndices = findBoundaryIndices(rawMessages);
+
+    const epochs: CompactionEpochInfo[] = [];
+    for (let epoch = 1; epoch <= boundaryIndices.length; epoch++) {
+      const bounds = epochSegmentBounds(boundaryIndices, epoch);
+      const raw = rawMessages[boundaryIndices[epoch - 1]];
+      const archivedMessages = bounds
+        ? normalizeRawSegment(rawMessages.slice(bounds.start, bounds.end), sessionId, this.normalizeMessage.bind(this)).total
+        : null;
+      epochs.push({
+        epoch,
+        boundaryTimestamp: boundaryTimestampOf(raw),
+        archivedMessages,
+        trigger: null,
+      });
+      try {
+        sessionsDb.upsertCompactionEpoch({
+          sessionId,
+          epoch,
+          boundaryUuid: typeof raw.uuid === 'string' ? raw.uuid : null,
+          boundaryTimestamp: boundaryTimestampOf(raw),
+          trigger: null,
+          preTokens: null,
+          archivedMessages,
+        });
+      } catch {
+        // Cache only — a failed write must not hide real history.
+      }
+    }
+
+    return epochs;
   }
 
   /**
    * REQ-049 fork: reads a copied transcript snapshot straight from disk (no
    * provider_session_id filter — the copy is an app-controlled whole-file
    * snapshot). Shares normalization with `fetchHistory` so the forked view is
-   * byte-for-byte identical to the original conversation.
+   * byte-for-byte identical to the original conversation. Forks keep the
+   * legacy whole-transcript viewport (fork = full copy semantics).
    */
   async fetchHistoryByJsonlPath(
     jsonlPath: string,
@@ -693,7 +864,10 @@ export class ClaudeSessionsProvider implements IProviderSessions {
       return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };
     }
 
-    return normalizeClaudeRawMessages(rawMessages, forkSessionId, limit, offset, this.normalizeMessage.bind(this));
+    return normalizeClaudeRawMessages(rawMessages, forkSessionId, limit, offset, this.normalizeMessage.bind(this), {
+      view: 'all',
+      cacheSessionId: null,
+    });
   }
 
   /**

@@ -74,6 +74,10 @@ interface ChatMessagesPaneProps {
   showThinking?: boolean;
   selectedProject: Project;
   onForkAtMessage?: (sessionId: string, upToTimestamp: string | number) => void;
+  /** REQ-052: archived message count shown on the compact-summary card. */
+  archivedCount?: number | null;
+  /** REQ-052: opens the archive (history) panel. */
+  onViewArchivedHistory?: () => void;
 }
 
 export default function ChatMessagesPane({
@@ -125,6 +129,8 @@ export default function ChatMessagesPane({
   showThinking,
   selectedProject,
   onForkAtMessage,
+  archivedCount,
+  onViewArchivedHistory,
 }: ChatMessagesPaneProps) {
   const { t } = useTranslation('chat');
   const messageKeyMapRef = useRef<WeakMap<ChatMessage, string>>(new WeakMap());
@@ -283,6 +289,8 @@ export default function ChatMessagesPane({
                     provider={provider}
                     canForkAtMessage={Boolean(onForkAtMessage && currentSessionId && MESSAGE_FORKABLE_PROVIDERS.has(provider))}
                     onForkAtMessage={onForkAtMessage && currentSessionId ? () => onForkAtMessage(currentSessionId, message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp) : undefined}
+                    archivedCount={archivedCount}
+                    onViewArchivedHistory={onViewArchivedHistory}
                   />
                 </div>
               );

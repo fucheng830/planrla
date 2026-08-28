@@ -30,6 +30,23 @@
     "workflow": "Delivery",
     "schedule": "Calendar"
   },
+  "compaction": {
+    "cardTitle": "Context compacted",
+    "expandSummary": "Expand summary",
+    "collapseSummary": "Collapse summary",
+    "viewHistory": "View {{count}} earlier messages",
+    "banner": "Context compacted — switched to the compacted view",
+    "panelTitle": "Message history",
+    "panelEyebrow": "Archived",
+    "panelSubtitle": "Messages before the last compaction boundary",
+    "archivedCount": "{{count}} messages archived",
+    "epochBadge": "Epoch {{epoch}}",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load history",
+    "empty": "No compacted history for this session",
+    "noMessagesInEpoch": "No messages in this epoch",
+    "loadEarlier": "Load earlier"
+  },
   "extensionPanel": {
     "tabs": {
       "markdown": "Markdown",

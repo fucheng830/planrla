@@ -28,7 +28,10 @@ export type MessageKind =
   | 'permission_cancelled'
   | 'session_created'
   | 'interactive_prompt'
-  | 'task_notification';
+  | 'task_notification'
+  // REQ-052: live context-compaction boundary frame (handled by
+  // useChatRealtimeHandlers; never persisted into the message list).
+  | 'compact_boundary';
 
 export interface NormalizedMessage {
   id: string;
@@ -60,6 +63,10 @@ export interface NormalizedMessage {
   isLocalCommand?: boolean;
   isLocalCommandStdout?: boolean;
   isCompactSummary?: boolean;
+  /** REQ-052 compact_boundary live frames: 'auto' | 'manual' | null. */
+  compactTrigger?: string | null;
+  /** REQ-052 compact_boundary live frames: context tokens before compaction. */
+  preTokens?: number | null;
   images?: { data: string; name: string }[];
   toolName?: string;
   toolInput?: unknown;
@@ -90,6 +97,25 @@ export interface NormalizedMessage {
 
 export type SessionStatus = 'idle' | 'loading' | 'streaming' | 'error';
 
+/**
+ * REQ-052 compaction viewport selector for history reads. `all` is the legacy
+ * whole-transcript behavior; `active` narrows to the latest compaction epoch;
+ * `archived` reads one compacted-away epoch.
+ */
+export type CompactionView = 'active' | 'archived' | 'all';
+
+/** REQ-052 compaction metadata returned by the sessions messages endpoint. */
+export interface CompactionInfo {
+  epoch: number;
+  /** Boundary time of the epoch (server field name). */
+  boundaryTimestamp?: string;
+  /** Accepted alias used by early spec revisions. */
+  lastBoundaryAt?: string;
+  /** Archived message count; null when the provider could not count. */
+  archivedMessages: number | null;
+  trigger?: string | null;
+}
+
 export interface SessionSlot {
   serverMessages: NormalizedMessage[];
   realtimeMessages: NormalizedMessage[];
@@ -103,6 +129,12 @@ export interface SessionSlot {
   hasMore: boolean;
   offset: number;
   tokenUsage: unknown;
+  /** REQ-052: viewport of the last history fetch; refresh keeps it. */
+  view: CompactionView;
+  /** REQ-052: true when messages exist before the last compaction boundary. */
+  hasArchived: boolean;
+  /** REQ-052: latest-epoch compaction metadata; null when absent/unsupported. */
+  compaction: CompactionInfo | null;
 }
 
 const EMPTY: NormalizedMessage[] = [];
@@ -120,6 +152,9 @@ function createEmptySlot(): SessionSlot {
     hasMore: false,
     offset: 0,
     tokenUsage: null,
+    view: 'all',
+    hasArchived: false,
+    compaction: null,
   };
 }
 
@@ -413,6 +448,23 @@ const STALE_THRESHOLD_MS = 30_000;
 
 const MAX_REALTIME_MESSAGES = 500;
 
+/**
+ * REQ-052: narrow the optional `compaction` payload from a history response.
+ * Providers without compaction support omit it — degrade to null.
+ */
+function readCompactionInfo(value: unknown): CompactionInfo | null {
+  if (!value || typeof value !== 'object') return null;
+  const rec = value as Record<string, unknown>;
+  if (typeof rec.epoch !== 'number') return null;
+  return {
+    epoch: rec.epoch,
+    boundaryTimestamp: typeof rec.boundaryTimestamp === 'string' ? rec.boundaryTimestamp : undefined,
+    lastBoundaryAt: typeof rec.lastBoundaryAt === 'string' ? rec.lastBoundaryAt : undefined,
+    archivedMessages: typeof rec.archivedMessages === 'number' ? rec.archivedMessages : null,
+    trigger: typeof rec.trigger === 'string' ? rec.trigger : null,
+  };
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useSessionStore() {
@@ -456,6 +508,10 @@ export function useSessionStore() {
     opts: {
       limit?: number | null;
       offset?: number;
+      /** REQ-052 compaction viewport; omitted keeps the legacy whole transcript. */
+      view?: CompactionView;
+      /** REQ-052 archived-view epoch selector (1-based; default latest). */
+      epoch?: number;
     } = {},
   ) => {
     const slot = getSlot(sessionId);
@@ -467,6 +523,12 @@ export function useSessionStore() {
       if (opts.limit !== null && opts.limit !== undefined) {
         params.append('limit', String(opts.limit));
         params.append('offset', String(opts.offset ?? 0));
+      }
+      if (opts.view) {
+        params.append('view', opts.view);
+      }
+      if (opts.epoch !== undefined) {
+        params.append('epoch', String(opts.epoch));
       }
 
       const qs = params.toString();
@@ -487,6 +549,11 @@ export function useSessionStore() {
       slot.offset = (opts.offset ?? 0) + messages.length;
       slot.fetchedAt = Date.now();
       slot.status = 'idle';
+      slot.view = opts.view ?? 'all';
+      // REQ-052: absent fields mean the provider is not compaction-aware —
+      // degrade to "no archive" so the UI stays legacy.
+      slot.hasArchived = Boolean(data.hasArchived);
+      slot.compaction = readCompactionInfo(data.compaction);
       recomputeMergedIfNeeded(slot);
       if (data.tokenUsage) {
         slot.tokenUsage = data.tokenUsage;
@@ -509,6 +576,9 @@ export function useSessionStore() {
     sessionId: string,
     opts: {
       limit?: number;
+      /** REQ-052 viewport; defaults to the slot's current view. */
+      view?: CompactionView;
+      epoch?: number;
     } = {},
   ) => {
     const slot = getSlot(sessionId);
@@ -518,6 +588,13 @@ export function useSessionStore() {
     const limit = opts.limit ?? 20;
     params.append('limit', String(limit));
     params.append('offset', String(slot.offset));
+    const view = opts.view ?? slot.view;
+    if (view !== 'all') {
+      params.append('view', view);
+    }
+    if (opts.epoch !== undefined) {
+      params.append('epoch', String(opts.epoch));
+    }
 
     const qs = params.toString();
     const url = `/api/providers/sessions/${encodeURIComponent(sessionId)}/messages${qs ? `?${qs}` : ''}`;
@@ -533,6 +610,8 @@ export function useSessionStore() {
       slot.serverMessages = [...olderMessages, ...slot.serverMessages];
       slot.hasMore = Boolean(data.hasMore);
       slot.offset = slot.offset + olderMessages.length;
+      slot.hasArchived = Boolean(data.hasArchived);
+      slot.compaction = readCompactionInfo(data.compaction) ?? slot.compaction;
       recomputeMergedIfNeeded(slot);
       notify(sessionId);
       return slot;
@@ -589,7 +668,14 @@ export function useSessionStore() {
   ) => {
     const slot = getSlot(sessionId);
     try {
-      const url = `/api/providers/sessions/${encodeURIComponent(sessionId)}/messages`;
+      const params = new URLSearchParams();
+      // REQ-052: keep the slot's current viewport so a background refresh of an
+      // active (compacted) view never re-inflates it with archived messages.
+      if (slot.view !== 'all') {
+        params.append('view', slot.view);
+      }
+      const qs = params.toString();
+      const url = `/api/providers/sessions/${encodeURIComponent(sessionId)}/messages${qs ? `?${qs}` : ''}`;
       const response = await authenticatedFetch(url);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -600,6 +686,10 @@ export function useSessionStore() {
       slot.total = data.total ?? slot.serverMessages.length;
       slot.hasMore = Boolean(data.hasMore);
       slot.fetchedAt = Date.now();
+      slot.hasArchived = Boolean(data.hasArchived);
+      slot.compaction = readCompactionInfo(data.compaction);
+      // Refresh returns the full viewport page — re-anchor tail pagination.
+      slot.offset = slot.serverMessages.length;
       // Only drop realtime rows the server transcript now owns. A blind clear
       // here caused the chat pane to flash "Continue your conversation" after
       // `complete` while JSONL / provider_session_id indexing was still behind.
