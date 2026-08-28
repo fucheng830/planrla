@@ -197,6 +197,9 @@ export function createRunner(deps: RunnerDeps) {
     log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}${reworked ? ' (rework)' : ''}`);
     recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd, reworked });
 
+    // complete 消息驱动推进是正常路径(含「人工阶段完成后停留」的设计行为);
+    // backstop 只兜「进程退出但从未发过 complete」的静默挂死。
+    let completeSeen = false;
     const writer = new RunnerWriter({
       taskId,
       auxBridge,
@@ -205,6 +208,7 @@ export function createRunner(deps: RunnerDeps) {
         taskStore.updateProviderSessionId(taskId, sid);
       },
       onComplete: () => {
+        completeSeen = true;
         log(`[kanban-runner] complete task=${taskId}`);
         recordEvent(taskId, 'agent_stage_completed', { stageIndex });
         emitTask(taskId);
@@ -267,6 +271,33 @@ export function createRunner(deps: RunnerDeps) {
           );
         }),
       ]);
+
+      // Backstop: a provider that RESOLVES without ever sending a complete
+      // message (process exited silently — observed 2026-08-28 REQ-003: spawn
+      // returned, transcript went quiet, timer got cleared, task wedged in
+      // running for 3h). Same safety net the review path already has: mirror
+      // the onComplete advance so the loop always progresses.
+      {
+        const cur = taskStore.getTask(taskId);
+        const alreadyAdvanced = !cur || cur.currentStageIndex !== stageIndex;
+        const terminal = cur && (cur.status === 'success' || cur.status === 'fail' || cur.status === 'cancelled');
+        if (!completeSeen && !alreadyAdvanced && !terminal) {
+          log(`[kanban-runner] spawn resolved without complete, backstop advancing task=${taskId}`);
+          if (stage.autoAdvance || stage.agentCanControlStage !== false) {
+            try {
+              service.next(rootId, taskId);
+            } catch (e) {
+              log(`[kanban-runner] backstop next failed task=${taskId}: ${e}`);
+            }
+          } else {
+            // 人工评审阶段:回到等待人工,不能悬在 running。
+            taskStore.updateTaskStage(taskId, stageIndex, 'waiting_user');
+          }
+          emitTask(taskId);
+          const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
+          scheduler?.schedule(rootId);
+        }
+      }
     } catch (e: any) {
       // Provider hang / timeout / reject: never leave the task stuck in "running".
       // When a spawnFn neither resolves nor sends any writer message (e.g. Claude

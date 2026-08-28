@@ -254,6 +254,24 @@ test('runAgentStage fails the task on unknown provider (never leaves it running)
   db.close();
 });
 
+test('runAgentStage backstop: spawn resolves without a complete message — task advances instead of wedging in running', async () => {
+  // 2026-08-28 REQ-003 真实故障:provider 进程静默退出,spawn promise 正常
+  // resolve 但从未发 complete 消息 → onComplete 不触发、超时 timer 被清,
+  // 任务永久 running(实测悬空 3 小时)。backstop 必须镜像推进。
+  const silentSpawn = async () => {}; // resolves, no writer.send
+  const { db, templateStore, service, runner, taskStore } = setup({ mockSpawn: silentSpawn });
+  makeAgentTemplate(templateStore, 't1');
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
+  service.next('r1', task.id); // → stage 1 (agent)
+
+  await runner.runAgentStage('r1', task.id, 1);
+
+  const after = taskStore.getTask(task.id)!;
+  assert.notEqual(after.status, 'running', 'task must not stay running');
+  assert.equal(after.status, 'success', 'autoAdvance terminal stage completes');
+  db.close();
+});
+
 test('runAgentStage passes worktreePath as cwd when worktreeSetup returns one', async () => {
   const seen: { cwd?: string }[] = [];
   const mockSpawn = async (_cmd: string, opts: any, writer: any) => {
