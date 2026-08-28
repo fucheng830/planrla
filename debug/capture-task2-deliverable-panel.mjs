@@ -52,11 +52,16 @@ try {
   }
 
   // --- 进入挂载 fixture 任务的真实扫描项目(workbench)---
+  // 前端常默认选中最近活动的项目;仅当项目名可见时才点(已选中则跳过)。
   const proj = page.getByText('电脑维护').first();
-  await proj.waitFor({ timeout: 30000 });
-  await proj.click();
-  await page.waitForLoadState('networkidle').catch(() => {});
-  log('entered project workbench');
+  try {
+    await proj.waitFor({ state: 'visible', timeout: 8000 });
+    await proj.click();
+    await page.waitForLoadState('networkidle').catch(() => {});
+    log('entered project workbench via click');
+  } catch {
+    log('project entry not visible (likely already selected), continuing');
+  }
 
   // --- 切到「研发流程」tab(左侧 rail 图标按钮)---
   const tab = page.getByRole('button', { name: '研发流程' }).or(page.getByTitle('研发流程')).first();
