@@ -1,4 +1,4 @@
-export { TEAM_MESSAGES_TABLE_SCHEMA_SQL } from '@/modules/database/schema.js';
+export { TEAM_MESSAGES_TABLE_SCHEMA_SQL, INIT_SCHEMA_SQL } from '@/modules/database/schema.js';
 export { initializeDatabase } from '@/modules/database/init-db.js';
 export { closeConnection, getConnection, getDatabasePath } from '@/modules/database/connection.js';
 export { a2aAgentsDb } from '@/modules/database/repositories/a2a-agents.js';

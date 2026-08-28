@@ -77,6 +77,13 @@ CREATE TABLE IF NOT EXISTS projects (
     isStarred BOOLEAN DEFAULT 0,
     isArchived BOOLEAN DEFAULT 0
 );
+
+-- 「已忘记」项目墓碑:从列表移除但保留会话数据的项目路径。会话同步扫到
+-- 这些路径仍会建档,但 ensureProject 强制归档,防止被悄悄复活回活动列表。
+CREATE TABLE IF NOT EXISTS project_tombstones (
+    project_path TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
+);
 `;
 
 export const SESSIONS_TABLE_SCHEMA_SQL = `

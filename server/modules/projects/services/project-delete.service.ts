@@ -51,9 +51,15 @@ export async function deleteSessionJsonlFilesForProjectPath(projectPath: string)
 }
 
 /**
- * - **Soft delete** (`force` false): set `isArchived` on the `projects` row (hide from the active list; DB only).
- * - **Force** (`force` true): for each session row for that `project_path`, delete the file at `jsonl_path`
- *   (when set), then remove session rows and the `projects` row.
+ * - **Soft delete** (`force` false) on an ACTIVE project: set `isArchived` (hide from
+ *   the active list; DB only).
+ * - **Soft delete on an ALREADY-ARCHIVED project** = "forget": record a tombstone +
+ *   remove the `projects` row, but KEEP session rows and jsonl files. A second tap of
+ *   delete in the archive view should not force users into destructive mode just to
+ *   clean the list. The tombstone guarantees session sync won't resurrect the row.
+ * - **Force** (`force` true): for each session row for that `project_path`, delete the
+ *   file at `jsonl_path` (when set), then remove session rows and the `projects` row.
+ *   A tombstone is recorded as well — other providers' scans may still see the path.
  */
 export async function deleteOrArchiveProject(projectId: string, force: boolean): Promise<void> {
   const row = projectsDb.getProjectById(projectId);
@@ -65,12 +71,18 @@ export async function deleteOrArchiveProject(projectId: string, force: boolean):
   }
 
   if (!force) {
-    projectsDb.updateProjectIsArchivedById(projectId, true);
+    if (!row.isArchived) {
+      projectsDb.updateProjectIsArchivedById(projectId, true);
+      return;
+    }
+    projectsDb.insertProjectTombstone(row.project_path);
+    projectsDb.deleteProjectById(projectId);
     return;
   }
 
   await deleteSessionJsonlFilesForProjectPath(row.project_path);
   sessionsDb.deleteSessionsByProjectPath(row.project_path);
+  projectsDb.insertProjectTombstone(row.project_path);
   projectsDb.deleteProjectById(projectId);
 }
 
@@ -86,5 +98,6 @@ export function restoreArchivedProject(projectId: string): void {
     });
   }
 
+  projectsDb.deleteProjectTombstone(row.project_path);
   projectsDb.updateProjectIsArchivedById(projectId, false);
 }

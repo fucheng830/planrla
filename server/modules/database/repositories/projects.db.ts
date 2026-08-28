@@ -23,6 +23,31 @@ function isKanbanWorktreePath(p: string): boolean {
 }
 
 export const projectsDb = {
+    /** 「已忘记」项目墓碑:被用户从列表移除(但保留会话数据)的项目路径。
+     * 会话同步扫到这些路径的 jsonl 时仍会建档,但必须保持归档不复活——
+     * 否则删掉的项目会被下一次同步悄悄拉回活动列表(实测发生过:
+     * C:\Users\HONOR 反复回到创建任务卡的默认项目里)。表结构在
+     * schema.ts 的 PROJECTS_TABLE_SCHEMA_SQL 里随启动补建。 */
+    insertProjectTombstone(projectPath: string): void {
+        const db = getConnection();
+        db.prepare(`
+            INSERT OR IGNORE INTO project_tombstones (project_path, created_at)
+            VALUES (?, ?)
+        `).run(normalizeProjectPath(projectPath), new Date().toISOString());
+    },
+    isProjectPathTombstoned(projectPath: string): boolean {
+        const db = getConnection();
+        const row = db.prepare(`
+            SELECT 1 FROM project_tombstones WHERE project_path = ?
+        `).get(normalizeProjectPath(projectPath));
+        return Boolean(row);
+    },
+    /** 显式恢复(归档区「恢复」按钮)清除墓碑:用户意图胜过同步压制。 */
+    deleteProjectTombstone(projectPath: string): void {
+        const db = getConnection();
+        db.prepare('DELETE FROM project_tombstones WHERE project_path = ?')
+            .run(normalizeProjectPath(projectPath));
+    },
     /** Active project paths (for local-image proxy allow-list). */
     listProjectPaths(): string[] {
         const db = getConnection();
@@ -56,8 +81,10 @@ export const projectsDb = {
         const normalizedProjectName = normalizeProjectDisplayName(normalizedProjectPath, customProjectName);
         // Defense-in-depth: kanban worktree paths reaching this layer (e.g. a
         // caller bypassing session attribution) are created pre-archived and
-        // forced back to archived on conflict — they must never revive.
-        const wantArchived = isKanbanWorktreePath(normalizedProjectPath) ? 1 : 0;
+        // forced back to archived on conflict — they must never revive. The
+        // same applies to tombstoned ("forgotten") projects: session sync may
+        // still see their jsonl files, but the row must stay archived.
+        const wantArchived = isKanbanWorktreePath(normalizedProjectPath) || projectsDb.isProjectPathTombstoned(normalizedProjectPath) ? 1 : 0;
         const attemptedId = randomUUID();
         const row = db.prepare(`
         INSERT INTO projects (project_id, project_path, custom_project_name, isArchived)
