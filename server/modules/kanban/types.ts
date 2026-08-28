@@ -74,7 +74,8 @@ export interface TaskAuxFlags {
   hasPlan: boolean;
   hasTodos: boolean;
   hasTask: boolean;
-  sessionError?: string;
+  /** null = 显式清空(undefined = 调用方不关心该字段)。 */
+  sessionError?: string | null;
   /** When the agent calls AskUserQuestion, the bridge captures the requestId
    * + questions payload here so the kanban UI can render an inline answer box.
    * Cleared on answer / stage advance / cancel / complete. */

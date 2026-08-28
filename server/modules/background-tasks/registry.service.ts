@@ -137,12 +137,12 @@ function upsertKanban(input: {
   if (input.status === 'success') status = 'completed';
   else if (input.status === 'fail') {
     status = 'failed';
-    error = input.aux.sessionError;
+    error = input.aux.sessionError ?? undefined;
   } else if (input.status === 'cancelled') status = 'killed';
   else if (input.aux.sessionError) {
     // 非终态但有 sessionError → failed(REQ-034:错误实时反映)
     status = 'failed';
-    error = input.aux.sessionError;
+    error = input.aux.sessionError ?? undefined;
   }
 
   const progress =

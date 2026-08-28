@@ -273,9 +273,12 @@ export function createRunner(deps: RunnerDeps) {
       const alreadyAutoRetried = taskStore.listTaskEvents(taskId).some((e2) => e2.type === 'task_auto_retried');
       if (isTimeout && !alreadyAutoRetried) {
         recordEvent(taskId, 'task_auto_retried', { stageIndex, error: errMsg });
-        taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+        taskStore.updateTaskAuxFlags(taskId, { sessionError: null });
         taskStore.clearProviderSessionId(taskId);
         taskStore.updateTaskStatus(taskId, 'queued');
+        // running→queued 直通(不经终态分支),必须显式放掉 admit 标志,
+        // 否则调度器把它当「别人正在跑」永远跳过(fail 路径无此问题)。
+        taskStore.setSchedulerAdmitted(taskId, false);
         const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
         scheduler?.schedule(rootId);
         log(`[kanban-runner] timeout auto-retry task=${taskId} stage=${stageIndex}`);

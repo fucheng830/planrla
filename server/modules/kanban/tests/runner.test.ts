@@ -319,11 +319,10 @@ test('runAgentStage fails task on timeout when spawnFn hangs (no complete/error)
   // queued (audit event kept) — it just will not be respawned until some
   // later schedule() tick picks it up.
   assert.equal(got!.status, 'queued', 'timeout auto-retries even without scheduler');
-  assert.match(
-    String(got!.auxFlags.sessionError ?? ''),
-    /timed ?out|timeout/i,
-    'sessionError must record the timeout reason',
-  );
+  // 自动重试中不残留旧错误文案(任务在重试不是失败;二次超时转 fail 时才会
+  // 重新记录 sessionError)。曾经 updateTaskAuxFlags({sessionError: undefined})
+  // 是 no-op,清不掉——null 才是显式清空。
+  assert.equal(got!.auxFlags.sessionError ?? '', '', 'sessionError cleared while auto-retrying');
   db.close();
 });
 
@@ -338,10 +337,15 @@ test('runAgentStage timeout with scheduler: auto-retries once (queued, audited),
   makeAgentTemplate(templateStore, 't1');
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
   service.next('r1', task.id); // → stage 1 (agent)
+  // 模拟生产路径:调度器 admit 后 admitted=1 + running,超时直通 queued 必须放掉标志,
+  // 否则调度器把它当「别人正在跑」永远跳过(2026-08-28 REQ-001 开工阶段实测卡死)。
+  taskStore.updateTaskStage(task.id, 1, 'running');
+  taskStore.setSchedulerAdmitted(task.id, true);
 
   await runner.runAgentStage('r1', task.id, 1);
   const afterFirst = taskStore.getTask(task.id)!;
   assert.equal(afterFirst.status, 'queued', 'first timeout auto-retries to queued');
+  assert.equal(afterFirst.schedulerAdmitted, false, 'admit flag released so the scheduler can re-admit');
   assert.equal(scheduled, 1, 'scheduler woken once');
   assert.ok(taskStore.listTaskEvents(task.id).some((e) => e.type === 'task_auto_retried'), 'audit event');
 

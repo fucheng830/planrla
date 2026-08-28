@@ -185,6 +185,10 @@ function buildKanban() {
       if (task.status === 'running') {
         taskStore.updateTaskStatus(task.id, 'queued');
         taskStore.setSchedulerAdmitted(task.id, false);
+      } else if (task.schedulerAdmitted) {
+        // queued/waiting_user 却带着 admit 标志 = 中断遗留的不一致态(如超时
+        // 自动重试曾直通 queued 不清标志)。不清掉,调度器会永远跳过它。
+        taskStore.setSchedulerAdmitted(task.id, false);
       }
       staleRoots.add(task.rootId);
     }

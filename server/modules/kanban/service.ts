@@ -236,7 +236,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
       throw new AppError('只能 retry 处于 fail 状态的任务', { code: 'INVALID_STATUS', statusCode: 400 });
     }
     const retriedCount = taskStore.listTaskEvents(taskId).filter((e) => e.type === 'task_retried').length;
-    taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+    taskStore.updateTaskAuxFlags(taskId, { sessionError: null });
     taskStore.clearProviderSessionId(taskId);
     taskStore.updateTaskStatus(taskId, 'queued');
     recordEvent(taskId, 'task_retried', { attempt: retriedCount + 1 });
@@ -255,7 +255,7 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     if (!trimmed) {
       throw new AppError('返工必须附上验收反馈', { code: 'FEEDBACK_REQUIRED', statusCode: 400 });
     }
-    taskStore.updateTaskAuxFlags(taskId, { sessionError: undefined });
+    taskStore.updateTaskAuxFlags(taskId, { sessionError: null });
     taskStore.setReworkFeedback(taskId, trimmed);
     taskStore.updateTaskStatus(taskId, 'queued');
     recordEvent(taskId, 'task_reworked', { feedback: trimmed.slice(0, 500) });
