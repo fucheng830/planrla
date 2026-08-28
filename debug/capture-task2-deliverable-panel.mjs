@@ -42,7 +42,7 @@ try {
   if (await gitName.count()) {
     log('onboarding: filling git identity');
     await gitName.fill('fixture');
-    await page.getByPlaceholder('你的邮箱').fill('fixture@local');
+    await page.getByPlaceholder('你的邮箱').fill('fixture@example.com');
     await page.getByRole('button', { name: /Next/ }).click();
     const complete = page.getByRole('button', { name: /Complete Setup/ });
     await complete.waitFor({ timeout: 20000 });
