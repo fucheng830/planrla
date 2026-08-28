@@ -375,14 +375,14 @@ export default function SidebarProjectItem({
                 <button
                   type="button"
                   aria-label={t('tooltips.deleteProject')}
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-900/20"
+                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100 dark:hover:bg-accent"
                   onClick={(event) => {
                     event.stopPropagation();
                     onDeleteProject(project);
                   }}
                   title={t('tooltips.deleteProject')}
                 >
-                  <Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
+                  <Trash2 className="h-3 w-3 text-muted-foreground transition-colors hover:text-red-500" />
                 </button>
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />

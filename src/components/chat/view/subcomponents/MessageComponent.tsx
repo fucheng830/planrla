@@ -181,7 +181,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
           {!isGrouped && (
             <div className="mb-1 flex items-center">
               {message.type === 'error' ? (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-sm text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--ds-danger))] text-sm text-white">
                   !
                 </div>
               ) : message.type === 'tool' ? (
@@ -236,7 +236,7 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
                       className="relative mt-2 scroll-mt-4 rounded border border-red-200/60 bg-red-50/50 p-3 dark:border-red-800/40 dark:bg-red-950/10"
                     >
                       <div className="relative mb-2 flex items-center gap-1.5">
-                        <svg className="h-4 w-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4 text-[hsl(var(--ds-danger))]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         <span className="text-xs font-medium text-red-700 dark:text-red-300">{t('messageTypes.error')}</span>
