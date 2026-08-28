@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Paperclip, Plus, Search, X } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
@@ -26,6 +26,32 @@ type TaskKind = 'feature' | 'bug';
 const PRIORITY_LABEL: Record<Priority, string> = { high: '高', medium: '中', low: '低' };
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_FILES = 5;
+
+const isImageFile = (f: File) => f.type.startsWith('image/');
+
+/** 附件合并校验(文件选择与剪贴板粘贴共用):超限跳过、封顶截断、按名+大小去重。 */
+function mergeFiles(prev: File[], incoming: File[]): { next: File[]; error: string | null } {
+  const next = [...prev];
+  let error: string | null = null;
+  for (const file of incoming) {
+    if (file.size > MAX_FILE_BYTES) { error = `${file.name} 超过 8MB,已跳过`; continue; }
+    if (next.length >= MAX_FILES) { error = `最多 ${MAX_FILES} 个附件`; break; }
+    if (!next.some((f) => f.name === file.name && f.size === file.size)) next.push(file);
+  }
+  return { next, error };
+}
+
+/** 剪贴板图片起名:粘贴图片-YYYYMMDD-HHmmss(-n).ext,保证重复粘贴不重名。 */
+function namePastedImages(images: File[]): File[] {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  return images.map((file, i) => {
+    const ext = (file.type.split('/')[1] ?? 'png').replace('jpeg', 'jpg');
+    const name = images.length > 1 ? `粘贴图片-${stamp}-${i + 1}.${ext}` : `粘贴图片-${stamp}.${ext}`;
+    return new File([file], name, { type: file.type });
+  });
+}
 
 /** 创建任务卡片(B 方案):需求大输入框为视觉主体;任务分「新需求 / Bug 修复」
  *  两类;项目用可搜索选择器;支持随需求上传附件(≤8MB/个,≤5 个)。 */
@@ -66,25 +92,49 @@ export function CreateTaskCard({ projects, templates, defaultProjectId, onCreate
     });
   }, [projectQuery, projects]);
 
-  const addFiles = (incoming: FileList | null) => {
-    if (!incoming || incoming.length === 0) return;
-    let error: string | null = null;
+  const addFiles = useCallback((incoming: FileList | File[] | null) => {
+    const list = incoming ? Array.from(incoming) : [];
+    if (list.length === 0) return;
     setFiles((prev) => {
-      const next = [...prev];
-      for (const file of Array.from(incoming)) {
-        if (file.size > MAX_FILE_BYTES) { error = `${file.name} 超过 8MB,已跳过`; continue; }
-        if (next.length >= MAX_FILES) { error = `最多 ${MAX_FILES} 个附件`; break; }
-        if (!next.some((f) => f.name === file.name && f.size === file.size)) next.push(file);
-      }
+      const { next, error } = mergeFiles(prev, list);
+      setFileError(error);
       return next;
     });
-    setFileError(error);
-  };
+  }, []);
+
+  // 剪贴板粘贴:卡片打开期间监听全局 paste,把图片附件收进来(文本粘贴不劫持,
+  // 焦点在需求输入框里照常粘文字)。
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) images.push(file);
+        }
+      }
+      if (images.length === 0) return;
+      event.preventDefault();
+      addFiles(namePastedImages(images));
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [addFiles]);
 
   const removeFile = (name: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== name));
     setFileError(null);
   };
+
+  // 图片附件缩略图;files 变化(增删)时旧的 object URL 随 effect 清理回收。
+  const imageUrls = useMemo(() => {
+    const map = new Map<File, string>();
+    files.filter(isImageFile).forEach((f) => map.set(f, URL.createObjectURL(f)));
+    return map;
+  }, [files]);
+  useEffect(() => () => { imageUrls.forEach((url) => URL.revokeObjectURL(url)); }, [imageUrls]);
 
   const submit = async () => {
     const text = input.trim();
@@ -156,12 +206,15 @@ export function CreateTaskCard({ projects, templates, defaultProjectId, onCreate
                 onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }}
               />
             </label>
-            <span className="text-workbench-faint ml-2 text-[11px]">单个 ≤ 8MB · 最多 5 个</span>
+            <span className="text-workbench-faint ml-2 text-[11px]">单个 ≤ 8MB · 最多 5 个 · 可直接 Ctrl+V 粘贴截图</span>
             {files.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {files.map((f) => (
                   <li key={f.name + '-' + f.size} className="flex items-center justify-between rounded border border-workbench-border bg-workbench-surface px-2 py-1">
-                    <span className="min-w-0 truncate text-xs text-workbench-ink">{f.name} <span className="text-workbench-faint">({Math.max(1, Math.round(f.size / 1024))} KB)</span></span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {imageUrls.get(f) && <img src={imageUrls.get(f)} alt="" className="size-6 flex-shrink-0 rounded border border-workbench-border object-cover" />}
+                      <span className="min-w-0 truncate text-xs text-workbench-ink">{f.name} <span className="text-workbench-faint">({Math.max(1, Math.round(f.size / 1024))} KB)</span></span>
+                    </span>
                     <button type="button" onClick={() => removeFile(f.name)} aria-label={'移除 ' + f.name} className="text-workbench-faint rounded p-0.5 hover:text-workbench-danger">
                       <X className="size-3.5" aria-hidden="true" />
                     </button>
