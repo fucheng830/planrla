@@ -221,13 +221,21 @@ export function createRunner(deps: RunnerDeps) {
         if (stage.autoAdvance || stage.agentCanControlStage !== false) {
           try {
             service.next(rootId, taskId);
+            // next 把新阶段置 queued,但调度器早已退出本轮 spawn 的调用链——
+            // 不唤醒的话新阶段要等下一次外部触发才被 admit(实测卡住)。
+            const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
+            scheduler?.schedule(rootId);
           } catch (e) {
             log(`[kanban-runner] complete-advance next failed: ${e}`);
           }
         }
       },
       onError: (m) => {
-        taskStore.updateTaskAuxFlags(taskId, { sessionError: String(m?.message ?? m) });
+        const reason = m instanceof Error ? m.message
+          : typeof m === 'string' ? m
+            : typeof m?.message === 'string' ? m.message
+              : JSON.stringify(m);
+        taskStore.updateTaskAuxFlags(taskId, { sessionError: reason });
         emitTask(taskId);
       },
     });
