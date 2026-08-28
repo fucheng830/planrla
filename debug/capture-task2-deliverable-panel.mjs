@@ -58,10 +58,11 @@ try {
   await page.waitForLoadState('networkidle').catch(() => {});
   log('entered project workbench');
 
-  // --- 切到「研发流程」tab ---
-  const tab = page.getByText('研发流程', { exact: true }).first();
+  // --- 切到「研发流程」tab(左侧 rail 图标按钮)---
+  const tab = page.getByRole('button', { name: '研发流程' }).or(page.getByTitle('研发流程')).first();
   await tab.waitFor({ timeout: 30000 });
-  await tab.click();
+  await tab.click({ force: true });
+  await page.waitForLoadState('networkidle').catch(() => {});
   log('switched to workflow tab');
 
   // --- 打开 success 任务的交付物面板 ---
