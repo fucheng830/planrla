@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bot,
   CalendarClock,
-  Check,
   ChevronRight,
   CircleDot,
   FileWarning,
   Plus,
   KanbanSquare,
   List,
-  MessageCircle,
   Paperclip,
   Play,
-  ShieldAlert,
-  UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -243,44 +239,9 @@ function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel,
   );
 }
 
-function ActionCard({ title, detail, status, tone, children }: { title: string; detail: string; status: string; tone: 'waiting' | 'failed'; children?: ReactNode }) {
-  return (
-    <article className={`rounded-md border p-3 ${tone === 'waiting' ? 'bg-workbench-waiting-soft/30 border-workbench-waiting/40' : 'bg-workbench-danger-soft/30 border-workbench-danger/40'}`}>
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-workbench-ink">{title}</h3>
-        <WorkbenchStatus state={tone === 'waiting' ? 'waiting' : 'failed'} label={status} />
-      </div>
-      <p className="mt-2 text-xs leading-5 text-workbench-subtle">{detail}</p>
-      {children}
-    </article>
-  );
-}
-
-function WorkflowRightRail({ schedules, agentRows, nextTask, failedTask, refreshAll }: { schedules: ReturnType<typeof useKanban>['schedules']; agentRows: AgentRow[]; nextTask: Task | null; failedTask: Task | null; refreshAll: () => Promise<void> }) {
-  const [resolvedAction, setResolvedAction] = useState<string | null>(null);
-
+function WorkflowRightRail({ schedules, agentRows }: { schedules: ReturnType<typeof useKanban>['schedules']; agentRows: AgentRow[] }) {
   return (
     <aside className="space-y-3 xl:sticky xl:top-4 xl:self-start" aria-label="研发流程辅助信息">
-      <section className="ds-panel p-3" aria-label="当前需要你处理">
-        <header className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-workbench-ink"><ShieldAlert className="size-4 text-workbench-waiting" aria-hidden="true" />当前需要你处理</h2>
-          <span className="ds-mono bg-workbench-waiting-soft rounded px-1.5 py-0.5 text-[10px] text-workbench-waiting">{(nextTask ? 1 : 0) + (failedTask ? 1 : 0)}</span>
-        </header>
-        {nextTask ? (
-          <ActionCard title={nextTask.taskTemplateName ?? `任务 #${nextTask.taskNumber}`} detail="AI 已暂停，等待你确认后继续推进任务。" status="待确认" tone="waiting">
-            {resolvedAction === 'allow' ? <p className="mt-3 flex items-center gap-1.5 text-xs text-workbench-success"><Check className="size-3.5" />已允许继续</p> : (
-              <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => setResolvedAction('allow')} className="ds-focus-ring inline-flex items-center gap-1 rounded bg-workbench-accent px-2 py-1 text-xs font-semibold text-white"><Play className="size-3" />允许</button>
-                <button type="button" onClick={() => setResolvedAction('review')} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted"><UserRound className="size-3" />先人工确认</button>
-              </div>
-            )}
-          </ActionCard>
-        ) : (
-          <p className="rounded-md border border-workbench-border bg-workbench-muted/30 p-3 text-xs text-workbench-subtle">当前没有等待人工确认的任务</p>
-        )}
-        {failedTask && <div className="mt-2"><ActionCard title={`REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''}`} detail={failedTask.auxFlags?.sessionError ?? '任务运行失败,需要工程师检查日志并决定是否重试。'} status="转派" tone="failed"><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { void kanbanApi.retryTask(failedTask.id, failedTask.rootId).then(refreshAll).then(() => toast.success('已重试,任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-ink hover:bg-workbench-muted"><Play className="size-3" />重试</button><button type="button" onClick={() => { const input = window.prompt('转给哪位同事?(输入名字,将创建一条团队消息)'); if (input?.trim()) { void (async () => { const rootId = failedTask.rootId; const res = await fetch('/api/team-messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rootId, content: `@${input.trim()} 转派:REQ-${String(failedTask.taskNumber).padStart(3, '0')} ${failedTask.taskTemplateName ?? ''} 执行失败(${failedTask.auxFlags?.sessionError ?? '未知原因'}),请协助处理。`, taskId: failedTask.id }) }); if (!res.ok) throw new Error(`team-messages failed: ${res.status}`); toast.success(`已转给 ${input.trim()},消息在消息盒子可见`); })(); } }} className="ds-focus-ring hover:bg-workbench-danger-soft inline-flex items-center gap-1 rounded border border-workbench-danger/40 px-2 py-1 text-xs text-workbench-danger"><MessageCircle className="size-3" />转给同事</button><button type="button" onClick={() => { void kanbanApi.move(failedTask.id, failedTask.rootId, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); }} className="ds-focus-ring inline-flex items-center gap-1 rounded border border-workbench-border px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">取消任务</button></div></ActionCard></div>}
-      </section>
-
       <section className="ds-panel p-3" aria-label="日历与定时任务">
         <header className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-semibold text-workbench-ink"><CalendarClock className="size-4 text-workbench-accent" aria-hidden="true" />日历与定时任务</h2><ChevronRight className="size-4 text-workbench-subtle" aria-hidden="true" /></header>
         <div className="space-y-2">{schedules.length === 0 ? <p className="rounded-md border border-dashed border-workbench-border p-3 text-center text-xs text-workbench-subtle">暂无定时任务,可在日历页创建</p> : schedules.slice(0, 3).map((schedule) => <div key={schedule.id} className="flex items-start gap-2 rounded-md border border-workbench-border bg-workbench-muted/20 p-2.5"><CircleDot className="mt-0.5 size-3.5 text-workbench-accent" aria-hidden="true" /><div className="min-w-0"><p className="truncate text-xs font-semibold text-workbench-ink">{schedule.cronExpression}</p><p className="mt-1 truncate text-[11px] text-workbench-subtle">{schedule.input || '当前项目定时任务'}</p></div><span className="ml-auto text-[10px] text-workbench-subtle">run</span></div>)}</div>
@@ -347,8 +308,6 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
     [activeTemplate],
   );
   const liveTasks = useMemo(() => tasks.filter((task) => task.status !== 'cancelled').map((task) => displayTask(task, stageNames.length, projects)), [projects, stageNames, tasks]);
-  const failedTask = tasks.find((task) => task.status === 'fail') ?? null;
-  const nextTask = tasks.find((task) => task.status === 'waiting_user') ?? null;
   const columns = useMemo(() => stageNames.map((name, index) => ({ name, tasks: liveTasks.filter((task) => task.stageIndex === index) })), [stageNames, liveTasks]);
 
   // Agent rows derive from the template stages + live task states — no fake data.
@@ -457,7 +416,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
           )}
           <div className="mt-3 flex items-center gap-4 text-xs text-workbench-subtle"><span className="flex items-center gap-1.5"><KanbanSquare className="size-3.5" aria-hidden="true" />任务按工程阶段推进</span><span className="flex items-center gap-1.5"><List className="size-3.5" aria-hidden="true" />列表视图用于快速扫描全量任务</span></div>
         </main>
-        <WorkflowRightRail schedules={schedules} agentRows={agentRows} nextTask={nextTask} failedTask={failedTask} refreshAll={refreshAll} />
+        <WorkflowRightRail schedules={schedules} agentRows={agentRows} />
       </div>
       {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} onChanged={() => void refreshAll()} />}
     </PageShell>
