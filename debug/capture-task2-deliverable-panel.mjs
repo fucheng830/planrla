@@ -84,9 +84,9 @@ try {
   if (!loaded) throw new Error(`screenshot image failed to load: ${src}`);
   log('evidence image loaded via proxy:', decodeURIComponent(src));
 
-  // --- 留证截图:面板特写 + 整页 ---
+  // --- 留证截图:交付物 modal 特写 + 整页 ---
   await page.waitForTimeout(500);
-  const panel = page.locator('.ds-panel').first();
+  const panel = page.locator('div.fixed.inset-0 > .ds-panel').first();
   await panel.screenshot({ path: join(shotDir, 'task2-deliverable-panel.png') });
   await page.screenshot({ path: join(shotDir, 'task2-workflow-fullpage.png'), fullPage: false });
   log('saved:', join(shotDir, 'task2-deliverable-panel.png'));
