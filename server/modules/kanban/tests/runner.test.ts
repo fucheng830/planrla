@@ -213,9 +213,9 @@ test('providerSessionId captured and reused on second run', async () => {
   db.close();
 });
 
-test('runAgentStage throws on unknown provider', async () => {
+test('runAgentStage fails the task on unknown provider (never leaves it running)', async () => {
   const mockSpawn = async () => {};
-  const { db, templateStore, service, runner } = setup({ mockSpawn });
+  const { db, templateStore, service, runner, taskStore } = setup({ mockSpawn });
   templateStore.saveTaskTemplate({
     id: 't1',
     name: 'T',
@@ -245,7 +245,12 @@ test('runAgentStage throws on unknown provider', async () => {
   });
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
   service.next('r1', task.id);
-  await assert.rejects(() => runner.runAgentStage('r1', task.id, 1), /unknown provider|spawnFn/i);
+  // Pre-spawn 失败(未知 provider/worktree 缺失等)必须把任务落到 fail,
+  // 否则异常被调度器吞掉后任务永久 running+admitted,占死并发槽堵死看板。
+  await runner.runAgentStage('r1', task.id, 1);
+  const failed = taskStore.getTask(task.id)!;
+  assert.equal(failed.status, 'fail');
+  assert.match(failed.auxFlags.sessionError ?? '', /unknown provider/);
   db.close();
 });
 

@@ -133,48 +133,69 @@ export function createRunner(deps: RunnerDeps) {
     // W4: ensure worktree (lazy, idempotent) before resolving cwd. If the
     // orchestrator is absent (legacy callers/tests), fall back to the task's
     // persisted worktreePath or the root project path.
+    // 这段失败必须落到 fail(与 spawn 失败同一出口)——曾发生在 try 之外,
+    // 异常被调度器吞掉后任务永久 running+admitted,占死并发槽堵死整个看板。
     let cwd: string | undefined;
-    if (worktreeSetup) {
-      const wt = await worktreeSetup.ensureWorktree(task, rootPath);
-      if (!wt) throw new Error('worktree 创建失败:拒绝在主仓直接执行 agent(防污染用户仓库)');
-      cwd = wt;
-    } else {
-      cwd = task.worktreePath ?? rootPath ?? undefined;
+    let prompt: string;
+    let reworked = false;
+    let spawnFn: (typeof spawnFns)[string];
+    try {
+      if (worktreeSetup) {
+        const wt = await worktreeSetup.ensureWorktree(task, rootPath);
+        if (!wt) throw new Error('worktree 创建失败:拒绝在主仓直接执行 agent(防污染用户仓库)');
+        cwd = wt;
+      } else {
+        cwd = task.worktreePath ?? rootPath ?? undefined;
+      }
+
+      // W4: rendered prompt (variable substitution + MCP self-drive preamble).
+      // `{{input}}` resolves from the current stage run's input; when an agent
+      // stage is reached via autoAdvance from a user stage, the agent run has no
+      // input of its own, so fall back to the task's original (stage 0) input.
+      const run = taskStore.latestStageRun(taskId, stageIndex);
+      const input = run?.input ?? (stageIndex > 0 ? (taskStore.latestStageRun(taskId, 0)?.input ?? '') : '');
+      // 验收返工:feedback 由 rework 写入,这里消费一次。有反馈时只发送返工指令
+      // (provider 会话延续,agent 拿着上一轮上下文按反馈改),不重发整段阶段 prompt。
+      const reworkFeedback = taskStore.consumeReworkFeedback(taskId);
+      reworked = Boolean(reworkFeedback);
+      prompt = reworkFeedback
+        ? [
+            '你上一轮交付的工作未通过人工验收,需要返工。',
+            '请在当前工作区继续,根据下面的验收反馈修改实现;完成后重新输出交付总结' + (stage.promptTemplate?.includes('DELIVERY.md') ? ',并同步更新 DELIVERY.md。' : '。'),
+            '',
+            '验收反馈:',
+            reworkFeedback,
+          ].join('\n')
+        : renderStagePrompt({
+            stage,
+            ctx: {
+              taskId: task.id,
+              taskNumber: task.taskNumber,
+              stageName: stage.name,
+              stageIndex,
+              rootPath,
+              input,
+            },
+          });
+      spawnFn = spawnFns[stage.agent];
+      if (!spawnFn) throw new Error(`unknown provider: ${stage.agent}`);
+    } catch (e: any) {
+      taskStore.updateTaskAuxFlags(taskId, { sessionError: String(e?.message ?? e) });
+      recordEvent(taskId, 'agent_stage_failed', { stageIndex, error: String(e?.message ?? e) });
+      try {
+        service.fail(rootId, taskId);
+      } catch (failErr) {
+        log(`[kanban-runner] pre-spawn service.fail error task=${taskId}: ${failErr}`);
+      }
+      // fail 释放了并发槽,唤醒调度器让排队的任务顶上(否则要等下一次外部触发)。
+      const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
+      scheduler?.schedule(rootId);
+      log(`[kanban-runner] pre-spawn failed task=${taskId}: ${e?.message ?? e}`);
+      return;
     }
 
-    // W4: rendered prompt (variable substitution + MCP self-drive preamble).
-    // `{{input}}` resolves from the current stage run's input; when an agent
-    // stage is reached via autoAdvance from a user stage, the agent run has no
-    // input of its own, so fall back to the task's original (stage 0) input.
-    const run = taskStore.latestStageRun(taskId, stageIndex);
-    const input = run?.input ?? (stageIndex > 0 ? (taskStore.latestStageRun(taskId, 0)?.input ?? '') : '');
-    // 验收返工:feedback 由 rework 写入,这里消费一次。有反馈时只发送返工指令
-    // (provider 会话延续,agent 拿着上一轮上下文按反馈改),不重发整段阶段 prompt。
-    const reworkFeedback = taskStore.consumeReworkFeedback(taskId);
-    const prompt = reworkFeedback
-      ? [
-          '你上一轮交付的工作未通过人工验收,需要返工。',
-          '请在当前工作区继续,根据下面的验收反馈修改实现;完成后重新输出交付总结' + (stage.promptTemplate?.includes('DELIVERY.md') ? ',并同步更新 DELIVERY.md。' : '。'),
-          '',
-          '验收反馈:',
-          reworkFeedback,
-        ].join('\n')
-      : renderStagePrompt({
-          stage,
-          ctx: {
-            taskId: task.id,
-            taskNumber: task.taskNumber,
-            stageName: stage.name,
-            stageIndex,
-            rootPath,
-            input,
-          },
-        });
-    const spawnFn = spawnFns[stage.agent];
-    if (!spawnFn) throw new Error(`unknown provider: ${stage.agent}`);
-
-    log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}${reworkFeedback ? ' (rework)' : ''}`);
-    recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd, reworked: Boolean(reworkFeedback) });
+    log(`[kanban-runner] start task=${taskId} stage=${stageIndex} agent=${stage.agent} cwd=${cwd ?? '<none>'}${reworked ? ' (rework)' : ''}`);
+    recordEvent(taskId, 'agent_stage_started', { stageIndex, agent: stage.agent, cwd, reworked });
 
     const writer = new RunnerWriter({
       taskId,
@@ -264,6 +285,11 @@ export function createRunner(deps: RunnerDeps) {
         service.fail(rootId, taskId);
       } catch (failErr) {
         log(`[kanban-runner] post-fail service.fail error task=${taskId}: ${failErr}`);
+      }
+      // fail 释放了并发槽,唤醒调度器让排队的任务顶上。
+      {
+        const scheduler = typeof schedulerDep === 'function' ? schedulerDep() : schedulerDep;
+        scheduler?.schedule(rootId);
       }
       log(`[kanban-runner] spawn failed/timeout task=${taskId}: ${e}`);
     } finally {

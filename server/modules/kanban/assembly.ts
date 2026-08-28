@@ -174,14 +174,21 @@ function buildKanban() {
 
   // Zombie recovery: agent runners are child processes — a backend restart
   // kills them mid-stage and nothing would ever resume or fail the task.
-  // Requeue running tasks so the scheduler respawns the current stage.
+  // Requeue running tasks so the scheduler respawns the current stage. Roots
+  // with queued-but-unadmitted tasks also get a schedule pass — otherwise a
+  // restart after a fail leaves them queued forever (nothing would trigger
+  // the scheduler again).
   try {
+    const staleRoots = new Set<string>();
     for (const task of taskStore.listAllTasks()) {
-      if (task.status !== 'running') continue;
-      taskStore.updateTaskStatus(task.id, 'queued');
-      taskStore.setSchedulerAdmitted(task.id, false);
-      scheduler.schedule(task.rootId);
+      if (task.status === 'success' || task.status === 'fail' || task.status === 'cancelled') continue;
+      if (task.status === 'running') {
+        taskStore.updateTaskStatus(task.id, 'queued');
+        taskStore.setSchedulerAdmitted(task.id, false);
+      }
+      staleRoots.add(task.rootId);
     }
+    for (const rootId of staleRoots) scheduler.schedule(rootId);
   } catch (e) {
     console.error('[kanban] zombie requeue failed:', e);
   }

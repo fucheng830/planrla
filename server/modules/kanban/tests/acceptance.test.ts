@@ -236,3 +236,42 @@ test('runner: 返工 spawn 只发送返工指令(会话延续),反馈消费一�
   db.close();
   rmSync(rootDir, { recursive: true, force: true });
 });
+
+test('runner: pre-spawn 失败(worktree 为 null)必须落到 fail,不得僵死 running', async () => {
+  const rootDir = initRepo();
+  const db = new Database(':memory:');
+  const taskStore = createTaskStore({ db });
+  const templateStore = createTemplateStore({ dir: mkdtempSync(join(tmpdir(), 'kanban-accept-tpl3-')) });
+  templateStore.saveTaskTemplate({
+    id: 'tpl3', name: 'T3', maxConcurrency: 1, createdAt: NOW, updatedAt: NOW,
+    stages: [
+      { id: 's0', position: 0, snapshot: { id: 'ss0', name: '需求', role: 'user' as const, autoAdvance: true, createdAt: NOW, updatedAt: NOW } },
+      { id: 's1', position: 1, snapshot: { id: 'ss1', name: '开工', role: 'agent' as const, agent: 'claude', autoAdvance: false, createdAt: NOW, updatedAt: NOW } },
+    ],
+  });
+  const service = createKanbanService({ taskStore, templateStore });
+  const scheduled: string[] = [];
+  const runner = createRunner({
+    taskStore, templateStore, service,
+    auxBridge: createAuxBridge({ updateAuxFlags: () => {} }),
+    resolveRootPath: () => rootDir,
+    worktreeSetup: { ensureWorktree: async () => null },
+    spawnFns: { claude: async () => { throw new Error('spawn should never be reached'); } },
+    scheduler: { schedule: (rootId: string) => scheduled.push(rootId) },
+  } as any);
+
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 'tpl3', input: 'x' });
+  service.next('r1', task.id);
+  await runner.runAgentStage('r1', task.id, 1);
+
+  const failed = taskStore.getTask(task.id)!;
+  assert.equal(failed.status, 'fail', 'task failed instead of zombie running');
+  assert.match(failed.auxFlags.sessionError ?? '', /拒绝在主仓直接执行/);
+  const events = taskStore.listTaskEvents(task.id).map((e) => e.type);
+  assert.ok(events.includes('agent_stage_failed'));
+  assert.ok(events.includes('task_failed'));
+  assert.ok(scheduled.includes('r1'), 'scheduler woken after fail so queued tasks can fill the slot');
+
+  db.close();
+  rmSync(rootDir, { recursive: true, force: true });
+});
