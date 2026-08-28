@@ -35,6 +35,7 @@
     "expandSummary": "Expand summary",
     "collapseSummary": "Collapse summary",
     "viewHistory": "View {{count}} earlier messages",
+    "viewHistoryNoCount": "View message history",
     "banner": "Context compacted — switched to the compacted view",
     "panelTitle": "Message history",
     "panelEyebrow": "Archived",

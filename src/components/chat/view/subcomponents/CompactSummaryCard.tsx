@@ -71,14 +71,19 @@ export default function CompactSummaryCard({
           </div>
         )}
 
-        {onViewArchivedHistory && typeof archivedCount === 'number' && archivedCount > 0 && (
+        {/* Entry renders whenever the handler exists; the active viewport may
+            report archivedMessages = null (count is resolved lazily by the
+            compactions endpoint), so the label degrades to a count-less one. */}
+        {onViewArchivedHistory && (
           <button
             type="button"
             onClick={onViewArchivedHistory}
             className="ds-focus-ring mt-3 flex items-center gap-1.5 rounded-lg border border-workbench-border bg-background px-3 py-1.5 text-xs font-medium text-workbench-accent hover:opacity-90"
           >
             <History className="h-3.5 w-3.5" />
-            {t('compaction.viewHistory', { count: archivedCount })}
+            {typeof archivedCount === 'number' && archivedCount > 0
+              ? t('compaction.viewHistory', { count: archivedCount })
+              : t('compaction.viewHistoryNoCount')}
           </button>
         )}
       </div>

@@ -1,0 +1,62 @@
+[
+  {
+    "step": "login",
+    "ok": true,
+    "detail": "auto-entered main UI (default single user)"
+  },
+  {
+    "step": "open seeded session",
+    "ok": true,
+    "detail": "/session/e2e-app-req052"
+  },
+  {
+    "step": "main viewport: compact card rendered",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "main viewport: post-boundary messages rendered",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "main viewport: epoch1 content hidden",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "main viewport: epoch2 content hidden",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "archive panel: default epoch (latest) shows epoch2 content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "archive panel: closing summary rendered as compact card",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "archive panel: epoch switch shows epoch1 content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "archive panel: epoch1 closing summary present",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "step": "archive panel: load-earlier disabled at epoch head",
+    "ok": true,
+    "detail": "disabled=true"
+  },
+  {
+    "step": "after close: main view intact, archived text still hidden",
+    "ok": true,
+    "detail": ""
+  }
+]
