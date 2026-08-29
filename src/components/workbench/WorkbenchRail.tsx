@@ -33,7 +33,7 @@ export function WorkbenchRail({ items, footerItems, activeId, onSelect, classNam
     <img src="/logo.svg" alt="Planrla" title="Planrla" className="size-7" draggable={false} />
   );
   return (
-    <nav aria-label="Workbench navigation" className={cn('flex w-12 flex-col items-center gap-1 border-r border-workbench-border bg-workbench-surface py-3', className)}>
+    <nav aria-label="Workbench navigation" className={cn('flex w-16 flex-col items-center gap-1.5 border-r border-workbench-border bg-workbench-surface py-3', className)}>
       {IS_PLATFORM ? (
         <a
           href="https://planrla.com/dashboard"
@@ -56,19 +56,20 @@ export function WorkbenchRail({ items, footerItems, activeId, onSelect, classNam
             data-active={isActive}
             onClick={() => onSelect(id)}
             className={cn(
-              'ds-focus-ring relative flex size-9 items-center justify-center rounded-md text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink',
-              isActive && 'bg-workbench-muted text-workbench-accent',
+              'ds-focus-ring relative flex size-9 items-center justify-center rounded-[10px] text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink',
+              isActive &&
+                'bg-workbench-surface text-workbench-accent shadow-[0_1px_2px_hsl(220_20%_10%/0.12),0_0_0_1px_hsl(var(--ds-border))] dark:bg-workbench-raised dark:text-workbench-accent dark:shadow-[inset_0_0_0_1px_hsl(var(--ds-accent)/0.35),0_1px_2px_hsl(0_0%_0%/0.35)]',
             )}
           >
             <Icon className="size-4" aria-hidden="true" />
-            {badge && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-workbench-accent" aria-label={badge} />}
+            {badge && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-workbench-accent ring-2 ring-workbench-surface dark:ring-workbench-raised" aria-label={badge} />}
           </button>
         );
       })}
       {footerItems && footerItems.length > 0 && (
         <div className="mt-auto flex flex-col items-center gap-1 pt-2">
           {footerItems.map(({ id, label, icon: Icon, href }) => {
-            const itemClass = 'ds-focus-ring relative flex size-9 items-center justify-center rounded-md text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink';
+            const itemClass = 'ds-focus-ring relative flex size-9 items-center justify-center rounded-[10px] text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink';
             return href ? (
               <a key={id} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className={itemClass}>
                 <Icon className="size-4" aria-hidden="true" />
