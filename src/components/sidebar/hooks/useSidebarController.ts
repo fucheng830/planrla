@@ -157,6 +157,8 @@ export function useSidebarController({
   sidebarVisible,
 }: UseSidebarControllerArgs) {
   const paletteOps = usePaletteOps();
+  /** 已被「选中即自动展开」effect 处理过的项目——此后用户手动收起不再被拉回。 */
+  const autoExpandedSeenProjects = useRef<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -219,6 +221,12 @@ export function useSidebarController({
     }
 
     setExpandedProjects((prev) => {
+      // 多展模式下,点击已展开项目的行=收起;若不加「见过即不再拉」,
+      // 选中切回该项目时本 effect 会立刻把它重新展开,收不起来。
+      if (autoExpandedSeenProjects.current.has(selectedProjectId)) {
+        return prev;
+      }
+      autoExpandedSeenProjects.current.add(selectedProjectId);
       if (prev.has(selectedProjectId)) {
         return prev;
       }
@@ -482,8 +490,10 @@ export function useSidebarController({
   // `projectId` as their identifier after the migration.
   const toggleProject = useCallback((projectId: string) => {
     setExpandedProjects((prev) => {
-      const next = new Set<string>();
-      if (!prev.has(projectId)) {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
         next.add(projectId);
       }
       return next;
