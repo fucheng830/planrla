@@ -313,22 +313,27 @@ export function useChatRealtimeHandlers({
       // --- UI side effects for specific kinds ---
       switch (msg.kind) {
         case 'compact_boundary': {
-          // REQ-052: context was compacted. Everything before the boundary is
-          // now archived — drop buffered realtime rows immediately (merged
-          // dedupes by id and would otherwise keep showing stale bubbles),
-          // notify the view layer for the banner, then swap the main viewport
-          // to the compacted (active) view, debounced against frame bursts.
-          if (streamTimerRef.current) {
-            clearTimeout(streamTimerRef.current);
-            streamTimerRef.current = null;
+          // REQ-052: context was compacted for `sid`. Everything before the
+          // boundary is now archived — drop this session's buffered realtime
+          // rows (merged dedupes by id and would otherwise keep showing stale
+          // bubbles), notify the view layer for the banner, then swap the main
+          // viewport to the compacted (active) view, debounced against bursts.
+          //
+          // Scoping (复盘修正): the batch queue is shared across sessions, so
+          // only this session's entries are dropped — a parallel run (e.g. a
+          // background kanban task) must not lose its already-buffered frames;
+          // an already-scheduled flush then drains the survivors (or no-ops on
+          // an empty queue). The stream-accumulation refs render the *visible*
+          // session's stream and are reset only when the boundary is its.
+          if (sid === activeViewSessionId) {
+            if (streamTimerRef.current) {
+              clearTimeout(streamTimerRef.current);
+              streamTimerRef.current = null;
+            }
+            accumulatedStreamRef.current = '';
+            firstTokenLoggedRef.current = false;
           }
-          accumulatedStreamRef.current = '';
-          if (rafIdRef.current !== null) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
-          }
-          batchQueueRef.current = [];
-          firstTokenLoggedRef.current = false;
+          batchQueueRef.current = batchQueueRef.current.filter((entry) => entry.sessionId !== sid);
 
           if (sid) {
             sessionStore.clearRealtime(sid);

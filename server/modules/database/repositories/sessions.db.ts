@@ -593,8 +593,9 @@ export const sessionsDb = {
   },
 
   /**
-   * REQ-052: cached compaction epochs for one session, oldest first. Used by
-   * the compactions endpoint as a fast path and as the baseline for detecting
+   * REQ-052: cached compaction epochs for one session, oldest first. Served by
+   * the compactions endpoint when the epoch set still matches the transcript
+   * (复盘修正: the table now has a read path), and the baseline for detecting
    * transcripts whose archived rows were purged by the provider CLI.
    */
   listCompactionEpochs(sessionId: string): Array<{
@@ -621,5 +622,17 @@ export const sessionsDb = {
       pre_tokens: number | null;
       archived_messages: number | null;
     }>;
+  },
+
+  /**
+   * REQ-052: drops cached epochs above `lastEpoch`. The transcript now holds
+   * fewer boundaries than the cache (CLI rewrite/cleanup), so ghost rows must
+   * not outlive the boundaries they described.
+   */
+  pruneCompactionEpochsAfter(sessionId: string, lastEpoch: number): void {
+    const db = getConnection();
+    db.prepare(
+      'DELETE FROM session_compactions WHERE session_id = ? AND epoch > ?'
+    ).run(sessionId, lastEpoch);
   },
 };

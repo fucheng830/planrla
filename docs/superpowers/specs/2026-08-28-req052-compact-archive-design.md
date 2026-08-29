@@ -117,3 +117,9 @@ SDK 侧其实已有官方事件挂点(目前被归一化层**静默丢弃**):
 2. **边界识别纯文件序**:`getSessionMessages` 不再内部排序,`normalizeClaudeRawMessages` 先按文件序找边界、再对所选段做稳定 timestamp 排序——同毫秒行不扰动边界(fixture 已覆盖)。
 3. **out-of-range epoch 返回空页**而非报错(并发截断下的温和降级)。
 4. 回归基线:全量 server 测试中 4 个失败(projects.db.integration / createProject conflict / providerMcp global adder / model cache persist)在 stash 本次改动后同样失败,为存量环境性失败,与 REQ-052 无关。
+
+## 实施备注(2026-08-29,复盘修正回填)
+
+5. **缓存表接上读路径**:`listCompactions` 的精确计数改走 `session_compactions`——epoch 集合签名(boundary uuid,timeline 缺 uuid 时退 timestamp)与转录现算一致且该行计数非空时直接服务缓存,仅新增/变化纪元重算。计数可缓存的依据:纪元段是封闭的,转录行只追加在文件尾,不会插进既有边界之前。`cacheEpochs` 同步改差异化写:集合比对一致则零写(稳态一次 SELECT),旧 `view=all` 消费方的纯 GET 不再每次 upsert N 行;转录边界数缩小时 `pruneCompactionEpochsAfter` 剪掉幽灵行。
+6. **live `compact_boundary` 缓冲清理按 session 过滤**:批量队列是多会话共享的,只丢弃边界会话自己的条目(并行后台 run 不再丢已缓冲帧);stream 累积 refs(`accumulatedStreamRef` 等)只在边界属于可见会话时才清。
+7. **复盘遗留(入 BACKLOG P1)**:全局搜索命中归档段的跳转降级(主视图 `view=active` 找不到目标,静默滚到最近时间戳)、「加载全部」按钮语义已变为「当前纪元全部」、`archivedMessages` tri-state 契约注释、live 事件 trigger/preTokens 落库(upsert COALESCE 已预留写位)、CLI 清理检测提示、live refetch 400ms 与 CLI flush 的竞态 dogfood 验证。

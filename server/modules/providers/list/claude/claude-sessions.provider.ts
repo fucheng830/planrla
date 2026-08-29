@@ -395,7 +395,35 @@ function buildEpochInfo(rawMessages: AnyRecord[], boundaryIndices: number[], epo
   };
 }
 
-/** Best-effort cache write; a failed cache row can never break a history read. */
+type CachedCompactionEpochRow = ReturnType<typeof sessionsDb.listCompactionEpochs>[number];
+
+function boundaryUuidOf(raw: AnyRecord): string | null {
+  return typeof raw.uuid === 'string' ? raw.uuid : null;
+}
+
+/**
+ * True when a cached row describes exactly this boundary row — same uuid, or
+ * same timestamp when the transcript row carries no uuid. A mismatch means the
+ * epoch set changed (new compaction or CLI rewrite) and the row must be
+ * refreshed, never served.
+ */
+function cachedRowMatchesBoundary(row: CachedCompactionEpochRow, raw: AnyRecord): boolean {
+  const uuid = boundaryUuidOf(raw);
+  if (row.boundary_uuid !== uuid) {
+    return false;
+  }
+  return uuid !== null || row.boundary_timestamp === boundaryTimestampOf(raw);
+}
+
+/**
+ * Best-effort cache sync; a failed cache row can never break a history read.
+ *
+ * 复盘修正: the epoch set is compared against the cache BEFORE any write —
+ * steady state (same boundaries as the previous scan) costs one SELECT and
+ * zero writes, so legacy `view=all` readers no longer upsert N rows on every
+ * GET. Rows beyond the current boundary count (transcript shrank after a CLI
+ * rewrite/cleanup) are pruned so the table cannot accumulate ghost epochs.
+ */
 function cacheEpochs(
   rawMessages: AnyRecord[],
   boundaryIndices: number[],
@@ -405,18 +433,26 @@ function cacheEpochs(
     return;
   }
   try {
-    boundaryIndices.forEach((rawIndex, i) => {
-      const raw = rawMessages[rawIndex];
-      sessionsDb.upsertCompactionEpoch({
-        sessionId: cacheSessionId,
-        epoch: i + 1,
-        boundaryUuid: typeof raw.uuid === 'string' ? raw.uuid : null,
-        boundaryTimestamp: boundaryTimestampOf(raw),
-        trigger: null,
-        preTokens: null,
-        archivedMessages: null,
+    const cached = sessionsDb.listCompactionEpochs(cacheSessionId);
+    const setMatches = cached.length === boundaryIndices.length
+      && cached.every((row, i) => cachedRowMatchesBoundary(row, rawMessages[boundaryIndices[i]]));
+    if (!setMatches) {
+      boundaryIndices.forEach((rawIndex, i) => {
+        const raw = rawMessages[rawIndex];
+        sessionsDb.upsertCompactionEpoch({
+          sessionId: cacheSessionId,
+          epoch: i + 1,
+          boundaryUuid: boundaryUuidOf(raw),
+          boundaryTimestamp: boundaryTimestampOf(raw),
+          trigger: null,
+          preTokens: null,
+          archivedMessages: null,
+        });
       });
-    });
+    }
+    if (cached.length > boundaryIndices.length) {
+      sessionsDb.pruneCompactionEpochsAfter(cacheSessionId, boundaryIndices.length);
+    }
   } catch {
     // Cache only — filtering decisions always re-derive from the transcript.
   }
@@ -798,9 +834,15 @@ export class ClaudeSessionsProvider implements IProviderSessions {
   }
 
   /**
-   * REQ-052: one transcript scan resolving every compaction epoch with exact
-   * archived counts; also refreshes the session_compactions cache so the
-   * archive viewer and the purged-history detector share one baseline.
+   * REQ-052: one transcript scan resolving every compaction epoch.
+   *
+   * 复盘修正: exact archived counts are expensive — computing them means
+   * normalizing the whole compacted-away past, the very O(N) work this REQ
+   * set out to avoid. Counts are therefore served from the
+   * `session_compactions` cache whenever the cached epoch set still matches
+   * the transcript boundaries; only new/changed epochs are recomputed.
+   * Caching a count is safe because an epoch's segment is closed: rows are
+   * appended at the end of the file, never before an existing boundary.
    */
   async listCompactions(
     sessionId: string,
@@ -810,16 +852,37 @@ export class ClaudeSessionsProvider implements IProviderSessions {
     const rawMessages = await getSessionMessages(sessionId, providerSessionId);
     const boundaryIndices = findBoundaryIndices(rawMessages);
 
+    let cached: CachedCompactionEpochRow[] = [];
+    try {
+      cached = sessionsDb.listCompactionEpochs(sessionId);
+    } catch {
+      // Cache only — fall through and compute everything from the scan.
+    }
+    const cachedByEpoch = new Map(cached.map((row) => [row.epoch, row]));
+
     const epochs: CompactionEpochInfo[] = [];
     for (let epoch = 1; epoch <= boundaryIndices.length; epoch++) {
-      const bounds = epochSegmentBounds(boundaryIndices, epoch);
       const raw = rawMessages[boundaryIndices[epoch - 1]];
+      const boundaryTimestamp = boundaryTimestampOf(raw);
+
+      const cachedRow = cachedByEpoch.get(epoch);
+      if (cachedRow && cachedRowMatchesBoundary(cachedRow, raw) && cachedRow.archived_messages !== null) {
+        epochs.push({
+          epoch,
+          boundaryTimestamp,
+          archivedMessages: cachedRow.archived_messages,
+          trigger: cachedRow.trigger,
+        });
+        continue;
+      }
+
+      const bounds = epochSegmentBounds(boundaryIndices, epoch);
       const archivedMessages = bounds
         ? normalizeRawSegment(rawMessages.slice(bounds.start, bounds.end), sessionId, this.normalizeMessage.bind(this)).total
         : null;
       epochs.push({
         epoch,
-        boundaryTimestamp: boundaryTimestampOf(raw),
+        boundaryTimestamp,
         archivedMessages,
         trigger: null,
       });
@@ -827,14 +890,22 @@ export class ClaudeSessionsProvider implements IProviderSessions {
         sessionsDb.upsertCompactionEpoch({
           sessionId,
           epoch,
-          boundaryUuid: typeof raw.uuid === 'string' ? raw.uuid : null,
-          boundaryTimestamp: boundaryTimestampOf(raw),
+          boundaryUuid: boundaryUuidOf(raw),
+          boundaryTimestamp,
           trigger: null,
           preTokens: null,
           archivedMessages,
         });
       } catch {
         // Cache only — a failed write must not hide real history.
+      }
+    }
+
+    if (cached.length > boundaryIndices.length) {
+      try {
+        sessionsDb.pruneCompactionEpochsAfter(sessionId, boundaryIndices.length);
+      } catch {
+        // Cache only — ghost rows are invisible to this response either way.
       }
     }
 

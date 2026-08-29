@@ -268,6 +268,86 @@ test('REQ-052 listCompactions returns exact epoch counts and warms the cache', a
   });
 });
 
+test('REQ-052 listCompactions serves cached counts when the epoch set is unchanged', async () => {
+  await withIsolatedDatabase(async () => {
+    const ts = '2026-08-28T10:00:00.000Z';
+    await setupCompactSession('app-cache-hit', [
+      userRow('before-1', ts, 'u1'),
+      compactSummaryRow('summary-text', ts, 'b1'),
+      userRow('after-1', ts, 'u2'),
+    ]);
+
+    await provider.listCompactions('app-cache-hit', { providerSessionId: PROVIDER_SESSION_ID });
+
+    // Sentinel count with a MATCHING boundary signature: if the second call
+    // recomputed from the transcript it would answer 2 — answering 999 proves
+    // the cached row was served without re-normalizing the archived past.
+    sessionsDb.upsertCompactionEpoch({
+      sessionId: 'app-cache-hit',
+      epoch: 1,
+      boundaryUuid: 'b1',
+      boundaryTimestamp: ts,
+      trigger: null,
+      preTokens: null,
+      archivedMessages: 999,
+    });
+
+    const epochs = await provider.listCompactions('app-cache-hit', { providerSessionId: PROVIDER_SESSION_ID });
+    assert.equal(epochs.length, 1);
+    assert.equal(epochs[0].archivedMessages, 999, 'unchanged epoch set must be served from cache');
+  });
+});
+
+test('REQ-052 history-primed cache rows (null counts) are completed, not served', async () => {
+  await withIsolatedDatabase(async () => {
+    const ts = '2026-08-28T10:00:00.000Z';
+    await setupCompactSession('app-lazy-count', [
+      userRow('before-1', ts, 'u1'),
+      assistantRow('before-2', ts, 'a1'),
+      compactSummaryRow('summary-text', ts, 'b1'),
+      userRow('after-1', ts, 'u2'),
+    ]);
+
+    // History reads cache the epoch lazily with archivedMessages = null —
+    // the listing must still resolve an exact count for such rows.
+    await provider.fetchHistory('app-lazy-count', { providerSessionId: PROVIDER_SESSION_ID, view: 'active' });
+    assert.equal(sessionsDb.listCompactionEpochs('app-lazy-count')[0].archived_messages, null);
+
+    const epochs = await provider.listCompactions('app-lazy-count', { providerSessionId: PROVIDER_SESSION_ID });
+    assert.equal(epochs[0].archivedMessages, 3);
+    assert.equal(sessionsDb.listCompactionEpochs('app-lazy-count')[0].archived_messages, 3);
+  });
+});
+
+test('REQ-052 transcript shrink recomputes the changed epoch and prunes ghost cache rows', async () => {
+  await withIsolatedDatabase(async () => {
+    const ts = '2026-08-28T10:00:00.000Z';
+    const jsonlPath = await setupCompactSession('app-shrink', [
+      userRow('epoch1-msg', ts, 'u1'),
+      compactSummaryRow('summary-1', ts, 'b1'),
+      userRow('epoch2-msg', ts, 'u2'),
+      compactSummaryRow('summary-2', ts, 'b2'),
+      userRow('current-msg', ts, 'u3'),
+    ]);
+
+    await provider.listCompactions('app-shrink', { providerSessionId: PROVIDER_SESSION_ID });
+    assert.equal(sessionsDb.listCompactionEpochs('app-shrink').length, 2);
+
+    // Simulate a CLI rewrite that keeps only one (different) boundary.
+    await writeFile(jsonlPath, [
+      userRow('kept-1', ts, 'k1'),
+      compactSummaryRow('fresh-summary', ts, 'bX'),
+    ].join('\n') + '\n');
+
+    const epochs = await provider.listCompactions('app-shrink', { providerSessionId: PROVIDER_SESSION_ID });
+    assert.equal(epochs.length, 1);
+    assert.equal(epochs[0].archivedMessages, 2, 'changed boundary uuid must recompute, not serve stale cache');
+    const cached = sessionsDb.listCompactionEpochs('app-shrink');
+    assert.equal(cached.length, 1, 'ghost epoch rows are pruned on shrink');
+    assert.equal(cached[0].boundary_uuid, 'bX');
+  });
+});
+
 test('REQ-052 two compactions produce two epochs and active reads only the newest', async () => {
   await withIsolatedDatabase(async () => {
     const ts = '2026-08-28T10:00:00.000Z';
