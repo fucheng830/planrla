@@ -20,6 +20,8 @@ interface UseChatSessionStateArgs {
   selectedSession: ProjectSession | null;
   ws: WebSocket | null;
   sendMessage: (message: unknown) => void;
+  /** REQ-052: mapped from the backend capability matrix for the active provider. */
+  supportsCompact?: boolean;
   autoScrollToBottom?: boolean;
   externalMessageUpdate?: number;
   newSessionTrigger?: number;
@@ -99,6 +101,7 @@ export function useChatSessionState({
   selectedSession,
   ws,
   sendMessage,
+  supportsCompact = false,
   autoScrollToBottom,
   externalMessageUpdate,
   newSessionTrigger,
@@ -224,6 +227,90 @@ export function useChatSessionState({
   // every activity transition.
   const processingSessionsRef = useRef(processingSessions);
   processingSessionsRef.current = processingSessions;
+
+  /* ---------------------------------------------------------------- */
+  /*  REQ-052: context compaction (chat.compact)                      */
+  /* ---------------------------------------------------------------- */
+
+  // The compacting session id, mirrored to a ref for the realtime handler
+  // (which routes `complete`/`protocol_error` frames synchronously and must
+  // not depend on React state timing). `isCompacting` is derived per-viewed
+  // session so switching away never shows a foreign session's spinner.
+  const [compactingSessionId, setCompactingSessionId] = useState<string | null>(null);
+  const compactingSessionRef = useRef<string | null>(null);
+  const isCompacting = compactingSessionId !== null && compactingSessionId === activeSessionId;
+
+  const startCompactTracking = useCallback((sessionId: string) => {
+    compactingSessionRef.current = sessionId;
+    setCompactingSessionId(sessionId);
+  }, []);
+
+  const stopCompactTracking = useCallback((sessionId: string | null | undefined) => {
+    if (!sessionId || compactingSessionRef.current !== sessionId) {
+      return;
+    }
+    compactingSessionRef.current = null;
+    setCompactingSessionId(null);
+  }, []);
+
+  /**
+   * Terminal frame of a compact run (success, failure, or abort). The generic
+   * `complete` branch already refreshes the transcript from the server (the
+   * compact summary lands as a message); this adds the R2 mitigation — a
+   * direct token-usage fetch so the button reads the post-compact context
+   * size even when the compact run pushed no usage frame of its own.
+   */
+  const finishCompactSession = useCallback((sessionId: string | null | undefined) => {
+    if (!sessionId || compactingSessionRef.current !== sessionId) {
+      return;
+    }
+    stopCompactTracking(sessionId);
+
+    if (!selectedProject) {
+      return;
+    }
+    const url = `/api/projects/${selectedProject.projectId}/sessions/${sessionId}/token-usage`;
+    authenticatedFetch(url)
+      .then(async (response) => {
+        setTokenBudget(response.ok ? await response.json() : null);
+      })
+      .catch((error) => {
+        console.error('Failed to refresh token usage after compact:', error);
+      });
+  }, [selectedProject, stopCompactTracking]);
+
+  /**
+   * A compact request that was rejected before any run started
+   * (protocol_error — COMPACT_UNSUPPORTED / COMPACT_EMPTY_SESSION /
+   * RUN_IN_PROGRESS). No `complete` follows, so reset the button here; the
+   * generic branch already surfaces the error message in the conversation.
+   */
+  const cancelCompactSession = useCallback((sessionId: string | null | undefined) => {
+    stopCompactTracking(sessionId);
+  }, [stopCompactTracking]);
+
+  /** Click handler for the token-usage button: compact the viewed session. */
+  const handleCompactSession = useCallback((model?: string) => {
+    if (!activeSessionId || !supportsCompact) {
+      return;
+    }
+    if (isCompacting || isProcessing) {
+      // Compact occupies the same per-session run mutex as a chat send.
+      return;
+    }
+    // Brand-new sessions have no provider conversation to summarize — the
+    // server would reject with COMPACT_EMPTY_SESSION; skip the round trip.
+    if (totalMessages === 0) {
+      return;
+    }
+
+    startCompactTracking(activeSessionId);
+    sendMessage({
+      type: 'chat.compact',
+      sessionId: activeSessionId,
+      options: model ? { model } : undefined,
+    });
+  }, [activeSessionId, isCompacting, isProcessing, startCompactTracking, supportsCompact, sendMessage, totalMessages]);
 
   /* ---------------------------------------------------------------- */
   /*  Derive chatMessages from the store                              */
@@ -795,6 +882,11 @@ export function useChatSessionState({
     setIsUserScrolledUp,
     tokenBudget,
     setTokenBudget,
+    isCompacting,
+    compactingSessionRef,
+    handleCompactSession,
+    finishCompactSession,
+    cancelCompactSession,
     visibleMessageCount,
     visibleMessages,
     loadEarlierMessages,

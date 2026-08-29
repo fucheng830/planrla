@@ -45,6 +45,8 @@ type ProviderCapabilities = {
   supportsAbort: boolean;
   supportsPermissionRequests: boolean;
   supportsTokenUsage: boolean;
+  /** REQ-052: whether chat.compact is available for this provider. */
+  supportsCompact?: boolean;
 };
 
 type ProviderCapabilitiesApiResponse = {
@@ -486,5 +488,6 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     providerModelsRefreshing,
     hardRefreshProviderModels: () => loadProviderModels({ bypassCache: true }),
     selectProviderModel,
+    providerCapabilities,
   };
 }

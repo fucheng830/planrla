@@ -117,7 +117,18 @@
   "tokenUsage": {
     "title": "{{value}} tokens used",
     "show": "Show token usage",
-    "tokens": "tokens"
+    "tokens": "tokens",
+    "popoverTitle": "Context usage",
+    "usedTokens": "Total used",
+    "inputTokens": "Input",
+    "outputTokens": "Output",
+    "contextShare": "Context window",
+    "visibleMessages": "Visible messages",
+    "compactHint": "Click the button to compact the context",
+    "compacting": "Compacting context…",
+    "compactUnsupported": "Compaction is not supported by this provider",
+    "compactEmpty": "No conversation to compact yet",
+    "compress": "Compact context"
   },
   "todo": {
     "updated": "Todo list has been updated successfully",

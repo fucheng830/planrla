@@ -116,7 +116,18 @@
   "tokenUsage": {
     "title": "已使用 {{value}} 个令牌",
     "show": "显示令牌用量",
-    "tokens": "令牌"
+    "tokens": "令牌",
+    "popoverTitle": "上下文用量",
+    "usedTokens": "已用令牌",
+    "inputTokens": "输入",
+    "outputTokens": "输出",
+    "contextShare": "上下文窗口占用",
+    "visibleMessages": "可见消息",
+    "compactHint": "点击按钮即可压缩上下文",
+    "compacting": "正在压缩上下文…",
+    "compactUnsupported": "当前提供程序暂不支持压缩",
+    "compactEmpty": "暂无可压缩的会话内容",
+    "compress": "压缩上下文"
   },
   "todo": {
     "updated": "待办列表已成功更新",

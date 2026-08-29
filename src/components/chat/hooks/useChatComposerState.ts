@@ -447,19 +447,6 @@ export function useChatComposerState({
     ],
   );
 
-  const showCostModal = useCallback(() => {
-    executeCommand(
-      {
-        name: '/cost',
-        description: 'Display token usage information',
-        namespace: 'builtin',
-        metadata: { type: 'builtin' },
-      } as SlashCommand,
-      '/cost',
-      { preserveInput: true },
-    );
-  }, [executeCommand]);
-
   const {
     slashCommands,
     slashCommandsCount,
@@ -1198,7 +1185,6 @@ export function useChatComposerState({
     isInputFocused,
     commandModalPayload,
     closeCommandModal,
-    showCostModal,
     references,
     formattedHints,
     isReferencePickerOpen,
