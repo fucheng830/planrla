@@ -20,6 +20,11 @@
     --ds-success-soft: 160 84% 94%;
     --ds-danger: 0 72% 51%;
     --ds-danger-soft: 0 72% 96%;
+    /* 类目编码色(非状态语义): AI 类消息 / 定时来源 */
+    --ds-ai: 260 62% 60%;
+    --ds-ai-soft: 255 60% 96%;
+    --ds-info: 198 66% 49%;
+    --ds-info-soft: 198 66% 95%;
     --ds-radius-control: 6px;
     --ds-radius-panel: 8px;
     --ds-radius-tag: 4px;
@@ -46,6 +51,10 @@
     --ds-success-soft: 160 35% 17%;
     --ds-danger: 0 78% 64%;
     --ds-danger-soft: 0 35% 19%;
+    --ds-ai: 262 70% 69%;
+    --ds-ai-soft: 258 37% 22%;
+    --ds-info: 197 79% 64%;
+    --ds-info-soft: 197 35% 18%;
     --ds-shadow-panel: 0 1px 2px hsl(0 0% 0% / 0.25), 0 12px 28px hsl(0 0% 0% / 0.16);
 }
 

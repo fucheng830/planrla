@@ -12,12 +12,12 @@
   --mh-faint: #96a3b4;
   --mh-blue: hsl(var(--ds-accent));
   --mh-blue-soft: hsl(var(--ds-accent-soft));
-  --mh-amber: #a96d11;
-  --mh-amber-soft: #fff7e3;
-  --mh-purple: #8359d8;
-  --mh-purple-soft: #f1eaff;
+  --mh-amber: hsl(var(--ds-waiting));
+  --mh-amber-soft: hsl(var(--ds-waiting-soft));
+  --mh-purple: hsl(var(--ds-ai));
+  --mh-purple-soft: hsl(var(--ds-ai-soft));
   --mh-green: hsl(var(--ds-success));
-  --mh-red: #d54d5b;
+  --mh-red: hsl(var(--ds-danger));
   min-height: 100dvh;
   padding: 8px;
   overflow: hidden;
@@ -41,12 +41,12 @@
   --mh-faint: #5f7187;
   --mh-blue: hsl(var(--ds-accent));
   --mh-blue-soft: hsl(217 45% 20%);
-  --mh-amber: #f0b53c;
-  --mh-amber-soft: #302514;
-  --mh-purple: #9865ed;
-  --mh-purple-soft: #2e234c;
+  --mh-amber: hsl(var(--ds-waiting));
+  --mh-amber-soft: hsl(38 35% 19%);
+  --mh-purple: hsl(var(--ds-ai));
+  --mh-purple-soft: hsl(258 37% 22%);
   --mh-green: hsl(var(--ds-success));
-  --mh-red: #ef626c;
+  --mh-red: hsl(var(--ds-danger));
 }
 
 .message-hub-page *, .message-hub-page *::before, .message-hub-page *::after { box-sizing: border-box; }

@@ -24,7 +24,7 @@ export function statusStyle(
     case 'success':
       return { labelKey: 'success', dot: 'bg-workbench-success', text: 'text-workbench-success' };
     case 'fail':
-      return { labelKey: 'fail', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' };
+      return { labelKey: 'fail', dot: 'bg-workbench-danger', text: 'text-workbench-danger' };
     case 'cancelled':
       return { labelKey: 'cancelled', dot: 'bg-gray-300', text: 'text-gray-400 dark:text-gray-500' };
     default:
@@ -49,7 +49,7 @@ export function AuxBadges({ flags }: { flags: TaskAuxFlags }) {
       )}
       {flags.hasTodos && (
         <Icon title={t('aux.todo')}>
-          <ListChecks className="h-3 w-3 text-green-500" />
+          <ListChecks className="h-3 w-3 text-workbench-success" />
         </Icon>
       )}
       {flags.hasTask && (
@@ -59,7 +59,7 @@ export function AuxBadges({ flags }: { flags: TaskAuxFlags }) {
       )}
       {flags.sessionError && (
         <Icon title={flags.sessionError}>
-          <AlertCircle className="h-3 w-3 text-destructive" />
+          <AlertCircle className="h-3 w-3 text-workbench-danger" />
         </Icon>
       )}
       {!any && <span className="text-[10px] text-muted-foreground">—</span>}

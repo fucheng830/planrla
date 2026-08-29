@@ -12,10 +12,10 @@
   --cal-blue-soft: hsl(var(--ds-accent-soft));
   --cal-green: hsl(var(--ds-success));
   --cal-green-soft: hsl(var(--ds-success-soft));
-  --cal-red: #e05a63;
-  --cal-red-soft: #fff0f1;
-  --cal-cyan: #2a9dce;
-  --cal-cyan-soft: #ecf8fc;
+  --cal-red: hsl(var(--ds-danger));
+  --cal-red-soft: hsl(var(--ds-danger-soft));
+  --cal-cyan: hsl(var(--ds-info));
+  --cal-cyan-soft: hsl(var(--ds-info-soft));
   min-height: 100dvh;
   padding: 16px;
   background: var(--cal-canvas);
@@ -38,10 +38,10 @@
   --cal-blue-soft: hsl(217 45% 20%);
   --cal-green: hsl(var(--ds-success));
   --cal-green-soft: hsl(160 35% 17%);
-  --cal-red: #ef777d;
-  --cal-red-soft: #432529;
-  --cal-cyan: #5bc4ec;
-  --cal-cyan-soft: #153846;
+  --cal-red: hsl(var(--ds-danger));
+  --cal-red-soft: hsl(0 35% 19%);
+  --cal-cyan: hsl(var(--ds-info));
+  --cal-cyan-soft: hsl(197 35% 18%);
 }
 
 .calendar-schedule-page *, .calendar-schedule-page *::before, .calendar-schedule-page *::after { box-sizing: border-box; }

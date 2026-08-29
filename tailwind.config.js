@@ -27,6 +27,8 @@ export default {
           waiting: "hsl(var(--ds-waiting))",
           success: "hsl(var(--ds-success))",
           danger: "hsl(var(--ds-danger))",
+          ai: "hsl(var(--ds-ai))",
+          info: "hsl(var(--ds-info))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
