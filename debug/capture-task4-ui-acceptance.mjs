@@ -46,16 +46,42 @@ const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   locale: 'zh-CN',
 });
-// Force the zh-CN UI regardless of navigator language detection.
-await context.addInitScript(() => {
-  window.localStorage.setItem('userLanguage', 'zh-CN');
+
+// ── 0. authenticate BEFORE any page load ──
+// The web shell fires protected API calls at mount; when they answer 401 the
+// bundle crashes (`.flatMap` on an error object) and renders a blank page —
+// the login form never gets a chance to appear. So the #username form path
+// below could never work; the token must already be in localStorage.
+const loginResponse = await fetch(`${BASE_URL}/api/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username: 'planrla', password: 'planrla' }),
 });
+if (!loginResponse.ok) {
+  throw new Error(`e2e login failed: HTTP ${loginResponse.status}`);
+}
+const loginBody = await loginResponse.json();
+// Fresh DBs boot into the onboarding wizard, which blocks the main UI (and
+// therefore /session/:id) until completed — mark it done for the e2e user.
+const onboardingResponse = await fetch(`${BASE_URL}/api/user/complete-onboarding`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${loginBody.token}` },
+  body: '{}',
+});
+if (!onboardingResponse.ok) {
+  throw new Error(`e2e complete-onboarding failed: HTTP ${onboardingResponse.status}`);
+}
+await context.addInitScript((token) => {
+  window.localStorage.setItem('userLanguage', 'zh-CN');
+  window.localStorage.setItem('auth-token', token);
+}, loginBody.token);
+record('login', true, 'token injected via API login (planrla/planrla)');
 
 const page = await context.newPage();
 const shot = (name) => page.screenshot({ path: path.join(OUT_DIR, name), fullPage: false });
 
 try {
-  // ── 1. login (skipped when the single-user app auto-enters the main UI) ──
+  // ── 1. enter the main UI ──
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
   if (await page.locator('#username').isVisible().catch(() => false)) {
@@ -63,9 +89,9 @@ try {
     await page.fill('#password', 'planrla');
     await page.click('button[type="submit"]');
     await page.waitForSelector('#username', { state: 'detached', timeout: 20000 });
-    record('login', true, 'via login form');
+    record('main UI', true, 'via login form');
   } else {
-    record('login', true, 'auto-entered main UI (default single user)');
+    record('main UI', true, 'entered with injected token');
   }
   await page.waitForTimeout(1500);
 
@@ -91,7 +117,10 @@ try {
   // Label is count-less when the active viewport reports archivedMessages=null
   // (counts resolve lazily via the compactions endpoint).
   await page.getByRole('button', { name: /查看更早|查看历史消息/ }).first().click();
-  await page.waitForSelector('text=历史消息', { timeout: 15000 });
+  // Scoped to the panel dialog: the sidebar lists synced real sessions whose
+  // names contain the same "历史消息" substring, so a bare text= locator is
+  // ambiguous and can wait on the wrong element forever.
+  await page.getByRole('dialog').getByText('历史消息', { exact: true }).first().waitFor({ timeout: 15000 });
   await page.waitForSelector(`text=${EPOCH2_TEXT}`, { timeout: 15000 });
   await page.waitForTimeout(800);
   const panelText = await page.locator('body').innerText();

@@ -51,9 +51,24 @@ Frontend(Kimi via A2A 实施,hub review):
 ## 验证证据
 
 预检:`npm run typecheck` 双端通过;`npm run build` 通过;`git diff --check` 干净;无 `nul` 文件。
-单测:REQ-052 套件 **10/10**;全量 437 tests / 433 pass / 4 fail——4 个失败(projects.db.integration、createProject conflict、providerMcp global adder、model cache persist)经 `git stash` 对照在无本改动的树上同样失败,**存量环境性问题,与本次无关**。
+单测:REQ-052 套件 **13/13**(初版 10 + 复盘修正 `96e8196` 增 3:缓存命中/惰性计数补算/缩容剪枝);全量 437 tests / 433 pass / 4 fail——4 个失败(projects.db.integration、createProject conflict、providerMcp global adder、model cache persist)经 `git stash` 对照在无本改动的树上同样失败,**存量环境性问题,与本次无关**。
 
-可视化验收(playwright 无头,真实打开 3101 隔离环境[种子会话],12/12 断言通过):
+可视化验收(playwright 无头,真实打开 3101 隔离环境[种子会话],**13/13 断言通过**):
+
+> ⚠️ **证据链更正(2026-08-29,三道门复验)**:本节初版宣称的「12/12」与当时入库的
+> `task4-check-results.json` 矛盾——该 JSON 实为一次**失败记录**(1/2:登录步骤误判
+> 「auto-entered」,实际 web 壳层对 401 响应 `.flatMap` 崩溃白屏,登录表单从未渲染)。
+> harness 有三处根因,已修复后真实验收通过:
+> ① 桌面 bundle(`VITE_IS_PLATFORM=true`)在 web 模式永不发 Authorization 头 →
+>    验收必须用 web bundle(`npx vite build`,干净环境无该变量);
+> ② token 必须在页面加载**前**经 `POST /api/auth/login` 获取并注入 localStorage
+>    (`debug/capture-task4-ui-acceptance.mjs` 第 0 步);
+> ③ fresh DB 会卡首次引导向导 → capture 预调 `POST /api/user/complete-onboarding`;
+>    另 `text=历史消息` 裸定位与侧栏同步真实会话名撞车,已收窄到 dialog 作用域。
+> 复验同时覆盖了复盘修正(`96e8196`)的缓存路径:面板打开后 `session_compactions`
+> 两纪元精确计数(3/4)落库,纪元签名一致时复用。
+> 顺带发现的存量产品缺陷(与 REQ-052 无关,另行入池):web 模式未登录时壳层白屏
+> 崩溃而非渲染登录/注册页。
 
 ![主视图只显压缩后内容:压缩卡+边界后两条,纪元1/2原文零泄漏](debug/ui-acceptance/task4-main-active-view.png)
 ![归档面板默认纪元:纪元tabs+精确计数徽章,纪元2消息与摘要卡收口](debug/ui-acceptance/task4-archive-panel-latest-epoch.png)

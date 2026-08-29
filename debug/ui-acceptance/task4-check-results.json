@@ -2,7 +2,12 @@
   {
     "step": "login",
     "ok": true,
-    "detail": "auto-entered main UI (default single user)"
+    "detail": "token injected via API login (planrla/planrla)"
+  },
+  {
+    "step": "main UI",
+    "ok": true,
+    "detail": "entered with injected token"
   },
   {
     "step": "open seeded session",
