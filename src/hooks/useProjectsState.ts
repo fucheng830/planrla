@@ -398,7 +398,16 @@ export function useProjectsState({
         setIsLoadingProjects(true);
       }
       const response = await api.projects({ forceSync });
-      const projectData = (await response.json()) as Project[];
+      const responseBody = (await response.json().catch(() => null)) as Project[] | { error?: unknown } | null;
+
+      if (!response.ok || !Array.isArray(responseBody)) {
+        const detail = responseBody && typeof responseBody === 'object' && 'error' in responseBody
+          ? `: ${JSON.stringify(responseBody.error)}`
+          : '';
+        throw new Error(`Failed to load projects (HTTP ${response.status})${detail}`);
+      }
+
+      const projectData = responseBody;
 
       setProjects((prevProjects) => {
         const mergedProjects = mergeExpandedSessionPages(prevProjects, projectData);
