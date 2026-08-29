@@ -249,7 +249,7 @@ function TaskAttachmentsModal({ task, onClose, onChanged }: { task: Task; onClos
         <header className="flex items-center justify-between border-b border-workbench-border p-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-workbench-ink">附件 · REQ-{String(task.taskNumber).padStart(3, '0')}</h2>
-            <p className="mt-0.5 truncate text-[10px] text-workbench-subtle" title={task.title}>{task.title}</p>
+            <p className="mt-0.5 truncate text-[10px] text-workbench-subtle" title={task.input ?? undefined}>{task.input?.trim() || task.taskTemplateName || `任务 #${task.taskNumber}`}</p>
           </div>
           <button type="button" onClick={onClose} className="ds-focus-ring rounded px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">关闭</button>
         </header>
