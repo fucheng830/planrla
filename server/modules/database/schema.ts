@@ -137,6 +137,23 @@ CREATE VIRTUAL TABLE IF NOT EXISTS session_search USING fts5(
 );
 `;
 
+export const SESSION_COMPACTIONS_TABLE_SCHEMA_SQL = `
+-- REQ-052 会话压缩纪元缓存（过滤事实源始终是 provider JSONL 现算，本表只做
+-- 纪元列表/计数缓存 + 「历史被 CLI 清理」检测的对照基准）。
+CREATE TABLE IF NOT EXISTS session_compactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    epoch INTEGER NOT NULL,
+    boundary_uuid TEXT,
+    boundary_timestamp TEXT NOT NULL,
+    trigger TEXT,
+    pre_tokens INTEGER,
+    archived_messages INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(session_id, epoch)
+);
+`;
+
 export const A2A_AGENTS_TABLE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS a2a_agents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -249,6 +266,8 @@ ${LAST_SCANNED_AT_SQL}
 ${APP_CONFIG_TABLE_SCHEMA_SQL}
 
 ${SESSION_SEARCH_TABLE_SCHEMA_SQL}
+
+${SESSION_COMPACTIONS_TABLE_SCHEMA_SQL}
 
 ${A2A_AGENTS_TABLE_SCHEMA_SQL}
 

@@ -616,6 +616,8 @@ router.get(
     const sessionId = parseSessionId(req.params.sessionId);
     const limitRaw = readOptionalQueryString(req.query.limit);
     const offsetRaw = readOptionalQueryString(req.query.offset);
+    const viewRaw = readOptionalQueryString(req.query.view);
+    const epochRaw = readOptionalQueryString(req.query.epoch);
 
     let limit: number | null = null;
     if (limitRaw !== undefined) {
@@ -641,10 +643,51 @@ router.get(
       offset = parsedOffset;
     }
 
+    // REQ-052: compaction viewport. Omitted view keeps the legacy whole
+    // transcript so existing consumers never change meaning implicitly.
+    let view: 'active' | 'archived' | 'all' | undefined;
+    if (viewRaw !== undefined) {
+      if (viewRaw !== 'active' && viewRaw !== 'archived' && viewRaw !== 'all') {
+        throw new AppError('view must be one of: active, archived, all.', {
+          code: 'INVALID_QUERY_PARAMETER',
+          statusCode: 400,
+        });
+      }
+      view = viewRaw;
+    }
+
+    let epoch: number | undefined;
+    if (epochRaw !== undefined) {
+      const parsedEpoch = Number.parseInt(epochRaw, 10);
+      if (Number.isNaN(parsedEpoch) || parsedEpoch < 1) {
+        throw new AppError('epoch must be a positive integer.', {
+          code: 'INVALID_QUERY_PARAMETER',
+          statusCode: 400,
+        });
+      }
+      epoch = parsedEpoch;
+    }
+
     const result = await sessionsService.fetchHistory(sessionId, {
       limit,
       offset,
+      view,
+      epoch,
     });
+    res.json(createApiSuccessResponse(result));
+  }),
+);
+
+/**
+ * REQ-052: compaction epochs of one session for the archive viewer. Providers
+ * without compaction support answer `supported: false` so the frontend hides
+ * the entry point instead of rendering a broken panel.
+ */
+router.get(
+  '/sessions/:sessionId/compactions',
+  asyncHandler(async (req: Request, res: Response) => {
+    const sessionId = parseSessionId(req.params.sessionId);
+    const result = await sessionsService.listCompactions(sessionId);
     res.json(createApiSuccessResponse(result));
   }),
 );

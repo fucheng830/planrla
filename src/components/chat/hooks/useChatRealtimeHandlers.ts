@@ -60,6 +60,12 @@ interface UseChatRealtimeHandlersArgs {
   onSilentRunCompleted?: (sessionId: string | null | undefined, success: boolean) => void;
   onWebSocketReconnect?: () => void;
   sessionStore: SessionStore;
+  /**
+   * REQ-052: a live compaction boundary just crossed for `sessionId`. The
+   * handler has already cleared the realtime buffer; the receiver shows the
+   * "context compacted" banner (and may dismiss stale scroll state).
+   */
+  onCompactBoundary?: (sessionId: string) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +100,7 @@ export function useChatRealtimeHandlers({
   onSilentRunCompleted,
   onWebSocketReconnect,
   sessionStore,
+  onCompactBoundary,
 }: UseChatRealtimeHandlersArgs) {
   // Session switches can send `chat.subscribe` before this effect has a chance
   // to rebind the websocket listener. Read the visible session id from a ref
@@ -117,6 +124,10 @@ export function useChatRealtimeHandlers({
   // stream_delta 不进（已有 100ms accumulatedStream 合并）；status/permission/complete 不进（shouldPersist=false）。
   const batchQueueRef = useRef<BatchEntry[]>([]);
   const rafIdRef = useRef<number | null>(null);
+
+  // REQ-052: debounce (per session) the active-view re-fetch that follows a
+  // live compact_boundary — auto-compact can fire several frames in a burst.
+  const compactRefetchTimerRef = useRef<Map<string, number>>(new Map());
 
   const flushBatch = useCallback(() => {
     rafIdRef.current = null;
@@ -288,7 +299,10 @@ export function useChatRealtimeHandlers({
         msg.kind !== 'complete'
         && msg.kind !== 'status'
         && msg.kind !== 'permission_request'
-        && msg.kind !== 'permission_cancelled';
+        && msg.kind !== 'permission_cancelled'
+        // REQ-052: boundary frames are handled below (banner + buffer reset +
+        // active-view re-fetch), never persisted as message rows.
+        && msg.kind !== 'compact_boundary';
 
       if (sid && shouldPersist) {
         // 批量：累积到 rAF 队列，flush 时 appendRealtimeBatch（一次 set per session）
@@ -298,6 +312,50 @@ export function useChatRealtimeHandlers({
 
       // --- UI side effects for specific kinds ---
       switch (msg.kind) {
+        case 'compact_boundary': {
+          // REQ-052: context was compacted for `sid`. Everything before the
+          // boundary is now archived — drop this session's buffered realtime
+          // rows (merged dedupes by id and would otherwise keep showing stale
+          // bubbles), notify the view layer for the banner, then swap the main
+          // viewport to the compacted (active) view, debounced against bursts.
+          //
+          // Scoping (复盘修正): the batch queue is shared across sessions, so
+          // only this session's entries are dropped — a parallel run (e.g. a
+          // background kanban task) must not lose its already-buffered frames;
+          // an already-scheduled flush then drains the survivors (or no-ops on
+          // an empty queue). The stream-accumulation refs render the *visible*
+          // session's stream and are reset only when the boundary is its.
+          if (sid === activeViewSessionId) {
+            if (streamTimerRef.current) {
+              clearTimeout(streamTimerRef.current);
+              streamTimerRef.current = null;
+            }
+            accumulatedStreamRef.current = '';
+            firstTokenLoggedRef.current = false;
+          }
+          batchQueueRef.current = batchQueueRef.current.filter((entry) => entry.sessionId !== sid);
+
+          if (sid) {
+            sessionStore.clearRealtime(sid);
+            onCompactBoundary?.(sid);
+
+            const pending = compactRefetchTimerRef.current.get(sid);
+            if (pending !== undefined) {
+              window.clearTimeout(pending);
+            }
+            const timer = window.setTimeout(() => {
+              compactRefetchTimerRef.current.delete(sid);
+              void sessionStore.fetchFromServer(sid, {
+                limit: 20,
+                offset: 0,
+                view: 'active',
+              });
+            }, 400);
+            compactRefetchTimerRef.current.set(sid, timer);
+          }
+          break;
+        }
+
         case 'complete': {
           // REQ-030: silent completion. Fire the narrow silent-observer
           // callback (ChatInterface wires useAutoRename here so it can reset
@@ -488,6 +546,10 @@ export function useChatRealtimeHandlers({
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
+      for (const timer of compactRefetchTimerRef.current.values()) {
+        window.clearTimeout(timer);
+      }
+      compactRefetchTimerRef.current.clear();
       flushBatch(); // flush 残留（best-effort）
     };
   }, [
@@ -509,6 +571,7 @@ export function useChatRealtimeHandlers({
     onSilentRunCompleted,
     onWebSocketReconnect,
     sessionStore,
+    onCompactBoundary,
     flushBatch,
     scheduleFlush,
   ]);

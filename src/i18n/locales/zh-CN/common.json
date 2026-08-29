@@ -30,6 +30,24 @@
     "workflow": "研发流程",
     "schedule": "日程任务"
   },
+  "compaction": {
+    "cardTitle": "上下文已压缩",
+    "expandSummary": "展开摘要",
+    "collapseSummary": "收起摘要",
+    "viewHistory": "查看更早 {{count}} 条历史",
+    "viewHistoryNoCount": "查看历史消息",
+    "banner": "上下文已压缩，已切换到压缩后视图",
+    "panelTitle": "历史消息",
+    "panelEyebrow": "已归档",
+    "panelSubtitle": "最后一个压缩边界之前的消息",
+    "archivedCount": "{{count}} 条消息已归档",
+    "epochBadge": "纪元 {{epoch}}",
+    "loading": "加载中…",
+    "loadFailed": "历史消息加载失败",
+    "empty": "该会话没有已压缩的历史",
+    "noMessagesInEpoch": "该纪元没有消息",
+    "loadEarlier": "加载更早"
+  },
   "extensionPanel": {
     "tabs": {
       "markdown": "Markdown",

@@ -555,4 +555,84 @@ export const sessionsDb = {
       )
       .run(exposed ? 1 : 0, sessionId).changes > 0;
   },
+
+  /**
+   * REQ-052: upserts one compaction epoch discovered while reading history.
+   * Pure cache — the transcript on disk stays the source of truth, so a stale
+   * row can never hide or invent a boundary.
+   */
+  upsertCompactionEpoch(entry: {
+    sessionId: string;
+    epoch: number;
+    boundaryUuid: string | null;
+    boundaryTimestamp: string;
+    trigger: string | null;
+    preTokens: number | null;
+    archivedMessages: number | null;
+  }): void {
+    const db = getConnection();
+    db.prepare(
+      `INSERT INTO session_compactions
+         (session_id, epoch, boundary_uuid, boundary_timestamp, trigger, pre_tokens, archived_messages)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(session_id, epoch) DO UPDATE SET
+         boundary_uuid = excluded.boundary_uuid,
+         boundary_timestamp = excluded.boundary_timestamp,
+         trigger = COALESCE(excluded.trigger, session_compactions.trigger),
+         pre_tokens = COALESCE(excluded.pre_tokens, session_compactions.pre_tokens),
+         archived_messages = COALESCE(excluded.archived_messages, session_compactions.archived_messages)`
+    ).run(
+      entry.sessionId,
+      entry.epoch,
+      entry.boundaryUuid,
+      entry.boundaryTimestamp,
+      entry.trigger,
+      entry.preTokens,
+      entry.archivedMessages,
+    );
+  },
+
+  /**
+   * REQ-052: cached compaction epochs for one session, oldest first. Served by
+   * the compactions endpoint when the epoch set still matches the transcript
+   * (复盘修正: the table now has a read path), and the baseline for detecting
+   * transcripts whose archived rows were purged by the provider CLI.
+   */
+  listCompactionEpochs(sessionId: string): Array<{
+    epoch: number;
+    boundary_uuid: string | null;
+    boundary_timestamp: string;
+    trigger: string | null;
+    pre_tokens: number | null;
+    archived_messages: number | null;
+  }> {
+    const db = getConnection();
+    return db
+      .prepare(
+        `SELECT epoch, boundary_uuid, boundary_timestamp, trigger, pre_tokens, archived_messages
+         FROM session_compactions
+         WHERE session_id = ?
+         ORDER BY epoch ASC`
+      )
+      .all(sessionId) as Array<{
+      epoch: number;
+      boundary_uuid: string | null;
+      boundary_timestamp: string;
+      trigger: string | null;
+      pre_tokens: number | null;
+      archived_messages: number | null;
+    }>;
+  },
+
+  /**
+   * REQ-052: drops cached epochs above `lastEpoch`. The transcript now holds
+   * fewer boundaries than the cache (CLI rewrite/cleanup), so ghost rows must
+   * not outlive the boundaries they described.
+   */
+  pruneCompactionEpochsAfter(sessionId: string, lastEpoch: number): void {
+    const db = getConnection();
+    db.prepare(
+      'DELETE FROM session_compactions WHERE session_id = ? AND epoch > ?'
+    ).run(sessionId, lastEpoch);
+  },
 };

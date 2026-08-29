@@ -1,4 +1,5 @@
 import type {
+  CompactionEpochInfo,
   FetchHistoryOptions,
   FetchHistoryResult,
   LLMProvider,
@@ -157,6 +158,13 @@ export interface IProviderSessions {
    * 同源、不受分页/过滤影响。可选,未实现的 provider forkSession 回退整文件复制。
    */
   forkJsonlByMessage?(sourceJsonlPath: string, targetPath: string, upToTimestamp: number | string): Promise<void>;
+
+  /**
+   * REQ-052: lists the session's compaction epochs (oldest first) with exact
+   * archived message counts. Optional — callers must treat unsupported
+   * providers as "no archive viewer" instead of an error.
+   */
+  listCompactions?(sessionId: string, options?: Pick<FetchHistoryOptions, 'providerSessionId'>): Promise<CompactionEpochInfo[]>;
 }
 
 // ---------------------------

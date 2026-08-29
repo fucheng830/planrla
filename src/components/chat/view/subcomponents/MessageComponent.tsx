@@ -17,6 +17,7 @@ import { Reasoning, ReasoningTrigger, ReasoningContent } from '../../../../share
 import { Markdown } from './Markdown';
 import MessageCopyControl from './MessageCopyControl';
 import MessageSpeakControl from './MessageSpeakControl';
+import CompactSummaryCard from './CompactSummaryCard';
 
 type DiffLine = {
   type: string;
@@ -42,6 +43,10 @@ type MessageComponentProps = {
   canForkAtMessage?: boolean;
   /** Handler invoked when the user clicks "fork from here" on this message. */
   onForkAtMessage?: () => void;
+  /** REQ-052: archived message count for the compact-summary card entry. */
+  archivedCount?: number | null;
+  /** REQ-052: opens the archive (history) panel from the compact-summary card. */
+  onViewArchivedHistory?: () => void;
 };
 
 type InteractiveOption = {
@@ -52,7 +57,7 @@ type InteractiveOption = {
 
 const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
 
-const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider, canForkAtMessage, onForkAtMessage }: MessageComponentProps) => {
+const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, onFileOpen, onOpenSession, autoExpandTools, showRawParameters, showThinking, selectedProject, provider, canForkAtMessage, onForkAtMessage, archivedCount, onViewArchivedHistory }: MessageComponentProps) => {
   const { t } = useTranslation('chat');
   const isGrouped = prevMessage && prevMessage.type === message.type &&
     ((prevMessage.type === 'assistant') ||
@@ -119,6 +124,18 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
 
   if (shouldHideThinkingMessage) {
     return null;
+  }
+
+  // REQ-052: a compaction boundary summary renders as a collapsible
+  // "context compacted" card — not a normal assistant bubble.
+  if (message.isCompactSummary) {
+    return (
+      <CompactSummaryCard
+        message={message}
+        archivedCount={archivedCount}
+        onViewArchivedHistory={onViewArchivedHistory}
+      />
+    );
   }
 
   return (

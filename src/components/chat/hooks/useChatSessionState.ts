@@ -4,7 +4,7 @@ import type { MutableRefObject } from 'react';
 import { authenticatedFetch } from '../../../utils/api';
 import type { MarkSessionIdle, SessionActivityMap } from '../../../hooks/useSessionProtection';
 import type { Project, ProjectSession, LLMProvider } from '../../../types/app';
-import type { SessionStore, NormalizedMessage } from '../../../stores/useSessionStore';
+import type { SessionStore, NormalizedMessage, CompactionInfo } from '../../../stores/useSessionStore';
 import type { ChatMessage } from '../types/types';
 import { createCachedDiffCalculator, type DiffCalculator } from '../utils/messageTransforms';
 
@@ -264,6 +264,14 @@ export function useChatSessionState({
 
   const storeMessages = activeSessionId ? sessionStore.getMessages(activeSessionId) : [];
 
+  // REQ-052: compaction/archive metadata of the viewed session. Read from the
+  // slot during render so every store fetch/refresh (including the live
+  // compact_boundary re-fetch) refreshes it without extra state plumbing.
+  // Providers without compaction support leave these unset — degrade to none.
+  const sessionSlot = activeSessionId ? sessionStore.getSessionSlot(activeSessionId) : undefined;
+  const hasArchivedMessages = Boolean(sessionSlot?.hasArchived);
+  const compactionInfo: CompactionInfo | null = sessionSlot?.compaction ?? null;
+
   // Reset viewHiddenCount when store messages change
   const prevStoreLenRef = useRef(0);
   if (storeMessages.length !== prevStoreLenRef.current) {
@@ -336,6 +344,7 @@ export function useChatSessionState({
       try {
         const slot = await sessionStore.fetchMore(selectedSession.id, {
           limit: MESSAGES_PER_PAGE,
+          view: 'active',
         });
         if (!slot || slot.serverMessages.length === 0) return false;
 
@@ -481,6 +490,9 @@ export function useChatSessionState({
         const slot = await sessionStore.fetchFromServer(selectedSessionId, {
           limit: MESSAGES_PER_PAGE,
           offset: 0,
+          // REQ-052: main viewport renders only the latest compaction epoch;
+          // pre-boundary history is browsed via the archive panel.
+          view: 'active',
         });
         if (slot) {
           setHasMoreMessages(slot.hasMore);
@@ -563,6 +575,7 @@ export function useChatSessionState({
             const slot = await sessionStore.fetchFromServer(selectedSession.id, {
               limit: null,
               offset: 0,
+              view: 'active',
             });
             if (slot) {
               setHasMoreMessages(false);
@@ -720,6 +733,7 @@ export function useChatSessionState({
       const slot = await sessionStore.fetchFromServer(requestSessionId, {
         limit: null,
         offset: 0,
+        view: 'active',
       });
 
       if (currentSessionId !== requestSessionId) return;
@@ -789,6 +803,8 @@ export function useChatSessionState({
     isLoadingAllMessages,
     loadAllJustFinished,
     showLoadAllOverlay,
+    hasArchivedMessages,
+    compactionInfo,
     createDiff,
     scrollContainerRef,
     virtuaRef,
