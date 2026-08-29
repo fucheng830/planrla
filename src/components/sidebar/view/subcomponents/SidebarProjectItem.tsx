@@ -328,62 +328,67 @@ export default function SidebarProjectItem({
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  aria-label={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
-                  className={cn(
-                    'touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100',
-                    !isStarred && 'opacity-0',
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleStarProject();
-                  }}
-                  title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
-                >
-                  <Star
+                {/* REQ-054: actions collapse to zero width when idle so the
+                    project name gets the full row (≈170px instead of 58px);
+                    they expand on hover/focus-within replacing opacity tricks
+                    that reserved layout space while invisible. */}
+                <div className="flex w-0 items-center overflow-hidden transition-all duration-200 group-hover:w-[112px] group-hover:gap-1 focus-within:w-[112px] focus-within:gap-1 touch:w-[112px] touch:gap-1">
+                  <button
+                    type="button"
+                    aria-label={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
                     className={cn(
-                      'h-3 w-3 transition-colors',
-                      isStarred ? 'text-yellow-600 dark:text-yellow-400 fill-current' : 'text-muted-foreground',
+                      'flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded hover:bg-accent',
                     )}
-                  />
-                </button>
-                <button
-                  type="button"
-                  aria-label={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpenFileTree(project);
-                  }}
-                  title={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
-                >
-                  <FolderTree className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={t('tooltips.renameProject')}
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onStartEditingProject(project);
-                  }}
-                  title={t('tooltips.renameProject')}
-                >
-                  <Edit3 className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={t('tooltips.deleteProject')}
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 focus-within:opacity-100 hover:bg-accent group-hover:opacity-100 dark:hover:bg-accent"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDeleteProject(project);
-                  }}
-                  title={t('tooltips.deleteProject')}
-                >
-                  <Trash2 className="h-3 w-3 text-muted-foreground transition-colors hover:text-red-500" />
-                </button>
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleStarProject();
+                    }}
+                    title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
+                  >
+                    <Star
+                      className={cn(
+                        'h-3 w-3 transition-colors',
+                        isStarred ? 'text-yellow-600 dark:text-yellow-400 fill-current' : 'text-muted-foreground',
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
+                    className="flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded hover:bg-accent"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenFileTree(project);
+                    }}
+                    title={t('tooltips.openFileTree', { defaultValue: 'Browse files' })}
+                  >
+                    <FolderTree className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('tooltips.renameProject')}
+                    className="flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded hover:bg-accent"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onStartEditingProject(project);
+                    }}
+                    title={t('tooltips.renameProject')}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('tooltips.deleteProject')}
+                    className="flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded hover:bg-accent dark:hover:bg-accent"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDeleteProject(project);
+                    }}
+                    title={t('tooltips.deleteProject')}
+                  >
+                    <Trash2 className="h-3 w-3 text-muted-foreground transition-colors hover:text-red-500" />
+                  </button>
+                </div>
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
                 ) : (
