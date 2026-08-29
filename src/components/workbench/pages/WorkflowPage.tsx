@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronRight,
   CircleDot,
+  Download,
   FileWarning,
   MessageSquare,
   Plus,
@@ -11,6 +12,7 @@ import {
   List,
   Paperclip,
   Play,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import type { Task, TaskPriority, TaskDiffResult } from '../../kanban/types';
+import type { Task, TaskAttachment, TaskPriority, TaskDiffResult } from '../../kanban/types';
 import type { Project } from '../../../types/app';
 import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
 
@@ -207,7 +209,79 @@ function DeliverablePanel({ task, onClose, onChanged }: { task: Task; onClose: (
     </div>
   );
 }
-function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable, onOpenSession }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void; onOpenSession?: (task: Task) => void }) {
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** 任务卡回形针徽章的展开面板:列出附件,可下载/删除。 */
+function TaskAttachmentsModal({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
+  const [items, setItems] = useState<TaskAttachment[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    kanbanApi.listAttachments(task.id)
+      .then((list) => { if (alive) setItems(list); })
+      .catch((e) => { if (alive) setError(e instanceof Error ? e.message : String(e)); });
+    return () => { alive = false; };
+  }, [task.id]);
+
+  const handleDelete = async (attachmentId: string) => {
+    setBusyId(attachmentId);
+    try {
+      await kanbanApi.deleteAttachment(task.id, attachmentId);
+      setItems((prev) => (prev ? prev.filter((a) => a.id !== attachmentId) : prev));
+      toast.success('附件已删除');
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="ds-panel flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <header className="flex items-center justify-between border-b border-workbench-border p-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold text-workbench-ink">附件 · REQ-{String(task.taskNumber).padStart(3, '0')}</h2>
+            <p className="mt-0.5 truncate text-[10px] text-workbench-subtle" title={task.title}>{task.title}</p>
+          </div>
+          <button type="button" onClick={onClose} className="ds-focus-ring rounded px-2 py-1 text-xs text-workbench-subtle hover:bg-workbench-muted">关闭</button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-auto p-3">
+          {error && <p className="rounded border border-workbench-danger/30 bg-workbench-danger/10 p-3 text-xs text-workbench-danger">{error}</p>}
+          {!error && items === null && <p className="text-xs text-workbench-subtle">正在加载附件…</p>}
+          {items?.length === 0 && <p className="rounded border border-dashed border-workbench-border p-4 text-center text-xs text-workbench-subtle">该任务还没有附件</p>}
+          <ul className="space-y-1.5">
+            {items?.map((a) => (
+              <li key={a.id} className="flex items-center gap-2 rounded border border-workbench-border bg-workbench-surface px-2.5 py-2">
+                <Paperclip className="size-3.5 flex-shrink-0 text-workbench-subtle" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-workbench-ink" title={a.filename}>{a.filename}</p>
+                  <p className="ds-mono mt-0.5 text-[10px] text-workbench-subtle">{formatBytes(a.size)} · {new Date(a.createdAt).toLocaleString()}</p>
+                </div>
+                {(() => {
+                  // 非 platform 模式下 <a> 直链带不了 Authorization,补 query token(SSE 同款通道)
+                  const token = localStorage.getItem('auth-token');
+                  const href = kanbanApi.attachmentDownloadUrl(task.id, a.id) + (token ? `?token=${encodeURIComponent(token)}` : '');
+                  return <a href={href} download={a.filename} className="ds-focus-ring inline-flex h-7 flex-shrink-0 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted"><Download className="size-3" aria-hidden="true" />下载</a>;
+                })()}
+                <button type="button" disabled={busyId === a.id} onClick={() => void handleDelete(a.id)} title="删除附件" className="ds-focus-ring inline-flex size-7 flex-shrink-0 items-center justify-center rounded border border-transparent text-workbench-subtle hover:border-workbench-danger/30 hover:bg-workbench-danger/10 hover:text-workbench-danger disabled:opacity-50"><Trash2 className="size-3.5" aria-hidden="true" /></button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable, onOpenSession, onShowAttachments }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void; onOpenSession?: (task: Task) => void; onShowAttachments?: (task: Task) => void }) {
   return (
     <article
       className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
@@ -216,7 +290,9 @@ function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel,
       <div className="flex items-center gap-1.5 overflow-hidden">
         <span className="ds-mono flex-shrink-0 text-[10px] text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</span>
           <span className={`flex-shrink-0 rounded px-1 py-0.5 text-[10px] font-medium ${task.isBug ? 'bg-workbench-danger-soft text-workbench-danger' : 'bg-workbench-accent/10 text-workbench-accent'}`}>{task.isBug ? 'Bug' : '需求'}</span>
-          {(attachmentCount ?? 0) > 0 && <span className="flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle" title="附件数"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</span>}
+          {(attachmentCount ?? 0) > 0 && (onShowAttachments && task.source
+            ? <button type="button" onClick={(e) => { e.stopPropagation(); onShowAttachments(task.source!); }} title="查看附件" className="ds-focus-ring flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle transition-colors hover:bg-workbench-accent/10 hover:text-workbench-accent"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</button>
+            : <span className="flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle" title="附件数"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</span>)}
           {task.projectName && <span className="truncate rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle">{task.projectName}</span>}
         <WorkbenchStatus state={task.status} label={task.statusLabel} />
       </div>
@@ -313,6 +389,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const [selectedTemplateId] = useState<string>('');
   const [selectedProjectId] = useState<string>('');
   const [deliverableTask, setDeliverableTask] = useState<Task | null>(null);
+  const [attachmentsTask, setAttachmentsTask] = useState<Task | null>(null);
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
 
   // 每个需求必须关联一个项目:默认当前项目,可切换到其它项目(任务落到
@@ -402,7 +479,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
                     ) : (
                       <>
                         {column.tasks.map((task) => (
-                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onOpenSession={task.source ? (src) => void openTaskSession(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} attachmentCount={attachmentCounts[task.id]} />
+                          <WorkflowTaskCard key={task.id} task={task} onAdvance={task.source ? () => void moveTask(task.source!.id, 'next', task.source!.rootId).then(refreshAll) : undefined} onRetry={task.source ? (id, rid) => { void kanbanApi.retryTask(id, rid).then(refreshAll).then(() => toast.success('已重试，任务重新排队')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} onShowDeliverable={task.source ? (src) => setDeliverableTask(src) : undefined} onOpenSession={task.source ? (src) => void openTaskSession(src) : undefined} onShowAttachments={task.source ? (src) => setAttachmentsTask(src) : undefined} onCancel={task.source ? (id, rid) => { void kanbanApi.move(id, rid, 'cancel').then(refreshAll).then(() => toast.success('任务已取消')).catch((e) => toast.error(e instanceof Error ? e.message : String(e))); } : undefined} attachmentCount={attachmentCounts[task.id]} />
                         ))}
                       </>
                     )}
@@ -438,6 +515,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
         <WorkflowRightRail schedules={schedules} agentRows={agentRows} />
       </div>
       {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} onChanged={() => void refreshAll()} />}
+      {attachmentsTask && <TaskAttachmentsModal task={attachmentsTask} onClose={() => setAttachmentsTask(null)} onChanged={() => void refreshAll()} />}
     </PageShell>
   );
 }
