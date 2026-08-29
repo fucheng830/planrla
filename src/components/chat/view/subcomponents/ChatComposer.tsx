@@ -67,7 +67,13 @@ interface ChatComposerProps {
   permissionMode: PermissionMode | string;
   onModeSwitch: () => void;
   tokenBudget: Record<string, unknown> | null;
-  onShowTokenUsage: () => void;
+  /** REQ-052: provider capability mapped from the backend matrix. */
+  supportsCompact: boolean;
+  /** REQ-052: true while the viewed session's compact run is in flight. */
+  isCompacting: boolean;
+  visibleMessageCount: number;
+  totalMessages: number;
+  onCompactSession: () => void;
   slashCommandsCount: number;
   onToggleCommandMenu: () => void;
   hasInput: boolean;
@@ -133,7 +139,11 @@ export default function ChatComposer({
   permissionMode,
   onModeSwitch,
   tokenBudget,
-  onShowTokenUsage,
+  supportsCompact,
+  isCompacting,
+  visibleMessageCount,
+  totalMessages,
+  onCompactSession,
   slashCommandsCount,
   onToggleCommandMenu,
   hasInput,
@@ -491,7 +501,14 @@ export default function ChatComposer({
               </div>
             </button>
 
-            <TokenUsageSummary usage={tokenBudget} onClick={onShowTokenUsage} />
+            <TokenUsageSummary
+              usage={tokenBudget}
+              supportsCompact={supportsCompact}
+              isCompacting={isCompacting}
+              visibleMessageCount={visibleMessageCount}
+              totalMessages={totalMessages}
+              onCompact={onCompactSession}
+            />
 
             <PromptInputButton
               tooltip={{ content: t('input.showAllCommands') }}

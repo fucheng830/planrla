@@ -21,6 +21,13 @@ type ProviderCapabilities = {
   supportsPermissionRequests: boolean;
   /** Whether the token-usage endpoint has data for this provider. */
   supportsTokenUsage: boolean;
+  /**
+   * Whether chat.compact can compress this session's context (REQ-052).
+   * Compaction relies on the CLI's built-in /compact slash command, which only
+   * the Claude SDK runtime processes headlessly — every other provider is
+   * rejected by the chat.compact capability check before any run starts.
+   */
+  supportsCompact: boolean;
 };
 
 /**
@@ -38,6 +45,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsAbort: true,
     supportsPermissionRequests: true,
     supportsTokenUsage: true,
+    supportsCompact: true,
   },
   cursor: {
     provider: 'cursor',
@@ -47,6 +55,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsAbort: true,
     supportsPermissionRequests: false,
     supportsTokenUsage: false,
+    supportsCompact: false,
   },
   codex: {
     provider: 'codex',
@@ -56,6 +65,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsAbort: true,
     supportsPermissionRequests: false,
     supportsTokenUsage: true,
+    supportsCompact: false,
   },
   gemini: {
     provider: 'gemini',
@@ -68,6 +78,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsAbort: true,
     supportsPermissionRequests: false,
     supportsTokenUsage: true,
+    supportsCompact: false,
   },
   opencode: {
     provider: 'opencode',
@@ -77,6 +88,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsAbort: true,
     supportsPermissionRequests: false,
     supportsTokenUsage: true,
+    supportsCompact: false,
   },
   kimi: {
     provider: 'kimi',
@@ -90,6 +102,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     // wire.jsonl carries usage.record events, but the token-usage endpoint has
     // no kimi branch yet.
     supportsTokenUsage: false,
+    supportsCompact: false,
   },
   zcode: {
     provider: 'zcode',
@@ -103,6 +116,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsPermissionRequests: false,
     // Telemetry usage.delta events exist; token-usage endpoint has no zcode branch yet.
     supportsTokenUsage: false,
+    supportsCompact: false,
   },
 };
 

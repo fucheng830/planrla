@@ -2,113 +2,21 @@ import type { WebSocket } from 'ws';
 
 import { sessionsDb } from '@/modules/database/index.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
-import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/services/websocket-state.service.js';
+import { connectedClients } from '@/modules/websocket/services/websocket-state.service.js';
 import type {
   AnyRecord,
   AuthenticatedWebSocketRequest,
   LLMProvider,
 } from '@/shared/types.js';
 import { parseIncomingJsonObject } from '@/shared/utils.js';
-
-/**
- * One provider runtime entry point. All five runtimes share this signature,
- * which lets the chat handler dispatch through a provider-keyed map instead
- * of provider-specific branches.
- */
-type ProviderSpawnFn = (
-  command: string,
-  options: AnyRecord,
-  writer: unknown
-) => Promise<unknown>;
-
-type ChatWebSocketDependencies = {
-  /** Provider runtimes keyed by provider id. */
-  spawnFns: Record<LLMProvider, ProviderSpawnFn>;
-  /**
-   * Abort functions keyed by provider id. They are addressed with the
-   * provider-native session id (that is how runtimes key their process maps).
-   * The Claude abort is async; the rest are sync — both shapes are accepted.
-   */
-  abortFns: Record<LLMProvider, (providerSessionId: string) => boolean | Promise<boolean>>;
-  resolveToolApproval: (
-    requestId: string,
-    payload: {
-      allow: boolean;
-      updatedInput?: unknown;
-      message?: string;
-      rememberEntry?: unknown;
-    }
-  ) => void;
-  /** Claude-only today: pending tool approvals included in `chat_subscribed`. */
-  getPendingApprovalsForSession: (providerSessionId: string) => unknown[];
-};
-
-/**
- * Extracts the authenticated request user id in the formats currently produced
- * by platform and OSS auth code paths.
- */
-function readRequestUserId(
-  request: AuthenticatedWebSocketRequest | undefined
-): string | number | null {
-  const user = request?.user;
-  if (!user) {
-    return null;
-  }
-
-  if (typeof user.id === 'string' || typeof user.id === 'number') {
-    return user.id;
-  }
-
-  if (typeof user.userId === 'string' || typeof user.userId === 'number') {
-    return user.userId;
-  }
-
-  return null;
-}
-
-function sendJson(ws: WebSocket, payload: unknown): void {
-  if (ws.readyState === WS_OPEN_STATE) {
-    ws.send(JSON.stringify(payload));
-  }
-}
-
-/**
- * Reports a protocol-level failure to the requesting client.
- *
- * Protocol errors deliberately use their own `kind` (instead of the provider
- * `error` message kind) so the frontend can distinguish "your request was
- * invalid" from "the model run produced an error" without inspecting text.
- *
- * REQ-030 silent-tagging gap (intentional): pre-`startRun` errors emitted
- * here (SESSION_ID_REQUIRED / SESSION_NOT_FOUND / UNSUPPORTED_PROVIDER /
- * RUN_IN_PROGRESS) bypass `decorateAndRecordEvent`, so they are never tagged
- * `silent:true` even when the triggering `chat.send` carried `options.silent`.
- * This is unreachable from `useAutoRename`: it pre-validates every trigger
- * condition before sending (session exists in the local store, provider has
- * a spawn fn, sessionId is always set in `buildSilentRenameFrame`), and the
- * backend's own `handleChatSend` reads `silent` only AFTER these branches
- * return — so a silent send that reaches this fn would have to come from a
- * caller that already violated those preconditions. Document and move on.
- */
-function sendProtocolError(
-  ws: WebSocket,
-  code: string,
-  error: string,
-  sessionId?: string
-): void {
-  sendJson(ws, {
-    kind: 'protocol_error',
-    code,
-    error,
-    sessionId: sessionId ?? null,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-function readRequiredSessionId(data: AnyRecord): string | null {
-  const sessionId = typeof data.sessionId === 'string' ? data.sessionId.trim() : '';
-  return sessionId.length > 0 ? sessionId : null;
-}
+import { handleChatCompact } from '@/modules/websocket/services/chat-compact.handler.js';
+import {
+  readRequestUserId,
+  readRequiredSessionId,
+  sendJson,
+  sendProtocolError,
+} from '@/modules/websocket/services/chat-protocol.utils.js';
+import type { ChatWebSocketDependencies } from '@/modules/websocket/services/chat-websocket.types.js';
 
 /**
  * Handles `chat.send`: resolves the session row (provider, project path, and
@@ -328,6 +236,7 @@ function handlePermissionResponse(data: AnyRecord, dependencies: ChatWebSocketDe
  *
  * Inbound protocol (client to server):
  * - `chat.send`                { sessionId, content, options? }
+ * - `chat.compact`             { sessionId, options? } — REQ-052 context compaction
  * - `chat.abort`               { sessionId }
  * - `chat.subscribe`           { sessions: [{ sessionId, lastSeq? }] }
  * - `chat.permission-response` { requestId, allow, updatedInput?, message?, rememberEntry? }
@@ -360,6 +269,9 @@ export function handleChatConnection(
       switch (messageType) {
         case 'chat.send':
           await handleChatSend(ws, userId, data, dependencies);
+          return;
+        case 'chat.compact':
+          await handleChatCompact(ws, userId, data, dependencies);
           return;
         case 'chat.abort':
           await handleChatAbort(ws, data, dependencies);

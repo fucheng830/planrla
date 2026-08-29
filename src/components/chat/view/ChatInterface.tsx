@@ -99,10 +99,15 @@ function ChatInterface({
     providerModelsRefreshing,
     hardRefreshProviderModels,
     selectProviderModel,
+    providerCapabilities,
   } = useChatProviderState({
     selectedSession,
     selectedProject,
   });
+
+  // REQ-052: compaction is a backend-owned capability; strict `=== true`
+  // keeps the button inert until the capability matrix has actually loaded.
+  const supportsCompact = providerCapabilities?.[provider]?.supportsCompact === true;
 
   const {
     chatMessages,
@@ -120,6 +125,11 @@ function ChatInterface({
     setIsUserScrolledUp,
     tokenBudget,
     setTokenBudget,
+    isCompacting,
+    compactingSessionRef,
+    handleCompactSession,
+    finishCompactSession,
+    cancelCompactSession,
     visibleMessageCount,
     visibleMessages,
     loadEarlierMessages,
@@ -139,6 +149,7 @@ function ChatInterface({
     selectedSession,
     ws,
     sendMessage,
+    supportsCompact,
     autoScrollToBottom,
     externalMessageUpdate,
     newSessionTrigger,
@@ -203,7 +214,6 @@ function ChatInterface({
     isInputFocused: _isInputFocused,
     commandModalPayload,
     closeCommandModal,
-    showCostModal,
     references,
     formattedHints,
     isReferencePickerOpen,
@@ -300,6 +310,9 @@ function ChatInterface({
     onSilentRunCompleted,
     onWebSocketReconnect: handleWebSocketReconnect,
     sessionStore,
+    compactingSessionRef,
+    onCompactRunFinished: finishCompactSession,
+    onCompactCancelled: cancelCompactSession,
   });
 
   useEffect(() => {
@@ -497,7 +510,11 @@ function ChatInterface({
           permissionMode={permissionMode}
           onModeSwitch={cyclePermissionMode}
           tokenBudget={tokenBudget}
-          onShowTokenUsage={showCostModal}
+          supportsCompact={supportsCompact}
+          isCompacting={isCompacting}
+          visibleMessageCount={visibleMessages.length}
+          totalMessages={totalMessages}
+          onCompactSession={() => handleCompactSession(claudeModel)}
           slashCommandsCount={slashCommandsCount}
           onToggleCommandMenu={handleToggleCommandMenu}
           hasInput={Boolean(input.trim())}

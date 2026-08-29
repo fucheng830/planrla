@@ -60,6 +60,16 @@ interface UseChatRealtimeHandlersArgs {
   onSilentRunCompleted?: (sessionId: string | null | undefined, success: boolean) => void;
   onWebSocketReconnect?: () => void;
   sessionStore: SessionStore;
+  /**
+   * REQ-052: live mirror of the session whose compact button is spinning.
+   * Read synchronously in the `complete`/`protocol_error` branches to decide
+   * whether the frame terminates a compact run.
+   */
+  compactingSessionRef?: MutableRefObject<string | null>;
+  /** REQ-052: a compact run reached its terminal `complete` frame. */
+  onCompactRunFinished?: (sessionId: string, result: { success: boolean; aborted: boolean }) => void;
+  /** REQ-052: a compact request was rejected pre-run (protocol_error). */
+  onCompactCancelled?: (sessionId: string) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +104,9 @@ export function useChatRealtimeHandlers({
   onSilentRunCompleted,
   onWebSocketReconnect,
   sessionStore,
+  compactingSessionRef,
+  onCompactRunFinished,
+  onCompactCancelled,
 }: UseChatRealtimeHandlersArgs) {
   // Session switches can send `chat.subscribe` before this effect has a chance
   // to rebind the websocket listener. Read the visible session id from a ref
@@ -194,6 +207,13 @@ export function useChatRealtimeHandlers({
         case 'protocol_error': {
           console.error('[Chat] Protocol error:', msg.code, msg.error);
           if (sid) {
+            // REQ-052: a rejected compact (COMPACT_UNSUPPORTED /
+            // COMPACT_EMPTY_SESSION / RUN_IN_PROGRESS) never gets a `complete`
+            // frame — reset the button's loading state here.
+            if (compactingSessionRef?.current === sid) {
+              compactingSessionRef.current = null;
+              onCompactCancelled?.(sid);
+            }
             // Surface the failure in the conversation and stop the spinner —
             // the run never started (or was rejected), so no `complete` follows.
             onSessionIdle?.(sid);
@@ -331,6 +351,19 @@ export function useChatRealtimeHandlers({
           // indicator derives from the processing map, so deleting the entry
           // hides it immediately and atomically.
           onSessionIdle?.(sid);
+
+          // REQ-052: terminal frame of a compact run — clear the button's
+          // loading state and let the consumer refresh the usage readout
+          // (the R2 mitigation fetch). The generic transcript refresh below
+          // already lands the compact summary message.
+          if (sid && !msg.silent && compactingSessionRef?.current === sid) {
+            compactingSessionRef.current = null;
+            onCompactRunFinished?.(sid, {
+              success: msg.success !== false,
+              aborted: Boolean(msg.aborted),
+            });
+          }
+
           if (sid === activeViewSessionId) {
             pendingPermissionRequestsRef.current = [];
             setPendingPermissionRequests([]);
@@ -509,6 +542,9 @@ export function useChatRealtimeHandlers({
     onSilentRunCompleted,
     onWebSocketReconnect,
     sessionStore,
+    compactingSessionRef,
+    onCompactRunFinished,
+    onCompactCancelled,
     flushBatch,
     scheduleFlush,
   ]);
