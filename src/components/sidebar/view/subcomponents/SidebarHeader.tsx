@@ -58,12 +58,68 @@ export default function SidebarHeader({
   // 桌面端（非 macOS）的 Logo 已上移到自绘标题栏（chrome/TitleBar），这里避免重复。
   const hasCustomTitleBar =
     typeof window !== 'undefined' && !!window.electronAPI && window.electronAPI.platform !== 'darwin';
+
   const searchPlaceholder = searchMode === 'sessions'
     ? t('search.sessionsPlaceholder')
     : searchMode === 'archived'
       ? t('search.archivedPlaceholder', 'Search archived sessions...')
       : t('projects.searchPlaceholder');
   const completedBadgeText = completedSessionsCount > 99 ? '99+' : String(completedSessionsCount);
+
+  const modeChips = (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onSearchModeChange('projects')}
+        aria-pressed={searchMode === 'projects'}
+        className={cn(
+          "flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium transition-all",
+          searchMode === 'projects'
+            ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+            : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+        )}
+      >
+        <Folder className="h-3 w-3" />
+        {t('search.modeProjects')}
+      </button>
+      <button
+        onClick={() => onSearchModeChange('sessions')}
+        aria-pressed={searchMode === 'sessions'}
+        className={cn(
+          "flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium transition-all",
+          searchMode === 'sessions'
+            ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+            : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+        )}
+      >
+        <span className="relative flex h-3 w-3 items-center justify-center">
+          <MessageSquare className="h-3 w-3" />
+          {completedSessionsCount > 0 && (
+            <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
+              {completedBadgeText}
+            </span>
+          )}
+        </span>
+        {t('search.modeSessions')}
+      </button>
+      <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
+        <button
+          onClick={() => onSearchModeChange('archived')}
+          aria-pressed={searchMode === 'archived'}
+          aria-label={t('search.archiveOnlyTooltip', 'Archive only')}
+          title={t('search.archiveOnlyTooltip', 'Archive only')}
+          className={cn(
+            "flex h-7 w-8 items-center justify-center rounded-lg border border-transparent text-xs font-medium transition-all",
+            searchMode === 'archived'
+              ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+              : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+          )}
+        >
+          <Archive className="h-3 w-3" />
+        </button>
+      </Tooltip>
+    </div>
+  );
+
 
   const LogoBlock = () => (
     <img
@@ -152,58 +208,8 @@ export default function SidebarHeader({
               </div>
               <ActionButtons />
             </div>
-            {/* Row 2: search mode toggle */}
-            <div className="flex rounded-lg bg-muted/50 p-0.5">
-              <button
-                onClick={() => onSearchModeChange('projects')}
-                aria-pressed={searchMode === 'projects'}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'projects'
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Folder className="h-3 w-3" />
-                {t('search.modeProjects')}
-              </button>
-              <button
-                onClick={() => onSearchModeChange('sessions')}
-                aria-pressed={searchMode === 'sessions'}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'sessions'
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <span className="relative flex h-3 w-3 items-center justify-center">
-                  <MessageSquare className="h-3 w-3" />
-                  {completedSessionsCount > 0 && (
-                    <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
-                      {completedBadgeText}
-                    </span>
-                  )}
-                </span>
-                {t('search.modeSessions')}
-              </button>
-              <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
-                <button
-                  onClick={() => onSearchModeChange('archived')}
-                  aria-pressed={searchMode === 'archived'}
-                  aria-label={t('search.archiveOnlyTooltip', 'Archive only')}
-                  title={t('search.archiveOnlyTooltip', 'Archive only')}
-                  className={cn(
-                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
-                    searchMode === 'archived'
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Archive className="h-3 w-3" />
-                </button>
-              </Tooltip>
-            </div>
+            {/* Row 2: search mode toggle (chip style) */}
+            {modeChips}
           </div>
         ) : (
           <div className={cn('flex items-center gap-2', hasCustomTitleBar ? 'justify-end' : 'justify-between')}>
@@ -253,57 +259,7 @@ export default function SidebarHeader({
         {/* Mobile search */}
         {showSearchTools && (
           <div className="mt-2.5 space-y-2">
-            <div className="flex rounded-lg bg-muted/50 p-0.5">
-              <button
-                onClick={() => onSearchModeChange('projects')}
-                aria-pressed={searchMode === 'projects'}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'projects'
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Folder className="h-3 w-3" />
-                {t('search.modeProjects')}
-              </button>
-              <button
-                onClick={() => onSearchModeChange('sessions')}
-                aria-pressed={searchMode === 'sessions'}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                  searchMode === 'sessions'
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <span className="relative flex h-3 w-3 items-center justify-center">
-                  <MessageSquare className="h-3 w-3" />
-                  {completedSessionsCount > 0 && (
-                    <span className="absolute -right-2.5 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground shadow-sm ring-1 ring-background">
-                      {completedBadgeText}
-                    </span>
-                  )}
-                </span>
-                {t('search.modeSessions')}
-              </button>
-              <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
-                <button
-                  onClick={() => onSearchModeChange('archived')}
-                  aria-pressed={searchMode === 'archived'}
-                  aria-label={t('search.archiveOnlyTooltip', 'Archive only')}
-                  title={t('search.archiveOnlyTooltip', 'Archive only')}
-                  className={cn(
-                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
-                    searchMode === 'archived'
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Archive className="h-3 w-3" />
-                </button>
-              </Tooltip>
-            </div>
+            {modeChips}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
               <Input
