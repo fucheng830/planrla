@@ -101,22 +101,25 @@ export default function SidebarHeader({
         </span>
         {t('search.modeSessions')}
       </button>
-      <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
-        <button
-          onClick={() => onSearchModeChange('archived')}
-          aria-pressed={searchMode === 'archived'}
-          aria-label={t('search.archiveOnlyTooltip', 'Archive only')}
-          title={t('search.archiveOnlyTooltip', 'Archive only')}
-          className={cn(
-            "flex h-7 w-8 items-center justify-center rounded-lg border border-transparent text-xs font-medium transition-all",
-            searchMode === 'archived'
-              ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
-              : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
-          )}
-        >
-          <Archive className="h-3 w-3" />
-        </button>
-      </Tooltip>
+      {/* Archive-only toggle sits at the far right of the chip row (REQ: 对齐右侧) */}
+      <div className="ml-auto flex items-center">
+        <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
+          <button
+            onClick={() => onSearchModeChange('archived')}
+            aria-pressed={searchMode === 'archived'}
+            aria-label={t('search.archiveOnlyTooltip', 'Archive only')}
+            title={t('search.archiveOnlyTooltip', 'Archive only')}
+            className={cn(
+              "flex h-7 w-8 items-center justify-center rounded-lg border border-transparent text-xs font-medium transition-all",
+              searchMode === 'archived'
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+            )}
+          >
+            <Archive className="h-3 w-3" />
+          </button>
+        </Tooltip>
+      </div>
     </div>
   );
 
