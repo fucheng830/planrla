@@ -9,11 +9,15 @@ type PageShellProps = {
 
 /** Scrollable workbench page container. Pages render inside the existing
  *  main-area tab system; the left rail/sidebar stays untouched. */
-export function PageShell({ children, className }: PageShellProps) {
+export function PageShell({ children, className, scroll = true }: PageShellProps & { scroll?: boolean }) {
   return (
-    <div className={cn('h-full overflow-auto bg-workbench-canvas', className)}>
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-4 lg:p-6">{children}</div>
-    </div>
+    scroll
+      ? <div className={cn('h-full overflow-auto bg-workbench-canvas', className)}>
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-4 lg:p-6">{children}</div>
+        </div>
+      : <div className={cn('h-full overflow-hidden bg-workbench-canvas', className)}>
+          <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col gap-4 p-4 lg:p-6">{children}</div>
+        </div>
   );
 }
 

@@ -322,7 +322,7 @@ function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel,
 
 function WorkflowRightRail({ schedules, agentRows }: { schedules: ReturnType<typeof useKanban>['schedules']; agentRows: AgentRow[] }) {
   return (
-    <aside className="space-y-3 xl:sticky xl:top-4 xl:self-start" aria-label="研发流程辅助信息">
+    <aside className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pb-1" aria-label="研发流程辅助信息">
       <section className="ds-panel p-3" aria-label="日历与定时任务">
         <header className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-semibold text-workbench-ink"><CalendarClock className="size-4 text-workbench-accent" aria-hidden="true" />日历与定时任务</h2><ChevronRight className="size-4 text-workbench-subtle" aria-hidden="true" /></header>
         <div className="space-y-2">{schedules.length === 0 ? <p className="rounded-md border border-dashed border-workbench-border p-3 text-center text-xs text-workbench-subtle">暂无定时任务,可在日历页创建</p> : schedules.slice(0, 3).map((schedule) => <div key={schedule.id} className="flex items-start gap-2 rounded-md border border-workbench-border bg-workbench-muted/20 p-2.5"><CircleDot className="mt-0.5 size-3.5 text-workbench-accent" aria-hidden="true" /><div className="min-w-0"><p className="truncate text-xs font-semibold text-workbench-ink">{schedule.cronExpression}</p><p className="mt-1 truncate text-[11px] text-workbench-subtle">{schedule.input || '当前项目定时任务'}</p></div><span className="ml-auto text-[10px] text-workbench-subtle">run</span></div>)}</div>
@@ -423,7 +423,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
 
 
   return (
-    <PageShell>
+    <PageShell scroll={false}>
       <PageToolbar
         title="研发流程看板"
         description={`全部项目 · 每个任务必须沿着需求设计、技术方案设计、开工、测试验证、交付推进`}
@@ -463,15 +463,15 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
         />
       )}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <main className="min-w-0">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_320px]">
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2 text-xs text-workbench-subtle"><FilterChip label="看板" active={view === 'board'} onClick={() => setView('board')} /><FilterChip label="列表" active={view === 'list'} onClick={() => setView('list')} />{liveTasks.length === 0 && !loading && <span className="rounded bg-workbench-muted px-2 py-1">还没有任务 · 点右上角「创建任务」开始</span>}</div><div className="flex items-center gap-3 text-xs text-workbench-subtle"><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-accent" />AI 运行中</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-waiting" />等负责人</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-danger" />验证失败</span><span className="flex items-center gap-1"><CircleDot className="size-3 text-workbench-success" />已交付</span></div></div>
           {error && <p className="bg-workbench-danger-soft/30 mb-3 rounded-md border border-workbench-danger/30 p-3 text-sm text-workbench-danger">加载任务失败：{error}</p>}
           {loading && <p className="mb-3 text-sm text-workbench-subtle">正在加载看板数据…</p>}
           {view === 'board' ? (
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden pb-1">
               {columns.map((column, index0) => (
-                <section key={column.name} className="ds-panel flex min-h-[520px] w-56 shrink-0 grow flex-col" aria-label={column.name}>
+                <section key={column.name} className="ds-panel flex h-full min-h-0 w-56 shrink-0 grow flex-col" aria-label={column.name}>
                   <header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header>
                   <div className="flex flex-1 flex-col space-y-2 overflow-auto p-2">
                     {column.tasks.length === 0 ? (
@@ -493,7 +493,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
               ))}
             </div>
           ) : (
-            <section className="ds-panel overflow-hidden" aria-label="任务列表">
+            <section className="ds-panel min-h-0 flex-1 overflow-auto" aria-label="任务列表">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-workbench-border bg-workbench-muted/50 text-xs text-workbench-subtle"><tr><th className="px-3 py-2 font-medium">编号</th><th className="px-3 py-2 font-medium">任务</th><th className="px-3 py-2 font-medium">阶段</th><th className="px-3 py-2 font-medium">优先级</th><th className="px-3 py-2 font-medium">状态</th></tr></thead>
                 <tbody>
@@ -512,7 +512,9 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
           )}
           <div className="mt-3 flex items-center gap-4 text-xs text-workbench-subtle"><span className="flex items-center gap-1.5"><KanbanSquare className="size-3.5" aria-hidden="true" />任务按工程阶段推进</span><span className="flex items-center gap-1.5"><List className="size-3.5" aria-hidden="true" />列表视图用于快速扫描全量任务</span></div>
         </main>
-        <WorkflowRightRail schedules={schedules} agentRows={agentRows} />
+        <div className="min-h-0 overflow-hidden">
+          <WorkflowRightRail schedules={schedules} agentRows={agentRows} />
+        </div>
       </div>
       {deliverableTask && <DeliverablePanel task={deliverableTask} onClose={() => setDeliverableTask(null)} onChanged={() => void refreshAll()} />}
       {attachmentsTask && <TaskAttachmentsModal task={attachmentsTask} onClose={() => setAttachmentsTask(null)} onChanged={() => void refreshAll()} />}
