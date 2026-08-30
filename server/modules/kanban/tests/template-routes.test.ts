@@ -140,3 +140,25 @@ test('POST /templates response includes store normalization (updatedAt, stage po
   assert.ok(res.body.template.updatedAt, 'updatedAt should be stamped');
   assert.equal(res.body.template.stages[0].position, 0);
 });
+
+// --- 截图留证:前端整体保存不能抹掉内置模板的 seedVersion 迁移标记 ---
+
+test('POST /templates preserves on-disk seedVersion when the editor saves sdlc-default without it', async () => {
+  const { app } = setup();
+  // 磁盘上先有一个带标记的 v2 内置模板(模拟启动迁移后的状态)
+  await request(app).post('/api/tasks/templates').send({ ...validTpl, id: 'sdlc-default', seedVersion: 2 });
+  // 前端编辑器不感知 seedVersion:整体保存时该字段缺失
+  const edited = JSON.parse(JSON.stringify(validTpl));
+  edited.id = 'sdlc-default';
+  delete edited.seedVersion;
+  const res = await request(app).post('/api/tasks/templates').send(edited);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.template.seedVersion, 2, 'marker must survive the save');
+});
+
+test('POST /templates does not stamp seedVersion on non-built-in templates', async () => {
+  const { app } = setup();
+  const res = await request(app).post('/api/tasks/templates').send(validTpl);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.template.seedVersion, undefined);
+});

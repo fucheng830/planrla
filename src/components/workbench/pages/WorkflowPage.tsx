@@ -161,7 +161,7 @@ function DeliverablePanel({ task, onClose, onChanged }: { task: Task; onClose: (
           {diff && (<>
             <p className="text-xs text-workbench-subtle">{diff.files.length} 个文件改动 · <span className="text-workbench-success">+{additions}</span> / <span className="text-workbench-danger">-{deletions}</span>{diff.truncated && ' (已截断)'} · worktree {diff.worktreePath}</p>
             {diff.mergedIntoRoot && <p className="mb-3 rounded border border-workbench-success/30 bg-workbench-success/10 p-3 text-xs text-workbench-success">交付物已全部合并进主仓,无未合并改动。</p>}
-            {deliveryDoc && <pre className="mb-3 whitespace-pre-wrap rounded border border-workbench-accent/30 bg-workbench-accent/5 p-3 text-xs leading-5 text-workbench-ink">{deliveryDoc}</pre>}
+            {deliveryDoc && <div className="mb-3 rounded border border-workbench-accent/30 bg-workbench-accent/5 p-3"><Markdown className="prose prose-sm max-w-none text-xs">{deliveryDoc}</Markdown></div>}
             <ul className="mt-3 space-y-1">
               {diff.files.map((f: TaskDiffResult["files"][number]) => (
                 <li key={f.path} className="flex items-center justify-between gap-2 rounded border border-workbench-border bg-workbench-surface px-2 py-1.5 text-xs">

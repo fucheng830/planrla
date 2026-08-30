@@ -11,6 +11,8 @@ import type { TemplateStore } from '@/modules/kanban/template-store.js';
 import type { ScheduleStore } from '@/modules/kanban/schedule-store.js';
 import { broadcastTaskDeleted, broadcastTaskUpdated } from '@/utils/kanban-websocket.js';
 import { decomposePrd } from '@/modules/kanban/prd-decompose.js';
+import { preserveSeedVersion } from '@/modules/kanban/sdlc-default-template.js';
+import { resolveDeliveryDocImages } from '@/modules/kanban/delivery-doc.js';
 import { createAttachmentStore } from './attachments.js';
 import { getTaskDiff } from '@/modules/kanban/review.js';
 import { acceptDeliverable } from '@/modules/kanban/acceptance.js';
@@ -98,7 +100,7 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
 
   router.post('/templates', (req, res) => {
     try {
-      const tpl = templateStore.saveTaskTemplate(req.body);
+      const tpl = templateStore.saveTaskTemplate(preserveSeedVersion(req.body, templateStore.getTaskTemplate(String(req.body?.id ?? ''))));
       res.json({ template: tpl });
     } catch (e: any) {
       const statusCode = e?.statusCode ?? 500;
@@ -283,7 +285,8 @@ export function createKanbanRouter(deps: KanbanRouterDeps): Router {
     if (!task.worktreePath) return res.status(404).json({ message: 'no worktree' });
     try {
       const content = readFileSync(join(task.worktreePath, 'DELIVERY.md'), 'utf8');
-      res.json({ content });
+      // 仓库内相对路径截图改写为绝对路径,前端才能经 local-image 代理渲染。
+      res.json({ content: resolveDeliveryDocImages(content, task.worktreePath) });
     } catch {
       res.status(404).json({ message: 'DELIVERY.md not found' });
     }
