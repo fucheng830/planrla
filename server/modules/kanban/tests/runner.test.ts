@@ -164,6 +164,43 @@ test('runAgentStage with planMode=true uses permissionMode=plan', async () => {
   db.close();
 });
 
+test('runAgentStage keeps a human-review stage in waiting_user after complete (no auto-advance)', async () => {
+  const mockSpawn = async (_cmd: string, _opts: any, writer: any) => {
+    writer.send(JSON.stringify({ kind: 'complete' }));
+  };
+  const { db, taskStore, templateStore, service, runner } = setup({ mockSpawn });
+  templateStore.saveTaskTemplate({
+    id: 't-plan',
+    name: 'T-Plan',
+    maxConcurrency: 1,
+    createdAt: NOW,
+    updatedAt: NOW,
+    stages: [
+      {
+        id: 's0',
+        position: 0,
+        snapshot: { id: 'ss0', name: 'Requirements', role: 'agent', agent: 'claude', autoAdvance: false, agentCanControlStage: false, planMode: true, promptTemplate: 'design requirements', createdAt: NOW, updatedAt: NOW },
+      },
+      {
+        id: 's1',
+        position: 1,
+        snapshot: { id: 'ss1', name: 'Next', role: 'agent', agent: 'claude', autoAdvance: true, promptTemplate: 'next', createdAt: NOW, updatedAt: NOW },
+      },
+    ],
+  });
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't-plan', input: 'build something' });
+  // 模拟真实链路:任务已 admitted 并处于首阶段 running
+  taskStore.insertStageRun({ id: 'run0', taskId: task.id, stageIndex: 0, stageName: 'Requirements', role: 'agent', status: 'running', createdAt: NOW, updatedAt: NOW });
+  taskStore.updateTaskStage(task.id, 0, 'running');
+  taskStore.setSchedulerAdmitted(task.id, true);
+  await runner.runAgentStage('r1', task.id, 0);
+  const after = taskStore.getTask(task.id)!;
+  assert.equal(after.status, 'waiting_user', '需求设计(planMode, agentCanControlStage=false)完成后必须停在原地等人工');
+  assert.equal(after.currentStageIndex, 0, '不能自动推进到下一阶段');
+  assert.equal(after.schedulerAdmitted, false, 'admit 标志必须释放,否则占用并发槽');
+  db.close();
+});
+
 test('aux flag extracted from spawnFn events (TodoWrite → hasTodos)', async () => {
   const mockSpawn = async (_cmd: string, _opts: any, writer: any) => {
     writer.send(JSON.stringify({ kind: 'tool_use', toolName: 'TodoWrite', toolInput: { todos: [] } }));
@@ -398,7 +435,7 @@ test('startReviewComment resumes the provider session and restores status', asyn
   const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'go' });
   service.next('r1', task.id);
   await runner.runAgentStage('r1', task.id, 1);
-  assert.equal(taskStore.getTask(task.id)?.status, 'queued');
+  assert.equal(taskStore.getTask(task.id)?.status, 'waiting_user', '评审型 agent 阶段完成后停在 waiting_user');
 
   // mock 同步完成:评审运行期间(readable at spawn time)是 running,完成后恢复
   const { done } = runner.startReviewComment('r1', task.id, 'please fix the edge case');
@@ -409,7 +446,7 @@ test('startReviewComment resumes the provider session and restores status', asyn
   assert.match(calls[1].cmd, /please fix the edge case/);
   // 评审 spawn 被调用时任务处于 running
   assert.equal(calls[1].statusAtCall, 'running');
-  assert.equal(taskStore.getTask(task.id)?.status, 'queued');
+  assert.equal(taskStore.getTask(task.id)?.status, 'waiting_user');
   db.close();
 });
 

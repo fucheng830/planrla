@@ -52,10 +52,13 @@ test('createTask non-auto first stage puts task in waiting_user', () => {
   assert.equal(task.status, 'waiting_user');
 });
 
-test('createTask rejects when first stage is agent role', () => {
+test('createTask accepts agent first stage and queues it for the scheduler', () => {
+  // v3 起首阶段允许 agent(需求设计 plan-mode 阶段):createTask 落 waiting_user,
+  // 由调度器 admit 后跑 agent,完成后回到 waiting_user 等人工评审。
   const { service, templateStore } = newService();
-  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'agent' }, { role: 'user' }]));
-  assert.throws(() => service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' }), /first stage must be user/i);
+  templateStore.saveTaskTemplate(makeTemplate('t1', [{ role: 'agent', autoAdvance: false }, { role: 'user' }]));
+  const task = service.createTask({ rootId: 'r1', taskTemplateId: 't1', input: 'do' });
+  assert.equal(task.status, 'waiting_user');
 });
 
 test('createTask rejects when template missing', () => {

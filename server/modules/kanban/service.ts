@@ -43,7 +43,8 @@ export function createKanbanService(deps: KanbanServiceDeps) {
     const tpl = requireTemplate(input.taskTemplateId);
     const firstStage = tpl.stages[0]?.snapshot;
     if (!firstStage) throw new AppError('template has no stages', { code: 'INVALID_TEMPLATE', statusCode: 400 });
-    if (firstStage.role !== 'user') throw new AppError('first stage must be user role', { code: 'INVALID_TEMPLATE', statusCode: 400 });
+    // v3 起首阶段可以是 agent(如需求设计 plan-mode 阶段):此时调度器 admit
+    // 后直接跑 agent,无需人工先行。只要求首阶段存在,不再强制 user 角色。
 
     const priority = input.priority ?? 'medium';
     if (!isTaskPriority(priority)) {

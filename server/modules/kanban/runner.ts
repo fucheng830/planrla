@@ -232,6 +232,11 @@ export function createRunner(deps: RunnerDeps) {
           } catch (e) {
             log(`[kanban-runner] complete-advance next failed: ${e}`);
           }
+        } else {
+          // 人工评审阶段(如需求设计 plan-mode 阶段):agent 完成后任务不能悬在
+          // running,也不能自动推进——转 waiting_user 等人评审/推进,并放掉
+          // admit 标志释放并发槽(scheduler_admitted 与 status 一并落库)。
+          taskStore.updateTaskStage(taskId, stageIndex, 'waiting_user');
         }
       },
       onError: (m) => {
