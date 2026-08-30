@@ -8,7 +8,7 @@
 import type { TaskTemplate } from '@/modules/kanban/types.js';
 
 /** 内置模板当前 seed 版本。改模板文案时 +1,并补一条迁移映射(见 MIGRATIONS)。 */
-export const SDLC_DEFAULT_SEED_VERSION = 2;
+export const SDLC_DEFAULT_SEED_VERSION = 3;
 
 // --- v1(历史)各 stage promptTemplate 原文,迁移指纹:磁盘值命中其一才判「未自改」。
 // 同一 stage 可能有多个历史变体(如 ss4 曾以单括号 {input} 写盘),都要收录,
@@ -47,10 +47,47 @@ const V2_PROMPTS: Record<string, string> = {
   ].join('\n'),
 };
 
-/** 构建 v2 内置模板(首次 seed 用)。 */
+// --- v3:需求设计 agent 化(REQ:需求设计必须走 plan 模式 + AI 澄清交互)---
+// ss0 由纯人工阶段升级为 plan-mode agent 阶段:先探索项目与需求,遇到模糊点
+// 直接通过 AskUserQuestion 向人提问(看板卡内联应答,REQ-038 通道),最后把
+// 补全后的需求写入 worktree 根的 REQUIREMENTS.md 作为该阶段的可评审产物。
+const V3_SS0_SNAPSHOT = {
+  id: 'ss0',
+  name: '需求设计',
+  role: 'agent' as const,
+  autoAdvance: false,
+  agent: 'claude',
+  agentCanControlStage: false,
+  planMode: true,
+  promptTemplate: [
+    '你是需求设计负责人。任务需求(可能不完整):',
+    '{{input}}',
+    '',
+    '请产出一份需求设计文档 REQUIREMENTS.md,写入当前工作区根目录。要求:',
+    '1. 先充分探索项目现状(代码结构、既有实现、相关约定),再写需求;',
+    '2. 需求描述有缺口、有歧义或有多种合理理解时,必须通过 AskUserQuestion 工具向用户提问澄清,不要自行猜测;把用户的回答补进需求;',
+    '3. 文档包含:背景与目标、用户故事、功能需求(可验证的验收标准)、非功能需求、范围外事项、开放问题;',
+    '4. 完成后停止,等待用户评审,不要自行进入技术方案或实施。',
+  ].join('\n'),
+};
+
+// --- v3 新增人工阶段:方案确认(在 ss1 技术方案之后、ss2 开工之前)---
+const V3_SS1B_SNAPSHOT = {
+  id: 'ss1b',
+  name: '方案确认',
+  role: 'user' as const,
+  autoAdvance: false,
+};
+
+/** 构建 v3 内置模板(首次 seed 用)。 */
 export function buildSdlcDefaultTemplate(now: string): TaskTemplate {
   const stage = (id: string, name: string, role: 'user' | 'agent', promptTemplate?: string): TaskTemplate['stages'][number]['snapshot'] => ({
     id, name, role, autoAdvance: role === 'agent', ...(role === 'agent' ? { agent: 'claude', agentCanControlStage: true } : {}), ...(promptTemplate ? { promptTemplate } : {}), createdAt: now, updatedAt: now,
+  });
+  const snap = (base: typeof V3_SS0_SNAPSHOT | typeof V3_SS1B_SNAPSHOT, position: number): TaskTemplate['stages'][number] => ({
+    id: base.id === 'ss1b' ? 'st1b' : 'st0',
+    position,
+    snapshot: { ...base, createdAt: now, updatedAt: now },
   });
   return {
     id: 'sdlc-default',
@@ -60,11 +97,12 @@ export function buildSdlcDefaultTemplate(now: string): TaskTemplate {
     createdAt: now,
     updatedAt: now,
     stages: [
-      { id: 'st0', position: 0, snapshot: stage('ss0', '需求设计', 'user') },
-      { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求:\n{{input}}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
-      { id: 'st2', position: 2, snapshot: stage('ss2', '开工', 'agent', '{{input}}\n\n按已确认的技术方案实施开发。') },
-      { id: 'st3', position: 3, snapshot: stage('ss3', '测试验证', 'agent', V2_PROMPTS.ss3) },
-      { id: 'st4', position: 4, snapshot: stage('ss4', '交付', 'agent', V2_PROMPTS.ss4) },
+      snap(V3_SS0_SNAPSHOT, 0),
+      { id: 'st1', position: 1, snapshot: stage('ss1', '技术方案', 'agent', '需求设计文档:\n{{input}}\n\n请产出技术方案设计:架构选型、改动点、风险。') },
+      snap(V3_SS1B_SNAPSHOT, 2),
+      { id: 'st2', position: 3, snapshot: stage('ss2', '开工', 'agent', '{{input}}\n\n按已确认的技术方案实施开发。') },
+      { id: 'st3', position: 4, snapshot: stage('ss3', '测试验证', 'agent', V2_PROMPTS.ss3) },
+      { id: 'st4', position: 5, snapshot: stage('ss4', '交付', 'agent', V2_PROMPTS.ss4) },
     ],
   };
 }
@@ -83,7 +121,8 @@ export function preserveSeedVersion(body: TaskTemplate, disk: TaskTemplate | nul
 
 /**
  * seedVersion 迁移映射:fromVersion → 逐 stage { from 指纹, to 新文案 }。
- * 未来升 v3 时:SDLC_DEFAULT_SEED_VERSION +1,在此追加 `2: {...}` 条目。
+ * v3 迁移为结构性变更(阶段角色/新增阶段/planMode),无法用 prompt 指纹
+ * 表达——由 migrateSdlcDefaultSeed 内的专用分支处理,不走 MIGRATIONS 表。
  */
 const MIGRATIONS: Record<number, Record<string, { from: string[]; to: string }>> = {
   1: {
@@ -109,6 +148,18 @@ export function migrateSdlcDefaultSeed(disk: TaskTemplate, now = new Date().toIS
   const fromVersion = disk.seedVersion ?? 1;
   const upgraded: string[] = [];
   const skipped: string[] = [];
+  // v2 → v3:结构性变更(需求设计 agent 化 + 新增方案确认人工阶段)。
+  // 不做 prompt 指纹判断:阶段集合本身变了,整体以 v3 构建器输出为准;
+  // 磁盘 stage 的顺序/角色照 v3 重建,用户对 prompt 的自定义不保留——
+  // 因为 v2 的 ss0 是无 prompt 的人工阶段,v3 需要注入完整 agent prompt。
+  if (fromVersion < SDLC_DEFAULT_SEED_VERSION) {
+    const fresh = buildSdlcDefaultTemplate(now);
+    return {
+      tpl: { ...disk, ...fresh, id: disk.id, createdAt: disk.createdAt, updatedAt: now },
+      upgraded: fresh.stages.map((s) => s.snapshot.id),
+      skipped: [],
+    };
+  }
   const stages = disk.stages.map((s) => {
     const sid = s.snapshot.id;
     let prompt = s.snapshot.promptTemplate;

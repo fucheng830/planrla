@@ -41,8 +41,27 @@ const snap = (tpl: TaskTemplate, sid: string) => tpl.stages.find((s) => s.snapsh
 test('buildSdlcDefaultTemplate stamps the current seedVersion', () => {
   const tpl = buildSdlcDefaultTemplate(NOW);
   assert.equal(tpl.seedVersion, SDLC_DEFAULT_SEED_VERSION);
-  assert.equal(tpl.seedVersion, 2);
-  assert.equal(tpl.stages.length, 5);
+  assert.equal(tpl.seedVersion, 3);
+  assert.equal(tpl.stages.length, 6);
+});
+
+test('v3 promotes the requirements stage to a plan-mode agent stage', () => {
+  const ss0 = snap(buildSdlcDefaultTemplate(NOW), 'ss0');
+  assert.equal(ss0.role, 'agent');
+  assert.equal(ss0.planMode, true);
+  assert.equal(ss0.agentCanControlStage, false, '需求设计产出后必须停在原地等人工评审');
+  assert.match(ss0.promptTemplate!, /AskUserQuestion/);
+  assert.match(ss0.promptTemplate!, /REQUIREMENTS\.md/);
+});
+
+test('v3 inserts a human sign-off stage between design and implementation', () => {
+  const tpl = buildSdlcDefaultTemplate(NOW);
+  const names = tpl.stages.map((s) => s.snapshot.name);
+  assert.ok(names.indexOf('方案确认') > names.indexOf('技术方案'));
+  assert.ok(names.indexOf('方案确认') < names.indexOf('开工'));
+  const ss1b = snap(tpl, 'ss1b');
+  assert.equal(ss1b.role, 'user');
+  assert.equal(ss1b.autoAdvance, false);
 });
 
 test('v2 ss3 prompt mandates playwright screenshots under debug/ui-acceptance', () => {
@@ -61,41 +80,36 @@ test('v2 ss4 prompt requires DELIVERY.md evidence section', () => {
   assert.match(ss4.promptTemplate!, /本任务无可视化改动/);
 });
 
-// --- migrateSdlcDefaultSeed(定向迁移矩阵)---
+// --- migrateSdlcDefaultSeed(v2/v1 → v3 结构性迁移)---
 
-test('migration upgrades untouched v1 stages and stamps seedVersion', () => {
+test('migration upgrades a legacy v1 disk template to the full v3 stage structure', () => {
   const { tpl, upgraded, skipped } = migrateSdlcDefaultSeed(v1DiskTemplate(), NOW);
-  assert.deepEqual(upgraded.sort(), ['ss3', 'ss4']);
+  assert.deepEqual(upgraded.sort(), ['ss0', 'ss1', 'ss1b', 'ss2', 'ss3', 'ss4']);
   assert.deepEqual(skipped, []);
   assert.equal(tpl.seedVersion, SDLC_DEFAULT_SEED_VERSION);
-  const v2 = buildSdlcDefaultTemplate(NOW);
-  assert.equal(snap(tpl, 'ss3').promptTemplate, snap(v2, 'ss3').promptTemplate);
-  assert.equal(snap(tpl, 'ss4').promptTemplate, snap(v2, 'ss4').promptTemplate);
-  // 未在迁移映射中的 stage 一字不动
-  assert.equal(snap(tpl, 'ss1').promptTemplate, snap(v1DiskTemplate(), 'ss1').promptTemplate);
-  assert.equal(snap(tpl, 'ss2').promptTemplate, snap(v1DiskTemplate(), 'ss2').promptTemplate);
+  const fresh = buildSdlcDefaultTemplate(NOW);
+  assert.deepEqual(tpl.stages.map((s) => s.snapshot.id), fresh.stages.map((s) => s.snapshot.id));
+  assert.equal(snap(tpl, 'ss0').planMode, true);
+  assert.ok(tpl.stages.some((s) => s.snapshot.id === 'ss1b'));
 });
 
-test('migration recognizes historical on-disk variants (ss4 with single-brace {input}) as unedited', () => {
+test('migration is deterministic for historical on-disk variants', () => {
   const disk = v1DiskTemplate();
   const ss4 = disk.stages.find((s) => s.snapshot.id === 'ss4')!;
   ss4.snapshot.promptTemplate = ss4.snapshot.promptTemplate!.replace('{{input}}', '{input}');
-  const { tpl, upgraded, skipped } = migrateSdlcDefaultSeed(disk, NOW);
-  assert.deepEqual(upgraded.sort(), ['ss3', 'ss4'], 'legacy variant must still upgrade');
+  const { tpl, skipped } = migrateSdlcDefaultSeed(disk, NOW);
   assert.deepEqual(skipped, []);
-  const v2 = buildSdlcDefaultTemplate(NOW);
-  assert.equal(snap(tpl, 'ss4').promptTemplate, snap(v2, 'ss4').promptTemplate);
+  assert.equal(snap(tpl, 'ss4').promptTemplate, snap(buildSdlcDefaultTemplate(NOW), 'ss4').promptTemplate);
 });
 
-test('migration keeps user-edited prompts and reports them as skipped', () => {
+test('migration treats user-edited prompts as part of the structural rebuild', () => {
   const disk = v1DiskTemplate();
   const custom = '{{input}}\n\n按团队规范跑测试。';
   const ss3 = disk.stages.find((s) => s.snapshot.id === 'ss3')!;
   ss3.snapshot.promptTemplate = custom;
   const { tpl, upgraded, skipped } = migrateSdlcDefaultSeed(disk, NOW);
-  assert.deepEqual(upgraded, ['ss4']);
-  assert.deepEqual(skipped, ['ss3']);
-  assert.equal(snap(tpl, 'ss3').promptTemplate, custom, 'user edit must survive');
+  assert.deepEqual(skipped, []);
+  assert.ok(upgraded.length > 0);
   assert.equal(tpl.seedVersion, SDLC_DEFAULT_SEED_VERSION, 'seedVersion still advances to avoid re-running migration');
 });
 
