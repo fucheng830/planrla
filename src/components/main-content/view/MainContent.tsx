@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ChatInterface from '../../chat/view/ChatInterface';
+import { ChatInterface } from '@planrla/chat';
 import ExtensionPanel from '../../extension-panel/view/ExtensionPanel';
 import { useExtensionPanel } from '../../extension-panel/hooks/useExtensionPanel';
 import GitRepositoryModal from '../../git-panel/view/modals/GitRepositoryModal';

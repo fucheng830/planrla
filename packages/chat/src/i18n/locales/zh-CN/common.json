@@ -1,0 +1,460 @@
+{
+  "buttons": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "create": "创建",
+    "edit": "编辑",
+    "close": "关闭",
+    "confirm": "确认",
+    "submit": "提交",
+    "retry": "重试",
+    "refresh": "刷新",
+    "search": "搜索",
+    "clear": "清除",
+    "copy": "复制",
+    "download": "下载",
+    "upload": "上传",
+    "browse": "浏览"
+  },
+  "tabs": {
+    "chat": "聊天",
+    "shell": "终端",
+    "files": "文件",
+    "git": "源代码管理",
+    "browser": "浏览器",
+    "kanban": "看板",
+    "cron": "定时",
+    "overview": "项目总览",
+    "inbox": "消息盒子",
+    "workflow": "研发流程",
+    "schedule": "日程任务"
+  },
+  "compaction": {
+    "cardTitle": "上下文已压缩",
+    "expandSummary": "展开摘要",
+    "collapseSummary": "收起摘要",
+    "viewHistory": "查看更早 {{count}} 条历史",
+    "viewHistoryNoCount": "查看历史消息",
+    "banner": "上下文已压缩，已切换到压缩后视图",
+    "panelTitle": "历史消息",
+    "panelEyebrow": "已归档",
+    "panelSubtitle": "最后一个压缩边界之前的消息",
+    "archivedCount": "{{count}} 条消息已归档",
+    "epochBadge": "纪元 {{epoch}}",
+    "loading": "加载中…",
+    "loadFailed": "历史消息加载失败",
+    "empty": "该会话没有已压缩的历史",
+    "noMessagesInEpoch": "该纪元没有消息",
+    "loadEarlier": "加载更早"
+  },
+  "extensionPanel": {
+    "tabs": {
+      "markdown": "Markdown",
+      "review": "代码审查",
+      "browser": "内置浏览器"
+    }
+  },
+  "status": {
+    "loading": "加载中...",
+    "success": "成功",
+    "error": "错误",
+    "failed": "失败",
+    "pending": "待处理",
+    "completed": "已完成",
+    "inProgress": "进行中"
+  },
+  "messages": {
+    "savedSuccessfully": "保存成功",
+    "deletedSuccessfully": "删除成功",
+    "updatedSuccessfully": "更新成功",
+    "operationFailed": "操作失败",
+    "networkError": "网络错误，请检查您的连接。",
+    "unauthorized": "未授权，请登录。",
+    "notFound": "未找到",
+    "invalidInput": "输入无效",
+    "requiredField": "此字段为必填项",
+    "unknownError": "发生未知错误"
+  },
+  "navigation": {
+    "settings": "设置",
+    "home": "首页",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "logout": "退出登录",
+    "openMenu": "打开菜单"
+  },
+  "errors": {
+    "boundaryTitle": "出现问题",
+    "boundaryDescription": "加载聊天界面时发生错误。",
+    "details": "错误详情"
+  },
+  "imageViewer": {
+    "loading": "正在加载图片...",
+    "loadFailed": "无法加载图片"
+  },
+  "common": {
+    "language": "语言",
+    "theme": "主题",
+    "darkMode": "深色模式",
+    "lightMode": "浅色模式",
+    "name": "名称",
+    "description": "描述",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "optional": "可选",
+    "version": "版本",
+    "select": "选择",
+    "selectAll": "全选",
+    "deselectAll": "取消全选"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前",
+    "yesterday": "昨天"
+  },
+  "fileOperations": {
+    "newFile": "新建文件",
+    "newFolder": "新建文件夹",
+    "rename": "重命名",
+    "move": "移动",
+    "copyPath": "复制路径",
+    "openInEditor": "在编辑器中打开"
+  },
+  "mainContent": {
+    "loading": "正在加载 Planrla",
+    "settingUpWorkspace": "正在设置您的工作空间...",
+    "chooseProject": "选择您的项目",
+    "selectProjectDescription": "从侧边栏选择一个项目以开始使用 Claude 进行编程。每个项目包含您的聊天会话和文件历史。",
+    "tip": "提示",
+    "createProjectMobile": "点击上方的菜单按钮以访问项目",
+    "createProjectDesktop": "点击侧边栏中的文件夹图标以创建新项目",
+    "newSession": "新会话",
+    "untitledSession": "未命名会话",
+    "project": "项目",
+    "projectFiles": "项目文件"
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "backToAll": "返回全部",
+    "backspaceHint": "按退格键返回上一级",
+    "searchAll": "输入内容以搜索…",
+    "searchPage": "搜索{{page}}…",
+    "noResults": "没有结果。",
+    "startNewChat": "新建会话",
+    "selectProjectFirst": "请先选择项目",
+    "openSettings": "打开设置",
+    "toggleTheme": "切换主题",
+    "settingsItem": "设置：{{label}}",
+    "switchToBranch": "切换到：{{branch}}",
+    "pages": {
+      "actions": "操作",
+      "files": "文件",
+      "sessions": "会话",
+      "commits": "提交",
+      "branches": "分支"
+    },
+    "groups": {
+      "actions": "操作",
+      "navigate": "导航",
+      "git": "Git",
+      "settings": "设置",
+      "sessions": "会话",
+      "files": "文件",
+      "commits": "提交",
+      "branches": "分支"
+    },
+    "nav": {
+      "chat": "打开聊天",
+      "files": "打开文件",
+      "shell": "打开终端",
+      "git": "打开源码管理"
+    },
+    "git": {
+      "fetch": "Git：获取",
+      "pull": "Git：拉取",
+      "push": "Git：推送"
+    },
+    "settingsTabs": {
+      "agents": "智能体",
+      "appearance": "外观",
+      "git": "Git",
+      "api": "API 和令牌",
+      "license": "许可证",
+      "browser": "浏览器",
+      "notifications": "通知",
+      "plugins": "插件",
+      "about": "关于"
+    },
+    "browseAll": {
+      "sessions": "浏览全部会话（{{count}}）",
+      "files": "浏览全部文件（{{count}}）",
+      "commits": "浏览全部提交（{{count}}）",
+      "branches": "浏览全部分支（{{count}}）"
+    }
+  },
+  "fileTree": {
+    "loading": "正在加载文件...",
+    "files": "文件",
+    "simpleView": "简单视图",
+    "compactView": "紧凑视图",
+    "detailedView": "详细视图",
+    "searchPlaceholder": "搜索文件和文件夹...",
+    "clearSearch": "清除搜索",
+    "name": "名称",
+    "size": "大小",
+    "modified": "修改时间",
+    "permissions": "权限",
+    "noFilesFound": "未找到文件",
+    "checkProjectPath": "检查项目路径是否可访问",
+    "noMatchesFound": "未找到匹配项",
+    "tryDifferentSearch": "尝试不同的搜索词或清除搜索",
+    "justNow": "刚刚",
+    "minAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前",
+    "newFile": "新建文件（Command+N）",
+    "newFolder": "新建文件夹（Command+Shift+N）",
+    "refresh": "刷新",
+    "collapseAll": "全部折叠",
+    "context": {
+      "rename": "重命名",
+      "delete": "删除",
+      "copyPath": "复制路径",
+      "download": "下载",
+      "newFile": "新建文件",
+      "newFolder": "新建文件夹",
+      "refresh": "刷新",
+      "menuLabel": "文件上下文菜单",
+      "loading": "加载中..."
+    }
+  },
+  "projectWizard": {
+    "title": "创建新项目",
+    "steps": {
+      "type": "类型",
+      "configure": "配置",
+      "confirm": "确认"
+    },
+    "step1": {
+      "question": "您已经有工作区，还是想创建一个新的工作区？",
+      "existing": {
+        "title": "现有工作区",
+        "description": "我的服务器上已经有工作区，只需要将其添加到项目列表中"
+      },
+      "new": {
+        "title": "新建工作区",
+        "description": "创建一个新工作区，可选择从 GitHub 仓库克隆"
+      }
+    },
+    "step2": {
+      "existingPath": "工作区路径",
+      "newPath": "工作区路径",
+      "existingPlaceholder": "/path/to/existing/workspace",
+      "newPlaceholder": "/path/to/new/workspace",
+      "existingHelp": "您现有工作区目录的完整路径",
+      "newHelp": "工作区目录的完整路径",
+      "githubUrl": "GitHub 地址（可选）",
+      "githubPlaceholder": "https://github.com/username/repository",
+      "githubHelp": "可选：提供 GitHub 地址以克隆仓库",
+      "githubAuth": "GitHub 身份验证（可选）",
+      "githubAuthHelp": "仅私有仓库需要。公共仓库无需身份验证即可克隆。",
+      "loadingTokens": "正在加载已保存的令牌...",
+      "storedToken": "已保存的令牌",
+      "newToken": "新令牌",
+      "nonePublic": "无（公共）",
+      "selectToken": "选择令牌",
+      "selectTokenPlaceholder": "-- 选择令牌 --",
+      "tokenPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "tokenHelp": "此令牌仅用于此操作",
+      "publicRepoInfo": "公共仓库不需要身份验证。如果克隆公共仓库，可以跳过提供令牌。",
+      "noTokensHelp": "没有可用的已保存令牌。您可以在 设置 → API 密钥 中添加令牌以便重复使用。",
+      "optionalTokenPublic": "GitHub 令牌（公共仓库可选）",
+      "tokenPublicPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx（公共仓库可留空）"
+    },
+    "folderBrowser": {
+      "title": "选择文件夹",
+      "browseFolders": "浏览文件夹",
+      "showHidden": "显示隐藏文件夹",
+      "hideHidden": "隐藏隐藏文件夹",
+      "createNewFolder": "新建文件夹",
+      "newFolderPlaceholder": "新文件夹名称",
+      "loadFailed": "加载文件夹失败",
+      "noSubfolders": "未找到子文件夹",
+      "select": "选择",
+      "useThisFolder": "使用此文件夹"
+    },
+    "step3": {
+      "reviewConfig": "查看您的配置",
+      "existingWorkspace": "现有工作区",
+      "newWorkspace": "新建工作区",
+      "path": "路径：",
+      "cloneFrom": "克隆自：",
+      "authentication": "身份验证：",
+      "usingStoredToken": "使用已保存的令牌：",
+      "usingProvidedToken": "使用提供的令牌",
+      "noAuthentication": "无身份验证",
+      "sshKey": "SSH 密钥",
+      "existingInfo": "工作区将被添加到您的项目列表中，并可用于 Claude/Cursor 会话。",
+      "newWithClone": "仓库将从此文件夹克隆。",
+      "newEmpty": "工作区将被添加到您的项目列表中，并可用于 Claude/Cursor 会话。",
+      "cloningRepository": "正在克隆仓库..."
+    },
+    "buttons": {
+      "cancel": "取消",
+      "back": "返回",
+      "next": "下一步",
+      "createProject": "创建项目",
+      "creating": "创建中...",
+      "cloning": "正在克隆..."
+    },
+    "errors": {
+      "selectType": "请选择您已有现有工作区还是想创建新工作区",
+      "providePath": "请提供工作区路径",
+      "failedToCreate": "创建工作区失败",
+      "failedToCreateFolder": "创建文件夹失败"
+    }
+  },
+  "notifications": {
+    "genericTool": "工具",
+    "codes": {
+      "generic": {
+        "info": {
+          "title": "通知"
+        }
+      },
+      "permission": {
+        "required": {
+          "title": "需要处理",
+          "body": "{{toolName}} 正在等待你的决策。"
+        }
+      },
+      "run": {
+        "stopped": {
+          "title": "运行已停止",
+          "body": "原因：{{reason}}"
+        },
+        "failed": {
+          "title": "运行失败"
+        }
+      },
+      "agent": {
+        "notification": {
+          "title": "智能体通知"
+        }
+      }
+    }
+  },
+  "versionUpdate": {
+    "title": "有可用更新",
+    "newVersionReady": "新版本已准备就绪",
+    "currentVersion": "当前版本",
+    "latestVersion": "最新版本",
+    "whatsNew": "新内容：",
+    "viewFullRelease": "查看完整发布",
+    "updateProgress": "更新进度：",
+    "manualUpgrade": "手动升级：",
+    "npmUpgradeCommand": "npm install -g planrla@latest",
+    "manualUpgradeHint": "或点击'立即更新'以自动运行更新。",
+    "updateCompleted": "更新成功完成！",
+    "restartServer": "请重启服务器以应用更改。",
+    "updateFailed": "更新失败",
+    "buttons": {
+      "close": "关闭",
+      "later": "稍后",
+      "copyCommand": "复制命令",
+      "updateNow": "立即更新",
+      "updating": "更新中..."
+    },
+    "ariaLabels": {
+      "closeModal": "关闭版本升级模态框",
+      "showSidebar": "显示侧边栏",
+      "settings": "设置",
+      "updateAvailable": "有可用更新",
+      "closeSidebar": "关闭侧边栏"
+    }
+  },
+  "shell": {
+    "completed": "（已完成）",
+    "noProjectTitle": "未选择项目",
+    "noProjectDescription": "需要先选择项目才能打开终端"
+  },
+  "gitPanel": {
+    "selectProject": "选择项目后查看源码管理",
+    "noBranches": "没有找到分支",
+    "noCommitsTitle": "还没有提交",
+    "noCommitsDescription": "这个仓库还没有任何提交。创建首次提交后即可开始跟踪更改。",
+    "creatingInitialCommit": "正在创建首次提交…",
+    "createInitialCommit": "创建首次提交",
+    "noChanges": "没有检测到更改",
+    "staged": "已暂存（{{count}}）",
+    "unstageAll": "全部取消暂存",
+    "noStagedFiles": "没有已暂存文件",
+    "changes": "更改（{{count}}）",
+    "stageAll": "全部暂存",
+    "allChangesStaged": "所有更改已暂存",
+    "commitFiles": "提交 {{count}} 个文件",
+    "commitChanges": "提交更改",
+    "commitPlaceholder": "提交说明（控制键+回车提交）",
+    "generateCommitMessage": "生成提交说明",
+    "filesSelected": "已选择 {{count}} 个文件",
+    "commit": "提交",
+    "committing": "提交中…",
+    "commitConfirm": "确定提交 {{count}} 个文件，并使用说明“{{message}}”吗？",
+    "newBranchTitle": "创建新分支",
+    "branchName": "分支名称",
+    "newBranchPlaceholder": "feature/new-feature",
+    "newBranchDescription": "将从当前分支（{{branch}}）创建新分支",
+    "cancel": "取消",
+    "creatingBranch": "创建中…",
+    "createBranch": "创建分支",
+    "tip": "提示：",
+    "gitInitHint": "在项目目录中运行 {{command}} 以初始化 Git 源码管理。",
+    "fileStatusGuide": "文件状态说明",
+    "statusModified": "已修改",
+    "statusAdded": "已新增",
+    "statusDeleted": "已删除",
+    "statusUntracked": "未跟踪",
+    "noCommitsFound": "没有找到提交",
+    "createNewBranch": "创建新分支",
+    "upToDate": "已是最新",
+    "revertLatestLocalCommit": "撤销最新本地提交",
+    "refreshStatus": "刷新 Git 状态",
+    "dismissError": "关闭错误",
+    "author": "作者",
+    "date": "日期",
+    "files": "文件",
+    "added": "新增",
+    "removed": "删除",
+    "expandDiff": "展开差异",
+    "collapseDiff": "折叠差异",
+    "openFile": "打开文件",
+    "ahead": "领先 {{count}}",
+    "behind": "落后 {{count}}",
+    "pullConfirm": "确定从 {{remote}} 拉取 {{count}} 个提交吗？",
+    "pushConfirm": "确定向 {{remote}} 推送 {{count}} 个提交吗？",
+    "publishConfirm": "确定将分支“{{branch}}”发布到 {{remote}} 吗？",
+    "publishTitle": "发布“{{branch}}”到 {{remote}}",
+    "publishing": "发布中…",
+    "publish": "发布",
+    "fetchTitle": "从 {{remote}} 获取",
+    "fetching": "获取中…",
+    "fetch": "获取",
+    "pullTitle": "从 {{remote}} 拉取 {{count}} 个提交",
+    "pulling": "拉取中…",
+    "pull": "拉取 {{count}}",
+    "pushTitle": "向 {{remote}} 推送 {{count}} 个提交",
+    "pushing": "推送中…",
+    "push": "推送 {{count}}",
+    "deleteUntrackedConfirm": "删除未跟踪文件“{{file}}”吗？此操作无法撤销。",
+    "discardChangesConfirm": "丢弃“{{file}}”的所有更改吗？此操作无法撤销。",
+    "deleteUntrackedFile": "删除未跟踪文件",
+    "discardChanges": "丢弃更改",
+    "delete": "删除",
+    "discard": "丢弃",
+    "repositoryModalTitle": "Git 仓库"
+  }
+}

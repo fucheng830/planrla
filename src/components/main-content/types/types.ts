@@ -8,8 +8,8 @@ import type {
   MarkSessionProcessing,
   SessionActivityMap,
 } from '../../../hooks/useSessionProtection';
-import type { SessionEstablishedContext, SessionNavigationOptions } from '../../chat/types/types';
-import type { PickerCandidateSession } from '../../chat/view/subcomponents/SessionReferencePicker';
+import type { SessionEstablishedContext, SessionNavigationOptions } from '@planrla/chat';
+import type { PickerCandidateSession } from '@planrla/chat';
 import type { SettingsMainTab } from '../../settings/types/types';
 
 export type MainContentProps = {

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { PendingPermissionRequest } from '../components/chat/types/types';
+import type { PendingPermissionRequest } from '@planrla/chat';
 
 export interface PermissionContextValue {
   pendingPermissionRequests: PendingPermissionRequest[];

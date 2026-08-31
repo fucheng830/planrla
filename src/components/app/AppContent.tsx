@@ -17,8 +17,8 @@ import { useDeviceSettings } from '../../hooks/useDeviceSettings';
 import { useSessionProtection } from '../../hooks/useSessionProtection';
 import { useProjectsState } from '../../hooks/useProjectsState';
 import { getAllSessions } from '../sidebar/utils/utils';
-import type { PickerCandidateSession } from '../chat/view/subcomponents/SessionReferencePicker';
-import { toCandidateSession } from '../chat/utils/candidateSession';
+import type { PickerCandidateSession } from '@planrla/chat';
+import { toCandidateSession } from '@planrla/chat';
 import { api } from '../../utils/api';
 
 type RunningSessionApiItem = {

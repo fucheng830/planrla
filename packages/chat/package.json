@@ -1,0 +1,37 @@
+{
+  "name": "@planrla/chat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "planrla 对话 UI 独立包：消息渲染、工具卡、流式输出、权限审批。配置经 props 注入，可嵌入任意宿主应用。",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "audit": "node ../../scripts/chat-package-audit.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  },
+  "dependencies": {
+    "react-i18next": "^16.5.3",
+    "i18next": "^25.7.4",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "lucide-react": "^0.515.0",
+    "virtua": "^3.14.5",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "rehype-katex": "^7.0.1",
+    "react-dropzone": "^14.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0",
+    "cmdk": "^1.1.1"
+  }
+}

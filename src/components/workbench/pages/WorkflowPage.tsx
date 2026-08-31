@@ -23,7 +23,7 @@ import { useWebSocket } from '../../../contexts/WebSocketContext';
 import type { PendingAskUserQuestion, Task, TaskAttachment, TaskPriority, TaskDiffResult } from '../../kanban/types';
 import type { Project } from '../../../types/app';
 import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
-import { Markdown } from '../../chat/view/subcomponents/Markdown';
+import { Markdown } from '@planrla/chat';
 import { TaskDetailModal } from '../../kanban/TaskDetailModal';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';

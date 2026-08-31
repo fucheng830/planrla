@@ -1,0 +1,174 @@
+{
+  "blocked": {
+    "badge": "blocked by {{ids}}"
+  },
+  "banner": {
+    "nextTask": "Next up"
+  },
+  "expand": {
+    "button": "Expand",
+    "confirm": "Confirm expand?",
+    "running": "Expanding…",
+    "done": "Expanded into {{ids}}",
+    "hint": "Decompose this task into follow-up tasks (replaces the original)"
+  },
+  "events": {
+    "task_created": "Task created",
+    "stage_advanced": "Stage advanced",
+    "stage_returned": "Returned to stage",
+    "stage_jumped": "Jumped to stage",
+    "task_completed": "Task completed",
+    "task_cancelled": "Task cancelled",
+    "task_paused": "Task paused",
+    "task_resumed": "Task resumed",
+    "task_failed": "Task failed",
+    "task_expanded": "Expanded into subtasks",
+    "task_expanded_from": "Created by expansion",
+    "agent_stage_started": "Agent started",
+    "agent_stage_completed": "Agent finished",
+    "agent_stage_failed": "Agent failed",
+    "review_submitted": "Review comment sent"
+  },
+  "status": {
+    "running": "Running",
+    "queued": "Queued",
+    "waiting": "Waiting",
+    "paused": "Paused",
+    "success": "Done",
+    "fail": "Failed",
+    "cancelled": "Cancelled",
+    "pending": "Pending"
+  },
+  "role": {
+    "user": "user",
+    "agent": "agent"
+  },
+  "aux": {
+    "ask": "Awaiting your answer",
+    "plan": "Has plan",
+    "todo": "Has TODOs",
+    "task": "Has subtasks",
+    "asking": "Awaiting"
+  },
+  "panel": {
+    "emptyProject": "Select a project to view its kanban board.",
+    "newTask": "New Task",
+    "templates": "Templates",
+    "schedules": "Schedules",
+    "parsePrd": "PRD → Tasks",
+    "refresh": "Refresh",
+    "loading": "Loading…"
+  },
+  "board": {
+    "emptyTasks": "No tasks yet. Create one from a template.",
+    "emptyColumn": "No tasks",
+    "templateNotFound": "Template not found."
+  },
+  "detail": {
+    "task": "Task",
+    "stageLabel": "Stage {{i}} · {{name}} ({{role}}/{{agent}})",
+    "stageLabelNoAgent": "Stage {{i}} · {{name}} ({{role}})",
+    "flags": "Flags",
+    "worktree": "Worktree",
+    "input": "Input",
+    "prev": "Prev",
+    "next": "Next",
+    "pause": "Pause",
+    "resume": "Resume",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete task #{{number}}? This removes the task and its history.",
+    "jumpToStage": "Jump to stage",
+    "askedAgo": "agent asked · {{n}} min ago"
+  },
+  "answer": {
+    "title": "Agent is waiting for your decision",
+    "submit": "Submit answer",
+    "submitting": "Submitting…",
+    "noOptions": "(agent provided no options — answer in its session instead)",
+    "cta": "Agent is waiting → click to handle"
+  },
+  "create": {
+    "title": "New Task",
+    "template": "Template",
+    "noTemplates": "No templates. Create one in the Templates editor first.",
+    "input": "Input (passed to the task as {{input}})",
+    "inputPlaceholder": "e.g. implement feature X",
+    "inputHint": "Injected into the prompt as {{input}}",
+    "priority": "Priority",
+    "dependencies": "Depends on (starts only after these succeed)",
+    "dependenciesHint": "The task stays queued until all selected tasks complete successfully.",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "prd": {
+    "title": "Generate tasks from PRD",
+    "provider": "Provider",
+    "input": "PRD content",
+    "placeholder": "Paste your product requirements document here...",
+    "hint": "The provider decomposes the PRD into ordered tasks with dependencies, created from the selected template.",
+    "submit": "Generate tasks",
+    "submitting": "Generating (may take a minute)..."
+  },
+  "timeline": {
+    "title": "Stage history",
+    "events": "Events",
+    "loading": "Loading...",
+    "empty": "No stage history yet."
+  },
+  "review": {
+    "showDiff": "View changes",
+    "hideDiff": "Hide changes",
+    "diffLoading": "Loading diff...",
+    "diffEmpty": "No changes in this worktree yet.",
+    "placeholder": "Review feedback for the agent (resumes its session)...",
+    "submit": "Send feedback",
+    "submitting": "Sending...",
+    "sent": "Sent — the agent is working on it."
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "editor": {
+    "title": "Task Templates",
+    "newTemplate": "New Template",
+    "backToBoard": "← Back to board",
+    "stagesN": "{{count}} stages · concurrency {{n}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editing": "Editing: {{name}}",
+    "planMode": "plan mode",
+    "autoAdvance": "auto-advance",
+    "selfDrive": "self-drive (MCP)",
+    "addUserStage": "+ User stage",
+    "addAgentStage": "+ Agent stage",
+    "save": "Save",
+    "cancel": "Cancel",
+    "noTemplates": "No templates yet.",
+    "promptPlaceholder": "Prompt template. Use {{input}}, {{task_id}}, {{task_number}}, {{stage_name}}…",
+    "maxConcurrency": "Max concurrency"
+  },
+  "schedules": {
+    "title": "Schedules",
+    "newSchedule": "New Schedule",
+    "noSchedules": "No schedules yet.",
+    "edit": "Edit",
+    "disabled": "disabled",
+    "templateMissing": "(template missing)",
+    "listHint": "{{template}} · input: {{input}}",
+    "cron": "Cron expression",
+    "cronPlaceholder": "0 9 * * * (daily 9am) or */5 * * * *",
+    "cronHint": "Standard 5-field: minute hour day month weekday",
+    "cronError": "Enter 5 fields: minute hour day month weekday (e.g. 0 9 * * *)",
+    "template": "Template",
+    "noTemplates": "No templates. Create one in the Templates editor first.",
+    "input": "Input",
+    "inputPlaceholder": "e.g. daily report",
+    "enabled": "Enabled",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

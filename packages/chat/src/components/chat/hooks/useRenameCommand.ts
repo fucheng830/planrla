@@ -13,7 +13,7 @@
  * the backend history filter via `shared/renameCommand` so the synthetic
  * silent-rename user message can be detected identically on reload.
  */
-import { SILENT_RENAME_HINT_PREFIX } from '../../../../shared/renameCommand';
+import { SILENT_RENAME_HINT_PREFIX } from '../../../shared/renameCommand';
 
 export function parseRenameCommand(rawInput: string): { explicitTitle?: string } {
   const trimmed = rawInput.trim();

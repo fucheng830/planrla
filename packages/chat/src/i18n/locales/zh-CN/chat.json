@@ -1,0 +1,421 @@
+{
+  "codeBlock": {
+    "copy": "复制",
+    "copied": "已复制",
+    "copyCode": "复制代码"
+  },
+  "copyMessage": {
+    "copy": "复制消息",
+    "copied": "消息已复制",
+    "selectFormat": "选择复制格式",
+    "copyAsMarkdown": "复制为 Markdown",
+    "copyAsText": "复制为纯文本"
+  },
+  "messageActions": {
+    "forkFromHere": "从此处分支新对话"
+  },
+  "messageTypes": {
+    "user": "U",
+    "error": "错误",
+    "tool": "工具",
+    "claude": "Claude",
+    "cursor": "Cursor",
+    "codex": "Codex",
+    "gemini": "Gemini",
+    "opencode": "OpenCode",
+    "kimi": "Kimi Code"
+  },
+  "tools": {
+    "settings": "工具设置",
+    "error": "工具错误",
+    "result": "工具结果",
+    "viewParams": "查看输入参数",
+    "viewRawParams": "查看原始参数",
+    "viewDiff": "查看编辑差异",
+    "creatingFile": "创建新文件：",
+    "updatingTodo": "更新待办事项",
+    "read": "读取",
+    "readFile": "读取文件",
+    "updateTodo": "更新待办列表",
+    "readTodo": "读取待办列表",
+    "searchResults": "结果",
+    "rawParams": "原始参数"
+  },
+  "commandMenu": {
+    "noCommands": "没有可用命令",
+    "availableCommands": "可用命令"
+  },
+  "subagent": {
+    "agent": "智能体",
+    "runningTask": "正在执行任务",
+    "title": "子智能体 / {{type}}：{{description}}",
+    "currently": "当前：",
+    "completed": "已完成（{{count}} 个工具）",
+    "viewHistory": "查看工具历史（{{count}}）",
+    "error": "（错误）"
+  },
+  "search": {
+    "found": "找到 {{count}} 个{{type}}",
+    "file": "文件",
+    "files": "文件",
+    "pattern": "模式：",
+    "in": "在："
+  },
+  "fileOperations": {
+    "updated": "文件更新成功",
+    "created": "文件创建成功",
+    "written": "文件写入成功",
+    "diff": "差异",
+    "newFile": "新文件",
+    "viewContent": "查看文件内容",
+    "viewFullOutput": "查看完整输出（{{count}} 个字符）",
+    "contentDisplayed": "文件内容显示在上面的差异视图中"
+  },
+  "interactive": {
+    "title": "交互式提示",
+    "needsInput": "Claude 需要你的输入",
+    "selectAll": "可多选",
+    "other": "其他...",
+    "answerPlaceholder": "输入你的回答...",
+    "skip": "跳过",
+    "skipAll": "全部跳过",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交",
+    "waiting": "等待您在 CLI 中响应",
+    "instruction": "请在 Claude 运行的终端中选择一个选项。",
+    "selectedOption": "✓ Claude 选择了选项 {{number}}",
+    "instructionDetail": "在 CLI 中，您可以使用方向键或输入数字来交互式地选择此选项。"
+  },
+  "thinking": {
+    "title": "思考中...",
+    "emoji": "💭 思考中...",
+    "streaming": "思考中...",
+    "fewSeconds": "思考了几秒",
+    "duration": "思考了 {{count}} 秒"
+  },
+  "json": {
+    "response": "JSON 响应"
+  },
+  "permissions": {
+    "grant": "授予 {{tool}} 权限",
+    "added": "权限已添加",
+    "addTo": "将 {{entry}} 添加到允许的工具。",
+    "retry": "权限已保存。重试请求以使用该工具。",
+    "error": "无法更新权限。请重试。",
+    "openSettings": "打开设置",
+    "required": "需要确认权限",
+    "toolLabel": "工具：",
+    "allowRule": "允许规则：",
+    "viewToolInput": "查看工具输入",
+    "deny": "拒绝",
+    "allowSaved": "允许（已保存）",
+    "allowRemember": "允许并记住",
+    "allowOnce": "仅允许一次"
+  },
+  "tokenUsage": {
+    "title": "已使用 {{value}} 个令牌",
+    "show": "显示令牌用量",
+    "tokens": "令牌",
+    "popoverTitle": "上下文用量",
+    "usedTokens": "已用令牌",
+    "inputTokens": "输入",
+    "outputTokens": "输出",
+    "contextShare": "上下文窗口占用",
+    "visibleMessages": "可见消息",
+    "compactHint": "点击按钮即可压缩上下文",
+    "compacting": "正在压缩上下文…",
+    "compactUnsupported": "当前提供程序暂不支持压缩",
+    "compactEmpty": "暂无可压缩的会话内容",
+    "compress": "压缩上下文"
+  },
+  "todo": {
+    "updated": "待办列表已成功更新",
+    "current": "当前待办列表"
+  },
+  "plan": {
+    "viewPlan": "📋 查看实施计划",
+    "title": "实施计划",
+    "toggle": "展开或收起计划",
+    "generating": "正在生成计划...",
+    "revise": "修改",
+    "build": "开始执行"
+  },
+  "diffComments": {
+    "copyAsMessage": "复制评论为消息",
+    "copied": "已复制到输入框",
+    "commentTitle": "评论此行",
+    "placeholder": "对此行的评论…",
+    "save": "保存",
+    "delete": "删除"
+  },
+  "usageLimit": {
+    "resetAt": "Claude 使用限制已达到。您的限制将在 **{{time}} {{timezone}}** - {{date}} 重置"
+  },
+  "codex": {
+    "permissionMode": "权限模式",
+    "modes": {
+      "default": "默认模式",
+      "auto": "自动模式",
+      "acceptEdits": "编辑模式",
+      "bypassPermissions": "无限制模式",
+      "plan": "计划模式"
+    },
+    "descriptions": {
+      "default": "只有受信任的命令（ls、cat、grep、git status 等）自动运行。其他命令将被跳过。可以写入工作区。",
+      "auto": "模型分类器会针对每次工具调用决定允许或拒绝。无需手动处理，但比绕过确认更安全，仍可能出现拒绝。",
+      "acceptEdits": "工作区内的所有命令自动运行。完全自动模式，具有沙盒执行功能。",
+      "bypassPermissions": "完全的系统访问，无限制。所有命令自动运行，具有完整的磁盘和网络访问权限。请谨慎使用。",
+      "plan": "计划模式 - 不执行任何命令"
+    },
+    "technicalDetails": "技术细节"
+  },
+  "input": {
+    "placeholder": "输入 / 调用命令，@ 选择文件，或向 {{provider}} 提问...",
+    "placeholderDefault": "输入您的消息...",
+    "disabled": "输入已禁用",
+    "attachFiles": "附加文件",
+    "attachImages": "附加图片",
+    "removeImage": "移除图片",
+    "dropImagesHere": "将图片拖放到这里",
+    "send": "发送",
+    "stop": "停止",
+    "hintText": {
+      "ctrlEnter": "控制键+回车发送 • 上档键+回车换行 • 制表键切换模式 • / 斜杠命令",
+      "enter": "回车发送 • 上档键+回车换行 • 制表键切换模式 • / 斜杠命令"
+    },
+    "clickToChangeMode": "点击更改权限模式（或在输入框中按制表键）",
+    "showAllCommands": "显示所有命令",
+    "clearInput": "清空输入",
+    "scrollToBottom": "滚动到底部"
+  },
+  "providerSelection": {
+    "title": "选择您的智能助手",
+    "description": "选择一个服务以开始新对话",
+    "modelSelector": "模型选择器",
+    "selectModel": "选择模型",
+    "clickToChange": "点击切换模型",
+    "searchModels": "搜索模型...",
+    "noModelsFound": "没有找到模型。",
+    "loadingModels": "正在加载模型…",
+    "providerInfo": {
+      "anthropic": "由 Anthropic 提供",
+      "openai": "由 OpenAI 提供",
+      "cursorEditor": "智能代码编辑器",
+      "google": "由 Google 提供"
+    },
+    "readyPrompt": {
+      "claude": "准备好使用带有 {{model}} 的 Claude。请在下方开始输入您的消息。",
+      "cursor": "准备好使用带有 {{model}} 的 Cursor。请在下方开始输入您的消息。",
+      "codex": "准备好使用带有 {{model}} 的 Codex。请在下方开始输入您的消息。",
+      "gemini": "准备好使用带有 {{model}} 的 Gemini。请在下方开始输入您的消息。",
+      "opencode": "准备好使用带有 {{model}} 的 OpenCode。请在下方开始输入您的消息。",
+      "kimi": "准备好使用带有 {{model}} 的 Kimi Code。请在下方开始输入您的消息。",
+      "default": "请在上方选择一个服务以开始"
+    },
+    "pressToSearch": "按 <kbd>{{shortcut}}</kbd> 搜索会话、文件和提交"
+  },
+  "commandModal": {
+    "common": {
+      "unknown": "未知",
+      "unavailable": "不可用",
+      "provider": "服务",
+      "model": "模型"
+    },
+    "meta": {
+      "commandResult": "命令结果",
+      "help": {
+        "eyebrow": "命令中心",
+        "title": "帮助与快捷方式",
+        "subtitle": "无需离开聊天，即可搜索内置命令、语法模式和命令用法。"
+      },
+      "models": {
+        "eyebrow": "模型列表",
+        "title": "可用模型",
+        "subtitle": "浏览、搜索并复制当前服务的模型 ID。"
+      },
+      "cost": {
+        "eyebrow": "会话用量",
+        "title": "令牌用量",
+        "subtitle": "查看此会话的输入、输出和总令牌数。"
+      },
+      "status": {
+        "eyebrow": "运行状态",
+        "title": "系统状态",
+        "subtitle": "集中查看版本、服务、运行时和环境详情。"
+      }
+    },
+    "help": {
+      "filterCommands": "筛选命令...",
+      "builtin": "内置",
+      "noDescription": "暂无描述。",
+      "noCommandsMatch": "没有匹配该筛选条件的命令。",
+      "syntax": "语法",
+      "allArgs": "传入全部参数。",
+      "positionalArgs": "传入位置参数。",
+      "fileContents": "包含文件内容。",
+      "quickTip": "快捷提示",
+      "quickTipPrefix": "在输入框输入",
+      "quickTipSuffix": "打开命令面板，然后用方向键和回车运行命令。",
+      "fallbackCommands": {
+        "models": "浏览当前服务的可用模型。",
+        "cost": "查看当前会话的令牌用量。",
+        "status": "检查运行时、版本、服务和环境状态。",
+        "memory": "打开项目的 CLAUDE.md 记忆文件。",
+        "config": "打开设置和配置。",
+        "help": "显示命令文档和语法。"
+      }
+    },
+    "models": {
+      "nextResponseNotice": "下一次回复将使用 {{model}} 继续。",
+      "defaultModelNotice": "{{provider}} 的默认模型已设为 {{model}}。",
+      "changeModelError": "暂时无法切换模型。",
+      "modelCount": "{{count}} 个模型",
+      "activeModel": "当前模型",
+      "nextResponse": "下一次回复：{{model}}",
+      "default": "默认",
+      "updated": "已更新",
+      "notCachedYet": "尚未缓存",
+      "catalogRefresh": "刷新模型列表",
+      "allProviders": "全部服务",
+      "cacheHint": "模型列表会缓存 3 天。CLI、认证或配置变化后，或缺少新模型时，请刷新列表。",
+      "refreshingCatalogs": "正在刷新列表...",
+      "refreshFromProviders": "从服务刷新",
+      "sessionOverrideHint": "选择模型后会保存为此会话的覆盖设置，并在下一次回复时生效。",
+      "defaultModelHint": "选择模型后会更新此服务在新对话轮次中使用的默认模型。",
+      "searchProviderModels": "搜索 {{provider}} 模型...",
+      "shownCount": "显示 {{count}} 个",
+      "useModel": "使用模型 {{model}}",
+      "currentSelection": "当前选择",
+      "nextResponseSelection": "下一次回复选择",
+      "applying": "正在应用...",
+      "copyModelId": "复制模型 ID {{model}}",
+      "noModelsMatch": "没有匹配该搜索的模型。"
+    },
+    "cost": {
+      "totalTokensUsed": "已使用令牌总数",
+      "inputTokens": "输入令牌",
+      "outputTokens": "输出令牌",
+      "breakdown": "明细",
+      "contextWindow": "上下文窗口"
+    },
+    "status": {
+      "package": "包",
+      "version": "版本",
+      "uptime": "运行时长",
+      "platform": "平台",
+      "memory": "内存",
+      "runtimeOnline": "运行时在线",
+      "processResponding": "进程 {{process}} 正在响应。",
+      "statusProcess": "状态",
+      "healthy": "正常"
+    },
+    "closeAria": "关闭命令结果弹窗",
+    "escCloses": "按退出键关闭弹窗。",
+    "close": "关闭"
+  },
+  "session": {
+    "continue": {
+      "title": "继续您的对话",
+      "description": "询问有关代码的问题、请求更改或获取开发任务的帮助"
+    },
+    "loading": {
+      "olderMessages": "正在加载更早的消息...",
+      "sessionMessages": "正在加载会话消息..."
+    },
+    "messages": {
+      "showingOf": "显示 {{shown}} / {{total}} 条消息",
+      "scrollToLoad": "向上滚动以加载更多",
+      "showingLast": "显示最近 {{count}} 条消息（共 {{total}} 条）",
+      "loadEarlier": "加载更早的消息",
+      "loadAll": "加载全部消息",
+      "loadingAll": "正在加载全部消息...",
+      "allLoaded": "全部消息已加载",
+      "perfWarning": "已加载全部消息 - 滚动可能变慢。点击「滚动到底部」恢复性能。"
+    }
+  },
+  "shell": {
+    "selectProject": {
+      "title": "选择项目",
+      "description": "选择一个项目以在该目录中打开交互式终端"
+    },
+    "status": {
+      "newSession": "新会话",
+      "initializing": "初始化中...",
+      "restarting": "重启中..."
+    },
+    "actions": {
+      "disconnect": "断开连接",
+      "disconnectTitle": "断开终端连接",
+      "restart": "重启",
+      "restartTitle": "重启终端（请先断开连接）",
+      "connect": "在终端中继续",
+      "connectTitle": "连接到终端"
+    },
+    "loading": "正在加载终端...",
+    "connecting": "正在连接到终端...",
+    "startSession": "启动新的 Claude 会话",
+    "resumeSession": "恢复会话：{{displayName}}...",
+    "runCommand": "在 {{projectName}} 中运行 {{command}}",
+    "startCli": "在 {{projectName}} 中启动 Claude 命令行工具",
+    "defaultCommand": "命令",
+    "authUrl": {
+      "description": "打开或复制登录链接：",
+      "hide": "隐藏",
+      "inputLabel": "登录链接",
+      "open": "打开链接",
+      "copy": "复制链接",
+      "copied": "已复制",
+      "show": "显示登录链接"
+    }
+  },
+  "claudeStatus": {
+    "actions": {
+      "thinking": "思考中",
+      "processing": "处理中",
+      "analyzing": "分析中",
+      "working": "工作中",
+      "computing": "计算中",
+      "reasoning": "推理中"
+    },
+    "state": {
+      "live": "实时",
+      "paused": "已暂停"
+    },
+    "elapsed": {
+      "seconds": "{{count}} 秒",
+      "minutesSeconds": "{{minutes}} 分 {{seconds}} 秒",
+      "label": "已用 {{time}}",
+      "startingNow": "刚刚开始"
+    },
+    "controls": {
+      "stopGeneration": "停止生成",
+      "pressEscToStop": "可随时按退出键停止"
+    },
+    "providers": {
+      "assistant": "助手"
+    }
+  },
+  "projectSelection": {
+    "startChatWithProvider": "选择一个项目以开始与 {{provider}} 聊天"
+  },
+  "defaults": {
+    "permission": {
+      "ackTitle": "默认：不限权限",
+      "ackTitleAccessible": "权限模式确认",
+      "ackMessage": "新会话默认使用不限权限模式。AI 可直接执行任意命令（含终端、写文件、删除），无需逐条确认。是否继续？",
+      "ackConfirm": "我已了解，设为默认",
+      "ackCancel": "取消"
+    }
+  },
+  "references": {
+    "openPicker": "引用会话 (Ctrl+L)",
+    "pickerTitle": "引用会话",
+    "searchPlaceholder": "搜索(空=当前 project,输入切全部)",
+    "noSessions": "无匹配会话",
+    "queryableFrom": "可查:「{{title}}」",
+    "dropSessionReference": "松手引用该会话",
+    "cancel": "取消",
+    "confirm": "引用"
+  }
+}

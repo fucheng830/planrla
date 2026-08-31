@@ -1,0 +1,465 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "submit": "Submit",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "search": "Search",
+    "clear": "Clear",
+    "copy": "Copy",
+    "download": "Download",
+    "upload": "Upload",
+    "browse": "Browse"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "shell": "Shell",
+    "files": "Files",
+    "git": "Source Control",
+    "browser": "Browser",
+    "kanban": "Kanban",
+    "cron": "Cron",
+    "overview": "Overview",
+    "inbox": "Inbox",
+    "workflow": "Delivery",
+    "schedule": "Calendar"
+  },
+  "compaction": {
+    "cardTitle": "Context compacted",
+    "expandSummary": "Expand summary",
+    "collapseSummary": "Collapse summary",
+    "viewHistory": "View {{count}} earlier messages",
+    "viewHistoryNoCount": "View message history",
+    "banner": "Context compacted — switched to the compacted view",
+    "panelTitle": "Message history",
+    "panelEyebrow": "Archived",
+    "panelSubtitle": "Messages before the last compaction boundary",
+    "archivedCount": "{{count}} messages archived",
+    "epochBadge": "Epoch {{epoch}}",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load history",
+    "empty": "No compacted history for this session",
+    "noMessagesInEpoch": "No messages in this epoch",
+    "loadEarlier": "Load earlier"
+  },
+  "extensionPanel": {
+    "tabs": {
+      "markdown": "Markdown",
+      "review": "Review",
+      "browser": "Embedded browser"
+    }
+  },
+  "status": {
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "failed": "Failed",
+    "pending": "Pending",
+    "completed": "Completed",
+    "inProgress": "In Progress"
+  },
+  "messages": {
+    "savedSuccessfully": "Saved successfully",
+    "deletedSuccessfully": "Deleted successfully",
+    "updatedSuccessfully": "Updated successfully",
+    "operationFailed": "Operation failed",
+    "networkError": "Network error. Please check your connection.",
+    "unauthorized": "Unauthorized. Please log in.",
+    "notFound": "Not found",
+    "invalidInput": "Invalid input",
+    "requiredField": "This field is required",
+    "unknownError": "An unknown error occurred"
+  },
+  "navigation": {
+    "settings": "Settings",
+    "home": "Home",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "logout": "Logout",
+    "openMenu": "Open menu"
+  },
+  "errors": {
+    "boundaryTitle": "Something went wrong",
+    "boundaryDescription": "An error occurred while loading the chat interface.",
+    "details": "Error Details"
+  },
+  "imageViewer": {
+    "loading": "Loading image...",
+    "loadFailed": "Unable to load image"
+  },
+  "common": {
+    "language": "Language",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "name": "Name",
+    "description": "Description",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "optional": "Optional",
+    "version": "Version",
+    "select": "Select",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} mins ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago",
+    "yesterday": "Yesterday"
+  },
+  "fileOperations": {
+    "newFile": "New File",
+    "newFolder": "New Folder",
+    "rename": "Rename",
+    "move": "Move",
+    "copyPath": "Copy Path",
+    "openInEditor": "Open in Editor"
+  },
+  "mainContent": {
+    "loading": "Loading Planrla",
+    "settingUpWorkspace": "Setting up your workspace...",
+    "chooseProject": "Choose Your Project",
+    "selectProjectDescription": "Select a project from the sidebar to start coding with Claude. Each project contains your chat sessions and file history.",
+    "tip": "Tip",
+    "createProjectMobile": "Tap the menu button above to access projects",
+    "createProjectDesktop": "Create a new project by clicking the folder icon in the sidebar",
+    "newSession": "New Session",
+    "untitledSession": "Untitled Session",
+    "project": "Project",
+    "projectFiles": "Project Files"
+  },
+  "commandPalette": {
+    "title": "Command palette",
+    "backToAll": "Back to all",
+    "backspaceHint": "Backspace to go back",
+    "searchAll": "Type to search anything…",
+    "searchPage": "Search {{page}}…",
+    "noResults": "No results.",
+    "startNewChat": "Start new chat",
+    "selectProjectFirst": "Select a project first",
+    "openSettings": "Open settings",
+    "toggleTheme": "Toggle theme",
+    "settingsItem": "Settings: {{label}}",
+    "switchToBranch": "Switch to: {{branch}}",
+    "pages": {
+      "actions": "Actions",
+      "files": "Files",
+      "sessions": "Sessions",
+      "commits": "Commits",
+      "branches": "Branches"
+    },
+    "groups": {
+      "actions": "Actions",
+      "navigate": "Navigate",
+      "git": "Git",
+      "settings": "Settings",
+      "sessions": "Sessions",
+      "files": "Files",
+      "commits": "Commits",
+      "branches": "Branches"
+    },
+    "nav": {
+      "chat": "Go to Chat",
+      "files": "Go to Files",
+      "shell": "Go to Shell",
+      "git": "Go to Source Control"
+    },
+    "git": {
+      "fetch": "Git: Fetch",
+      "pull": "Git: Pull",
+      "push": "Git: Push"
+    },
+    "settingsTabs": {
+      "agents": "Agents",
+      "appearance": "Appearance",
+      "git": "Git",
+      "api": "API Tokens",
+      "license": "License",
+      "browser": "Browser",
+      "notifications": "Notifications",
+      "plugins": "Plugins",
+      "about": "About"
+    },
+    "browseAll": {
+      "sessions": "Browse all sessions ({{count}})",
+      "files": "Browse all files ({{count}})",
+      "commits": "Browse all commits ({{count}})",
+      "branches": "Browse all branches ({{count}})"
+    }
+  },
+  "fileTree": {
+    "loading": "Loading files...",
+    "files": "Files",
+    "simpleView": "Simple view",
+    "compactView": "Compact view",
+    "detailedView": "Detailed view",
+    "searchPlaceholder": "Search files and folders...",
+    "clearSearch": "Clear search",
+    "name": "Name",
+    "size": "Size",
+    "modified": "Modified",
+    "permissions": "Permissions",
+    "noFilesFound": "No files found",
+    "checkProjectPath": "Check if the project path is accessible",
+    "noMatchesFound": "No matches found",
+    "tryDifferentSearch": "Try a different search term or clear the search",
+    "justNow": "just now",
+    "minAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago",
+    "newFile": "New File (Cmd+N)",
+    "newFolder": "New Folder (Cmd+Shift+N)",
+    "refresh": "Refresh",
+    "collapseAll": "Collapse All",
+    "context": {
+      "rename": "Rename",
+      "delete": "Delete",
+      "copyPath": "Copy Path",
+      "download": "Download",
+      "newFile": "New File",
+      "newFolder": "New Folder",
+      "refresh": "Refresh",
+      "menuLabel": "File context menu",
+      "loading": "Loading..."
+    }
+  },
+  "projectWizard": {
+    "title": "Create New Project",
+    "steps": {
+      "type": "Type",
+      "configure": "Configure",
+      "confirm": "Confirm"
+    },
+    "step1": {
+      "question": "Do you already have a workspace, or would you like to create a new one?",
+      "existing": {
+        "title": "Existing Workspace",
+        "description": "I already have a workspace on my server and just need to add it to the project list"
+      },
+      "new": {
+        "title": "New Workspace",
+        "description": "Create a new workspace, optionally clone from a GitHub repository"
+      }
+    },
+    "step2": {
+      "existingPath": "Workspace Path",
+      "newPath": "Workspace Path",
+      "existingPlaceholder": "/path/to/existing/workspace",
+      "newPlaceholder": "/path/to/new/workspace",
+      "existingHelp": "Full path to your existing workspace directory",
+      "newHelp": "Full path to your workspace directory",
+      "githubUrl": "GitHub URL (Optional)",
+      "githubPlaceholder": "https://github.com/username/repository",
+      "githubHelp": "Optional: provide a GitHub URL to clone a repository",
+      "githubAuth": "GitHub Authentication (Optional)",
+      "githubAuthHelp": "Only required for private repositories. Public repos can be cloned without authentication.",
+      "loadingTokens": "Loading stored tokens...",
+      "storedToken": "Stored Token",
+      "newToken": "New Token",
+      "nonePublic": "None (Public)",
+      "selectToken": "Select Token",
+      "selectTokenPlaceholder": "-- Select a token --",
+      "tokenPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "tokenHelp": "This token will be used only for this operation",
+      "publicRepoInfo": "Public repositories don't require authentication. You can skip providing a token if cloning a public repo.",
+      "noTokensHelp": "No stored tokens available. You can add tokens in Settings → API Keys for easier reuse.",
+      "optionalTokenPublic": "GitHub Token (Optional for Public Repos)",
+      "tokenPublicPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (leave empty for public repos)"
+    },
+    "folderBrowser": {
+      "title": "Select Folder",
+      "browseFolders": "Browse folders",
+      "showHidden": "Show hidden folders",
+      "hideHidden": "Hide hidden folders",
+      "createNewFolder": "Create new folder",
+      "newFolderPlaceholder": "New folder name",
+      "loadFailed": "Failed to load folders",
+      "noSubfolders": "No subfolders found",
+      "select": "Select",
+      "useThisFolder": "Use this folder"
+    },
+    "step3": {
+      "reviewConfig": "Review Your Configuration",
+      "existingWorkspace": "Existing Workspace",
+      "newWorkspace": "New Workspace",
+      "path": "Path:",
+      "cloneFrom": "Clone From:",
+      "authentication": "Authentication:",
+      "usingStoredToken": "Using stored token:",
+      "usingProvidedToken": "Using provided token",
+      "noAuthentication": "No authentication",
+      "sshKey": "SSH Key",
+      "existingInfo": "The workspace will be added to your project list and will be available for Claude/Cursor sessions.",
+      "newWithClone": "The repository will be cloned from this folder.",
+      "newEmpty": "The workspace will be added to your project list and will be available for Claude/Cursor sessions.",
+      "cloningRepository": "Cloning repository..."
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "createProject": "Create Project",
+      "creating": "Creating...",
+      "cloning": "Cloning..."
+    },
+    "errors": {
+      "selectType": "Please select whether you have an existing workspace or want to create a new one",
+      "providePath": "Please provide a workspace path",
+      "failedToCreate": "Failed to create workspace",
+      "failedToCreateFolder": "Failed to create folder"
+    }
+  },
+  "notifications": {
+    "genericTool": "a tool",
+    "codes": {
+      "generic": {
+        "info": {
+          "title": "Notification"
+        }
+      },
+      "permission": {
+        "required": {
+          "title": "Action Required",
+          "body": "{{toolName}} is waiting for your decision."
+        }
+      },
+      "run": {
+        "stopped": {
+          "title": "Run Stopped",
+          "body": "Reason: {{reason}}"
+        },
+        "failed": {
+          "title": "Run Failed"
+        }
+      },
+      "agent": {
+        "notification": {
+          "title": "Agent Notification"
+        }
+      }
+    }
+  },
+  "versionUpdate": {
+    "title": "Update Available",
+    "newVersionReady": "A new version is ready",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "whatsNew": "What's New:",
+    "viewFullRelease": "View full release",
+    "updateProgress": "Update Progress:",
+    "manualUpgrade": "Manual upgrade:",
+    "npmUpgradeCommand": "npm install -g planrla@latest",
+    "manualUpgradeHint": "Or click \"Update Now\" to run the update automatically.",
+    "updateCompleted": "Update completed successfully!",
+    "restartServer": "Please restart the server to apply changes.",
+    "updateFailed": "Update failed",
+    "buttons": {
+      "close": "Close",
+      "later": "Later",
+      "copyCommand": "Copy Command",
+      "updateNow": "Update Now",
+      "updating": "Updating..."
+    },
+    "ariaLabels": {
+      "closeModal": "Close version upgrade modal",
+      "showSidebar": "Show sidebar",
+      "settings": "Settings",
+      "updateAvailable": "Update available",
+      "closeSidebar": "Close sidebar"
+    }
+  },
+  "shell": {
+    "completed": "(Completed)",
+    "noProjectTitle": "No Project Selected",
+    "noProjectDescription": "A project is required to open a shell"
+  },
+  "gitPanel": {
+    "selectProject": "Select a project to view source control",
+    "noBranches": "No branches found",
+    "noCommitsTitle": "No commits yet",
+    "noCommitsDescription": "This repository doesn't have any commits yet. Create your first commit to start tracking changes.",
+    "creatingInitialCommit": "Creating Initial Commit...",
+    "createInitialCommit": "Create Initial Commit",
+    "noChanges": "No changes detected",
+    "staged": "Staged ({{count}})",
+    "unstageAll": "Unstage All",
+    "noStagedFiles": "No staged files",
+    "changes": "Changes ({{count}})",
+    "stageAll": "Stage All",
+    "allChangesStaged": "All changes staged",
+    "commitFiles": "Commit {{count}} file",
+    "commitFiles_other": "Commit {{count}} files",
+    "commitChanges": "Commit Changes",
+    "commitPlaceholder": "Message (Ctrl+Enter to commit)",
+    "generateCommitMessage": "Generate commit message",
+    "filesSelected": "{{count}} file selected",
+    "filesSelected_other": "{{count}} files selected",
+    "commit": "Commit",
+    "committing": "Committing...",
+    "commitConfirm": "Commit {{count}} file with message: \"{{message}}\"?",
+    "commitConfirm_other": "Commit {{count}} files with message: \"{{message}}\"?",
+    "newBranchTitle": "Create New Branch",
+    "branchName": "Branch Name",
+    "newBranchPlaceholder": "feature/new-feature",
+    "newBranchDescription": "This will create a new branch from the current branch ({{branch}})",
+    "cancel": "Cancel",
+    "creatingBranch": "Creating...",
+    "createBranch": "Create Branch",
+    "tip": "Tip:",
+    "gitInitHint": "Run {{command}} in your project directory to initialize git source control.",
+    "fileStatusGuide": "File Status Guide",
+    "statusModified": "Modified",
+    "statusAdded": "Added",
+    "statusDeleted": "Deleted",
+    "statusUntracked": "Untracked",
+    "noCommitsFound": "No commits found",
+    "createNewBranch": "Create new branch",
+    "upToDate": "Up to date",
+    "revertLatestLocalCommit": "Revert latest local commit",
+    "refreshStatus": "Refresh git status",
+    "dismissError": "Dismiss error",
+    "author": "Author",
+    "date": "Date",
+    "files": "Files",
+    "added": "Added",
+    "removed": "Removed",
+    "expandDiff": "Expand diff",
+    "collapseDiff": "Collapse diff",
+    "openFile": "Click to open file",
+    "ahead": "{{count}} ahead",
+    "behind": "{{count}} behind",
+    "pullConfirm": "Pull {{count}} commit from {{remote}}?",
+    "pullConfirm_other": "Pull {{count}} commits from {{remote}}?",
+    "pushConfirm": "Push {{count}} commit to {{remote}}?",
+    "pushConfirm_other": "Push {{count}} commits to {{remote}}?",
+    "publishConfirm": "Publish branch \"{{branch}}\" to {{remote}}?",
+    "publishTitle": "Publish \"{{branch}}\" to {{remote}}",
+    "publishing": "Publishing…",
+    "publish": "Publish",
+    "fetchTitle": "Fetch from {{remote}}",
+    "fetching": "Fetching…",
+    "fetch": "Fetch",
+    "pullTitle": "Pull {{count}} from {{remote}}",
+    "pulling": "Pulling…",
+    "pull": "Pull {{count}}",
+    "pushTitle": "Push {{count}} to {{remote}}",
+    "pushing": "Pushing…",
+    "push": "Push {{count}}",
+    "deleteUntrackedConfirm": "Delete untracked file \"{{file}}\"? This action cannot be undone.",
+    "discardChangesConfirm": "Discard all changes to \"{{file}}\"? This action cannot be undone.",
+    "deleteUntrackedFile": "Delete untracked file",
+    "discardChanges": "Discard changes",
+    "delete": "Delete",
+    "discard": "Discard",
+    "repositoryModalTitle": "Git Repository"
+  }
+}

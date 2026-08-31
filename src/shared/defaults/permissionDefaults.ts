@@ -1,5 +1,5 @@
 import type { LLMProvider } from '../../types/app';
-import type { PermissionMode } from '../../components/chat/types/types';
+import type { PermissionMode } from '@planrla/chat';
 
 export const BYPASS_MODE_BY_PROVIDER: Partial<Record<LLMProvider, PermissionMode>> = {
   claude: 'bypassPermissions',

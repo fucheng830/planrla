@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { AgentProvider } from '../../../../../types/types';
-import type { PermissionMode } from '../../../../../../../components/chat/types/types';
+import type { PermissionMode } from '@planrla/chat';
 import {
   BYPASS_MODE_BY_PROVIDER,
   getDefaultPermissionModes,
