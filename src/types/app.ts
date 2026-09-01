@@ -66,6 +66,8 @@ export interface Project {
   fullPath: string;
   path?: string;
   isStarred?: boolean;
+  /** Persisted manual order (drag-and-drop). -1/undefined = no manual order. */
+  sortIndex?: number;
   sessions?: ProjectSession[];
   sessionMeta?: ProjectSessionMeta;
   [key: string]: unknown;

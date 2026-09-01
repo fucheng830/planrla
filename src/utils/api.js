@@ -143,6 +143,12 @@ export const api = {
     authenticatedFetch(`/api/projects/${encodeURIComponent(projectId)}/toggle-star`, {
       method: 'POST',
     }),
+  // 侧边栏项目拖拽排序:提交完整有序 projectId 列表,后端整体持久化。
+  reorderProjects: (projectIds) =>
+    authenticatedFetch('/api/projects/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ projectIds }),
+    }),
   readFile: (projectId, filePath) =>
     authenticatedFetch(`/api/projects/${projectId}/file?filePath=${encodeURIComponent(filePath)}`),
   // REQ-047 — 递归 .md/.markdown/.txt 文件树(给侧边栏 Markdown 编辑面板)。

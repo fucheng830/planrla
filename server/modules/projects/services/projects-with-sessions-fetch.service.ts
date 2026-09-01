@@ -40,6 +40,8 @@ export type ProjectListItem = {
   displayName: string;
   fullPath: string;
   isStarred: boolean;
+  /** Persisted manual order (sidebar drag-and-drop); -1 = none. */
+  sortIndex?: number;
   sessions: SessionSummary[];
   sessionMeta: {
     hasMore: boolean;
@@ -205,6 +207,7 @@ export async function getProjectsWithSessions(
     project_path: string;
     custom_project_name?: string | null;
     isStarred?: number;
+    sortIndex?: number | null;
   }>;
   const totalProjects = projectRows.length;
   const projectPaths = projectRows.map((r) => r.project_path);
@@ -246,6 +249,7 @@ export async function getProjectsWithSessions(
       displayName,
       fullPath: row.project_path,
       isStarred: Boolean(row.isStarred),
+      sortIndex: typeof row.sortIndex === 'number' && row.sortIndex >= 0 ? row.sortIndex : -1,
       sessions: page.sessions,
       sessionMeta: { hasMore: page.hasMore, total: page.total },
     });

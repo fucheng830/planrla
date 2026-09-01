@@ -1,4 +1,5 @@
 import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderTree, Star, Trash2, X } from 'lucide-react';
+import { useRef } from 'react';
 import type { TFunction } from 'i18next';
 
 import { cn } from '../../../../lib/utils';
@@ -49,6 +50,14 @@ type SidebarProjectItemProps = {
   onStartEditingSession: (sessionId: string, initialName: string) => void;
   onCancelEditingSession: () => void;
   onSaveEditingSession: (projectName: string, sessionId: string, summary: string, provider: LLMProvider) => void;
+  /** Sidebar drag-and-drop reordering (desktop list). */
+  draggable?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStartProject?: () => void;
+  onDragOverProject?: (belowHalf: boolean) => void;
+  onDropProject?: () => void;
+  onDragEndProject?: () => void;
   t: TFunction;
 };
 
@@ -81,6 +90,13 @@ export default function SidebarProjectItem({
   onCancelEditingProject,
   onSaveProjectName,
   onDeleteProject,
+  draggable = false,
+  isDragging = false,
+  isDropTarget = false,
+  onDragStartProject,
+  onDragOverProject,
+  onDropProject,
+  onDragEndProject,
   onSessionSelect,
   onDeleteSession,
   onForkSession,
@@ -96,7 +112,6 @@ export default function SidebarProjectItem({
 }: SidebarProjectItemProps) {
   // Project identity is tracked by the DB-assigned `projectId` everywhere
   // after the projectName → projectId migration.
-  const isSelected = selectedProject?.projectId === project.projectId;
   const isEditing = editingProject === project.projectId;
   const totalSessionCount = Number(project.sessionMeta?.total ?? sessions.length);
   const sessionCountDisplay = getSessionCountDisplay(project, sessions);
@@ -117,6 +132,8 @@ export default function SidebarProjectItem({
     toggleProject();
   };
 
+  const dragDepthRef = useRef(0);
+
   return (
     <div className={cn('md:space-y-1', isDeleting && 'opacity-50 pointer-events-none')}>
       <div className="md:group group">
@@ -124,10 +141,7 @@ export default function SidebarProjectItem({
           <div
             className={cn(
               'p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150',
-              isSelected && 'bg-primary/5 border-primary/20',
-              isStarred &&
-                !isSelected &&
-                'bg-yellow-50/50 dark:bg-yellow-900/5 border-yellow-200/30 dark:border-yellow-800/30',
+              isStarred && 'bg-yellow-50/50 dark:bg-yellow-900/5 border-yellow-200/30 dark:border-yellow-800/30',
             )}
             onClick={toggleProject}
           >
@@ -254,10 +268,41 @@ export default function SidebarProjectItem({
         <div
           role="button"
           tabIndex={0}
-          aria-current={isSelected ? 'true' : undefined}
+          draggable={draggable}
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', project.projectId);
+            dragDepthRef.current = 0;
+            onDragStartProject?.();
+          }}
+          onDragOver={(event) => {
+            if (!draggable || !event.dataTransfer.types.includes('text/plain')) {
+              return;
+            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const rect = event.currentTarget.getBoundingClientRect();
+            onDragOverProject?.(event.clientY > rect.top + rect.height / 2);
+          }}
+          onDragEnter={() => {
+            dragDepthRef.current += 1;
+          }}
+          onDragLeave={() => {
+            dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            dragDepthRef.current = 0;
+            onDropProject?.();
+          }}
+          onDragEnd={() => onDragEndProject?.()}
           className={cn(
             'hidden md:flex w-full justify-between rounded-md p-2 h-auto font-normal hover:bg-workbench-muted',
-            isSelected && 'bg-workbench-muted text-workbench-ink',
+            draggable && 'cursor-grab active:cursor-grabbing',
+            isDragging && 'opacity-40',
+            isDropTarget &&
+              !isDragging &&
+              'ring-2 ring-inset ring-workbench-accent/50 bg-workbench-accent/5',
           )}
           onClick={selectAndToggleProject}
           onKeyDown={(event) => {
@@ -268,7 +313,7 @@ export default function SidebarProjectItem({
           }}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Folder className={cn('h-3.5 w-3.5 flex-shrink-0', isSelected ? 'text-workbench-accent' : 'text-workbench-subtle')} aria-hidden="true" />
+            <Folder className="h-3.5 w-3.5 flex-shrink-0 text-workbench-subtle" aria-hidden="true" />
             <div className="min-w-0 flex-1 text-left">
               {isEditing ? (
                 <div className="space-y-1">
@@ -332,7 +377,7 @@ export default function SidebarProjectItem({
                     project name gets the full row (≈170px instead of 58px);
                     they expand on hover/focus-within replacing opacity tricks
                     that reserved layout space while invisible. */}
-                <div className="flex w-0 items-center overflow-hidden transition-all duration-200 group-hover:w-[112px] group-hover:gap-1 focus-within:w-[112px] focus-within:gap-1 touch:w-[112px] touch:gap-1">
+                <div className="touch:w-[112px] touch:gap-1 flex w-0 items-center gap-1 overflow-hidden transition-all duration-200 focus-within:w-[112px] focus-within:gap-1 group-hover:w-[112px] group-hover:gap-1">
                   <button
                     type="button"
                     aria-label={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}

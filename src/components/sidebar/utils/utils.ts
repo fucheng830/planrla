@@ -196,6 +196,14 @@ export const sortProjects = (
       return 1;
     }
 
+    // Manual drag order (persisted `sortIndex`) wins over name/date modes
+    // so the user's arrangement survives refresh and resort toggles.
+    const aIndex = typeof projectA.sortIndex === 'number' ? projectA.sortIndex : -1;
+    const bIndex = typeof projectB.sortIndex === 'number' ? projectB.sortIndex : -1;
+    if (aIndex >= 0 && bIndex >= 0 && aIndex !== bIndex) {
+      return aIndex - bIndex;
+    }
+
     if (projectSortOrder === 'date') {
       return getProjectLastActivity(projectB).getTime() - getProjectLastActivity(projectA).getTime();
     }

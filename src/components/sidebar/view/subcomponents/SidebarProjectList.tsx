@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
+import { api } from '../../../../utils/api';
 import type { LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../../types/app';
 import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../../hooks/useSessionProtection';
 import type { SessionWithProvider } from '../../types/types';
@@ -97,6 +98,43 @@ export default function SidebarProjectList({
   onSaveEditingSession,
   t,
 }: SidebarProjectListProps) {
+  // Sidebar drag-and-drop reordering (desktop list only). Local state gives
+  // instant feedback; the persistence request fires on drop and can fail
+  // silently (order reverts on next reload — same tradeoff as star toggles
+  // before their optimistic layer existed).
+  const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
+  const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
+  const dropBelowRef = useRef(false);
+  const [orderedProjects, setOrderedProjects] = useState<Project[] | null>(null);
+
+  useEffect(() => {
+    setOrderedProjects(null);
+  }, [projects]);
+
+  const handleDrop = (targetProjectId: string) => {
+    setDraggingProjectId((currentDraggingId) => {
+      setOrderedProjects((currentOrder) => {
+        const baseList = currentOrder ?? filteredProjects;
+        if (!currentDraggingId || currentDraggingId === targetProjectId) {
+          return currentOrder;
+        }
+        const fromIndex = baseList.findIndex((p) => p.projectId === currentDraggingId);
+        const toIndex = baseList.findIndex((p) => p.projectId === targetProjectId);
+        if (fromIndex < 0 || toIndex < 0) {
+          return currentOrder;
+        }
+        const next = [...baseList];
+        const [moved] = next.splice(fromIndex, 1);
+        const insertAt = dropBelowRef.current ? toIndex + 1 : toIndex;
+        next.splice(insertAt > fromIndex ? insertAt - 1 : insertAt, 0, moved);
+        void api.reorderProjects(next.map((p) => p.projectId)).catch(() => {});
+        return next;
+      });
+      return null;
+    });
+    setDropTargetProjectId(null);
+  };
+
   const state = (
     <SidebarProjectsState
       isLoading={isLoading}
@@ -117,12 +155,13 @@ export default function SidebarProjectList({
   }, [selectedProject]);
 
   const showProjects = !isLoading && projects.length > 0 && filteredProjects.length > 0;
+  const visibleProjects = orderedProjects ?? filteredProjects;
 
   return (
     <div className="pb-safe-area-inset-bottom md:space-y-1">
       {!showProjects
         ? state
-        : filteredProjects.map((project) => (
+        : visibleProjects.map((project) => (
             // React key + per-project state lookups all use the DB `projectId`
             // so they remain stable across renames and session changes.
             <SidebarProjectItem
@@ -162,6 +201,19 @@ export default function SidebarProjectList({
               onCancelEditingSession={onCancelEditingSession}
               onSaveEditingSession={onSaveEditingSession}
               t={t}
+              draggable
+              isDragging={draggingProjectId === project.projectId}
+              isDropTarget={dropTargetProjectId === project.projectId}
+              onDragStartProject={() => setDraggingProjectId(project.projectId)}
+              onDragOverProject={(below) => {
+                dropBelowRef.current = below;
+                setDropTargetProjectId(project.projectId);
+              }}
+              onDropProject={() => handleDrop(project.projectId)}
+              onDragEndProject={() => {
+                setDraggingProjectId(null);
+                setDropTargetProjectId(null);
+              }}
             />
           ))}
     </div>

@@ -581,6 +581,7 @@ export type ProjectRepositoryRow = {
   custom_project_name: string | null;
   isStarred: number;
   isArchived: number;
+  sortIndex?: number | null;
 };
 
 /**

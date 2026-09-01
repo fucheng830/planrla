@@ -432,6 +432,16 @@ const addSessionsIsPinnedColumn = (db: Database): void => {
   addColumnToTableIfNotExists(db, 'sessions', columnNames, 'isPinned', 'BOOLEAN DEFAULT 0');
 };
 
+/** Sidebar drag-and-drop ordering (2026-09-01): stores the user's manual
+ *  project order. Rows without a value keep DEFAULT -1 and fall back to the
+ *  legacy name/date ordering in code. */
+const addProjectsSortIndexColumn = (db: Database): void => {
+  const projectsTableInfo = getTableInfo(db, 'projects');
+  const columnNames = projectsTableInfo.map((column) => column.name);
+
+  addColumnToTableIfNotExists(db, 'projects', columnNames, 'sortIndex', 'INTEGER DEFAULT -1');
+};
+
 const ensureProjectsForSessionPaths = (db: Database): void => {
   if (!tableExists(db, 'sessions')) {
     return;
@@ -531,6 +541,7 @@ export const runMigrations = (db: Database) => {
     addProviderSessionIdMapping(db);
     addA2aExposedColumn(db);
     addSessionsIsPinnedColumn(db);
+    addProjectsSortIndexColumn(db);
     ensureProjectsForSessionPaths(db);
     mergeCaseDuplicateProjects(db);
 

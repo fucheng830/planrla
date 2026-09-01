@@ -154,9 +154,10 @@ export const projectsDb = {
     getProjectPaths(): ProjectRepositoryRow[] {
         const db = getConnection();
         return db.prepare(`
-            SELECT project_id, project_path, custom_project_name, isStarred, isArchived
+            SELECT project_id, project_path, custom_project_name, isStarred, isArchived, sortIndex
             FROM projects
             WHERE isArchived = 0
+            ORDER BY CASE WHEN sortIndex >= 0 THEN 0 ELSE 1 END, sortIndex ASC, rowid ASC
         `).all() as ProjectRepositoryRow[];
     },
 
@@ -221,6 +222,27 @@ export const projectsDb = {
             SET isStarred = ?
             WHERE project_id = ?
         `).run(isStarred ? 1 : 0, projectId);
+    },
+
+    /** Persists sidebar drag-and-drop ordering in one transaction. Unknown
+     *  or archived ids are ignored so a stale client cannot reorder ghosts. */
+    updateProjectSortIndexes(projectIdsInOrder: string[]): void {
+        const db = getConnection();
+        const assign = db.prepare(`
+            UPDATE projects
+            SET sortIndex = ?
+            WHERE project_id = ? AND isArchived = 0
+        `);
+        const run = db.transaction((ids: string[]) => {
+            ids.forEach((projectId, index) => assign.run(index, projectId));
+        });
+        run(projectIdsInOrder);
+    },
+
+    /** Clears manual ordering so every project falls back to auto sort. */
+    clearProjectSortIndexes(): void {
+        const db = getConnection();
+        db.prepare('UPDATE projects SET sortIndex = -1').run();
     },
 
     updateProjectIsArchived(projectPath: string, isArchived: boolean): void {

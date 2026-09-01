@@ -7,6 +7,7 @@ import { AppError, asyncHandler, createApiSuccessResponse } from '@/shared/utils
 import { getArchivedProjectsWithSessions, getProjectSessionsPage, getProjectsWithSessions } from '@/modules/projects/services/projects-with-sessions-fetch.service.js';
 import { deleteOrArchiveProject, restoreArchivedProject } from '@/modules/projects/services/project-delete.service.js';
 import { applyLegacyStarredProjectIds, toggleProjectStar } from '@/modules/projects/services/project-star.service.js';
+import { reorderProjects } from '@/modules/projects/services/project-reorder.service.js';
 
 const router = express.Router();
 
@@ -109,6 +110,15 @@ router.get(
     const sessionsPage = await getProjectSessionsPage(projectId, { limit, offset });
     res.json(sessionsPage);
   }),
+);
+
+router.put(
+  '/reorder',
+  (req, res) => {
+    const { projectIds } = req.body as { projectIds?: unknown };
+    const { updated } = reorderProjects(projectIds);
+    res.json({ success: true, updated });
+  },
 );
 
 router.post(
