@@ -6,7 +6,6 @@ import {
   CircleDot,
   Download,
   FileWarning,
-  MessageSquare,
   Plus,
   KanbanSquare,
   List,
@@ -16,68 +15,22 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Markdown } from '@planrla/chat';
 
 import { useKanban } from '../../kanban';
 import { kanbanApi } from '../../kanban/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import type { PendingAskUserQuestion, Task, TaskAttachment, TaskPriority, TaskDiffResult } from '../../kanban/types';
+import type { Task, TaskAttachment, TaskDiffResult } from '../../kanban/types';
 import type { Project } from '../../../types/app';
-import { WorkbenchStatus, type WorkbenchStatusState } from '../WorkbenchStatus';
-import { Markdown } from '@planrla/chat';
 import { TaskDetailModal } from '../../kanban/TaskDetailModal';
+import { WorkbenchStatus } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
 import { CreateTaskCard } from './CreateTaskCard';
-import { WORKFLOW_STAGES } from './workflowModel';
+import { WorkflowTaskCard } from './WorkflowTaskCard';
+import { displayTask, STAGE_DOT_CLASS, STAGE_EMPTY_COPY, WORKFLOW_STAGES } from './workflowModel';
 
 type AgentRow = { name: string; detail: string; state: 'running' | 'idle' | 'waiting'; label: string };
-
-const priorityLabel = (priority?: TaskPriority): string => (priority === 'high' ? '高' : priority === 'low' ? '低' : '中');
-
-const taskStatus = (task: Task): { state: WorkbenchStatusState; label: string } => {
-  if (task.status === 'success') return { state: 'complete', label: '已交付' };
-  if (task.status === 'fail') return { state: 'failed', label: '验证失败' };
-  if (task.status === 'waiting_user') return { state: 'waiting', label: '等待人工' };
-  return { state: 'running', label: task.status === 'pending' ? '未开始' : 'AI 运行中' };
-};
-
-type DisplayTask = {
-  id: string;
-  isBug?: boolean;
-  attachments?: number;
-  taskNumber: number;
-  stageIndex: number;
-  title: string;
-  detail: string;
-  tags: string[];
-  priority: string;
-  status: WorkbenchStatusState;
-  statusLabel: string;
-  projectName?: string;
-  source?: Task;
-};
-
-function displayTask(task: Task, stageCount: number, projects: Project[]): DisplayTask {
-  const status = taskStatus(task);
-  return {
-    id: task.id,
-    isBug: task.taskType === 'bug',
-    taskNumber: task.taskNumber,
-    stageIndex: Math.min(task.currentStageIndex, Math.max(0, stageCount - 1)),
-    title: task.input?.trim() || task.taskTemplateName || `任务 #${task.taskNumber}`,
-    detail: task.worktreeBranch
-      ? `worktree: ${task.worktreeBranch}`
-      : task.auxFlags.sessionError
-        ? '需要处理任务错误'
-        : (task.labels[0] ?? task.taskTemplateName ?? '研发任务'),
-    tags: task.labels.length > 0 ? task.labels.slice(0, 3) : ['Kanban'],
-    priority: priorityLabel(task.priority),
-    status: status.state,
-    statusLabel: status.label,
-    projectName: projects.find((p) => p.projectId === task.rootId)?.displayName,
-    source: task,
-  };
-}
 
 /** 交付物面板:worktree 分支 + 相对主仓的 diff 统计/文件/补丁摘要 + 验收动作。 */
 function DeliverablePanel({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
@@ -282,57 +235,6 @@ function TaskAttachmentsModal({ task, onClose, onChanged }: { task: Task; onClos
   );
 }
 
-function WorkflowTaskCard({ task, attachmentCount, onAdvance, onRetry, onCancel, onShowDeliverable, onOpenSession, onShowAttachments, onOpenAsk }: { task: DisplayTask; attachmentCount?: number; onAdvance?: () => void; onRetry?: (taskId: string, rootId: string) => void; onCancel?: (taskId: string, rootId: string) => void; onShowDeliverable?: (task: Task) => void; onOpenSession?: (task: Task) => void; onShowAttachments?: (task: Task) => void; onOpenAsk?: (task: Task) => void }) {
-  const pending = task.source?.auxFlags.pendingAskUser ?? null;
-  const firstQuestion: PendingAskUserQuestion | undefined = pending?.questions?.questions?.[0];
-  return (
-    <article
-      className={`ds-surface-raised group rounded-md p-3 transition-colors hover:border-workbench-accent/60 ${task.status === 'failed' ? 'border-workbench-danger/60' : task.status === 'waiting' ? 'border-workbench-waiting/60' : ''}`}
-      onDoubleClick={onAdvance}
-    >
-      <div className="flex items-center gap-1.5 overflow-hidden">
-        <span className="ds-mono flex-shrink-0 text-[10px] text-workbench-subtle">REQ-{String(task.taskNumber).padStart(3, '0')}</span>
-          <span className={`flex-shrink-0 rounded px-1 py-0.5 text-[10px] font-medium ${task.isBug ? 'bg-workbench-danger-soft text-workbench-danger' : 'bg-workbench-accent/10 text-workbench-accent'}`}>{task.isBug ? 'Bug' : '需求'}</span>
-          {(attachmentCount ?? 0) > 0 && (onShowAttachments && task.source
-            ? <button type="button" onClick={(e) => { e.stopPropagation(); onShowAttachments(task.source!); }} title="查看附件" className="ds-focus-ring flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle transition-colors hover:bg-workbench-accent/10 hover:text-workbench-accent"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</button>
-            : <span className="flex flex-shrink-0 items-center gap-0.5 rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle" title="附件数"><Paperclip className="size-3" aria-hidden="true" />{attachmentCount}</span>)}
-          {task.projectName && <span className="truncate rounded bg-workbench-muted px-1 py-0.5 text-[10px] text-workbench-subtle">{task.projectName}</span>}
-        <WorkbenchStatus state={task.status} label={task.statusLabel} />
-      </div>
-      <h3 className="mt-1 line-clamp-2 break-all text-sm font-semibold leading-snug text-workbench-ink">{task.title}</h3>
-      <p className="mt-2 line-clamp-2 text-xs leading-5 text-workbench-subtle">{task.detail}</p>
-      {task.status === 'failed' && task.source?.auxFlags?.sessionError && <p className="mt-1 text-[11px] leading-4 text-workbench-danger">原因:{task.source.auxFlags.sessionError}</p>}
-      {pending && firstQuestion && onOpenAsk && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onOpenAsk(task.source!); }}
-          className="ds-focus-ring mt-2 w-full rounded border border-workbench-waiting/50 bg-workbench-waiting/10 px-2 py-1.5 text-left hover:bg-workbench-waiting/20"
-        >
-          <span className="block text-[11px] font-semibold text-workbench-waiting">AI 在等你回答</span>
-          <span className="mt-0.5 line-clamp-2 block text-[11px] text-workbench-subtle">{firstQuestion.question ?? '点击查看并回答'}</span>
-        </button>
-      )}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {task.tags.map((tag) => <span key={tag} className="ds-label rounded bg-workbench-muted px-1.5 py-0.5 normal-case tracking-normal">{tag}</span>)}
-        <span className="ml-auto text-[10px] text-workbench-subtle">优先级 {task.priority}</span>
-      </div>
-      {task.status === 'complete' && task.source?.worktreeBranch && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); onShowDeliverable?.(task.source!); }} className="ds-focus-ring mt-2 inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted">查看交付物</button>
-      )}
-      {task.status === 'running' && task.source?.providerSessionId && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); onOpenSession?.(task.source!); }} className="ds-focus-ring mt-2 inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted"><MessageSquare className="size-3" />查看对话</button>
-      )}
-      {task.status === 'failed' && task.source && (
-        <div className="mt-2 flex gap-1.5">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onRetry?.(task.source!.id, task.source!.rootId); }} className="ds-focus-ring inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] font-medium text-workbench-ink hover:bg-workbench-muted"><Play className="size-3" />重试此阶段</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onCancel?.(task.source!.id, task.source!.rootId); }} className="ds-focus-ring inline-flex h-7 items-center gap-1 rounded border border-workbench-border bg-workbench-surface px-2 text-[11px] text-workbench-subtle hover:bg-workbench-muted">取消</button>
-        </div>
-      )}
-      {onAdvance && <p className="mt-2 text-[10px] text-workbench-subtle opacity-0 transition-opacity group-hover:opacity-100">双击推进阶段</p>}
-    </article>
-  );
-}
-
 function WorkflowRightRail({ schedules, agentRows }: { schedules: ReturnType<typeof useKanban>['schedules']; agentRows: AgentRow[] }) {
   return (
     <aside className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pb-1" aria-label="研发流程辅助信息">
@@ -399,6 +301,28 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
   const [view, setView] = useState<'board' | 'list'>('board');
   const [showRules, setShowRules] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  // Collapsible board columns (reference-board inspired). Persisted so the
+  // 交付-style "done" column can stay folded across sessions.
+  const [collapsedStages, setCollapsedStages] = useState<Set<number>>(() => {
+    try {
+      const raw = window.localStorage.getItem('workflow-collapsed-stages');
+      return new Set(raw ? (JSON.parse(raw) as number[]) : []);
+    } catch {
+      return new Set<number>();
+    }
+  });
+  const toggleStageCollapse = useCallback((index: number) => {
+    setCollapsedStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index); else next.add(index);
+      try {
+        window.localStorage.setItem('workflow-collapsed-stages', JSON.stringify([...next]));
+      } catch {
+        // localStorage unavailable (private mode) — collapse stays session-only
+      }
+      return next;
+    });
+  }, []);
   const [selectedTemplateId] = useState<string>('');
   const [selectedProjectId] = useState<string>('');
   const [deliverableTask, setDeliverableTask] = useState<Task | null>(null);
@@ -485,11 +409,32 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
           {view === 'board' ? (
             <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden pb-1">
               {columns.map((column, index0) => (
+                collapsedStages.has(index0) ? (
+                  <button
+                    key={column.name}
+                    type="button"
+                    onClick={() => toggleStageCollapse(index0)}
+                    title={`展开「${column.name}」`}
+                    aria-label={`展开 ${column.name} 列`}
+                    className="ds-panel flex w-10 shrink-0 cursor-pointer flex-col items-center gap-2 py-3 text-workbench-subtle transition-colors hover:border-workbench-accent/60 hover:text-workbench-ink"
+                  >
+                    <span className={`size-2 rounded-full bg-current ${STAGE_DOT_CLASS[index0] ?? 'text-workbench-accent'}`} aria-hidden="true" />
+                    <span className="ds-mono text-xs font-semibold text-workbench-ink">{column.tasks.length}</span>
+                    <span className="text-[11px] [writing-mode:vertical-rl]">{column.name}</span>
+                  </button>
+                ) : (
                 <section key={column.name} className="ds-panel flex h-full min-h-0 w-56 shrink-0 grow flex-col" aria-label={column.name}>
-                  <header className="ds-panel-header"><h2 className="flex-1 text-sm font-semibold text-workbench-ink">{column.name}</h2><span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span></header>
+                  <header className="ds-panel-header">
+                    <span className={`size-2 flex-shrink-0 rounded-full bg-current ${STAGE_DOT_CLASS[index0] ?? 'text-workbench-accent'}`} aria-hidden="true" />
+                    <h2 className="flex-1 truncate text-sm font-semibold text-workbench-ink">{column.name}</h2>
+                    <span className="ds-mono rounded bg-workbench-muted px-1.5 py-0.5 text-[10px] text-workbench-subtle">{column.tasks.length}</span>
+                    <button type="button" onClick={() => toggleStageCollapse(index0)} title={`收起「${column.name}」`} aria-label={`收起 ${column.name} 列`} className="ds-focus-ring -mr-1 flex size-5 flex-shrink-0 items-center justify-center rounded text-workbench-subtle hover:bg-workbench-muted hover:text-workbench-ink">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="size-3"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                    </button>
+                  </header>
                   <div className="flex flex-1 flex-col space-y-2 overflow-auto p-2">
                     {column.tasks.length === 0 ? (
-                      <p className="py-8 text-center text-xs text-workbench-subtle">暂无任务</p>
+                      <p className="py-8 text-center text-xs text-workbench-subtle">{STAGE_EMPTY_COPY[column.name] ?? '暂无任务'}</p>
                     ) : (
                       <>
                         {column.tasks.map((task) => (
@@ -504,6 +449,7 @@ export function WorkflowPage({ projectName, projects = [] }: { projectName: stri
                     )}
                   </div>
                 </section>
+                )
               ))}
             </div>
           ) : (
