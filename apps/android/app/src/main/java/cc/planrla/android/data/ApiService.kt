@@ -20,6 +20,10 @@ interface AuthApi {
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
+    /** One-time QR pairing: exchange the short-lived pairing token for a normal JWT. */
+    @POST("api/auth/pair/exchange")
+    suspend fun pairExchange(@Body body: PairExchangeRequest): LoginResponse
+
     @GET("api/auth/user")
     suspend fun user(): UserInfo
 }

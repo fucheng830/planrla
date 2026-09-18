@@ -149,6 +149,7 @@ import cc.planrla.android.data.Device
 import cc.planrla.android.data.DiscardRequest
 import cc.planrla.android.data.LoginRequest
 import cc.planrla.android.data.NormalizedMessage
+import cc.planrla.android.data.PairExchangeRequest
 import cc.planrla.android.data.SessionInfo
 import cc.planrla.android.data.TokenBudget
 import cc.planrla.android.data.NetworkModule
@@ -1200,14 +1201,25 @@ fun ChatScreen(
                 val normalizedLan = normalizeHostInput(lan)
                 val deviceRelayToken = deviceToken.trim()
                 val id = deviceRelayToken.ifBlank { normalizedLan }
+                // QR pairing flow: ccPass carries the exchanged JWT and ccUser the
+                // __paired__ marker — store the JWT as the device token instead of
+                // treating it as a password.
+                val isPairedJwt = ccUser == "__paired__" && ccPass.startsWith("ey")
+                val effectiveToken = if (isPairedJwt) ccPass else deviceRelayToken
+                val effectiveId = if (isPairedJwt) normalizedLan else id
                 scope.launch {
+                    if (isPairedJwt) {
+                        App.tokenStore.setServer(normalizedLan)
+                        App.tokenStore.setToken(ccPass)
+                        App.tokenHolder.token = ccPass
+                    }
                     App.tokenStore.upsertDevice(Device(
-                        id = id,
+                        id = effectiveId,
                         name = name.trim().ifBlank { normalizedLan.ifBlank { defaultDeviceName } },
-                        token = deviceRelayToken,
+                        token = effectiveToken,
                         lan = normalizedLan.ifBlank { null },
-                        ccUser = ccUser.trim().ifBlank { null },
-                        ccPass = ccPass.ifBlank { null },
+                        ccUser = if (isPairedJwt) null else ccUser.trim().ifBlank { null },
+                        ccPass = if (isPairedJwt) null else ccPass.ifBlank { null },
                     ))
                     if (vm.applyDevice(id)) onSwitchDevice()
                 }
@@ -2841,6 +2853,8 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
     var lan by rememberSaveable { mutableStateOf("") }
     var ccUser by rememberSaveable { mutableStateOf("") }
     var ccPass by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var pairingStatus by rememberSaveable { mutableStateOf("") }
     val scanPrompt = stringResource(R.string.add_device_scan_prompt)
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { raw ->
@@ -2851,6 +2865,30 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 qr.lan?.let { if (it.isNotBlank()) lan = it }
                 qr.ccUser?.let { if (it.isNotBlank()) ccUser = it }
                 qr.ccPass?.let { if (it.isNotBlank()) ccPass = it }
+                // Desktop QR pairing payload (has lan + pairing token, no password):
+                // exchange the one-time token for a real JWT right away so the user
+                // can hit 添加 without typing username/password.
+                val isPairing = qr.ccUser == null && qr.ccPass == null && !qr.lan.isNullOrBlank() &&
+                    raw.contains("\"lan\"")
+                if (isPairing) {
+                    pairingStatus = ""
+                    scope.launch {
+                        val baseUrl = normalizeHostInput(qr.lan!!)
+                        val jwt = runCatching {
+                            withTimeout(8000) {
+                                App.api(baseUrl).auth.pairExchange(PairExchangeRequest(qr.token!!))
+                            }
+                        }.getOrNull()?.token
+                        if (jwt != null) {
+                            ccUser = "__paired__"
+                            ccPass = jwt
+                            token = ""
+                            pairingStatus = "已配对，点击添加完成"
+                        } else {
+                            pairingStatus = "配对交换失败，请手动输入账号"
+                        }
+                    }
+                }
             }
         }
     }
@@ -2923,6 +2961,14 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                     Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.add_device_scan_import))
+                }
+                if (pairingStatus.isNotEmpty()) {
+                    Text(
+                        pairingStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (pairingStatus.startsWith("已配对")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(

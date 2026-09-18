@@ -75,6 +75,9 @@ data class NormalizedMessage(
 data class LoginRequest(val username: String, val password: String)
 
 @Serializable
+data class PairExchangeRequest(val token: String)
+
+@Serializable
 data class LoginResponse(
     val success: Boolean? = null,
     val token: String? = null,
