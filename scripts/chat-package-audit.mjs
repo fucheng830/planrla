@@ -5,8 +5,8 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const SRC = join(ROOT, "src");
-const CHAT_ROOT = join(SRC, "components", "chat");
+const SRC = join(ROOT, "packages", "chat", "src");
+const CHAT_ROOT = SRC;
 
 function* walk(dir) {
   for (const e of readdirSync(dir)) {
@@ -41,7 +41,7 @@ for (const f of files) {
     if (!t) continue;
     if (t.startsWith(".")) {
       const abs = resolve(join(f, ".."), t);
-      const inChat = abs.startsWith(CHAT_ROOT) || abs.startsWith(join(SRC, "components", "chat"));
+      const inChat = abs.startsWith(CHAT_ROOT);
       add(buckets, inChat ? "INTERNAL (relative)" : `RELATIVE-OUTSIDE -> ${relative(SRC, abs)}`, rel);
     } else if (t.startsWith("@/components/chat")) {
       add(buckets, "INTERNAL (@/components/chat)", rel);

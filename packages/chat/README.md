@@ -46,6 +46,28 @@ configureChatApi({ baseUrl: "http://localhost:3201" });
 </WebSocketProvider>
 ```
 
+## 会话级积木
+
+`ChatSession` 是对完整会话面的稳定封装：宿主仍控制项目、会话和传输，组件负责消息流、工具卡、权限提示和输入区。
+
+```tsx
+import { ChatSession, configureChatApi, initChatI18n } from '@planrla/chat';
+
+await initChatI18n();
+configureChatApi({ baseUrl: '/api' });
+
+<ChatSession
+  selectedProject={project}
+  selectedSession={session}
+  ws={ws}
+  sendMessage={sendMessage}
+  onFileOpen={openFile}
+  className="h-full"
+/>
+```
+
+需要更细粒度组合时，可从包入口直接使用 `ChatMessagesPane`、`ChatComposer`、`MessageComponent`、`PermissionRequestsBanner` 和 `ToolRenderer`，对应 props 类型也已导出。
+
 ## 迁移步骤
 
 - M2 ✅ 包体落地（本目录）

@@ -24,7 +24,7 @@ const MESSAGE_FORKABLE_PROVIDERS: ReadonlySet<LLMProvider> = new Set([
   'claude', 'codex', 'gemini', 'kimi', 'zcode',
 ]);
 
-interface ChatMessagesPaneProps {
+export interface ChatMessagesPaneProps {
   scrollContainerRef: RefObject<HTMLDivElement>;
   virtuaRef: RefObject<VListHandle>;
   onWheel: () => void;

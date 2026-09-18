@@ -54,7 +54,7 @@ interface SlashCommand {
   [key: string]: unknown;
 }
 
-interface ChatComposerProps {
+export interface ChatComposerProps {
   pendingPermissionRequests: PendingPermissionRequest[];
   handlePermissionDecision: (
     requestIds: string | string[],

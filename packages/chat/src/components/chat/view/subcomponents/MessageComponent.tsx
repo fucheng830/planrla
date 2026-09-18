@@ -25,7 +25,7 @@ type DiffLine = {
   lineNum: number;
 };
 
-type MessageComponentProps = {
+export type MessageComponentProps = {
   message: ChatMessage;
   prevMessage: ChatMessage | null;
   nextMessage: ChatMessage | null;

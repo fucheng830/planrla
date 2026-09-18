@@ -17,7 +17,7 @@ import {
 
 registerPermissionPanel('AskUserQuestion', AskUserQuestionPanel);
 
-interface PermissionRequestsBannerProps {
+export interface PermissionRequestsBannerProps {
   pendingPermissionRequests: PendingPermissionRequest[];
   handlePermissionDecision: (
     requestIds: string | string[],
