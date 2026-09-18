@@ -41,12 +41,32 @@ object RunNotification {
             .setOnlyAlertOnce(true)
             .setUsesChronometer(true)
             .setWhen(System.currentTimeMillis())
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                ctx.getString(R.string.notif_stop_action),
+                PendingIntent.getService(
+                    ctx,
+                    sessionId.hashCode() + 1,
+                    Intent(ctx, RunForegroundService::class.java)
+                        .setAction(RunForegroundService.ACTION_ABORT),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
             .build()
 
     /** Terminal notification on the completion channel (run finished or failed). */
-    fun finished(ctx: Context, sessionId: String, providerName: String?, ok: Boolean): Notification =
-        base(ctx, RunForegroundService.CHANNEL_RUN, sessionId, providerName)
-            .setContentText(ctx.getString(if (ok) R.string.notif_done_body else R.string.notif_error_body))
+    fun finished(
+        ctx: Context,
+        sessionId: String,
+        providerName: String?,
+        ok: Boolean,
+        summary: String? = null,
+    ): Notification =
+        base(ctx, RunForegroundService.CHANNEL_RUN, sessionId, providerName, summary)
+            .setContentText(
+                summary?.takeIf { it.isNotBlank() }
+                ?: ctx.getString(if (ok) R.string.notif_done_body else R.string.notif_error_body),
+            )
             .setAutoCancel(true)
             .build()
 
@@ -55,6 +75,7 @@ object RunNotification {
         channel: String,
         sessionId: String,
         providerName: String?,
+        summary: String? = null,
     ): NotificationCompat.Builder =
         NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(android.R.drawable.ic_dialog_info)

@@ -124,6 +124,9 @@ object App {
      *  progress service from it when the app goes to the background mid-run. */
     data class ActiveRun(val sessionId: String, val providerName: String?)
     @Volatile var activeRun: ActiveRun? = null
+    /** Abort hook for the background notification stop action. Set by ChatViewModel
+     *  while a run is active; invoked from RunForegroundService (notification action). */
+    @Volatile var abortActiveRun: (() -> Unit)? = null
     val unread = MutableStateFlow<Set<String>>(emptySet())
     fun markUnread(id: String) { unread.value = unread.value + id }
     fun markRead(id: String) { unread.value = unread.value - id }

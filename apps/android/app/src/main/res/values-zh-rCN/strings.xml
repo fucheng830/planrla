@@ -268,4 +268,5 @@
     <string name="notif_progress_step">正在执行 %1$s — 点击查看</string>
     <string name="notif_done_body">任务已完成 — 点击查看结果</string>
     <string name="notif_error_body">任务失败 — 点击查看</string>
+    <string name="notif_stop_action">停止</string>
 </resources>

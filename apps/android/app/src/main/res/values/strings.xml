@@ -279,4 +279,5 @@
     <string name="notif_progress_step">Running %1$s — tap to view</string>
     <string name="notif_done_body">Run finished — tap to view the result</string>
     <string name="notif_error_body">Run failed — tap to view</string>
+    <string name="notif_stop_action">Stop</string>
 </resources>

@@ -7,6 +7,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
+import cc.planrla.android.ui.App
 
 /**
  * Foreground service that anchors the "run in progress" notification while the app is
@@ -23,6 +24,17 @@ class RunForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_ABORT) {
+            // "Stop" action on the notification: abort the run via the hook the
+            // ChatViewModel installed. The Complete/Error event (or abort() directly)
+            // tears down the rest; here we only drop the ongoing notification so the
+            // user is not left with a stale progress bar if the connection is gone.
+            App.abortActiveRun?.invoke()
+            running = false
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             running = false
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -50,6 +62,8 @@ class RunForegroundService : Service() {
         const val CHANNEL_ACTIVE = "planrla_run_active"
         const val CHANNEL_RUN = "planrla_run"
         const val NOTIF_ID = 42
+        /** Notification action: abort the active run (wired to App.abortActiveRun). */
+        const val ACTION_ABORT = "cc.planrla.android.ABORT_RUN"
         private const val ACTION_STOP = "cc.planrla.android.STOP_RUN"
 
         @Volatile private var running = false
@@ -80,6 +94,17 @@ class RunForegroundService : Service() {
             runCatching {
                 NotificationManagerCompat.from(ctx)
                     .notify(NOTIF_ID, RunNotification.progress(ctx, sid, providerName, step))
+            }
+        }
+
+        /** Terminal state: stop the service and post the completion notification. */
+        fun finish(ctx: Context, sessionId: String, providerName: String?, summary: String?) {
+            running = false
+            step = null
+            ctx.stopService(Intent(ctx, RunForegroundService::class.java))
+            runCatching {
+                NotificationManagerCompat.from(ctx)
+                    .notify(sessionId.hashCode(), RunNotification.finished(ctx, sessionId, providerName, true, summary))
             }
         }
     }

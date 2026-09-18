@@ -241,10 +241,13 @@ class ChatViewModel(
             val sid = currentSessionId
             if (sid != null) {
                 App.activeRun = App.ActiveRun(sid, providerDisplayName(sessionProvider))
+                // Let the background notification's stop action abort this run.
+                App.abortActiveRun = { socket?.sendAbort(sid) }
                 if (!App.isForeground) RunForegroundService.start(ctx, sid, providerDisplayName(sessionProvider))
             }
         } else {
             App.activeRun = null
+            App.abortActiveRun = null
             if (!App.isForeground) RunForegroundService.stop(ctx)
         }
     }
@@ -440,11 +443,14 @@ class ChatViewModel(
         val ctx = App.appContext
         val sid = currentSessionId
         if (sid == null) return
-        val n = RunNotification.finished(ctx, sid, providerDisplayName(sessionProvider), ok = true)
-        // isForeground gate is the real guard; permission denial throws SecurityException
-        // which we swallow (best-effort — won't crash the run handler).
+        // Preview: first line of the finished assistant message (mirrors Ekko's result
+        // thumbnail on the completion notification). Falls back to the generic string.
+        val summary = (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)
+            ?.text?.value?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(80)
+        // finish() also stops the (already-stopped-by-setWorking) service and posts the
+        // notification; SecurityException on denied permission is swallowed best-effort.
         runCatching {
-            NotificationManagerCompat.from(ctx).notify(currentSessionId.hashCode(), n)
+            RunForegroundService.finish(ctx, sid, providerDisplayName(sessionProvider), summary)
         }
     }
 
