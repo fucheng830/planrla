@@ -170,11 +170,11 @@
     <string name="chat_tool_error">Error</string>
     <string name="chat_tool_ok">OK</string>
     <string name="chat_shell_unavailable">Interactive shell needs a PTY transport (not in this build).</string>
-    <string name="chat_regenerate">↻ Regenerate</string>
+    <string name="chat_regenerate">Regenerate</string>
     <string name="chat_send">Send</string>
     <string name="chat_attachment">attachment</string>
-    <string name="chat_shell">🖥️ Shell</string>
-    <string name="chat_all_projects">←  All projects</string>
+    <string name="chat_shell">Shell</string>
+    <string name="chat_all_projects">All projects</string>
     <string name="chat_new_chat">+  New chat</string>
     <string name="chat_input_placeholder">Type / for commands, @ for files, or ask %1$s anything…</string>
     <string name="permission_mode_default">Default</string>
@@ -192,8 +192,8 @@
     <string name="files_upload">Upload</string>
     <string name="files_new_file">New file</string>
     <string name="files_rename">Rename</string>
-    <string name="files_share">↗ Share</string>
-    <string name="files_download">⬇ Download</string>
+    <string name="files_share">Share</string>
+    <string name="files_download">Download</string>
     <string name="files_path_label">Path (e.g. src/main.py)</string>
     <string name="files_create_directory">Create directory</string>
     <string name="files_delete_message">Delete \"%1$s\"?</string>

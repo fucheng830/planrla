@@ -54,6 +54,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AlertDialog
@@ -385,7 +391,7 @@ class ChatViewModel(
             is ChatEvent.ProtocolError -> {
                 setWorking(false)
                 notifyRunTerminalIfBackground(ok = false, summary = ev.code + ": " + ev.error)
-                _items.value = _items.value + ChatItem.Sys("⚠ ${ev.code}: ${ev.error}")
+                _items.value = _items.value + ChatItem.Sys("${ev.code}: ${ev.error}")
             }
             is ChatEvent.Other -> _connected.value = true
             is ChatEvent.TextDelta -> { if (sessionProvider == null) sessionProvider = "claude"; appendDelta(ev.text) }
@@ -431,7 +437,7 @@ class ChatViewModel(
             is ChatEvent.TokenBudgetEv -> _tokenBudget.value =
                 TokenBudget(ev.used, ev.total, ev.input, ev.output)
             is ChatEvent.ErrorEv -> {
-                _items.value = _items.value + ChatItem.Sys("⚠ ${ev.message}")
+                _items.value = _items.value + ChatItem.Sys(ev.message)
                 // A failed run must reach a backgrounded user too: setWorking above (via
                 // the handler below) already dropped the progress notification, so without
                 // a terminal notification the user never learns the run died.
@@ -471,7 +477,7 @@ class ChatViewModel(
     fun send(text: String) {
         val imgs = _images.value
         if (text.isBlank() && imgs.isEmpty()) return
-        _items.value = _items.value + ChatItem.User(text.ifBlank { "📷 图片" }, System.currentTimeMillis())
+        _items.value = _items.value + ChatItem.User(text.ifBlank { "[图片]" }, System.currentTimeMillis())
         _images.value = emptyList()
         setWorking(true)
         val sid = currentSessionId
@@ -486,7 +492,7 @@ class ChatViewModel(
                     currentSessionId = created.sessionId
                     socket?.sendChat(created.sessionId, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
                 }.onFailure { e ->
-                    _items.value = _items.value + ChatItem.Sys("⚠ 创建会话失败：${e.message ?: "未知错误"}")
+                    _items.value = _items.value + ChatItem.Sys("创建会话失败：${e.message ?: "未知错误"}")
                     setWorking(false)
                 }
             }
@@ -638,7 +644,7 @@ class ChatViewModel(
                 val msg = r.output?.takeIf { it.isNotBlank() }
                     ?: if (r.success != false) "${gitOpLabel(op)}完成" else (r.error ?: "${gitOpLabel(op)}失败")
                 _items.value = _items.value + ChatItem.Sys("Git ${gitOpLabel(op)}：$msg")
-            }.onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git ${gitOpLabel(op)}失败：${it.message ?: "未知错误"}") }
+            }.onFailure { _items.value = _items.value + ChatItem.Sys("Git ${gitOpLabel(op)}失败：${it.message ?: "未知错误"}") }
             _gitBusy.value = false
         }
     }
@@ -653,7 +659,7 @@ class ChatViewModel(
                     _items.value = _items.value + ChatItem.Sys("Git 放弃更改：${it.output?.takeIf { o -> o.isNotBlank() } ?: file}")
                     loadGit(s)
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git 放弃更改失败：${it.message ?: "未知错误"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("Git 放弃更改失败：${it.message ?: "未知错误"}") }
         }
     }
 
@@ -704,7 +710,7 @@ class ChatViewModel(
                     }.getOrNull()
                     _commitsOpen.value = true
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ Git 历史加载失败：${it.message ?: "未知错误"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("Git 历史加载失败：${it.message ?: "未知错误"}") }
         }
     }
 
@@ -723,7 +729,7 @@ class ChatViewModel(
                         _branches.value = b.localBranches.ifEmpty { b.remoteBranches }
                     }
                 }
-                .onFailure { _items.value = _items.value + ChatItem.Sys("⚠ 删除分支失败：${it.message ?: "未知错误"}") }
+                .onFailure { _items.value = _items.value + ChatItem.Sys("删除分支失败：${it.message ?: "未知错误"}") }
             _branchPickerOpen.value = true
         }
     }
@@ -743,7 +749,7 @@ class ChatViewModel(
                 error.message?.contains("401") == true -> "直接连接登录失败：账号或密码不正确"
                 else -> "切换桌面端失败：${error.message ?: "未知错误"}"
             }
-            _items.value = _items.value + ChatItem.Sys("⚠ $message")
+            _items.value = _items.value + ChatItem.Sys("$message")
             android.util.Log.e("planrla", "applyDevice failed id=$id", error)
         }.isSuccess
     }
@@ -878,8 +884,9 @@ fun ChatScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                if (b == branch) "● " else "○ ",
+                                if (b == branch) "●" else "○",
                                 color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(end = 6.dp),
                             )
                             Text(
                                 b,
@@ -1270,6 +1277,8 @@ private fun MessageList(
                     modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                 ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.chat_regenerate), style = MaterialTheme.typography.labelSmall)
                 }
             }
@@ -1304,7 +1313,7 @@ private fun ChatRow(item: ChatItem, prev: ChatItem?, next: ChatItem?) {
         is ChatItem.Thinking -> { if (App.settings.showThinking) ThinkingBlock(item.text) }
         is ChatItem.ToolCard -> ToolCardRow(item)
         is ChatItem.Sys -> Text(
-            "⚠ ${item.text}",
+            item.text,
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             color = MaterialTheme.colorScheme.error
         )
@@ -2341,8 +2350,8 @@ private fun ConversationsDrawer(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        DrawerActionRow(stringResource(R.string.chat_all_projects), onBackToProjects)
-        DrawerActionRow(stringResource(R.string.chat_new_chat), onNewSession, primary = true)
+        DrawerActionRow(stringResource(R.string.chat_all_projects), onBackToProjects, icon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) })
+        DrawerActionRow(stringResource(R.string.chat_new_chat), onNewSession, primary = true, icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) })
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         if (sessions.isEmpty()) {
             Text(
@@ -2362,15 +2371,21 @@ private fun ConversationsDrawer(
 }
 
 @Composable
-private fun DrawerActionRow(label: String, onClick: () -> Unit, primary: Boolean = false) {
-    Text(
-        label,
+private fun DrawerActionRow(label: String, onClick: () -> Unit, primary: Boolean = false, icon: (@Composable () -> Unit)? = null) {
+    Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal,
-        color = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-    )
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon?.invoke()
+        if (icon != null) Spacer(Modifier.width(10.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }
 
 @Composable
@@ -2486,6 +2501,13 @@ private fun HeaderIconTab(
 private fun ShellPlaceholder(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Default.Terminal,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp),
+            )
+            Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.chat_shell), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             Text(
@@ -2767,16 +2789,17 @@ private fun DeviceSwitcherSheet(
                             maxLines = 1,
                         )
                     }
-                    Text(
-                        "✎",
-                        Modifier.clickable { onEdit(d.id) }.padding(8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        if (selected) "●" else "○",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.titleMedium,
+                    IconButton(onClick = { onEdit(d.id) }) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(
+                        if (selected) Icons.Filled.RadioButtonChecked else Icons.Filled.RadioButtonUnchecked,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

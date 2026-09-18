@@ -136,7 +136,7 @@ private fun LoadingErrorRow(loading: Boolean, error: String?) {
         }
     }
     error?.let {
-        Text("⚠ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }
 

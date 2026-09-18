@@ -31,6 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -735,16 +737,32 @@ private fun FileViewer(
                             TextButton(onClick = { showRename = true }) { Text(stringResource(R.string.files_rename)) }
                         }
                         // Share/Download are always available for viewable text + image files.
-                        TextButton(onClick = onShare, enabled = canEdit) { Text(stringResource(R.string.files_share)) }
-                        TextButton(onClick = onDownload, enabled = canEdit) { Text(stringResource(R.string.files_download)) }
+                        TextButton(onClick = onShare, enabled = canEdit) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.files_share))
+                        }
+                        TextButton(onClick = onDownload, enabled = canEdit) {
+                            Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.files_download))
+                        }
                         IconButton(onClick = onDelete) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.settings_delete))
                         }
                     }
                 } else if (!content.loading && content.isImage) {
                     // Image preview: only Share / Download / Delete in the app bar.
-                    TextButton(onClick = onShare) { Text(stringResource(R.string.files_share)) }
-                    TextButton(onClick = onDownload) { Text(stringResource(R.string.files_download)) }
+                    TextButton(onClick = onShare) {
+                        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.files_share))
+                    }
+                    TextButton(onClick = onDownload) {
+                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.files_download))
+                    }
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.settings_delete))
                     }

@@ -101,7 +101,7 @@ private fun ExtensionSection(
         }
         s.error?.let {
             Text(
-                "⚠ $it",
+                it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
