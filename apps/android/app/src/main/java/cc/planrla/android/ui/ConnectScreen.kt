@@ -185,7 +185,11 @@ class ConnectViewModel : ViewModel() {
     fun login(server: String, user: String, pass: String, relay: String) {
         viewModelScope.launch {
             _state.value = State.Loading; _err.value = null
-            val norm = server.trimEnd('/')
+            // Accept bare host:port (e.g. 192.168.0.24:3002) — LAN desktops are plain HTTP,
+            // so default the scheme instead of failing with "Expected URL scheme ...".
+            val trimmed = server.trim().trimEnd('/')
+            val norm = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed
+                else "http://$trimmed"
             try {
                 App.tokenStore.setServer(norm)
                 if (relay.isNotBlank()) {
