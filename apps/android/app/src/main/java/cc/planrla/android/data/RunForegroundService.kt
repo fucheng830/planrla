@@ -102,13 +102,22 @@ class RunForegroundService : Service() {
         }
 
         /** Terminal state: stop the service and post the completion notification. */
-        fun finish(ctx: Context, sessionId: String, providerName: String?, summary: String?) {
+        fun finish(
+            ctx: Context,
+            sessionId: String,
+            providerName: String?,
+            ok: Boolean,
+            summary: String?,
+        ) {
             running = false
             step = null
             ctx.stopService(Intent(ctx, RunForegroundService::class.java))
             runCatching {
                 NotificationManagerCompat.from(ctx)
-                    .notify(sessionId.hashCode(), RunNotification.finished(ctx, sessionId, providerName, true, summary))
+                    .notify(
+                        sessionId.hashCode(),
+                        RunNotification.finished(ctx, sessionId, providerName, ok, summary),
+                    )
             }
         }
     }

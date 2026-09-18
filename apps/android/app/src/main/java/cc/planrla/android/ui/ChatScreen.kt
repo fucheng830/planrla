@@ -381,6 +381,7 @@ class ChatViewModel(
             }
             is ChatEvent.ProtocolError -> {
                 setWorking(false)
+                notifyRunTerminalIfBackground(ok = false, summary = ev.code + ": " + ev.error)
                 _items.value = _items.value + ChatItem.Sys("⚠ ${ev.code}: ${ev.error}")
             }
             is ChatEvent.Other -> _connected.value = true
@@ -418,11 +419,21 @@ class ChatViewModel(
             }
             ChatEvent.Complete -> {
                 setWorking(false)
-                notifyRunCompleteIfBackground()
+                // Preview: first line of the finished assistant message (mirrors Ekko's
+                // result thumbnail on the completion notification).
+                val summary = (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)
+                    ?.text?.value?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(80)
+                notifyRunTerminalIfBackground(ok = true, summary = summary)
             }
             is ChatEvent.TokenBudgetEv -> _tokenBudget.value =
                 TokenBudget(ev.used, ev.total, ev.input, ev.output)
-            is ChatEvent.ErrorEv -> _items.value = _items.value + ChatItem.Sys("⚠ ${ev.message}")
+            is ChatEvent.ErrorEv -> {
+                _items.value = _items.value + ChatItem.Sys("⚠ ${ev.message}")
+                // A failed run must reach a backgrounded user too: setWorking above (via
+                // the handler below) already dropped the progress notification, so without
+                // a terminal notification the user never learns the run died.
+                notifyRunTerminalIfBackground(ok = false, summary = ev.message)
+            }
             is ChatEvent.SessionCreated -> ev.sessionId.takeIf { it.isNotBlank() }?.let { currentSessionId = it }
         }
     }
@@ -437,20 +448,20 @@ class ChatViewModel(
     }
 
     /** Post a local "Claude 已完成" notification only when the app is backgrounded
-     *  (ProcessLifecycleOwner → App.isForeground). Foreground runs stay silent. */
-    private fun notifyRunCompleteIfBackground() {
+     *  (ProcessLifecycleOwner → App.isForeground). Foreground runs stay silent.
+     *  Covers both terminals: completion (summary = first line of the reply) and
+     *  failure (summary = the error text). */
+    private fun notifyRunTerminalIfBackground(ok: Boolean, summary: String?) {
         if (App.isForeground) return
         val ctx = App.appContext
         val sid = currentSessionId
         if (sid == null) return
-        // Preview: first line of the finished assistant message (mirrors Ekko's result
-        // thumbnail on the completion notification). Falls back to the generic string.
-        val summary = (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)
-            ?.text?.value?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(80)
         // finish() also stops the (already-stopped-by-setWorking) service and posts the
         // notification; SecurityException on denied permission is swallowed best-effort.
         runCatching {
-            RunForegroundService.finish(ctx, sid, providerDisplayName(sessionProvider), summary)
+            RunForegroundService.finish(
+                ctx, sid, providerDisplayName(sessionProvider), ok, summary?.take(80),
+            )
         }
     }
 
