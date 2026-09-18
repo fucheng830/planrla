@@ -70,10 +70,14 @@ class RunForegroundService : Service() {
         @Volatile private var sid = ""
         @Volatile private var providerName: String? = null
         @Volatile private var step: String? = null
+        /** Wall-clock start of the current run; anchors the notification chronometer
+         *  across step updates so elapsed time never resets mid-run. */
+        @Volatile private var startedAtMs = 0L
 
         /** Called when the app backgrounds with an active run: anchor the progress notification. */
         fun start(ctx: Context, sessionId: String, providerDisplayName: String?) {
             step = null
+            startedAtMs = System.currentTimeMillis()
             ctx.startForegroundService(
                 Intent(ctx, RunForegroundService::class.java)
                     .putExtra(RunNotification.EXTRA_SESSION_ID, sessionId)
@@ -93,7 +97,7 @@ class RunForegroundService : Service() {
             step = toolName?.takeIf { it.isNotBlank() } ?: return
             runCatching {
                 NotificationManagerCompat.from(ctx)
-                    .notify(NOTIF_ID, RunNotification.progress(ctx, sid, providerName, step))
+                    .notify(NOTIF_ID, RunNotification.progress(ctx, sid, providerName, step, startedAtMs))
             }
         }
 

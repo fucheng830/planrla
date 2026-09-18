@@ -30,7 +30,16 @@ object RunNotification {
     }
 
     /** Ongoing progress notification (indeterminate bar + elapsed-time chronometer). */
-    fun progress(ctx: Context, sessionId: String, providerName: String?, step: String?): Notification =
+    /** [startedAtMs] anchors the elapsed-time chronometer; 0 falls back to now. Rebuilding
+     *  the notification on step updates must reuse the original start time, or the clock
+     *  visibly resets on every tool call. */
+    fun progress(
+        ctx: Context,
+        sessionId: String,
+        providerName: String?,
+        step: String?,
+        startedAtMs: Long = 0L,
+    ): Notification =
         base(ctx, RunForegroundService.CHANNEL_ACTIVE, sessionId, providerName)
             .setContentText(
                 if (step.isNullOrBlank()) ctx.getString(R.string.notif_progress_body)
@@ -40,7 +49,7 @@ object RunNotification {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setUsesChronometer(true)
-            .setWhen(System.currentTimeMillis())
+            .setWhen(if (startedAtMs > 0) startedAtMs else System.currentTimeMillis())
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
                 ctx.getString(R.string.notif_stop_action),
