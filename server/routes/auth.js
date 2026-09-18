@@ -80,6 +80,85 @@ router.post('/register', async (req, res) => {
   }
 });
 
+import os from 'os';
+
+// LAN addresses of this desktop, for the mobile QR pairing payload.
+router.get('/lan-info', authenticateToken, (req, res) => {
+    try {
+        const ips = new Set();
+        for (const addrs of Object.values(os.networkInterfaces())) {
+            for (const addr of addrs ?? []) {
+                if (addr.family === 'IPv4' && !addr.internal) ips.add(addr.address);
+            }
+        }
+        const port = Number(process.env.SERVER_PORT || 3001);
+        res.json({ success: true, ips: [...ips], port });
+    } catch (error) {
+        console.error('LAN info error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// One-time device pairing tokens (mobile QR connect).
+// Tokens live in memory for PAIRING_TTL_MS (5 min), single use. Desktop never
+// puts the account password in a QR code — the phone exchanges the pairing
+// token for a normal JWT via POST /api/auth/pair/exchange.
+const pairingTokens = new Map(); // token -> { userId, username, expiresAt }
+const PAIRING_TTL_MS = 5 * 60 * 1000;
+
+function cleanExpiredPairingTokens() {
+    const now = Date.now();
+    for (const [k, v] of pairingTokens) {
+        if (v.expiresAt <= now) pairingTokens.delete(k);
+    }
+}
+
+// Create a pairing token (requires an authenticated desktop session).
+router.post('/pair/create', authenticateToken, (req, res) => {
+    try {
+        cleanExpiredPairingTokens();
+        const token = require('crypto').randomBytes(24).toString('base64url');
+        pairingTokens.set(token, {
+            userId: req.user.id,
+            username: req.user.username,
+            expiresAt: Date.now() + PAIRING_TTL_MS,
+        });
+        res.json({ success: true, token, expiresInMs: PAIRING_TTL_MS });
+    } catch (error) {
+        console.error('Pair create error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Exchange a pairing token for a normal JWT (no auth — the pairing token IS
+// the credential; single use + short TTL limit a leaked token's value).
+router.post('/pair/exchange', (req, res) => {
+    try {
+        cleanExpiredPairingTokens();
+        const { token } = req.body || {};
+        if (!token) return res.status(400).json({ error: 'token required' });
+        const entry = pairingTokens.get(String(token));
+        if (!entry || entry.expiresAt <= Date.now()) {
+            pairingTokens.delete(String(token));
+            return res.status(401).json({ error: 'Invalid or expired pairing token' });
+        }
+        // Single use.
+        pairingTokens.delete(String(token));
+        const user = userDb.getUserById(entry.userId);
+        if (!user) return res.status(401).json({ error: 'User not found' });
+        const jwt = generateToken(user);
+        userDb.updateLastLogin(user.id);
+        res.json({
+            success: true,
+            user: { id: user.id, username: user.username },
+            token: jwt,
+        });
+    } catch (error) {
+        console.error('Pair exchange error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // User login
 router.post('/login', async (req, res) => {
   try {

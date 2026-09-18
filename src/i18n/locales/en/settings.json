@@ -121,7 +121,8 @@
     "plugins": "Plugins",
     "skills": "Skills",
     "about": "About",
-    "license": "License"
+    "license": "License",
+    "mobile": "Connect Mobile"
   },
   "aboutInfo": {
     "tagline": "AI coding assistant interface",
@@ -901,5 +902,15 @@
       "addButton": "Add Agent",
       "cancelButton": "Cancel"
     }
+  },
+  "mobilePairing": {
+    "title": "Connect Mobile",
+    "subtitle": "Scan this QR code with the Planrla mobile app (Import from QR code) to add this desktop and sign in one step.",
+    "generating": "Generating QR code…",
+    "refresh": "Refresh QR",
+    "copy": "Copy address",
+    "copied": "Copied",
+    "addresses": "Desktop LAN addresses",
+    "securityNote": "The QR contains a one-time pairing token (no password). It expires in 5 minutes or after first use."
   }
 }

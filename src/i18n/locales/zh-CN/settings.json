@@ -104,7 +104,8 @@
     "plugins": "插件",
     "skills": "技能",
     "about": "关于",
-    "license": "许可证"
+    "license": "许可证",
+    "mobile": "连接手机"
   },
   "aboutInfo": {
     "tagline": "AI 编程助手界面",
@@ -821,5 +822,15 @@
       "addButton": "添加节点",
       "cancelButton": "取消"
     }
+  },
+  "mobilePairing": {
+    "title": "连接手机",
+    "subtitle": "用 Planrla 手机 App 的「扫码导入」扫描二维码，一步完成桌面端添加与登录。",
+    "generating": "正在生成二维码…",
+    "refresh": "刷新二维码",
+    "copy": "复制地址",
+    "copied": "已复制",
+    "addresses": "桌面端局域网地址",
+    "securityNote": "二维码包含一次性配对令牌（不含密码），5 分钟后或首次使用后即失效。"
   }
 }
