@@ -119,6 +119,11 @@ object App {
     /** Process-wide foreground flag, driven by ProcessLifecycleOwner in MainActivity. ON_START→true, ON_STOP→false. */
     @Volatile var isForeground: Boolean = true
     val settings: SettingsHolder = SettingsHolder()
+    /** The chat run currently executing (display provider + session), or null when idle.
+     *  Maintained by ChatViewModel.setWorking(); MainActivity starts the background
+     *  progress service from it when the app goes to the background mid-run. */
+    data class ActiveRun(val sessionId: String, val providerName: String?)
+    @Volatile var activeRun: ActiveRun? = null
     val unread = MutableStateFlow<Set<String>>(emptySet())
     fun markUnread(id: String) { unread.value = unread.value + id }
     fun markRead(id: String) { unread.value = unread.value - id }

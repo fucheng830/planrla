@@ -44,12 +44,27 @@ class MainActivity : ComponentActivity() {
         const val CHANNEL_RUN = "planrla_run"
     }
 
-    /** Tracks process-wide foreground state into App.isForeground so ViewModels can decide
-     *  whether to post a local notification (only when the app is backgrounded). */
-    private val processObserver = object : DefaultLifecycleObserver {
-        override fun onStart(owner: LifecycleOwner) { App.isForeground = true }
-        override fun onStop(owner: LifecycleOwner) { App.isForeground = false }
-    }
+   /** Tracks process-wide foreground state into App.isForeground so ViewModels can decide
+    *  whether to post a local notification (only when the app is backgrounded). */
+   private val processObserver = object : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            App.isForeground = true
+            // Back in the app: the on-screen chat shows live state, so drop the
+            // background progress notification.
+            cc.planrla.android.data.RunForegroundService.stop(this@MainActivity)
+        }
+        override fun onStop(owner: LifecycleOwner) {
+            App.isForeground = false
+            // Backgrounded mid-run: anchor an ongoing progress notification via a
+            // foreground service so the OS keeps our (re)connect loop alive and the
+            // user sees live status from the launcher/notification shade.
+            App.activeRun?.let { run ->
+                cc.planrla.android.data.RunForegroundService.start(
+                    this@MainActivity, run.sessionId, run.providerName,
+                )
+            }
+        }
+   }
 
     private val notifPermLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* result ignored; best-effort */ }
@@ -61,6 +76,9 @@ class MainActivity : ComponentActivity() {
         createRunChannel()
         ensureNotificationPermission()
         ProcessLifecycleOwner.get().lifecycle.addObserver(processObserver)
+        // Deep link from a run notification: navigate straight to the run's chat screen
+        // instead of the connect screen. chat re-attaches via chat.subscribe replay.
+        val notifSessionId = intent?.getStringExtra(cc.planrla.android.data.RunNotification.EXTRA_SESSION_ID)
         setContent {
             NomadTheme {
                 Surface(
@@ -73,7 +91,7 @@ class MainActivity : ComponentActivity() {
                     // aggressively curved screen edges, or the "waterfall cutout" simulator in developer
                     // options), applying them app-wide pads both sides and squashes every screen's width.
                     Box(Modifier.windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Vertical))) {
-                        NomadNav()
+                        NomadNav(notifSessionId)
                     }
                 }
             }
@@ -111,12 +129,19 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun createRunChannel() {
-        // NotificationChannel requires API 26+ (Oreo); minSdk is 26 so no guard needed.
-        val mgr = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            CHANNEL_RUN,
-            "Run completion",
+   private fun createRunChannel() {
+       // NotificationChannel requires API 26+ (Oreo); minSdk is 26 so no guard needed.
+       val mgr = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        mgr.createNotificationChannel(
+            NotificationChannel(
+                cc.planrla.android.data.RunForegroundService.CHANNEL_ACTIVE,
+                "运行中任务",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply { description = "任务后台执行时显示实时进度" }
+        )
+       val channel = NotificationChannel(
+           CHANNEL_RUN,
+           "Run completion",
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply { description = "Notifies you when Claude finishes a run in the background" }
         mgr.createNotificationChannel(channel)
@@ -145,9 +170,12 @@ private fun safeUrlDecode(value: String): String =
     }
 
 @Composable
-fun NomadNav() {
+fun NomadNav(notifSessionId: String? = null) {
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = "connect") {
+    NavHost(
+        navController = nav,
+        startDestination = if (notifSessionId.isNullOrBlank()) "connect" else "chat/$notifSessionId",
+    ) {
         composable("connect") {
             ConnectScreen(onLoggedIn = {
                 nav.navigate("chat/new") { popUpTo("connect") { inclusive = true } }

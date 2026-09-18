@@ -143,6 +143,8 @@ import cc.planrla.android.data.NormalizedMessage
 import cc.planrla.android.data.SessionInfo
 import cc.planrla.android.data.TokenBudget
 import cc.planrla.android.data.NetworkModule
+import cc.planrla.android.data.RunForegroundService
+import cc.planrla.android.data.RunNotification
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
@@ -229,6 +231,23 @@ class ChatViewModel(
     val sessions: StateFlow<List<SessionInfo>> = _sessions
     private val _working = MutableStateFlow(false)
     val working: StateFlow<Boolean> = _working
+    /** Single source of truth for "a run is active": mirrors into App.activeRun (so
+     *  MainActivity can anchor the background progress notification) and pushes live tool
+     *  steps into that notification. setWorking(false) tears both down. */
+    private fun setWorking(v: Boolean) {
+        _working.value = v
+        val ctx = App.appContext
+        if (v) {
+            val sid = currentSessionId
+            if (sid != null) {
+                App.activeRun = App.ActiveRun(sid, providerDisplayName(sessionProvider))
+                if (!App.isForeground) RunForegroundService.start(ctx, sid, providerDisplayName(sessionProvider))
+            }
+        } else {
+            App.activeRun = null
+            if (!App.isForeground) RunForegroundService.stop(ctx)
+        }
+    }
     private val _branch = MutableStateFlow<String?>(null)
     val branch: StateFlow<String?> = _branch
     private val _branches = MutableStateFlow<List<String>>(emptyList())
@@ -352,13 +371,13 @@ class ChatViewModel(
             }
             is ChatEvent.ChatSubscribed -> {
                 _connected.value = true
-                _working.value = ev.isProcessing
+                setWorking(ev.isProcessing)
                 if (ev.pendingPermissions.isNotEmpty()) {
                     _perms.value = ev.pendingPermissions.map { PermissionReq(it.requestId, it.toolName, it.input?.toString()) }
                 }
             }
             is ChatEvent.ProtocolError -> {
-                _working.value = false
+                setWorking(false)
                 _items.value = _items.value + ChatItem.Sys("⚠ ${ev.code}: ${ev.error}")
             }
             is ChatEvent.Other -> _connected.value = true
@@ -370,8 +389,13 @@ class ChatViewModel(
                 else appendDelta(ev.text)
             }
             is ChatEvent.Thinking -> _items.value = _items.value + ChatItem.Thinking(ev.text, System.currentTimeMillis())
-            is ChatEvent.ToolUse -> _items.value =
-                _items.value + ChatItem.ToolCard(ev.toolName, ev.input?.toString() ?: "", ev.toolId, time = System.currentTimeMillis())
+            is ChatEvent.ToolUse -> {
+                _items.value = _items.value +
+                    ChatItem.ToolCard(ev.toolName, ev.input?.toString() ?: "", ev.toolId, time = System.currentTimeMillis())
+                // Mirror the executing tool into the background progress notification (no-op
+                // unless the foreground service is anchoring it).
+                RunForegroundService.updateStep(App.appContext, ev.toolName)
+            }
             is ChatEvent.ToolResultEv -> {
                 val card = _items.value.asReversed()
                     .firstOrNull { it is ChatItem.ToolCard && (ev.toolId == null || it.toolId == ev.toolId) }
@@ -387,10 +411,10 @@ class ChatViewModel(
                 _perms.value.filterNot { it.requestId == ev.requestId }
             ChatEvent.StreamEnd -> {
                 (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)?.done?.value = true
-                _working.value = false
+                setWorking(false)
             }
             ChatEvent.Complete -> {
-                _working.value = false
+                setWorking(false)
                 notifyRunCompleteIfBackground()
             }
             is ChatEvent.TokenBudgetEv -> _tokenBudget.value =
@@ -414,13 +438,9 @@ class ChatViewModel(
     private fun notifyRunCompleteIfBackground() {
         if (App.isForeground) return
         val ctx = App.appContext
-        val n = NotificationCompat.Builder(ctx, "planrla_run")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(providerDisplayName(sessionProvider))
-            .setContentText("运行完成")
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
+        val sid = currentSessionId
+        if (sid == null) return
+        val n = RunNotification.finished(ctx, sid, providerDisplayName(sessionProvider), ok = true)
         // isForeground gate is the real guard; permission denial throws SecurityException
         // which we swallow (best-effort — won't crash the run handler).
         runCatching {
@@ -433,7 +453,7 @@ class ChatViewModel(
         if (text.isBlank() && imgs.isEmpty()) return
         _items.value = _items.value + ChatItem.User(text.ifBlank { "📷 图片" }, System.currentTimeMillis())
         _images.value = emptyList()
-        _working.value = true
+        setWorking(true)
         val sid = currentSessionId
         if (sid != null) {
             socket?.sendChat(sid, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
@@ -447,7 +467,7 @@ class ChatViewModel(
                     socket?.sendChat(created.sessionId, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
                 }.onFailure { e ->
                     _items.value = _items.value + ChatItem.Sys("⚠ 创建会话失败：${e.message ?: "未知错误"}")
-                    _working.value = false
+                    setWorking(false)
                 }
             }
         }
@@ -455,7 +475,7 @@ class ChatViewModel(
 
     fun abort() {
         currentSessionId?.let { socket?.sendAbort(it) }
-        _working.value = false
+        setWorking(false)
     }
 
     fun cyclePermissionMode() {
@@ -725,6 +745,10 @@ class ChatViewModel(
 
     override fun onCleared() {
         socket?.close()
+        // Leaving the chat route with a run active: the desktop host keeps running it and
+        // a later chat.subscribe re-attaches, but this VM is gone — drop the active-run
+        // marker so backgrounding later does not anchor a stale progress notification.
+        App.activeRun = null
     }
 
     companion object {

@@ -274,4 +274,9 @@
     <string name="shell_bad_url">bad URL</string>
     <string name="shell_disconnected">disconnected</string>
     <string name="shell_ws_error">WebSocket error</string>
+    <string name="notif_progress_title">Run in progress</string>
+    <string name="notif_progress_body">Working — tap to view the run</string>
+    <string name="notif_progress_step">Running %1$s — tap to view</string>
+    <string name="notif_done_body">Run finished — tap to view the result</string>
+    <string name="notif_error_body">Run failed — tap to view</string>
 </resources>
