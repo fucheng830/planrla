@@ -54,8 +54,8 @@
     <string name="device_switcher_title">切换桌面端</string>
     <string name="device_switcher_relay_token">中转令牌 …%1$s</string>
     <string name="device_switcher_lan">直连 %1$s</string>
-    <string name="device_switcher_add">+ 添加桌面端</string>
-    <string name="device_switcher_refresh">↻ 刷新桌面端列表</string>
+    <string name="device_switcher_add">添加桌面端</string>
+    <string name="device_switcher_refresh">刷新桌面端列表</string>
     <string name="device_switcher_action">切换</string>
     <string name="add_device_title">添加桌面端</string>
     <string name="add_device_name_label">名称（例如：家里）</string>
@@ -64,7 +64,7 @@
     <string name="add_device_help">直接连接只需要桌面端地址和 Planrla 用户名/密码。远程访问才需要中转令牌。</string>
     <string name="add_device_username_label">Planrla 用户名</string>
     <string name="add_device_password_label">Planrla 密码</string>
-    <string name="add_device_scan_import">📷 扫码导入</string>
+    <string name="add_device_scan_import">扫码导入</string>
     <string name="add_device_scan_prompt">将桌面端二维码对准取景框</string>
     <string name="add_device_direct_hint">直接连接不需要中转令牌。</string>
     <string name="add_device_confirm">添加</string>

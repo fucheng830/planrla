@@ -50,7 +50,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AlertDialog
@@ -2781,12 +2784,26 @@ private fun DeviceSwitcherSheet(
                 Modifier.fillMaxWidth().clickable(onClick = onAdd).padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(stringResource(R.string.device_switcher_add), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(
                 Modifier.fillMaxWidth().clickable(onClick = onRefresh).padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(stringResource(R.string.device_switcher_refresh), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(8.dp))
@@ -2879,7 +2896,11 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
                 TextButton(
                     onClick = { camPerm.launch(android.Manifest.permission.CAMERA) },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) { Text(stringResource(R.string.add_device_scan_import)) }
+                ) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_device_scan_import))
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.add_device_direct_hint),
