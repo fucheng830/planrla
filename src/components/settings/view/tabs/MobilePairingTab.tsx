@@ -22,12 +22,21 @@ export default function MobilePairingTab() {
     setLoading(true); setError(null); setQrDataUrl(null); setLanUrls([]);
     try {
       const lanRes = await authenticatedFetch('/api/auth/lan-info');
-      if (!lanRes.ok) throw new Error('Failed to get LAN info');
+      // A stale backend (or SPA fallback) answers unknown API routes with the
+      // index.html document — fail with a clear message instead of the cryptic
+      // "Unexpected token '<'" JSON parse error.
+      const lanCt = lanRes.headers.get('content-type') || '';
+      if (!lanRes.ok || !lanCt.includes('application/json')) {
+        throw new Error('桌面端服务未包含扫码配对接口，请重启/更新桌面端 Planrla 后再试。');
+      }
       const lan = await lanRes.json() as { ips: string[]; port: number };
       const port = lan.port || 3001;
       const urls = (lan.ips ?? []).map((ip) => `http://${ip}:${port}`);
       const pairRes = await authenticatedFetch('/api/auth/pair/create', { method: 'POST' });
-      if (!pairRes.ok) throw new Error('Failed to create pairing token');
+      const pairCt = pairRes.headers.get('content-type') || '';
+      if (!pairRes.ok || !pairCt.includes('application/json')) {
+        throw new Error('桌面端服务未包含扫码配对接口，请重启/更新桌面端 Planrla 后再试。');
+      }
       const pair = await pairRes.json() as { token: string };
       const host = window.location.hostname;
       const primary = urls[0] || `http://${host}:${port}`;
