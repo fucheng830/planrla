@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { userDb } from '../modules/database/index.js';
 import { getConnection } from '../modules/database/connection.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
@@ -117,7 +118,7 @@ function cleanExpiredPairingTokens() {
 router.post('/pair/create', authenticateToken, (req, res) => {
     try {
         cleanExpiredPairingTokens();
-        const token = require('crypto').randomBytes(24).toString('base64url');
+        const token = crypto.randomBytes(24).toString('base64url');
         pairingTokens.set(token, {
             userId: req.user.id,
             username: req.user.username,
