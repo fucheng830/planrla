@@ -1,8 +1,18 @@
+import { randomUUID } from 'node:crypto';
+
 import express, { type Request, type Response } from 'express';
+import * as realCron from 'node-cron';
 
 import { sessionsService } from '@/modules/providers/index.js';
 import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
+import {
+  buildScheduleConfirmation,
+  cronPromptsDriver,
+  cronPromptsStore,
+  normalizeLlmScheduleInput,
+  type NormalizedLlmScheduleInput,
+} from '@/modules/cron-prompts/index.js';
 
 import { setSessionTitle } from './session-rename.service.js';
 
@@ -35,6 +45,14 @@ const SERVER_INFO = {
 
 const MAX_RETURN_MESSAGES = 20;
 const DEFAULT_SEARCH_LIMIT = 20;
+
+type PendingScheduleConfirmation = {
+  input: NormalizedLlmScheduleInput;
+  expiresAt: number;
+};
+
+const pendingScheduleConfirmations = new Map<string, PendingScheduleConfirmation>();
+const SCHEDULE_CONFIRMATION_TTL_MS = 10 * 60 * 1000;
 
 type SessionMessage = {
   role: string;
@@ -113,6 +131,80 @@ const SET_SESSION_TITLE_TOOL: ToolDefinition = {
   },
 };
 
+const SCHEDULE_CREATE_TOOL: ToolDefinition = {
+  name: 'schedule_create',
+  description:
+    'Prepare a recurring LLM task. This does not write immediately: it returns a confirmation token. After the user explicitly confirms, call schedule_confirm with that token. Each trigger creates a new LLM session and runs the natural-language prompt in the selected project.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Human-readable schedule name.' },
+      cronExpression: { type: 'string', description: 'Standard five-field cron expression, for example 0 9 * * 1-5.' },
+      prompt: { type: 'string', description: 'The natural-language task the LLM should execute on every trigger.' },
+      provider: { type: 'string', description: 'LLM provider, default claude.' },
+      projectPath: { type: 'string', description: 'Absolute project path where the LLM session should work.' },
+      notifyInbox: { type: 'boolean', description: 'Send a completion notice to the project inbox, default true.' },
+    },
+    required: ['name', 'cronExpression', 'prompt', 'projectPath'],
+  },
+};
+
+const SCHEDULE_CONFIRM_TOOL: ToolDefinition = {
+  name: 'schedule_confirm',
+  description: 'Confirm and persist a schedule_create request using its confirmation token.',
+  inputSchema: {
+    type: 'object',
+    properties: { confirmationToken: { type: 'string' } },
+    required: ['confirmationToken'],
+  },
+};
+
+const SCHEDULE_LIST_TOOL: ToolDefinition = {
+  name: 'schedule_list',
+  description: 'List recurring LLM schedules currently configured on this host.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+};
+
+const SCHEDULE_DELETE_TOOL: ToolDefinition = {
+  name: 'schedule_delete',
+  description: 'Delete an existing recurring LLM schedule by id after the user confirms the deletion.',
+  inputSchema: {
+    type: 'object',
+    properties: { scheduleId: { type: 'string' }, confirmed: { type: 'boolean' } },
+    required: ['scheduleId', 'confirmed'],
+  },
+};
+
+const SCHEDULE_UPDATE_TOOL: ToolDefinition = {
+  name: 'schedule_update',
+  description: 'Update an existing recurring LLM schedule after the user confirms the proposed changes.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      scheduleId: { type: 'string' },
+      confirmed: { type: 'boolean' },
+      name: { type: 'string' },
+      cronExpression: { type: 'string' },
+      prompt: { type: 'string' },
+      provider: { type: 'string' },
+      projectPath: { type: 'string' },
+      notifyInbox: { type: 'boolean' },
+      enabled: { type: 'boolean' },
+    },
+    required: ['scheduleId', 'confirmed'],
+  },
+};
+
+const SCHEDULE_RUN_NOW_TOOL: ToolDefinition = {
+  name: 'schedule_run_now',
+  description: 'Start one immediate LLM run for an existing schedule. It creates a new LLM session using the saved prompt.',
+  inputSchema: {
+    type: 'object',
+    properties: { scheduleId: { type: 'string' } },
+    required: ['scheduleId'],
+  },
+};
+
 const textResponse = (text: string) => ({
   content: [{ type: 'text', text }],
 });
@@ -181,6 +273,25 @@ async function fetchSessionMessages(sessionId: string): Promise<{
 }
 
 async function callTool(name: string, args: Record<string, unknown>) {
+  cleanupExpiredScheduleConfirmations();
+  if (name === SCHEDULE_CREATE_TOOL.name) {
+    return createScheduleConfirmation(args);
+  }
+  if (name === SCHEDULE_CONFIRM_TOOL.name) {
+    return confirmSchedule(args);
+  }
+  if (name === SCHEDULE_LIST_TOOL.name) {
+    return listSchedules();
+  }
+  if (name === SCHEDULE_DELETE_TOOL.name) {
+    return deleteSchedule(args);
+  }
+  if (name === SCHEDULE_UPDATE_TOOL.name) {
+    return updateSchedule(args);
+  }
+  if (name === SCHEDULE_RUN_NOW_TOOL.name) {
+    return runScheduleNow(args);
+  }
   if (name === SEARCH_CONVERSATIONS_TOOL.name) {
     return searchConversations(args);
   }
@@ -265,6 +376,96 @@ function setSessionTitleTool(args: Record<string, unknown>) {
   return jsonResponse(result);
 }
 
+function createScheduleConfirmation(args: Record<string, unknown>) {
+  const input = normalizeLlmScheduleInput({
+    name: readString(args.name, 'name'),
+    cronExpression: readString(args.cronExpression, 'cronExpression'),
+    prompt: readString(args.prompt, 'prompt'),
+    provider: readOptionalString(args.provider) ?? 'claude',
+    projectPath: readString(args.projectPath, 'projectPath'),
+    notifyInbox: args.notifyInbox !== false,
+  }, (expression) => realCron.validate(expression));
+
+  const confirmationToken = randomUUID();
+  pendingScheduleConfirmations.set(confirmationToken, {
+    input,
+    expiresAt: Date.now() + SCHEDULE_CONFIRMATION_TTL_MS,
+  });
+  return jsonResponse({
+    status: 'confirmation_required',
+    confirmationToken,
+    message: buildScheduleConfirmation(input),
+    expiresInSeconds: SCHEDULE_CONFIRMATION_TTL_MS / 1000,
+  });
+}
+
+function confirmSchedule(args: Record<string, unknown>) {
+  const token = readString(args.confirmationToken, 'confirmationToken');
+  const pending = pendingScheduleConfirmations.get(token);
+  if (!pending || pending.expiresAt <= Date.now()) {
+    pendingScheduleConfirmations.delete(token);
+    throw new Error('schedule confirmation token is missing or expired');
+  }
+  pendingScheduleConfirmations.delete(token);
+  const task = cronPromptsStore.create(pending.input);
+  cronPromptsDriver.reload();
+  return jsonResponse({ status: 'created', schedule: task });
+}
+
+function listSchedules() {
+  return jsonResponse({ schedules: cronPromptsStore.list() });
+}
+
+function deleteSchedule(args: Record<string, unknown>) {
+  const scheduleId = readString(args.scheduleId, 'scheduleId');
+  if (args.confirmed !== true) {
+    throw new Error('schedule deletion requires confirmed=true after showing the schedule to the user');
+  }
+  const deleted = cronPromptsStore.delete(scheduleId);
+  if (!deleted) throw new Error('schedule not found');
+  cronPromptsDriver.reload();
+  return jsonResponse({ status: 'deleted', scheduleId });
+}
+
+function updateSchedule(args: Record<string, unknown>) {
+  const scheduleId = readString(args.scheduleId, 'scheduleId');
+  if (args.confirmed !== true) {
+    throw new Error('schedule update requires confirmed=true after showing the proposed changes');
+  }
+  const fields: Parameters<typeof cronPromptsStore.update>[1] = {};
+  if (typeof args.name === 'string' && args.name.trim()) fields.name = args.name.trim();
+  if (typeof args.cronExpression === 'string' && args.cronExpression.trim()) {
+    const expression = args.cronExpression.trim();
+    if (!realCron.validate(expression)) throw new Error(`invalid cron expression: ${expression}`);
+    fields.cronExpression = expression;
+  }
+  if (typeof args.prompt === 'string' && args.prompt.trim()) fields.prompt = args.prompt.trim();
+  if (typeof args.provider === 'string' && args.provider.trim()) fields.provider = args.provider.trim();
+  if (typeof args.projectPath === 'string') fields.projectPath = args.projectPath.trim().replace(/[\\/]+/g, '/');
+  if (typeof args.notifyInbox === 'boolean') fields.notifyInbox = args.notifyInbox;
+  if (typeof args.enabled === 'boolean') fields.enabled = args.enabled;
+  if (Object.keys(fields).length === 0) throw new Error('at least one schedule field is required');
+  const task = cronPromptsStore.update(scheduleId, fields);
+  if (!task) throw new Error('schedule not found');
+  cronPromptsDriver.reload();
+  return jsonResponse({ status: 'updated', schedule: task });
+}
+
+async function runScheduleNow(args: Record<string, unknown>) {
+  const scheduleId = readString(args.scheduleId, 'scheduleId');
+  const task = cronPromptsStore.getById(scheduleId);
+  if (!task) throw new Error('schedule not found');
+  const result = await cronPromptsDriver.runNow(scheduleId);
+  return jsonResponse({ status: 'started', schedule: task, result });
+}
+
+function cleanupExpiredScheduleConfirmations() {
+  const now = Date.now();
+  for (const [token, pending] of pendingScheduleConfirmations) {
+    if (pending.expiresAt <= now) pendingScheduleConfirmations.delete(token);
+  }
+}
+
 type JsonRpcRequest = {
   jsonrpc: '2.0';
   id?: string | number | null;
@@ -282,7 +483,19 @@ async function handleMessage(message: JsonRpcRequest) {
   }
 
   if (message.method === 'tools/list') {
-    return { tools: [QUERY_SESSION_TOOL, SEARCH_CONVERSATIONS_TOOL, SET_SESSION_TITLE_TOOL] };
+    return {
+      tools: [
+        QUERY_SESSION_TOOL,
+        SEARCH_CONVERSATIONS_TOOL,
+        SET_SESSION_TITLE_TOOL,
+        SCHEDULE_CREATE_TOOL,
+        SCHEDULE_CONFIRM_TOOL,
+        SCHEDULE_LIST_TOOL,
+        SCHEDULE_UPDATE_TOOL,
+        SCHEDULE_DELETE_TOOL,
+        SCHEDULE_RUN_NOW_TOOL,
+      ],
+    };
   }
 
   if (message.method === 'tools/call') {
