@@ -2984,7 +2984,14 @@ private fun AddDeviceDialog(onConfirm: (String, String, String, String, String) 
 }
 
 private fun normalizeHostInput(input: String): String {
-    val trimmed = input.trim().trimEnd('/')
+    // CJK IMEs swap ASCII ":" (and digits) for fullwidth forms — normalize back or
+    // the URL is unconnectable (user-visible as "cannot switch desktops").
+    val normalized = input
+        .replace('：', ':')
+        .replace('０', '0').replace('１', '1').replace('２', '2').replace('３', '3').replace('４', '4')
+        .replace('５', '5').replace('６', '6').replace('７', '7').replace('８', '8').replace('９', '9')
+        .replace('。', '.')
+    val trimmed = normalized.trim().trimEnd('/')
     return if (trimmed.isBlank() || trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed else "http://$trimmed"
 }
 

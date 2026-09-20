@@ -187,7 +187,13 @@ class ConnectViewModel : ViewModel() {
             _state.value = State.Loading; _err.value = null
             // Accept bare host:port (e.g. 192.168.0.24:3002) — LAN desktops are plain HTTP,
             // so default the scheme instead of failing with "Expected URL scheme ...".
-            val trimmed = server.trim().trimEnd('/')
+            // Normalize fullwidth punctuation/digits from CJK IMEs before use.
+            val normalized = server
+                .replace('：', ':')
+                .replace('０', '0').replace('１', '1').replace('２', '2').replace('３', '3').replace('４', '4')
+                .replace('５', '5').replace('６', '6').replace('７', '7').replace('８', '8').replace('９', '9')
+                .replace('。', '.')
+            val trimmed = normalized.trim().trimEnd('/')
             val norm = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed
                 else "http://$trimmed"
             try {
