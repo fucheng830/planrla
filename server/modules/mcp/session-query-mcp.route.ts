@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import express, { type Request, type Response } from 'express';
 import * as realCron from 'node-cron';
 
@@ -7,11 +5,9 @@ import { sessionsService } from '@/modules/providers/index.js';
 import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
 import {
-  buildScheduleConfirmation,
   cronPromptsDriver,
   cronPromptsStore,
   normalizeLlmScheduleInput,
-  type NormalizedLlmScheduleInput,
 } from '@/modules/cron-prompts/index.js';
 
 import { setSessionTitle } from './session-rename.service.js';
@@ -45,14 +41,6 @@ const SERVER_INFO = {
 
 const MAX_RETURN_MESSAGES = 20;
 const DEFAULT_SEARCH_LIMIT = 20;
-
-type PendingScheduleConfirmation = {
-  input: NormalizedLlmScheduleInput;
-  expiresAt: number;
-};
-
-const pendingScheduleConfirmations = new Map<string, PendingScheduleConfirmation>();
-const SCHEDULE_CONFIRMATION_TTL_MS = 10 * 60 * 1000;
 
 type SessionMessage = {
   role: string;
@@ -134,7 +122,7 @@ const SET_SESSION_TITLE_TOOL: ToolDefinition = {
 const SCHEDULE_CREATE_TOOL: ToolDefinition = {
   name: 'schedule_create',
   description:
-    'Prepare a recurring LLM task. This does not write immediately: it returns a confirmation token. After the user explicitly confirms, call schedule_confirm with that token. Each trigger creates a new LLM session and runs the natural-language prompt in the selected project.',
+    'Create a recurring LLM task immediately. Each trigger creates a new LLM session and runs the natural-language prompt in the selected project. No approval is required.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -146,16 +134,6 @@ const SCHEDULE_CREATE_TOOL: ToolDefinition = {
       notifyInbox: { type: 'boolean', description: 'Send a completion notice to the project inbox, default true.' },
     },
     required: ['name', 'cronExpression', 'prompt', 'projectPath'],
-  },
-};
-
-const SCHEDULE_CONFIRM_TOOL: ToolDefinition = {
-  name: 'schedule_confirm',
-  description: 'Confirm and persist a schedule_create request using its confirmation token.',
-  inputSchema: {
-    type: 'object',
-    properties: { confirmationToken: { type: 'string' } },
-    required: ['confirmationToken'],
   },
 };
 
@@ -273,12 +251,8 @@ async function fetchSessionMessages(sessionId: string): Promise<{
 }
 
 async function callTool(name: string, args: Record<string, unknown>) {
-  cleanupExpiredScheduleConfirmations();
   if (name === SCHEDULE_CREATE_TOOL.name) {
-    return createScheduleConfirmation(args);
-  }
-  if (name === SCHEDULE_CONFIRM_TOOL.name) {
-    return confirmSchedule(args);
+    return createSchedule(args);
   }
   if (name === SCHEDULE_LIST_TOOL.name) {
     return listSchedules();
@@ -376,7 +350,7 @@ function setSessionTitleTool(args: Record<string, unknown>) {
   return jsonResponse(result);
 }
 
-function createScheduleConfirmation(args: Record<string, unknown>) {
+function createSchedule(args: Record<string, unknown>) {
   const input = normalizeLlmScheduleInput({
     name: readString(args.name, 'name'),
     cronExpression: readString(args.cronExpression, 'cronExpression'),
@@ -386,28 +360,7 @@ function createScheduleConfirmation(args: Record<string, unknown>) {
     notifyInbox: args.notifyInbox !== false,
   }, (expression) => realCron.validate(expression));
 
-  const confirmationToken = randomUUID();
-  pendingScheduleConfirmations.set(confirmationToken, {
-    input,
-    expiresAt: Date.now() + SCHEDULE_CONFIRMATION_TTL_MS,
-  });
-  return jsonResponse({
-    status: 'confirmation_required',
-    confirmationToken,
-    message: buildScheduleConfirmation(input),
-    expiresInSeconds: SCHEDULE_CONFIRMATION_TTL_MS / 1000,
-  });
-}
-
-function confirmSchedule(args: Record<string, unknown>) {
-  const token = readString(args.confirmationToken, 'confirmationToken');
-  const pending = pendingScheduleConfirmations.get(token);
-  if (!pending || pending.expiresAt <= Date.now()) {
-    pendingScheduleConfirmations.delete(token);
-    throw new Error('schedule confirmation token is missing or expired');
-  }
-  pendingScheduleConfirmations.delete(token);
-  const task = cronPromptsStore.create(pending.input);
+  const task = cronPromptsStore.create(input);
   cronPromptsDriver.reload();
   return jsonResponse({ status: 'created', schedule: task });
 }
@@ -459,13 +412,6 @@ async function runScheduleNow(args: Record<string, unknown>) {
   return jsonResponse({ status: 'started', schedule: task, result });
 }
 
-function cleanupExpiredScheduleConfirmations() {
-  const now = Date.now();
-  for (const [token, pending] of pendingScheduleConfirmations) {
-    if (pending.expiresAt <= now) pendingScheduleConfirmations.delete(token);
-  }
-}
-
 type JsonRpcRequest = {
   jsonrpc: '2.0';
   id?: string | number | null;
@@ -489,7 +435,6 @@ async function handleMessage(message: JsonRpcRequest) {
         SEARCH_CONVERSATIONS_TOOL,
         SET_SESSION_TITLE_TOOL,
         SCHEDULE_CREATE_TOOL,
-        SCHEDULE_CONFIRM_TOOL,
         SCHEDULE_LIST_TOOL,
         SCHEDULE_UPDATE_TOOL,
         SCHEDULE_DELETE_TOOL,

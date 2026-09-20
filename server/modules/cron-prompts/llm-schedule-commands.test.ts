@@ -11,7 +11,7 @@ const valid: LlmScheduleInput = {
   projectPath: 'C:/workspace/project',
 };
 
-test('normalizes a valid LLM schedule command for confirmation', () => {
+test('normalizes a valid LLM schedule command for persistence', () => {
   assert.deepEqual(
     normalizeLlmScheduleInput(valid, () => true),
     { ...valid, notifyInbox: true },

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Do not execute shell commands or native crontab entries for this feature.
-- Mutation operations require confirmation before persistence.
+- Mutation operations do not require a separate approval step.
 - Preserve existing uncommitted user changes and modify only feature-scoped files.
 - Run backend typecheck and focused tests before claiming completion.
 
@@ -51,8 +51,8 @@
 - Test: `server/modules/cron-prompts/llm-schedule-commands.test.ts`
 
 - [ ] Add `schedule_create`, `schedule_confirm`, `schedule_list`, `schedule_update`, `schedule_delete`, and `schedule_run_now` schemas.
-- [ ] Make mutation tools return a confirmation request instead of writing immediately.
-- [ ] Wire confirmation approval to the schedule command service.
+- [ ] Make schedule creation write immediately and return the created schedule.
+- [ ] Keep update/delete explicit through the schedule id and return the resulting state.
 - [ ] Run the provider tool tests and backend typecheck.
 
 ### Task 4: Verification and documentation

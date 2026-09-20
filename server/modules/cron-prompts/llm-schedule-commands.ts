@@ -41,14 +41,3 @@ export function normalizeLlmScheduleInput(
     notifyInbox: input.notifyInbox !== false,
   };
 }
-
-export function buildScheduleConfirmation(input: NormalizedLlmScheduleInput): string {
-  return [
-    `创建 LLM 定时任务「${input.name}」`,
-    `时间规则: ${input.cronExpression}`,
-    `Provider: ${input.provider}`,
-    `项目: ${input.projectPath || '未指定'}`,
-    `任务内容: ${input.prompt}`,
-    '确认后，每次触发都会创建一个新的 LLM 会话执行这段任务。',
-  ].join('\n');
-}
