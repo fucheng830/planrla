@@ -61,6 +61,13 @@ object RunNotification {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
+            .addAction(
+                android.R.drawable.ic_menu_view,
+                ctx.getString(R.string.notif_view_action),
+                // contentIntent already deep-links; this action mirrors it so the
+                // notification shows the "停止 | 查看任务" two-button layout.
+                contentIntent(ctx, sessionId),
+            )
             .build()
 
     /** Terminal notification on the completion channel (run finished or failed). */
