@@ -444,7 +444,14 @@ class ChatViewModel(
                 // a terminal notification the user never learns the run died.
                 notifyRunTerminalIfBackground(ok = false, summary = ev.message)
             }
-            is ChatEvent.SessionCreated -> ev.sessionId.takeIf { it.isNotBlank() }?.let { currentSessionId = it }
+            is ChatEvent.SessionCreated -> {
+                ev.sessionId.takeIf { it.isNotBlank() }?.let { currentSessionId = it }
+                // New-session flow: send() armed setWorking(true) while currentSessionId
+                // was still null (create-session REST call hadn't finished), so the run
+                // marker never got set. Now that we have the real id, arm it — otherwise
+                // backgrounding this run shows no progress notification at all.
+                if (_working.value) setWorking(true)
+            }
         }
     }
 
@@ -486,11 +493,16 @@ class ChatViewModel(
             socket?.sendChat(sid, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
         } else {
             // chat.* requires a session row — create one via REST, then send.
-            viewModelScope.launch {
-                val s = serverUrl ?: return@launch
-                runCatching {
-                    val created = App.api(s).session.create(CreateSessionRequest(provider = sessionProvider ?: "claude", projectPath = cwd ?: projectId ?: ""))
-                    currentSessionId = created.sessionId
+             viewModelScope.launch {
+                 val s = serverUrl ?: return@launch
+                 runCatching {
+                    // Server rejects empty projectPath with 400 — fall back to the
+                    // first known project path when on a fresh new-session tab.
+                    val path = cwd ?: projectId
+                    val p = if (!path.isNullOrBlank()) path
+                    else App.api(s).project.projects().firstOrNull()?.path ?: ""
+                    val created = App.api(s).session.create(CreateSessionRequest(provider = sessionProvider ?: "claude", projectPath = p))
+                     currentSessionId = created.sessionId
                     socket?.sendChat(created.sessionId, text, cwd, _permissionMode.value, imgs.map { it.dataUrl to it.name })
                 }.onFailure { e ->
                     _items.value = _items.value + ChatItem.Sys("创建会话失败：${e.message ?: "未知错误"}")
