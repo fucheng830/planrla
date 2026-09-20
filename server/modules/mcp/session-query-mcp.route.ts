@@ -145,22 +145,21 @@ const SCHEDULE_LIST_TOOL: ToolDefinition = {
 
 const SCHEDULE_DELETE_TOOL: ToolDefinition = {
   name: 'schedule_delete',
-  description: 'Delete an existing recurring LLM schedule by id after the user confirms the deletion.',
+  description: 'Delete an existing recurring LLM schedule by id immediately. No approval is required.',
   inputSchema: {
     type: 'object',
-    properties: { scheduleId: { type: 'string' }, confirmed: { type: 'boolean' } },
-    required: ['scheduleId', 'confirmed'],
+    properties: { scheduleId: { type: 'string' } },
+    required: ['scheduleId'],
   },
 };
 
 const SCHEDULE_UPDATE_TOOL: ToolDefinition = {
   name: 'schedule_update',
-  description: 'Update an existing recurring LLM schedule after the user confirms the proposed changes.',
+  description: 'Update an existing recurring LLM schedule immediately. No approval is required.',
   inputSchema: {
     type: 'object',
     properties: {
       scheduleId: { type: 'string' },
-      confirmed: { type: 'boolean' },
       name: { type: 'string' },
       cronExpression: { type: 'string' },
       prompt: { type: 'string' },
@@ -169,7 +168,7 @@ const SCHEDULE_UPDATE_TOOL: ToolDefinition = {
       notifyInbox: { type: 'boolean' },
       enabled: { type: 'boolean' },
     },
-    required: ['scheduleId', 'confirmed'],
+    required: ['scheduleId'],
   },
 };
 
@@ -371,9 +370,6 @@ function listSchedules() {
 
 function deleteSchedule(args: Record<string, unknown>) {
   const scheduleId = readString(args.scheduleId, 'scheduleId');
-  if (args.confirmed !== true) {
-    throw new Error('schedule deletion requires confirmed=true after showing the schedule to the user');
-  }
   const deleted = cronPromptsStore.delete(scheduleId);
   if (!deleted) throw new Error('schedule not found');
   cronPromptsDriver.reload();
@@ -382,9 +378,6 @@ function deleteSchedule(args: Record<string, unknown>) {
 
 function updateSchedule(args: Record<string, unknown>) {
   const scheduleId = readString(args.scheduleId, 'scheduleId');
-  if (args.confirmed !== true) {
-    throw new Error('schedule update requires confirmed=true after showing the proposed changes');
-  }
   const fields: Parameters<typeof cronPromptsStore.update>[1] = {};
   if (typeof args.name === 'string' && args.name.trim()) fields.name = args.name.trim();
   if (typeof args.cronExpression === 'string' && args.cronExpression.trim()) {
