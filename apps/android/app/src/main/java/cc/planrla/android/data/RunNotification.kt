@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import cc.planrla.android.MainActivity
 import cc.planrla.android.R
 
@@ -27,6 +28,49 @@ object RunNotification {
             ctx, sessionId.hashCode(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+    }
+
+    private fun replyRemoteInput(): RemoteInput =
+        RemoteInput.Builder(RunNotificationReceiver.KEY_REPLY)
+            .setLabel("回复 Claude…")
+            .build()
+
+    private fun replyAction(ctx: Context, sessionId: String): NotificationCompat.Action {
+        val replyIntent = Intent(ctx, RunNotificationReceiver::class.java)
+            .setAction(RunNotificationReceiver.ACTION_REPLY)
+            .putExtra(EXTRA_SESSION_ID, sessionId)
+        val pi = PendingIntent.getBroadcast(
+            ctx, sessionId.hashCode() + 2, replyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+        )
+        return NotificationCompat.Action.Builder(
+            android.R.drawable.ic_menu_send,
+            ctx.getString(R.string.notif_reply_action),
+            pi,
+        ).addRemoteInput(replyRemoteInput()).build()
+    }
+
+    private fun permissionAction(
+        ctx: Context,
+        requestId: String,
+        sessionId: String,
+        allow: Boolean,
+    ): NotificationCompat.Action {
+        val intent = Intent(ctx, RunNotificationReceiver::class.java)
+            .setAction(if (allow) RunNotificationReceiver.ACTION_PERMIT else RunNotificationReceiver.ACTION_DENY)
+            .putExtra(RunNotificationReceiver.EXTRA_REQUEST_ID, requestId)
+            .putExtra(EXTRA_SESSION_ID, sessionId)
+        val pi = PendingIntent.getBroadcast(
+            ctx,
+            (requestId + if (allow) "-y" else "-n").hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Action.Builder(
+            if (allow) android.R.drawable.ic_input_get else android.R.drawable.ic_menu_close_clear_cancel,
+            ctx.getString(if (allow) R.string.notif_allow_action else R.string.notif_deny_action),
+            pi,
+        ).build()
     }
 
     /** Ongoing progress notification (indeterminate bar + elapsed-time chronometer). */
@@ -68,7 +112,8 @@ object RunNotification {
                 // notification shows the "停止 | 查看任务" two-button layout.
                 contentIntent(ctx, sessionId),
             )
-            .build()
+            .addAction(replyAction(ctx, sessionId))
+             .build()
 
     /** Terminal notification on the completion channel (run finished or failed). */
     fun finished(
@@ -84,6 +129,56 @@ object RunNotification {
                 ?: ctx.getString(if (ok) R.string.notif_done_body else R.string.notif_error_body),
             )
             .setAutoCancel(true)
+            .addAction(replyAction(ctx, sessionId))
+            .build()
+
+    /** High-priority heads-up: Claude needs a permission decision. */
+    fun permission(
+        ctx: Context,
+        sessionId: String,
+        providerName: String?,
+        requestId: String,
+        toolName: String?,
+        commandSummary: String?,
+    ): Notification {
+        val tool = toolName?.takeIf { it.isNotBlank() } ?: "tool"
+        val cmd = commandSummary?.takeIf { it.isNotBlank() } ?: tool
+        return base(ctx, RunForegroundService.CHANNEL_PERM, sessionId, providerName, commandSummary)
+            .setContentTitle(ctx.getString(R.string.notif_perm_title))
+            .setContentText(ctx.getString(R.string.notif_perm_body, tool))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                ctx.getString(R.string.notif_perm_body, tool) + "\n" + cmd
+            ))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .addAction(permissionAction(ctx, requestId, sessionId, allow = true))
+            .addAction(permissionAction(ctx, requestId, sessionId, allow = false))
+            .addAction(replyAction(ctx, sessionId))
+            .build()
+    }
+
+    /** High-priority heads-up: Claude asked a question and is waiting for an answer. */
+    fun inputPrompt(
+        ctx: Context,
+        sessionId: String,
+        providerName: String?,
+        question: String?,
+    ): Notification =
+        base(ctx, RunForegroundService.CHANNEL_PERM, sessionId, providerName, question)
+            .setContentTitle(ctx.getString(R.string.notif_input_title))
+            .setContentText(
+                question?.takeIf { it.isNotBlank() }
+                    ?: ctx.getString(R.string.notif_input_body),
+            )
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    question?.takeIf { it.isNotBlank() }
+                        ?: ctx.getString(R.string.notif_input_body),
+                ),
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .addAction(replyAction(ctx, sessionId))
             .build()
 
     private fun base(

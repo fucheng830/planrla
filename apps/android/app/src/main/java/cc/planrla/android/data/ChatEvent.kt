@@ -37,6 +37,9 @@ sealed class ChatEvent {
     ) : ChatEvent()
     /** Gateway protocol_error (SESSION_NOT_FOUND / RUN_IN_PROGRESS / …). Terminal for a send. */
     data class ProtocolError(val code: String, val error: String, val sessionId: String?) : ChatEvent()
+    /** Claude is blocked waiting for the user to type an answer (interactive_prompt).
+     *  Surfaced as a background notification with an inline reply box. */
+    data class InputPrompt(val text: String) : ChatEvent()
     object StreamEnd : ChatEvent()
     object Complete : ChatEvent()
     object Other : ChatEvent()
@@ -57,7 +60,7 @@ fun NormalizedMessage.toChatEvent(): ChatEvent? {
         "status" -> tokenBudget?.let { ChatEvent.TokenBudgetEv(it.used ?: 0, it.total ?: 0, it.inputTokens ?: 0, it.outputTokens ?: 0) }
         "session_created" -> (newSessionId ?: sessionId)?.let { ChatEvent.SessionCreated(it) }
         // Less-common kinds — surface their content instead of dropping to Other.
-        "interactive_prompt" -> text?.let { ChatEvent.TextMessage(it, null) }
+        "interactive_prompt" -> text?.let { ChatEvent.InputPrompt(it) }
         "task_notification" -> text?.let { ChatEvent.TextMessage(it, null) }
         "stream_end" -> ChatEvent.StreamEnd
         "complete" -> ChatEvent.Complete

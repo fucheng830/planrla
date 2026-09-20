@@ -127,6 +127,11 @@ object App {
     /** Abort hook for the background notification stop action. Set by ChatViewModel
      *  while a run is active; invoked from RunForegroundService (notification action). */
     @Volatile var abortActiveRun: (() -> Unit)? = null
+    /** The one live chat socket (owned by the foreground ChatViewModel). Notification
+     *  actions (inline reply, permission decision) send through it. Null when no chat
+     *  screen is active — in that case notification replies are dropped (rare: the
+     *  foreground service only runs while a chat screen exists). */
+    @Volatile var liveSocket: ChatSocket? = null
     val unread = MutableStateFlow<Set<String>>(emptySet())
     fun markUnread(id: String) { unread.value = unread.value + id }
     fun markRead(id: String) { unread.value = unread.value - id }

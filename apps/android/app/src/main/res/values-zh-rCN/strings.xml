@@ -270,4 +270,11 @@
     <string name="notif_error_body">任务失败 — 点击查看</string>
     <string name="notif_stop_action">停止</string>
     <string name="notif_view_action">查看任务</string>
+    <string name="notif_perm_title">等待权限审批</string>
+    <string name="notif_perm_body">Claude 想执行 %1$s</string>
+    <string name="notif_input_title">Claude 等待你的输入</string>
+    <string name="notif_input_body">Claude 正在等待你的回复</string>
+    <string name="notif_allow_action">允许</string>
+    <string name="notif_deny_action">拒绝</string>
+    <string name="notif_reply_action">回复</string>
 </resources>

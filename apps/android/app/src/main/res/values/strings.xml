@@ -281,4 +281,11 @@
     <string name="notif_error_body">Run failed — tap to view</string>
     <string name="notif_stop_action">Stop</string>
     <string name="notif_view_action">View task</string>
+    <string name="notif_perm_title">Waiting for approval</string>
+    <string name="notif_perm_body">Claude wants to run %1$s</string>
+    <string name="notif_input_title">Claude needs your input</string>
+    <string name="notif_input_body">Claude is waiting for your reply</string>
+    <string name="notif_allow_action">Allow</string>
+    <string name="notif_deny_action">Deny</string>
+    <string name="notif_reply_action">Reply</string>
 </resources>

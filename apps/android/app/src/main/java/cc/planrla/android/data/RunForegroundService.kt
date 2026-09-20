@@ -61,7 +61,10 @@ class RunForegroundService : Service() {
     companion object {
         const val CHANNEL_ACTIVE = "planrla_run_active"
         const val CHANNEL_RUN = "planrla_run"
+        /** Heads-up channel for permission prompts and input requests. */
+        const val CHANNEL_PERM = "planrla_perm"
         const val NOTIF_ID = 42
+        const val PERM_NOTIF_ID = 43
         /** Notification action: abort the active run (wired to App.abortActiveRun). */
         const val ACTION_ABORT = "cc.planrla.android.ABORT_RUN"
         private const val ACTION_STOP = "cc.planrla.android.STOP_RUN"

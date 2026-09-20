@@ -33,6 +33,11 @@
             android:name=".data.RunForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Handles inline-reply and allow/deny actions from run notifications. -->
+        <receiver
+            android:name=".data.RunNotificationReceiver"
+            android:exported="false" />
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="portrait"

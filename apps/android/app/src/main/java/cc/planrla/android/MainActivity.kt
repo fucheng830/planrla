@@ -139,6 +139,13 @@ class MainActivity : ComponentActivity() {
                 NotificationManager.IMPORTANCE_LOW,
             ).apply { description = "任务后台执行时显示实时进度" }
         )
+        mgr.createNotificationChannel(
+            NotificationChannel(
+                cc.planrla.android.data.RunForegroundService.CHANNEL_PERM,
+                "权限与输入请求",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply { description = "Claude 等待权限批准或输入回复时弹出提醒" }
+        )
        val channel = NotificationChannel(
            CHANNEL_RUN,
            "Run completion",

@@ -333,6 +333,7 @@ class ChatViewModel(
             val ch = Channel<ChatEvent>(Channel.UNLIMITED)
             val sock = App.chatSocket()
             socket = sock
+            App.liveSocket = sock
             sock.connect(s, t, r, ch)
             launch { for (ev in ch) handle(ev) }
         }
@@ -419,10 +420,20 @@ class ChatViewModel(
                     it.isError.value = ev.isError
                 }
             }
-            is ChatEvent.PermissionRequest -> _perms.value =
-                _perms.value + PermissionReq(ev.requestId, ev.toolName, ev.input?.toString())
-            is ChatEvent.PermissionCancelled -> _perms.value =
-                _perms.value.filterNot { it.requestId == ev.requestId }
+            is ChatEvent.PermissionRequest -> {
+                _perms.value = _perms.value + PermissionReq(ev.requestId, ev.toolName, ev.input?.toString())
+                // Backgrounded user must be able to decide without opening the app:
+                // heads-up notification with allow/deny actions + inline reply.
+                if (!App.isForeground) notifyPermissionRequest(ev.requestId, ev.toolName, ev.input?.toString())
+            }
+            is ChatEvent.PermissionCancelled -> {
+                _perms.value = _perms.value.filterNot { it.requestId == ev.requestId }
+                cancelPermissionNotification(ev.requestId)
+            }
+            is ChatEvent.InputPrompt -> {
+                _items.value = _items.value + ChatItem.Sys("? " + ev.text)
+                if (!App.isForeground) notifyInputPrompt(ev.text)
+            }
             ChatEvent.StreamEnd -> {
                 (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)?.done?.value = true
                 setWorking(false)
@@ -478,6 +489,37 @@ class ChatViewModel(
         runCatching {
             RunForegroundService.finish(
                 ctx, sid, providerDisplayName(sessionProvider), ok, summary?.take(80),
+            )
+        }
+    }
+
+    /** Heads-up notification: Claude needs a permission decision. Shows tool name and
+      *  a short command summary so the user can judge risk without opening the app. */
+    private fun notifyPermissionRequest(requestId: String, toolName: String?, input: String?) {
+        val ctx = App.appContext
+        val sid = currentSessionId ?: return
+        val summary = input?.take(160)
+        runCatching {
+            NotificationManagerCompat.from(ctx).notify(
+                requestId.hashCode(),
+                RunNotification.permission(ctx, sid, providerDisplayName(sessionProvider), requestId, toolName, summary),
+            )
+        }
+    }
+
+    private fun cancelPermissionNotification(requestId: String) {
+        runCatching { NotificationManagerCompat.from(App.appContext).cancel(requestId.hashCode()) }
+    }
+
+    /** Heads-up notification: Claude asked a question and is waiting for an answer.
+      *  Inline reply box sends straight back over the socket. */
+    private fun notifyInputPrompt(question: String) {
+        val ctx = App.appContext
+        val sid = currentSessionId ?: return
+        runCatching {
+            NotificationManagerCompat.from(ctx).notify(
+                ("input:" + sid).hashCode(),
+                RunNotification.inputPrompt(ctx, sid, providerDisplayName(sessionProvider), question.take(200)),
             )
         }
     }
@@ -784,6 +826,7 @@ class ChatViewModel(
 
     override fun onCleared() {
         socket?.close()
+        if (App.liveSocket === socket) App.liveSocket = null
         // Leaving the chat route with a run active: the desktop host keeps running it and
         // a later chat.subscribe re-attaches, but this VM is gone — drop the active-run
         // marker so backgrounding later does not anchor a stale progress notification.
