@@ -17,7 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -179,6 +184,20 @@ private fun safeUrlDecode(value: String): String =
 @Composable
 fun NomadNav(notifSessionId: String? = null) {
     val nav = rememberNavController()
+    var resumed by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (resumed) return@LaunchedEffect
+        resumed = true
+        val hasDevice = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            App.tokenStore.currentDevice() != null
+        }
+        if (notifSessionId.isNullOrBlank() && nav.currentBackStackEntry == null && hasDevice) {
+            // chat/new matches the chat/{sid} route pattern; navigate with a literal
+            // route argument instead of the route string, else Navigation treats the
+            // whole string as a destination name and crashes.
+            nav.navigate("chat/new?cwd=&title=&pid=&prov=") { popUpTo("connect") { inclusive = true } }
+        }
+    }
     NavHost(
         navController = nav,
         startDestination = if (notifSessionId.isNullOrBlank()) "connect" else "chat/$notifSessionId",
