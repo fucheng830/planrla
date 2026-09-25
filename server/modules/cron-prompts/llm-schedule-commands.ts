@@ -4,6 +4,10 @@ export interface LlmScheduleInput {
   prompt: string;
   provider: string;
   projectPath: string;
+  sessionMode?: 'new' | 'resume';
+  boundSessionId?: string | null;
+  permissionMode?: string;
+  catchUp?: boolean;
   notifyInbox?: boolean;
 }
 
@@ -13,6 +17,10 @@ export interface NormalizedLlmScheduleInput {
   prompt: string;
   provider: string;
   projectPath: string;
+  sessionMode: 'new' | 'resume';
+  boundSessionId: string | null;
+  permissionMode: string;
+  catchUp: boolean;
   notifyInbox: boolean;
 }
 
@@ -25,6 +33,14 @@ export function normalizeLlmScheduleInput(
   const prompt = input.prompt.trim();
   const provider = input.provider.trim() || 'claude';
   const projectPath = input.projectPath.trim().replace(/[\\/]+/g, '/');
+  const sessionMode = input.sessionMode === 'resume' ? 'resume' : 'new';
+  const boundSessionId = sessionMode === 'resume'
+    ? (input.boundSessionId?.trim() || null)
+    : null;
+  if (sessionMode === 'resume' && !boundSessionId) {
+    throw new Error('boundSessionId is required when sessionMode is resume');
+  }
+  const permissionMode = input.permissionMode?.trim() || 'bypassPermissions';
 
   if (!name) throw new Error('name is required');
   if (!cronExpression || !validateCron(cronExpression)) {
@@ -38,6 +54,10 @@ export function normalizeLlmScheduleInput(
     prompt,
     provider,
     projectPath,
+    sessionMode,
+    boundSessionId,
+    permissionMode,
+    catchUp: input.catchUp !== false,
     notifyInbox: input.notifyInbox !== false,
   };
 }

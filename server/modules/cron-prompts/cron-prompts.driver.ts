@@ -15,7 +15,9 @@ import type { LLMProvider, RealtimeClientConnection } from '@/shared/types.js';
 import { broadcastTeamMessage } from '@/utils/kanban-websocket.js';
 import { createTeamMessageStore } from '@/modules/team-messages/index.js';
 import { projectsDb } from '@/modules/database/repositories/projects.db.js';
+import { sessionsDb } from '@/modules/database/repositories/sessions.db.js';
 
+import { formatUtcSqlite, nextScheduledRunMs, shouldCatchUp } from './catch-up.js';
 import { cronPromptsStore, type CronPromptTask } from './cron-prompts.store.js';
 
 /** No-op websocket stub (same trick as A2A inbound): the cron path has no live peer. */
@@ -23,6 +25,12 @@ const STUB_CONNECTION: RealtimeClientConnection = {
   readyState: 3,
   send() { /* no live client */ },
 };
+
+/** Result handed to callers as soon as a run has been handed off to the provider. */
+export interface CronRunStartResult {
+  sessionId: string | null;
+  error?: string;
+}
 
 /** Buffers provider events; completion releases the driver's await. */
 class CronRunWriter {
@@ -67,7 +75,7 @@ export interface CronPromptsDriver {
   reload(): void;
   stop(): void;
   /** Runs one task immediately (manual "Run now" / API). Returns the app session id. */
-  runNow(taskId: string): Promise<{ sessionId: string | null; error?: string }>;
+  runNow(taskId: string): Promise<CronRunStartResult>;
   /** index.js 注入 wss 提供函数,驱动发出的消息盒子通知才能实时广播。 */
   setBroadcastSource(source: () => object | undefined): void;
 }
@@ -119,44 +127,89 @@ export function createCronPromptsDriver(deps: {
    * spawn continue in the background. Resolves with the app session id as
    * soon as the run has been handed off (bounded by RUN_TIMEOUT_MS).
    */
-  async function executeTask(task: CronPromptTask): Promise<string | null> {
+  async function executeTask(
+    task: CronPromptTask,
+    onStarted?: (result: CronRunStartResult) => void,
+  ): Promise<string | null> {
     const spawnFn = spawnFns[task.provider as keyof typeof spawnFns];
     if (!spawnFn) {
       log(`[cron-prompts] provider "${task.provider}" not supported`);
+      onStarted?.({ sessionId: null, error: `provider "${task.provider}" not supported` });
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
-    // 全局任务可不关联项目:未填时在用户主目录执行
-    const cwd = task.projectPath || homedir();
+    // resume 模式:唤醒绑定的既有会话追加 turn(Codex 线程唤醒语义);
+    // new 模式:mint 一个全新 app session,冷启动。
+    let appSessionId: string;
+    let providerSessionId: string | undefined;
+    let cwd: string;
+    if (task.sessionMode === 'resume') {
+      const bound = task.boundSessionId
+        ? sessionsDb.getSessionById(task.boundSessionId)
+        : null;
+      if (!bound) {
+        log(`[cron-prompts] bound session not found (task=${task.name}, session=${task.boundSessionId})`);
+        onStarted?.({ sessionId: null, error: `bound session "${task.boundSessionId}" not found` });
+        cronPromptsStore.recordRun(task.id, null);
+        return null;
+      }
+      if (bound.provider !== task.provider) {
+        log(`[cron-prompts] bound session provider mismatch: task=${task.provider}, session=${bound.provider}`);
+        onStarted?.({
+          sessionId: null,
+          error: `bound session provider "${bound.provider}" does not match task provider "${task.provider}"`,
+        });
+        cronPromptsStore.recordRun(task.id, null);
+        return null;
+      }
+      appSessionId = bound.session_id;
+      providerSessionId = bound.provider_session_id ?? undefined;
+      cwd = bound.project_path ?? task.projectPath ?? homedir();
+    } else {
+      appSessionId = '';
+      providerSessionId = undefined;
+      cwd = task.projectPath || homedir();
+    }
     if (!existsSync(cwd)) {
       log(`[cron-prompts] projectPath does not exist: ${cwd} (task=${task.name})`);
+      onStarted?.({ sessionId: null, error: `project path does not exist: ${cwd}` });
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
 
-    const { sessionId } = sessionsService.createAppSession(task.provider as LLMProvider, cwd);
+    if (!appSessionId) {
+      appSessionId = sessionsService.createAppSession(task.provider as LLMProvider, cwd).sessionId;
+    }
     const run = chatRunRegistry.startRun({
-      appSessionId: sessionId,
+      appSessionId,
       provider: task.provider as LLMProvider,
-      providerSessionId: null,
+      providerSessionId: providerSessionId ?? null,
       connection: STUB_CONNECTION,
       userId: null,
     });
     if (!run) {
       log(`[cron-prompts] session busy, skip run (task=${task.id})`);
+      onStarted?.({ sessionId: null, error: 'session busy, skipped this run' });
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
+    // The app session id exists before the provider finishes (or even
+    // reports its own provider session id) — hand it back immediately so
+    // "Run now" callers can navigate to the run.
+    onStarted?.({ sessionId: appSessionId });
 
     const writer = new CronRunWriter();
     try {
       // Fire-and-forget with a bounded wait: a hung provider runtime (dead
       // cwd, stuck CLI) must not block the caller forever.
       void Promise.resolve(spawnFn(task.prompt, {
-        sessionId: undefined,
+        // resume 模式传 provider-native id(与 chat.send 的 resume 语义一致);
+        // new 模式为 undefined,让 runtime 起新会话并回报 provider id。
+        sessionId: providerSessionId,
+        resume: Boolean(providerSessionId),
         cwd: cwd,
         projectPath: cwd,
-        permissionMode: 'bypassPermissions',
+        permissionMode: task.permissionMode,
       }, writer)).catch((e: unknown) => {
         log(`[cron-prompts] run failed: ${e instanceof Error ? e.message : String(e)}`);
         writer.send({ kind: 'error', content: String(e instanceof Error ? e.message : e) });
@@ -164,11 +217,11 @@ export function createCronPromptsDriver(deps: {
       await writer.waitComplete(RUN_TIMEOUT_MS);
     } finally {
       writer.dispose();
-      chatRunRegistry.completeRun(sessionId, { exitCode: 0 });
-      cronPromptsStore.recordRun(task.id, sessionId);
-      sendInboxNotification(task, sessionId);
+      chatRunRegistry.completeRun(appSessionId, { exitCode: 0 });
+      cronPromptsStore.recordRun(task.id, appSessionId);
+      sendInboxNotification(task, appSessionId);
     }
-    return sessionId;
+    return appSessionId;
   }
 
   function runTaskGuarded(task: CronPromptTask) {
@@ -192,13 +245,55 @@ export function createCronPromptsDriver(deps: {
       const fresh = cronPromptsStore.getById(task.id);
       if (!fresh || !fresh.enabled) return;
       log(`[cron-prompts] fired: ${fresh.name}`);
+      advanceNextRunAt(fresh);
       runTaskGuarded(fresh);
     });
     scheduled.set(task.id, handle);
+    // 首次注册(无持久化计划点)时初始化;已存在的值保留给 catch-up 扫描判定,
+    // 否则 reload 会先覆盖掉"错过的计划点",补跑永远不会触发。
+    if (!task.nextRunAt) advanceNextRunAt(task);
+  }
+
+  /** 把 next_run_at 推进到 now 之后的下一个计划点并持久化。 */
+  function advanceNextRunAt(task: CronPromptTask): void {
+    try {
+      // v4 node-cron 没有 scheduled:false 选项;创建即启动,算完立刻 stop。
+      // timeMatcher.getNextMatch(date) 与调度器用同一匹配器,语义一致。
+      const probe = cron.schedule(task.cronExpression, () => {}, { unref: true }) as
+        ReturnType<typeof cron.schedule> & { timeMatcher: { getNextMatch(date: Date): Date } };
+      try {
+        const nextMs = nextScheduledRunMs(task.cronExpression, Date.now(), (expression, date) => {
+          if (expression !== task.cronExpression) return null;
+          // timeMatcher 只算 > date 的下一个匹配(与调度器语义一致)。
+          return probe.timeMatcher.getNextMatch(date) as Date;
+        });
+        if (nextMs !== null) cronPromptsStore.setNextRunAt(task.id, formatUtcSqlite(nextMs));
+      } finally {
+        probe.stop();
+      }
+    } catch (err) {
+      log(`[cron-prompts] advance next_run_at failed (task=${task.name}): ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /** 启动时补跑:错过计划点(停机/睡眠)且在 7 天窗口内的任务,最多补一次。 */
+  function runCatchUpScan(): void {
+    const tasks = cronPromptsStore.list();
+    for (const task of tasks) {
+      const decision = shouldCatchUp(task);
+      if (!decision.shouldCatchUp) continue;
+      log(`[cron-prompts] catch-up: ${task.name} (missed ${task.nextRunAt})`);
+      // 补跑后立即推进到 now 之后的计划点,防止重复补跑。
+      advanceNextRunAt(task);
+      runTaskGuarded(task);
+    }
   }
 
   return {
-    start() { this.reload(); },
+    start() {
+      this.reload();
+      runCatchUpScan();
+    },
     reload() {
       for (const handle of scheduled.values()) handle.stop();
       scheduled.clear();
@@ -212,10 +307,16 @@ export function createCronPromptsDriver(deps: {
     async runNow(taskId) {
       const task = cronPromptsStore.getById(taskId);
       if (!task) return { sessionId: null, error: 'task not found' };
-      // Fire-and-forget: an agent turn can take minutes; respond immediately
-      // and let the run record itself on completion.
-      runTaskGuarded(task);
-      return { sessionId: null, started: true };
+      if (running.has(task.id)) {
+        return { sessionId: task.lastSessionId, error: 'task is already running' };
+      }
+      // Fire-and-forget: an agent turn can take minutes; hand back the app
+      // session id as soon as it is minted so callers can navigate there.
+      let resolveStarted!: (result: CronRunStartResult) => void;
+      const started = new Promise<CronRunStartResult>((resolve) => { resolveStarted = resolve; });
+      const wrapped = executeTask(task, (result) => resolveStarted(result));
+      void wrapped.catch(() => undefined);
+      return await started;
     },
     setBroadcastSource(source) { broadcastSource = source; },
   };

@@ -578,6 +578,14 @@ export const runMigrations = (db: Database) => {
     // 邮件与飞书目前仅持久化偏好,通道尚未接入(前端置灰标注)。
     db.exec(CRON_PROMPTS_TABLE_SCHEMA_SQL);
     const cronPromptColumns = (db.prepare('PRAGMA table_info(cron_prompts)').all() as Array<{ name: string }>).map((c) => c.name);
+    // 任务级权限模式(2026-09-22):定时运行无人值守,允许把单个任务降为
+    // default/acceptEdits。老数据默认 bypassPermissions 保持既有行为。
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'session_mode', "TEXT NOT NULL DEFAULT 'new'");
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'bound_session_id', 'TEXT');
+    // 补跑语义(2026-09-22):错过计划点(停机/睡眠)后启动时补跑一次。老数据默认开启。
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'catch_up', 'BOOLEAN DEFAULT 1');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'next_run_at', 'DATETIME');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'permission_mode', "TEXT NOT NULL DEFAULT 'bypassPermissions'");
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_inbox', 'BOOLEAN DEFAULT 1');
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_email', 'BOOLEAN DEFAULT 0');
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_feishu', 'BOOLEAN DEFAULT 0');

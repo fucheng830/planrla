@@ -417,5 +417,16 @@
     "dropSessionReference": "松手引用该会话",
     "cancel": "取消",
     "confirm": "引用"
+  },
+  "fileActions": {
+    "menuLabel": "文件操作",
+    "openBuiltIn": "在内置编辑器打开",
+    "openInApp": "用 {{app}} 打开",
+    "copyRelative": "复制相对路径",
+    "copyAbsolute": "复制绝对路径",
+    "reveal": "在文件管理器中显示",
+    "openTerminal": "在终端打开所在目录",
+    "copied": "已复制到剪贴板",
+    "actionFailed": "操作失败，请重试"
   }
 }

@@ -5,6 +5,8 @@
 import { Router } from 'express';
 import * as realCron from 'node-cron';
 
+import { providerCapabilitiesService } from '@/modules/providers/services/provider-capabilities.service.js';
+import { sessionsDb } from '@/modules/database/repositories/sessions.db.js';
 import { cronPromptsStore } from './cron-prompts.store.js';
 import { cronPromptsDriver } from './cron-prompts.driver.js';
 
@@ -15,6 +17,16 @@ interface CronValidate {
 export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Router {
   const router = Router();
   const cronLib = deps.cron ?? realCron;
+
+  const normalizePermissionMode = (provider: string, raw: unknown): string => {
+    if (typeof raw !== 'string' || !raw.trim()) return 'bypassPermissions';
+    const mode = raw.trim();
+    const capabilities = providerCapabilitiesService.getProviderCapabilities(provider as never);
+    if (!capabilities?.permissionModes?.includes(mode)) {
+      throw new Error(`invalid permissionMode "${mode}" for provider "${provider}"`);
+    }
+    return mode;
+  };
 
   const validatePayload = (body: Record<string, unknown>) => {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -34,7 +46,20 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     const notifyInbox = typeof body.notifyInbox === 'boolean' ? body.notifyInbox : true;
     const notifyEmail = body.notifyEmail === true;
     const notifyFeishu = body.notifyFeishu === true;
-    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath, notifyInbox, notifyEmail, notifyFeishu } } as const;
+    const catchUp = typeof body.catchUp === 'boolean' ? body.catchUp : true;
+    const permissionMode = normalizePermissionMode(provider, body.permissionMode);
+    const sessionMode = body.sessionMode === 'resume' ? 'resume' as const : 'new' as const;
+    const boundSessionId = typeof body.boundSessionId === 'string' ? body.boundSessionId.trim() : '';
+    if (sessionMode === 'resume') {
+      const bound = boundSessionId ? sessionsDb.getSessionById(boundSessionId) : null;
+      if (!bound) {
+        return { error: `boundSessionId "${boundSessionId}" does not exist` } as const;
+      }
+      if (bound.provider !== provider) {
+        return { error: `bound session provider "${bound.provider}" does not match task provider "${provider}"` } as const;
+      }
+    }
+    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath, sessionMode, boundSessionId: sessionMode === 'resume' ? boundSessionId : null, catchUp, permissionMode, notifyInbox, notifyEmail, notifyFeishu } } as const;
   };
 
   router.get('/', (_req, res) => {
@@ -42,9 +67,19 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
   });
 
   router.post('/', (req, res) => {
-    const parsed = validatePayload((req.body ?? {}) as Record<string, unknown>);
+    let parsed;
+    try {
+      parsed = validatePayload((req.body ?? {}) as Record<string, unknown>);
+    } catch (e) {
+      return res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+    }
     if ('error' in parsed) return res.status(400).json({ error: parsed.error });
-    const task = cronPromptsStore.create(parsed.value);
+    let task;
+    try {
+      task = cronPromptsStore.create(parsed.value);
+    } catch (e) {
+      return res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+    }
     cronPromptsDriver.reload();
     res.status(201).json({ success: true, data: task });
   });
@@ -62,10 +97,42 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     if (typeof body.prompt === 'string' && body.prompt.trim()) fields.prompt = body.prompt.trim();
     if (typeof body.provider === 'string' && body.provider) fields.provider = body.provider;
     if (typeof body.projectPath === 'string') fields.projectPath = body.projectPath.trim().replace(/[\\/]+/g, '/');
+    if (typeof body.permissionMode === 'string' && body.permissionMode.trim()) {
+      try {
+        fields.permissionMode = normalizePermissionMode(
+          typeof body.provider === 'string' && body.provider ? body.provider : cronPromptsStore.getById(String(req.params.id))?.provider ?? 'claude',
+          body.permissionMode,
+        );
+      } catch (e) {
+        return res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    if (body.sessionMode === 'resume' || body.sessionMode === 'new') {
+      const mode = body.sessionMode as 'new' | 'resume';
+      if (mode === 'resume') {
+        const boundId = typeof body.boundSessionId === 'string' ? body.boundSessionId.trim() : '';
+        const bound = boundId ? sessionsDb.getSessionById(boundId) : null;
+        if (!bound) return res.status(400).json({ error: `boundSessionId "${boundId}" does not exist` });
+        const provider = typeof body.provider === 'string' && body.provider ? body.provider : bound.provider;
+        if (bound.provider !== provider) {
+          return res.status(400).json({ error: `bound session provider "${bound.provider}" does not match task provider "${provider}"` });
+        }
+        fields.sessionMode = mode;
+        fields.boundSessionId = boundId;
+      } else {
+        fields.sessionMode = mode;
+      }
+    } else if (typeof body.boundSessionId === 'string' && body.boundSessionId.trim()) {
+      const boundId = body.boundSessionId.trim();
+      const bound = boundId ? sessionsDb.getSessionById(boundId) : null;
+      if (!bound) return res.status(400).json({ error: `boundSessionId "${boundId}" does not exist` });
+      fields.boundSessionId = boundId;
+    }
     if (typeof body.enabled === 'boolean') fields.enabled = body.enabled;
     if (typeof body.notifyInbox === 'boolean') fields.notifyInbox = body.notifyInbox;
     if (typeof body.notifyEmail === 'boolean') fields.notifyEmail = body.notifyEmail;
     if (typeof body.notifyFeishu === 'boolean') fields.notifyFeishu = body.notifyFeishu;
+    if (typeof body.catchUp === 'boolean') fields.catchUp = body.catchUp;
     const task = cronPromptsStore.update(String(req.params.id), fields);
     if (!task) return res.status(404).json({ error: 'task not found' });
     cronPromptsDriver.reload();

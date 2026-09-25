@@ -14,6 +14,16 @@ export interface CronPromptTask {
   prompt: string;
   provider: string;
   projectPath: string;
+  /** new = 每次新会话;resume = 唤醒既有会话追加 turn(Codex 线程唤醒模式)。 */
+  sessionMode: 'new' | 'resume';
+  /** resume 模式下绑定的 app session id。 */
+  boundSessionId: string | null;
+  /** 错过计划点(停机/睡眠)后启动时是否补跑一次。 */
+  catchUp: boolean;
+  /** 持久化的下一计划点(UTC 裸串),补跑判定与推进的依据。 */
+  nextRunAt: string | null;
+  /** 运行时权限模式;默认 bypassPermissions 兼容既有任务行为。 */
+  permissionMode: string;
   enabled: boolean;
   /** 运行后写一条系统消息进关联项目的消息盒子。 */
   notifyInbox: boolean;
@@ -35,6 +45,11 @@ interface CronPromptRow {
   prompt: string;
   provider: string;
   project_path: string;
+  session_mode: string;
+  bound_session_id: string | null;
+  catch_up: number | null;
+  next_run_at: string | null;
+  permission_mode: string;
   enabled: number;
   notify_inbox: number | null;
   notify_email: number | null;
@@ -53,6 +68,12 @@ const rowToTask = (row: CronPromptRow): CronPromptTask => ({
   prompt: row.prompt,
   provider: row.provider,
   projectPath: row.project_path,
+  sessionMode: row.session_mode === 'resume' ? 'resume' : 'new',
+  boundSessionId: row.bound_session_id ?? null,
+  // 老库 NULL → 默认开启(与权限列的回填语义一致)
+  catchUp: row.catch_up === null ? true : Boolean(row.catch_up),
+  nextRunAt: row.next_run_at ?? null,
+  permissionMode: row.permission_mode || 'bypassPermissions',
   enabled: Boolean(row.enabled),
   // 老库 NULL → 按默认语义(站内开、其余关)
   notifyInbox: row.notify_inbox === null ? true : Boolean(row.notify_inbox),
@@ -88,6 +109,10 @@ export const cronPromptsStore = {
     prompt: string;
     provider: string;
     projectPath: string;
+    sessionMode?: 'new' | 'resume';
+    boundSessionId?: string | null;
+    catchUp?: boolean;
+    permissionMode?: string;
     enabled?: boolean;
     notifyInbox?: boolean;
     notifyEmail?: boolean;
@@ -96,8 +121,8 @@ export const cronPromptsStore = {
     const db = getConnection();
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, enabled, notify_inbox, notify_email, notify_feishu)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, session_mode, bound_session_id, catch_up, permission_mode, enabled, notify_inbox, notify_email, notify_feishu)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       input.name,
@@ -105,6 +130,10 @@ export const cronPromptsStore = {
       input.prompt,
       input.provider,
       input.projectPath,
+      input.sessionMode === 'resume' ? 'resume' : 'new',
+      input.sessionMode === 'resume' ? (input.boundSessionId ?? null) : null,
+      input.catchUp === false ? 0 : 1,
+      input.permissionMode ?? 'bypassPermissions',
       input.enabled === false ? 0 : 1,
       input.notifyInbox === false ? 0 : 1,
       input.notifyEmail ? 1 : 0,
@@ -121,6 +150,10 @@ export const cronPromptsStore = {
       prompt: string;
       provider: string;
       projectPath: string;
+      sessionMode: 'new' | 'resume';
+      boundSessionId: string | null;
+      catchUp: boolean;
+      permissionMode: string;
       enabled: boolean;
       notifyInbox: boolean;
       notifyEmail: boolean;
@@ -129,12 +162,24 @@ export const cronPromptsStore = {
   ): CronPromptTask | null {
     const db = getConnection();
     const sets: string[] = [];
-    const values: Array<string | number> = [];
+    const values: Array<string | number | null> = [];
     if (fields.name !== undefined) { sets.push('name = ?'); values.push(fields.name); }
     if (fields.cronExpression !== undefined) { sets.push('cron_expression = ?'); values.push(fields.cronExpression); }
     if (fields.prompt !== undefined) { sets.push('prompt = ?'); values.push(fields.prompt); }
     if (fields.provider !== undefined) { sets.push('provider = ?'); values.push(fields.provider); }
     if (fields.projectPath !== undefined) { sets.push('project_path = ?'); values.push(fields.projectPath); }
+    if (fields.sessionMode !== undefined) {
+      sets.push('session_mode = ?');
+      values.push(fields.sessionMode === 'resume' ? 'resume' : 'new');
+      // 切回 new 模式时清掉绑定,避免留下悬空引用。
+      if (fields.sessionMode !== 'resume' && fields.boundSessionId === undefined) {
+        sets.push('bound_session_id = ?');
+        values.push(null);
+      }
+    }
+    if (fields.boundSessionId !== undefined) { sets.push('bound_session_id = ?'); values.push(fields.boundSessionId); }
+    if (fields.catchUp !== undefined) { sets.push('catch_up = ?'); values.push(fields.catchUp ? 1 : 0); }
+    if (fields.permissionMode !== undefined) { sets.push('permission_mode = ?'); values.push(fields.permissionMode); }
     if (fields.enabled !== undefined) { sets.push('enabled = ?'); values.push(fields.enabled ? 1 : 0); }
     if (fields.notifyInbox !== undefined) { sets.push('notify_inbox = ?'); values.push(fields.notifyInbox ? 1 : 0); }
     if (fields.notifyEmail !== undefined) { sets.push('notify_email = ?'); values.push(fields.notifyEmail ? 1 : 0); }
@@ -160,5 +205,11 @@ export const cronPromptsStore = {
        SET last_run_at = CURRENT_TIMESTAMP, last_session_id = ?, run_count = run_count + 1
        WHERE id = ?`
     ).run(sessionId, id);
+  },
+
+  /** 持久化下一计划点(补跑判定的依据)。 */
+  setNextRunAt(id: string, nextRunAt: string | null): void {
+    const db = getConnection();
+    db.prepare('UPDATE cron_prompts SET next_run_at = ? WHERE id = ?').run(nextRunAt, id);
   },
 };

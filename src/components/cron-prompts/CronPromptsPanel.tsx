@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CalendarClock, Check, Clock, Loader2, Pencil, Play, Plus, Power, Trash2, X,
 } from 'lucide-react';
@@ -13,6 +14,11 @@ type CronPromptTask = {
   prompt: string;
   provider: string;
   projectPath: string;
+  sessionMode: 'new' | 'resume';
+  boundSessionId: string;
+  catchUp: boolean;
+  nextRunAt: string | null;
+  permissionMode: string;
   enabled: boolean;
   lastRunAt: string | null;
   lastSessionId: string | null;
@@ -131,17 +137,100 @@ const MODE_LABELS: Record<ScheduleMode, string> = {
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary';
 
+type ProviderCapabilities = {
+  provider: string;
+  permissionModes: string[];
+};
+
+type BoundSessionOption = {
+  id: string;
+  label: string;
+};
+
+const PERMISSION_MODE_LABELS: Record<string, string> = {
+  default: '默认（需人工确认）',
+  auto: '自动',
+  acceptEdits: '接受编辑',
+  bypassPermissions: '跳过全部权限（无人值守）',
+  plan: '计划模式',
+  yolo: 'YOLO',
+};
+
 export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<CronPromptTask[]>([]);
+  const [permissionModesByProvider, setPermissionModesByProvider] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<CronPromptTask | null>(null);
-  const [form, setForm] = useState({ name: '', prompt: '', provider: 'claude', projectPath: '' });
+  const [form, setForm] = useState({ name: '', prompt: '', provider: 'claude', projectPath: '', sessionMode: 'new' as 'new' | 'resume', boundSessionId: '', catchUp: true, permissionMode: 'bypassPermissions' });
   const [schedule, setSchedule] = useState<ScheduleState>({ mode: 'daily', interval: '30', minute: '0', hour: '9', weekday: '1', dayOfMonth: '1' });
   const [customCron, setCustomCron] = useState('0 9 * * *');
   const [saving, setSaving] = useState(false);
+  const [boundSessions, setBoundSessions] = useState<BoundSessionOption[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authenticatedFetch('/api/providers/capabilities');
+        if (!res.ok) return;
+        const body = await res.json() as { data?: { providers?: ProviderCapabilities[] } };
+        const providers = body.data?.providers ?? [];
+        if (cancelled || providers.length === 0) return;
+        const map: Record<string, string[]> = {};
+        for (const p of providers) map[p.provider] = p.permissionModes ?? [];
+        setPermissionModesByProvider(map);
+      } catch {
+        // Keep the hardcoded fallback below when capabilities are unavailable.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // resume 模式需要选一个既有会话:按 projectPath 找到项目,拉它的会话列表,
+  // 只保留 provider 匹配的(driver 会校验 provider 一致性,前端先过滤减少无效选项)。
+  useEffect(() => {
+    if (form.sessionMode !== 'resume' || !form.projectPath.trim()) {
+      setBoundSessions([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingSessions(true);
+    (async () => {
+      try {
+        const normalizedTarget = form.projectPath.trim().replace(/[\\/]+/g, '/').toLowerCase();
+        const res = await authenticatedFetch('/api/projects');
+        if (!res.ok) return;
+        const projects = await res.json() as Array<{
+          projectId: string;
+          fullPath?: string;
+          path?: string;
+          sessions?: Array<{ id: string; provider?: string; summary?: string; name?: string; title?: string; lastActivity?: string; updated_at?: string }>;
+        }>;
+        const project = projects.find((p) => {
+          const candidate = (p.fullPath ?? p.path ?? '').replace(/[\\/]+/g, '/').toLowerCase();
+          return candidate && candidate === normalizedTarget;
+        });
+        if (!project || cancelled) return;
+        const options = (project.sessions ?? [])
+          .filter((s) => (s.provider ?? '') === form.provider)
+          .map((s) => ({
+            id: String(s.id),
+            label: (s.summary || s.name || s.title || s.id).slice(0, 60),
+          }));
+        if (!cancelled) setBoundSessions(options);
+      } catch {
+        if (!cancelled) setBoundSessions([]);
+      } finally {
+        if (!cancelled) setLoadingSessions(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [form.sessionMode, form.projectPath, form.provider]);
 
   const load = useCallback(async () => {
     try {
@@ -163,10 +252,15 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
   useEffect(() => { void load(); }, [load]);
 
   const cronExpression = schedule.mode === 'custom' ? customCron : buildCron(schedule);
+  // Provider changes can invalidate the stored permission mode (e.g. zcode
+  // only supports default) — always render a mode the provider accepts.
+  const effectivePermissionMode = permissionModesByProvider[form.provider]?.includes(form.permissionMode)
+    ? form.permissionMode
+    : permissionModesByProvider[form.provider]?.[0] ?? form.permissionMode;
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', prompt: '', provider: 'claude', projectPath: '' });
+    setForm({ name: '', prompt: '', provider: 'claude', projectPath: '', sessionMode: 'new', boundSessionId: '', catchUp: true, permissionMode: 'bypassPermissions' });
     setSchedule({ mode: 'daily', interval: '30', minute: '0', hour: '9', weekday: '1', dayOfMonth: '1' });
     setCustomCron('0 9 * * *');
     setEditorOpen(true);
@@ -174,7 +268,16 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
 
   const openEdit = (task: CronPromptTask) => {
     setEditing(task);
-    setForm({ name: task.name, prompt: task.prompt, provider: task.provider, projectPath: task.projectPath });
+    setForm({
+      name: task.name,
+      prompt: task.prompt,
+      provider: task.provider,
+      projectPath: task.projectPath,
+      sessionMode: task.sessionMode === 'resume' ? 'resume' : 'new',
+      boundSessionId: task.boundSessionId ?? '',
+      catchUp: task.catchUp !== false,
+      permissionMode: task.permissionMode || 'bypassPermissions',
+    });
     const parsed = parseCron(task.cronExpression);
     setSchedule(parsed);
     setCustomCron(task.cronExpression);
@@ -184,10 +287,18 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
   const save = async () => {
     setSaving(true); setError(null);
     try {
+      if (form.sessionMode === 'resume' && !form.boundSessionId) {
+        throw new Error('唤醒模式需要选择一个会话');
+      }
       const res = await authenticatedFetch(editing ? `/api/cron-prompts/${editing.id}` : '/api/cron-prompts', {
         method: editing ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...form, cronExpression }),
+        body: JSON.stringify({
+          ...form,
+          permissionMode: effectivePermissionMode,
+          boundSessionId: form.sessionMode === 'resume' ? form.boundSessionId : null,
+          cronExpression,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       setEditorOpen(false);
@@ -228,6 +339,9 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
     try {
       const res = await authenticatedFetch(`/api/cron-prompts/${task.id}/run`, { method: 'POST' });
       if (!res.ok) throw new Error(await res.text());
+      const body = await res.json() as { data?: { sessionId?: string | null; error?: string } };
+      if (body.data?.error) setError(body.data.error);
+      if (body.data?.sessionId) navigate(`/session/${body.data.sessionId}`);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -497,6 +611,81 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
                 </div>
               </div>
               <div>
+                <label className="mb-1 block text-xs text-muted-foreground">运行权限</label>
+                <select
+                  value={effectivePermissionMode}
+                  onChange={(e) => setForm({ ...form, permissionMode: e.target.value })}
+                  className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {(permissionModesByProvider[form.provider] ?? ['default', 'acceptEdits', 'bypassPermissions'])
+                    .filter((m) => m !== 'plan')
+                    .map((m) => (
+                      <option key={m} value={m}>
+                        {PERMISSION_MODE_LABELS[m] ?? m}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  定时运行为无人值守,建议只读/汇总类任务保持默认确认外的模式;改文件的任务需谨慎授权。
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">错过补跑</label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.catchUp}
+                    onChange={(e) => setForm({ ...form, catchUp: e.target.checked })}
+                  />
+                  服务重启/睡眠错过计划时间时,启动后自动补跑一次(7 天内有效)
+                </label>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  每次停机窗口最多补跑一次,不会按错过周期数重复执行;适合日报、巡检类任务。
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">会话模式</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="cron-session-mode"
+                      checked={form.sessionMode === 'new'}
+                      onChange={() => setForm({ ...form, sessionMode: 'new', boundSessionId: '' })}
+                    />
+                    每次新会话
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="cron-session-mode"
+                      checked={form.sessionMode === 'resume'}
+                      onChange={() => setForm({ ...form, sessionMode: 'resume' })}
+                    />
+                    唤醒既有会话
+                  </label>
+                </div>
+                {form.sessionMode === 'resume' && (
+                  <>
+                    <select
+                      value={form.boundSessionId}
+                      onChange={(e) => setForm({ ...form, boundSessionId: e.target.value })}
+                      className="mt-2 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">
+                        {loadingSessions ? '正在加载会话…' : boundSessions.length === 0 ? '该项目下暂无该智能体的会话' : '选择要唤醒的会话'}
+                      </option>
+                      {boundSessions.map((s) => (
+                        <option key={s.id} value={s.id}>{s.label}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      每次触发在该会话内追加一轮执行,智能体保留全部历史上下文(类似 Codex 的线程唤醒)。
+                    </p>
+                  </>
+                )}
+              </div>
+              <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Prompt</label>
                 <textarea
                   value={form.prompt}
@@ -518,7 +707,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
               </button>
               <button
                 type="button"
-                disabled={saving || !form.name.trim() || !form.prompt.trim() || !form.projectPath.trim()}
+                disabled={saving || !form.name.trim() || !form.prompt.trim() || !form.projectPath.trim() || (form.sessionMode === 'resume' && !form.boundSessionId)}
                 onClick={() => void save()}
                 className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >

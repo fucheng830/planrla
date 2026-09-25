@@ -445,5 +445,16 @@
     "dropSessionReference": "Drop to reference this session",
     "cancel": "Cancel",
     "confirm": "Reference"
+  },
+  "fileActions": {
+    "menuLabel": "File actions",
+    "openBuiltIn": "Open in editor",
+    "openInApp": "Open in {{app}}",
+    "copyRelative": "Copy relative path",
+    "copyAbsolute": "Copy absolute path",
+    "reveal": "Show in file manager",
+    "openTerminal": "Open folder in terminal",
+    "copied": "Copied to clipboard",
+    "actionFailed": "Action failed. Try again."
   }
 }

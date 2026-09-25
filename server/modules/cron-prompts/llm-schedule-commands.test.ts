@@ -9,6 +9,10 @@ const valid: LlmScheduleInput = {
   prompt: '总结今天项目的进展、风险和明天的建议。',
   provider: 'claude',
   projectPath: 'C:/workspace/project',
+  sessionMode: 'new',
+  boundSessionId: null,
+  permissionMode: 'bypassPermissions',
+  catchUp: true,
 };
 
 test('normalizes a valid LLM schedule command for persistence', () => {
@@ -26,5 +30,9 @@ test('rejects a command that has no prompt or valid cron expression', () => {
   assert.throws(
     () => normalizeLlmScheduleInput(valid, () => false),
     /invalid cron expression/,
+  );
+  assert.throws(
+    () => normalizeLlmScheduleInput({ ...valid, sessionMode: 'resume' }, () => true),
+    /boundSessionId is required/,
   );
 });
