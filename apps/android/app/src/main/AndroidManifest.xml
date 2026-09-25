@@ -34,6 +34,13 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Always-on push channel: notifies about runs that finish on the desktop
+             (or via schedules) while the phone app is backgrounded or closed. -->
+        <service
+            android:name=".data.PushSocketService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- Handles inline-reply and allow/deny actions from run notifications. -->
         <receiver
             android:name=".data.RunNotificationReceiver"

@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Planrla</string>
+    <string name="push_service_title">Planrla push</string>
+    <string name="push_service_body">Listening for run completions</string>
+    <string name="push_task_default_provider">Agent</string>
     <string name="connect_title">Connect your Desktop</string>
     <string name="connect_subtitle">Access your running Planrla Desktop remotely or directly.</string>
     <string name="connect_mode_remote">Remote Access</string>

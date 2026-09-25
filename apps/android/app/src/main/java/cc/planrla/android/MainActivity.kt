@@ -80,6 +80,10 @@ class MainActivity : ComponentActivity() {
         App.init(applicationContext, TokenStore(applicationContext), TokenHolder())
         createRunChannel()
         ensureNotificationPermission()
+        // Remote-run push channel: keep listening for desktop/scheduled run
+        // completions even when no chat screen is open. Cheap no-op until a
+        // device is configured (service idles polling DataStore).
+        cc.planrla.android.data.PushSocketService.start(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(processObserver)
         // Deep link from a run notification: navigate straight to the run's chat screen
         // instead of the connect screen. chat re-attaches via chat.subscribe replay.
@@ -191,7 +195,11 @@ fun NomadNav(notifSessionId: String? = null) {
         val hasDevice = withContext(kotlinx.coroutines.Dispatchers.IO) {
             App.tokenStore.currentDevice() != null
         }
-        if (notifSessionId.isNullOrBlank() && nav.currentBackStackEntry == null && hasDevice) {
+        // The back-stack check raced with NavHost setup on some cold-start
+        // orderings (entry already non-null before this effect ran), silently
+        // dropping the restore. hasDevice alone decides: navigate away from
+        // connect regardless of the transient stack state.
+        if (notifSessionId.isNullOrBlank() && hasDevice) {
             // chat/new matches the chat/{sid} route pattern; navigate with a literal
             // route argument instead of the route string, else Navigation treats the
             // whole string as a destination name and crashes.

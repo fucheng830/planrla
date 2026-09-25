@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Planrla</string>
+    <string name="push_service_title">Planrla 推送</string>
+    <string name="push_service_body">正在监听任务完成通知</string>
+    <string name="push_task_default_provider">智能体</string>
     <string name="connect_title">连接你的桌面端</string>
     <string name="connect_subtitle">远程访问或直接连接正在运行的 Planrla 桌面端。</string>
     <string name="connect_mode_remote">远程访问</string>

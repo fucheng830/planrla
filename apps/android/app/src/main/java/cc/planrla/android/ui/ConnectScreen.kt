@@ -94,6 +94,22 @@ class ConnectViewModel : ViewModel() {
 
     suspend fun autoLogin(): Boolean {
         val s = App.tokenStore.serverUrlSync()
+        // Direct-LAN device restore (no cloud account needed): the current device
+        // carries lan + credentials, so login is just applyDeviceSelection (it
+        // exchanges ccUser/ccPass for a fresh JWT against the desktop). This is
+        // the path a QR/direct-connect phone takes on cold start — without it the
+        // app falls back to the connect screen and looks "logged out".
+        val directDevice = App.tokenStore.currentDevice()
+        if (directDevice != null && !directDevice.lan.isNullOrBlank() && !directDevice.ccUser.isNullOrBlank()) {
+            val ok = runCatching { App.applyDeviceSelection(directDevice) }.isSuccess
+            if (ok) {
+                _state.value = State.LoggedIn(directDevice.lan)
+                return true
+            }
+            // LAN unreachable right now (desktop off / network changed): fall
+            // through to the account path so a relay-configured phone still
+            // restores; the error stays clear only if both paths fail.
+        }
         // Account session (preferred): JWT from api.planrla.com account login.
         val jwt = App.tokenStore.accountJwtSync()
         if (jwt != null && s != null) {
