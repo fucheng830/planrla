@@ -338,8 +338,10 @@ app.use('/api/tasks', authenticateToken, getKanban().router);
 
 // 定时任务 (cron prompts, ZCode-Cron style) — protected CRUD + run-now.
 import { createCronPromptsRouter } from './modules/cron-prompts/cron-prompts.routes.js';
+import { createFileActionsRouter } from './modules/file-actions/file-actions.routes.js';
 import { cronPromptsDriver } from './modules/cron-prompts/cron-prompts.driver.js';
 app.use('/api/cron-prompts', authenticateToken, createCronPromptsRouter());
+app.use('/api/file-actions', authenticateToken, createFileActionsRouter());
 
 // 日历一次性事件 (calendar one-time events) — list + create + delete.
 import { createCalendarEventsRouter } from './modules/calendar-events/calendar-events.routes.js';
