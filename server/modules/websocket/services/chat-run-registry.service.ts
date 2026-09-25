@@ -84,7 +84,7 @@ const runs = new Map<string, ChatRun>();
 // 通过通知管线广播。手机侧 PushSocketService 收到后按前台/后台决定是否弹
 // 本地通知;Web Push 订阅(手机浏览器)走同一事件。userId 回退逻辑由
 // orchestrator 处理(cron 路径无 userId → 本地单用户)。
-function notifyRunFinished(run: ChatRun, exitCode: unknown, aborted?: unknown): void {
+function notifyRunFinished(run: ChatRun, exitCode: unknown, aborted?: unknown, preview?: string): void {
   try {
     const code = typeof exitCode === 'number' ? exitCode : 0;
     notifyRunStopped({
@@ -92,10 +92,48 @@ function notifyRunFinished(run: ChatRun, exitCode: unknown, aborted?: unknown): 
       provider: run.provider,
       sessionId: run.appSessionId,
       stopReason: aborted ? 'aborted' : (code === 0 ? 'completed' : 'failed'),
+      preview,
     });
   } catch {
     /* 通知失败不影响 run 生命周期 */
   }
+}
+
+/**
+ * Completion-notification preview: first non-blank line of the finished
+ * assistant reply — full `kind:'text'` row first, then joined stream_delta
+ * fragments — falling back to the last user prompt. Mirrors the Android
+ * ChatScreen notification logic (e4ee575a); empty string means "no preview".
+ */
+function runCompletionPreview(run: ChatRun): string {
+  const firstLine = (value: string): string => {
+    const line = value.split(/\r?\n/).map((s) => s.trim()).find((s) => s.length > 0);
+    return line ?? '';
+  };
+  const contentOf = (event: NormalizedMessage): string =>
+    (typeof event.content === 'string' && event.content) || (typeof event.text === 'string' && event.text) || '';
+
+  for (let i = run.events.length - 1; i >= 0; i -= 1) {
+    const event = run.events[i];
+    if (event.kind === 'text' && event.role === 'assistant' && !event.silent) {
+      const line = firstLine(contentOf(event));
+      if (line) return line.slice(0, 80);
+    }
+  }
+  const deltas = run.events
+    .filter((event) => event.kind === 'stream_delta' && !event.silent)
+    .map((event) => contentOf(event))
+    .join('');
+  const deltaLine = firstLine(deltas);
+  if (deltaLine) return deltaLine.slice(0, 80);
+  for (let i = run.events.length - 1; i >= 0; i -= 1) {
+    const event = run.events[i];
+    if (event.kind === 'text' && event.role === 'user' && !event.silent) {
+      const line = firstLine(contentOf(event));
+      if (line) return line.slice(0, 80);
+    }
+  }
+  return '';
 }
 
 /**
@@ -204,8 +242,10 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     outbound.actualSessionId = run.appSessionId;
     run.status = 'completed';
     run.completedAt = Date.now();
-    // 手机推送:run 真正终点的单一事件源(三种 provider 统一)。
-    notifyRunFinished(run, message.exitCode ?? 0, message.aborted);
+    // 手机推送:run 真正终点的单一事件源(三种 provider 统一)。preview 只算一次,
+    // 通知管线与 registry 帧(手机 WS + REST 补跑)共用。
+    const preview = runCompletionPreview(run);
+    notifyRunFinished(run, message.exitCode ?? 0, message.aborted, preview);
     evictRunLater(run.appSessionId, run.silent);
     // REQ-046 §13 ② — chat run 完成 → registry 转 idle(面板显示"无活动/已完成")。
     // 非 silent 才进面板。TTL sweeper 会最终清掉。
@@ -215,6 +255,7 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
           appSessionId: run.appSessionId,
           provider: run.provider,
           running: false,
+          preview,
         });
       } catch {
         /* registry 容错 */

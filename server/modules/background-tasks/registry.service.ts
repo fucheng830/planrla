@@ -223,6 +223,7 @@ function upsertChat(input: {
   appSessionId: string;
   provider?: LLMProvider;
   running: boolean;
+  preview?: string;
 }): BackgroundTask | null {
   const id = buildBackgroundTaskId('chat', [input.appSessionId]);
   const existing = tasks.get(id);
@@ -237,7 +238,12 @@ function upsertChat(input: {
     lastActivityAt: nowMs(),
     finishedAt: existing?.finishedAt,
     subtitle: input.provider ? `chat · ${input.provider}` : 'chat',
-    detail: { type: 'chat', appSessionId: input.appSessionId, provider: input.provider },
+    detail: {
+      type: 'chat',
+      appSessionId: input.appSessionId,
+      provider: input.provider,
+      ...(input.preview ? { preview: input.preview } : {}),
+    },
   };
   upsert(task);
   return task;

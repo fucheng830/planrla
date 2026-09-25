@@ -219,12 +219,15 @@ class PushSocketService : Service() {
         if (App.isForeground) return
 
         val provider = detail["provider"]?.jsonPrimitive?.contentOrNull
+        // Server-side completion preview (assistant reply first line, falls back
+        // to the last user prompt) — same rule as ChatScreen's own notification.
+        val preview = detail["preview"]?.jsonPrimitive?.contentOrNull
         val ok = status != "failed" && status != "killed"
         val title = provider ?: getString(cc.planrla.android.R.string.push_task_default_provider)
         runCatching {
             NotificationManagerCompat.from(this).notify(
                 sessionId.hashCode(),
-                RunNotification.finished(this, sessionId, title, ok, null),
+                RunNotification.finished(this, sessionId, title, ok, preview),
             )
         }
     }

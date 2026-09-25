@@ -175,7 +175,11 @@ function buildPushBody(event) {
     'permission.required': normalizedEvent.meta?.toolName
       ? `Action Required: Tool "${normalizedEvent.meta.toolName}" needs approval`
       : 'Action Required: A tool needs your approval',
-    'run.stopped': normalizedEvent.meta?.stopReason || 'Run Stopped: The run has stopped',
+    'run.stopped': (() => {
+      const reason = normalizedEvent.meta?.stopReason || 'Run Stopped: The run has stopped';
+      const preview = typeof normalizedEvent.meta?.preview === 'string' ? normalizedEvent.meta.preview.trim() : '';
+      return preview ? `${reason} — ${preview}` : reason;
+    })(),
     'run.failed': normalizedEvent.meta?.error ? `Run Failed: ${normalizedEvent.meta.error}` : 'Run Failed: The run encountered an error',
     'agent.notification': normalizedEvent.meta?.message ? String(normalizedEvent.meta.message) : 'You have a new notification',
     'push.enabled': 'Push notifications are now enabled!'
@@ -289,9 +293,11 @@ function notifyUserIfEnabled({ userId, event }) {
  *   sessionId?: string | null,
  *   stopReason?: string,
  *   sessionName?: string | null,
+ *   preview?: string,
  * }} args
  */
-function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'completed', sessionName = null }) {
+function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'completed', sessionName = null, preview = '' }) {
+  const trimmedPreview = typeof preview === 'string' ? preview.trim() : '';
   notifyUserIfEnabled({
     userId,
     event: createNotificationEvent({
@@ -299,7 +305,7 @@ function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'co
       sessionId,
       kind: 'stop',
       code: 'run.stopped',
-      meta: { stopReason, sessionName },
+      meta: { stopReason, sessionName, ...(trimmedPreview ? { preview: trimmedPreview } : {}) },
       severity: 'info',
       dedupeKey: `${provider}:run:stop:${sessionId || 'none'}:${stopReason}`
     })

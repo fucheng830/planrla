@@ -109,6 +109,25 @@ test('registry: upsertChat proxy(running / idle)', () => {
   assert.equal(backgroundTaskRegistry.list()[0].status, 'idle');
 });
 
+test('registry: upsertChat preview lands in chat detail (手机完成通知预览)', () => {
+  reset();
+  backgroundTaskRegistry.setDeps({ now: () => 1000 });
+  backgroundTaskRegistry.upsertChat({ appSessionId: 'c-pv', provider: 'claude', running: true });
+  backgroundTaskRegistry.upsertChat({
+    appSessionId: 'c-pv',
+    provider: 'claude',
+    running: false,
+    preview: '修复完成,共改动 3 个文件',
+  });
+  const task = backgroundTaskRegistry.list().find((t) => t.detail.type === 'chat' && t.detail.appSessionId === 'c-pv');
+  assert.ok(task, 'chat task exists');
+  assert.equal(task!.detail.type === 'chat' ? task!.detail.preview : undefined, '修复完成,共改动 3 个文件');
+  // 空 preview 不落字段,老客户端不感知
+  backgroundTaskRegistry.upsertChat({ appSessionId: 'c-pv2', provider: 'zcode', running: false });
+  const bare = backgroundTaskRegistry.list().find((t) => t.detail.type === 'chat' && t.detail.appSessionId === 'c-pv2');
+  assert.ok(!('preview' in (bare!.detail as Record<string, unknown>)), 'no preview key when omitted');
+});
+
 test('registry: bash apply start → reconcile → complete(完整流)', () => {
   reset();
   let now = 1000;

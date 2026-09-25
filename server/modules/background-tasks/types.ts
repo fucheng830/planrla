@@ -54,6 +54,8 @@ export type BackgroundTaskDetail =
       type: 'chat';
       appSessionId: string;
       provider?: LLMProvider;
+      /** 完成通知预览:助手回复首行,兜底最后用户提问(手机推送/REST 补跑用)。 */
+      preview?: string;
     }
   | {
       type: 'bash';
