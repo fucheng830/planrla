@@ -9,6 +9,8 @@ import {
   cronPromptsStore,
   normalizeLlmScheduleInput,
 } from '@/modules/cron-prompts/index.js';
+import { providerCapabilitiesService } from '@/modules/providers/index.js';
+import { sessionsDb } from '@/modules/database/index.js';
 
 import { setSessionTitle } from './session-rename.service.js';
 
@@ -131,6 +133,25 @@ const SCHEDULE_CREATE_TOOL: ToolDefinition = {
       prompt: { type: 'string', description: 'The natural-language task the LLM should execute on every trigger.' },
       provider: { type: 'string', description: 'LLM provider, default claude.' },
       projectPath: { type: 'string', description: 'Absolute project path where the LLM session should work.' },
+      sessionMode: {
+        type: 'string',
+        description:
+          'new creates a fresh session per trigger (default). resume wakes the bound session and appends the prompt as a new turn, preserving conversation context.',
+      },
+      boundSessionId: {
+        type: 'string',
+        description: 'App session id to wake. Required when sessionMode is resume.',
+      },
+      permissionMode: {
+        type: 'string',
+        description:
+          'Runtime permission mode for headless runs: default, acceptEdits, or bypassPermissions. Provider support varies; bypassPermissions is the default.',
+      },
+      catchUp: {
+        type: 'boolean',
+        description:
+          'When true (default), a missed trigger caused by downtime/sleep is caught up once on startup, within a 7-day window. Each downtime window catches up at most one run.',
+      },
       notifyInbox: { type: 'boolean', description: 'Send a completion notice to the project inbox, default true.' },
     },
     required: ['name', 'cronExpression', 'prompt', 'projectPath'],
@@ -165,6 +186,10 @@ const SCHEDULE_UPDATE_TOOL: ToolDefinition = {
       prompt: { type: 'string' },
       provider: { type: 'string' },
       projectPath: { type: 'string' },
+      sessionMode: { type: 'string' },
+      boundSessionId: { type: 'string' },
+      permissionMode: { type: 'string' },
+      catchUp: { type: 'boolean' },
       notifyInbox: { type: 'boolean' },
       enabled: { type: 'boolean' },
     },
@@ -350,12 +375,31 @@ function setSessionTitleTool(args: Record<string, unknown>) {
 }
 
 function createSchedule(args: Record<string, unknown>) {
+  const provider = readOptionalString(args.provider) ?? 'claude';
+  const requestedPermissionMode = readOptionalString(args.permissionMode) ?? 'bypassPermissions';
+  const sessionMode = readOptionalString(args.sessionMode) === 'resume' ? 'resume' as const : 'new' as const;
+  const boundSessionId = readOptionalString(args.boundSessionId) ?? null;
+  if (sessionMode === 'resume') {
+    const bound = boundSessionId ? sessionsDb.getSessionById(boundSessionId) : null;
+    if (!bound) throw new Error(`boundSessionId "${boundSessionId}" does not exist`);
+    if (bound.provider !== provider) {
+      throw new Error(`bound session provider "${bound.provider}" does not match task provider "${provider}"`);
+    }
+  }
+  const capabilities = providerCapabilitiesService.getProviderCapabilities(provider as never);
+  if (!capabilities?.permissionModes?.includes(requestedPermissionMode)) {
+    throw new Error(`invalid permissionMode "${requestedPermissionMode}" for provider "${provider}"`);
+  }
   const input = normalizeLlmScheduleInput({
     name: readString(args.name, 'name'),
     cronExpression: readString(args.cronExpression, 'cronExpression'),
     prompt: readString(args.prompt, 'prompt'),
-    provider: readOptionalString(args.provider) ?? 'claude',
+    provider,
     projectPath: readString(args.projectPath, 'projectPath'),
+    sessionMode,
+    boundSessionId,
+    permissionMode: requestedPermissionMode,
+    catchUp: args.catchUp !== false,
     notifyInbox: args.notifyInbox !== false,
   }, (expression) => realCron.validate(expression));
 
@@ -388,6 +432,16 @@ function updateSchedule(args: Record<string, unknown>) {
   if (typeof args.prompt === 'string' && args.prompt.trim()) fields.prompt = args.prompt.trim();
   if (typeof args.provider === 'string' && args.provider.trim()) fields.provider = args.provider.trim();
   if (typeof args.projectPath === 'string') fields.projectPath = args.projectPath.trim().replace(/[\\/]+/g, '/');
+  const requestedMode = readOptionalString(args.sessionMode);
+  if (requestedMode === 'resume' || requestedMode === 'new') {
+    fields.sessionMode = requestedMode;
+  }
+  const requestedBoundSessionId = readOptionalString(args.boundSessionId);
+  if (requestedBoundSessionId) fields.boundSessionId = requestedBoundSessionId;
+  if (typeof args.permissionMode === 'string' && args.permissionMode.trim()) {
+    fields.permissionMode = args.permissionMode.trim();
+  }
+  if (typeof args.catchUp === 'boolean') fields.catchUp = args.catchUp;
   if (typeof args.notifyInbox === 'boolean') fields.notifyInbox = args.notifyInbox;
   if (typeof args.enabled === 'boolean') fields.enabled = args.enabled;
   if (Object.keys(fields).length === 0) throw new Error('at least one schedule field is required');

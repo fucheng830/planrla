@@ -8,6 +8,15 @@ import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/index.js';
  */
 export const MAX_SESSION_TITLE_LENGTH = 50;
 
+/**
+ * Wanxiang ops-session tag. FeedChatPanel filters its ops rail on this
+ * custom_name prefix, so a bare AI-generated title would make the session
+ * vanish from the wanxiang UI right after auto-rename renamed it (the
+ * "会话总是被清除" symptom). When a session is currently tagged, keep the tag
+ * in front of the new title.
+ */
+const WX_SESSION_TAG = '[WX]';
+
 export type SessionRenameResult = { sessionId: string; title: string };
 
 /**
@@ -46,7 +55,14 @@ export function setSessionTitle(sessionId: string, title: string): SessionRename
   if (trimmed.length > MAX_SESSION_TITLE_LENGTH) {
     throw new Error(`title must not exceed ${MAX_SESSION_TITLE_LENGTH} characters.`);
   }
-  sessionsService.renameSessionById(sessionId, trimmed);
-  broadcastSessionRenamed(sessionId, trimmed);
-  return { sessionId, title: trimmed };
+  const current = sessionsService.getSessionCustomName(sessionId);
+  const isTagged = typeof current === 'string' && current.trimStart().startsWith(WX_SESSION_TAG);
+  // 去掉旧标记再拼新标题，避免 "[WX] [WX] 标题" 叠加。
+  const stripped = isTagged && current ? current.replace(/^\s*\[WX\]\s*/, '') : '';
+  const finalTitle = isTagged
+    ? (trimmed === stripped ? trimmed : `${WX_SESSION_TAG} ${trimmed}`)
+    : trimmed;
+  sessionsService.renameSessionById(sessionId, finalTitle);
+  broadcastSessionRenamed(sessionId, finalTitle);
+  return { sessionId, title: finalTitle };
 }

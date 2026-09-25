@@ -535,6 +535,17 @@ export const sessionsService = {
   },
 
   /**
+   * Reads the current custom_name for one session (null when the row is
+   * missing or the name is blank). The MCP rename service uses this to decide
+   * whether the wanxiang [WX] tag must be preserved across an AI auto-rename.
+   */
+  getSessionCustomName(sessionId: string): string | null {
+    const session = sessionsDb.getSessionById(sessionId);
+    const name = session?.custom_name?.trim();
+    return name ? name : null;
+  },
+
+  /**
    * Flips `sessions.isPinned` for one session and returns the new state.
    * Pinned sessions sort before unpinned ones in the sidebar.
    */

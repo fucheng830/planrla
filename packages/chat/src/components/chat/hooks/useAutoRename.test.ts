@@ -79,6 +79,14 @@ test('isUntitledSummary: real titles (incl. "untitled …" user-chosen) → fals
   assert.equal(isUntitledSummary('Untitled Notes On Testing'), false);
 });
 
+test('isUntitledSummary: bare wanxiang [WX] tag → true (ops rail新会话修复)', () => {
+  // FeedChatPanel 创建会话时 custom_name 只写 "[WX]"，此前被判已命名，
+  // 导致万象运营栏的自动改名永不触发。带真实标题的 [WX] 行不受影响。
+  assert.equal(isUntitledSummary('[WX]'), true);
+  assert.equal(isUntitledSummary('[WX] '), true);
+  assert.equal(isUntitledSummary('[WX] 调试 WS 推送'), false);
+});
+
 /* ------------------------------------------------------------------ */
 /* isUntitledSummary length heuristic (核心修复)                      */
 /*                                                                    */
@@ -129,15 +137,15 @@ test('evaluateAutoRename: 短真标题 → 不触发(长度启发式不误伤真
 /* evaluateAutoRename — fire path                                     */
 /* ------------------------------------------------------------------ */
 
-test('evaluateAutoRename: 10 assistant turns + untitled + not in-flight → fire', () => {
+test('evaluateAutoRename: threshold assistant turns + untitled + not in-flight → fire', () => {
   const decision: AutoRenameDecision = evaluateAutoRename(makeArgs({}));
   assert.equal(decision.shouldFire, true);
   assert.equal(decision.reason, 'fire');
 });
 
-test('evaluateAutoRename: exactly threshold (10) fires, not 10+', () => {
-  // 10 turns = threshold; this is the spec trigger point.
-  const at = evaluateAutoRename(makeArgs({ messages: messagesWithAssistantTurns(10) }));
+test('evaluateAutoRename: exactly threshold (2) fires, not 2+', () => {
+  // 2 turns = threshold (lowered from 10: ops chats are short).
+  const at = evaluateAutoRename(makeArgs({ messages: messagesWithAssistantTurns(2) }));
   assert.equal(at.shouldFire, true);
 });
 
@@ -156,8 +164,8 @@ test('evaluateAutoRename: "Untitled Claude Session" placeholder → still fires 
   assert.equal(decision.shouldFire, true);
 });
 
-test('evaluateAutoRename: < 10 assistant turns → no fire', () => {
-  const decision = evaluateAutoRename(makeArgs({ messages: messagesWithAssistantTurns(9) }));
+test('evaluateAutoRename: below threshold assistant turns → no fire', () => {
+  const decision = evaluateAutoRename(makeArgs({ messages: messagesWithAssistantTurns(1) }));
   assert.equal(decision.shouldFire, false);
   assert.equal(decision.reason, 'below-threshold');
 });
@@ -168,10 +176,17 @@ test('evaluateAutoRename: in-flight → no fire (re-entry guard)', () => {
   assert.equal(decision.reason, 'in-flight');
 });
 
+test('evaluateAutoRename: bare [WX] tag session fires once first answer lands', () => {
+  // 万象运营会话的典型形态：custom_name="[WX]"，首条回复完成后即应改名。
+  const decision = evaluateAutoRename(makeArgs({ summary: '[WX]' }));
+  assert.equal(decision.shouldFire, true);
+  assert.equal(decision.reason, 'fire');
+});
+
 test('evaluateAutoRename: streaming placeholders + stream_delta do NOT count toward threshold', () => {
-  // 9 real assistant turns + 1 stream_delta = still 9 (delta kind excluded).
+  // 1 real assistant turn + 1 stream_delta = still 1 (delta kind excluded).
   const msgs2 = [
-    ...messagesWithAssistantTurns(9),
+    ...messagesWithAssistantTurns(1),
     { kind: 'stream_delta', role: 'assistant', id: '__streaming_sess-1' },
   ];
   const decision = evaluateAutoRename(makeArgs({ messages: msgs2 }));
@@ -181,7 +196,7 @@ test('evaluateAutoRename: streaming placeholders + stream_delta do NOT count tow
 
 test('evaluateAutoRename: non-assistant messages do not count', () => {
   const msgs = [
-    ...messagesWithAssistantTurns(9),
+    ...messagesWithAssistantTurns(1),
     { kind: 'text', role: 'user', id: 'u1' },
     { kind: 'tool_use', role: 'assistant', id: 't1' }, // kind != text, not counted
     { kind: 'tool_result', role: 'user', id: 'tr1' },
@@ -207,8 +222,8 @@ test('countAssistantTurns: only counts kind=text role=assistant', () => {
   assert.equal(countAssistantTurns(msgs as never), 2);
 });
 
-test('TITLE_THRESHOLD is 10', () => {
-  assert.equal(TITLE_THRESHOLD, 10);
+test('TITLE_THRESHOLD is 2', () => {
+  assert.equal(TITLE_THRESHOLD, 2);
 });
 
 /* ------------------------------------------------------------------ */
@@ -219,7 +234,9 @@ test('buildSilentRenameFrame: emits chat.send with silent:true + hint content', 
   const frame = buildSilentRenameFrame(SID);
   assert.equal(frame.type, 'chat.send');
   assert.equal(frame.sessionId, SID);
-  assert.deepEqual(frame.options, { silent: true });
+  // bypassPermissions 必须带上：静默改名没有 UI 审批入口，否则
+  // set_session_title 的 MCP 调用会卡在 permission_request 上。
+  assert.deepEqual(frame.options, { silent: true, permissionMode: 'bypassPermissions' });
   assert.match(frame.content, /重命名当前会话/);
   assert.match(frame.content, new RegExp(`id=${SID}`));
   assert.match(frame.content, /set_session_title/);
@@ -307,7 +324,7 @@ function runProbe(run: ProbeRun) {
   renderToString(createElement(Probe));
 }
 
-test('hook: 10 turns + untitled + success → sends exactly one silent frame', () => {
+test('hook: threshold turns + untitled + success → sends exactly one silent frame', () => {
   const sent: SilentRenameSendFrame[] = [];
   runProbe({
     steps: [{ kind: 'normal' }],
@@ -317,7 +334,7 @@ test('hook: 10 turns + untitled + success → sends exactly one silent frame', (
   });
   assert.equal(sent.length, 1);
   assert.equal(sent[0].type, 'chat.send');
-  assert.deepEqual(sent[0].options, { silent: true });
+  assert.deepEqual(sent[0].options, { silent: true, permissionMode: 'bypassPermissions' });
   assert.equal(sent[0].sessionId, SID);
 });
 
@@ -343,12 +360,12 @@ test('hook: already-titled → no fire', () => {
   assert.equal(sent.length, 0);
 });
 
-test('hook: < 10 turns → no fire', () => {
+test('hook: below threshold (1 turn) → no fire', () => {
   const sent: SilentRenameSendFrame[] = [];
   runProbe({
     steps: [{ kind: 'normal' }],
     selectedSession: { id: SID, summary: '' },
-    messages: messagesWithAssistantTurns(9),
+    messages: messagesWithAssistantTurns(1),
     sent,
   });
   assert.equal(sent.length, 0);

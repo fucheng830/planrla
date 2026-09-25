@@ -70,6 +70,28 @@ test('setSessionTitle trims surrounding whitespace before writing', async () => 
   });
 });
 
+test('setSessionTitle preserves the wanxiang [WX] tag across AI rename', async () => {
+  await withIsolatedDb(() => {
+    connectedClients.clear();
+    // 万象 FeedChatPanel 创建的运营会话 custom_name 以 [WX] 开头；AI 自动改名
+    // 后必须保留前缀，否则会话会从运营列表过滤器中消失。
+    sessionsDb.updateSessionCustomName('sess-rename-1', '[WX]');
+    const result = setSessionTitle('sess-rename-1', '选题分析');
+    assert.equal(result.title, '[WX] 选题分析');
+    assert.equal(sessionsDb.getSessionById('sess-rename-1')?.custom_name, '[WX] 选题分析');
+  });
+});
+
+test('setSessionTitle does not double-stack the [WX] tag', async () => {
+  await withIsolatedDb(() => {
+    connectedClients.clear();
+    sessionsDb.updateSessionCustomName('sess-rename-1', '[WX] 旧标题');
+    const result = setSessionTitle('sess-rename-1', '新标题');
+    assert.equal(result.title, '[WX] 新标题');
+    assert.equal(sessionsDb.getSessionById('sess-rename-1')?.custom_name, '[WX] 新标题');
+  });
+});
+
 test('setSessionTitle rejects empty title', () => {
   // No DB needed: the empty-title check throws before renameSessionById runs.
   assert.throws(() => setSessionTitle('sess-rename-1', '   '), /required/i);

@@ -6,9 +6,12 @@ import type { ProjectSession } from '../../../types/app';
 import { formatRenameCommandHint } from './useRenameCommand';
 
 /**
- * REQ-030: assistant turns required before auto-rename fires. Spec §4.1.1.
+ * REQ-030: assistant turns required before auto-rename fires. Spec §4.1.1
+ * set 10 for dev-agent marathons; wanxiang ops chats are typically 1-3 turns,
+ * which left every sidebar row stuck on "新会话" forever. 2 turns = the first
+ * real answer completed, enough signal for a short title.
  */
-export const TITLE_THRESHOLD = 10;
+export const TITLE_THRESHOLD = 2;
 
 /**
  * Known per-provider default titles. A session is "untitled" (eligible for
@@ -49,12 +52,25 @@ const UNTITLED_PLACEHOLDERS = new Set([
  */
 const REAL_TITLE_MAX_LENGTH = 40;
 
+/**
+ * Wanxiang ops-session tag. FeedChatPanel stamps every ops conversation with
+ * this custom_name prefix at creation (see wanxiang/frontend PlanrlaWorkbench),
+ * so a freshly created [WX] session holds a non-empty summary that trips the
+ * guards below — auto-rename never fired and the sidebar kept showing bare
+ * "新会话" rows. Treat the bare tag (optionally followed by whitespace) as
+ * untitled; a real renamed title ("[WX] 北京KFC选题") stays already-titled.
+ */
+const WX_SESSION_TAG_RE = /^\[WX\]\s*$/;
+
 export function isUntitledSummary(summary: string | null | undefined): boolean {
   if (summary === null || summary === undefined) {
     return true;
   }
   const trimmed = summary.trim();
   if (trimmed === '') {
+    return true;
+  }
+  if (WX_SESSION_TAG_RE.test(trimmed)) {
     return true;
   }
   if (UNTITLED_PLACEHOLDERS.has(trimmed.toLowerCase())) {
@@ -164,19 +180,23 @@ export interface SilentRenameSendFrame {
   type: 'chat.send';
   sessionId: string;
   content: string;
-  options: { silent: true };
+  options: { silent: true; permissionMode: 'bypassPermissions' };
 }
 
 /**
  * Build the silent rename send frame. Pure helper so tests can verify the
  * exact payload without standing up React state.
+ *
+ * permissionMode=bypassPermissions: silent runs have no UI to surface
+ * permission cards, and the agent's set_session_title MCP call would otherwise
+ * stall forever on a permission_request nobody can approve (2026-09-15 e2e).
  */
 export function buildSilentRenameFrame(sessionId: string): SilentRenameSendFrame {
   return {
     type: 'chat.send',
     sessionId,
     content: formatRenameCommandHint(sessionId),
-    options: { silent: true },
+    options: { silent: true, permissionMode: 'bypassPermissions' },
   };
 }
 
