@@ -89,6 +89,9 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
 }) => {
   const { t } = useTranslation('chat');
   const [copied, setCopied] = useState(false);
+  // 长命令默认截断为一行（收起态），点击命令区才展开全文。
+  // wrapText 配置不再决定初始态——否则一条多行 curl 就占三四行。
+  const [expanded, setExpanded] = useState(false);
   const isTerminal = style === 'terminal';
 
   const handleAction = async () => {
@@ -133,7 +136,13 @@ export const OneLineDisplay: React.FC<OneLineDisplayProps> = ({
         </CardHeader>
         <div className="px-3 py-2">
           <div className="rounded bg-gray-900 px-3 py-2 dark:bg-black">
-            <code className={`block font-mono text-xs text-green-400 ${wrapText ? 'whitespace-pre-wrap break-all' : 'truncate'}`}>
+            <code
+              onClick={() => setExpanded((v) => !v)}
+              title={expanded
+                ? t('toolDisplay.collapseCommand', { defaultValue: '点击收起' })
+                : t('toolDisplay.expandCommand', { defaultValue: '点击展开完整命令' })}
+              className={`block cursor-pointer font-mono text-xs text-green-400 ${expanded ? 'whitespace-pre-wrap break-all' : 'truncate'}`}
+            >
               <span className="select-none text-green-600 dark:text-green-500">$ </span>{value}
             </code>
           </div>
