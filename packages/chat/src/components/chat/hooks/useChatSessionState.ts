@@ -154,6 +154,20 @@ export function useChatSessionState({
 
   const createDiff = useMemo<DiffCalculator>(() => createCachedDiffCalculator(), []);
 
+  // 防会话切换首帧闪现「服务商选择空状态」：selectedSession.id 变化时消息区立刻按新 id
+  // 读 store（无缓存 → []），而 isLoadingSessionMessages 的置位在下方 useEffect（绘制后），
+  // 中间那帧满足 "messages===0 && !loading"，空状态分支被画出后又立刻被 spinner/消息替换。
+  // React 官方 "adjust state when props change" 模式：render 阶段同步置位，首帧直接落 spinner。
+  const prevSelectedSessionIdRef = useRef<string | null>(null);
+  const nextSelectedSessionId = selectedSession?.id ?? null;
+  if (nextSelectedSessionId !== prevSelectedSessionIdRef.current) {
+    prevSelectedSessionIdRef.current = nextSelectedSessionId;
+    // 仅无缓存的会话需要 spinner 兜底；有缓存消息时首帧直接渲染消息，不闪 loading。
+    if (nextSelectedSessionId && sessionStore.getMessages(nextSelectedSessionId).length === 0) {
+      setIsLoadingSessionMessages(true);
+    }
+  }
+
   useEffect(() => {
     const trigger = newSessionTrigger ?? 0;
     if (trigger === previousNewSessionTriggerRef.current) {
@@ -530,6 +544,9 @@ export function useChatSessionState({
 
     // Skip if already loaded and fresh
     if (lastLoadedSessionKeyRef.current === sessionKey && sessionStore.has(selectedSessionId) && !sessionStore.isStale(selectedSessionId)) {
+    // 缓存命中路径也要复位 render 阶段的预置位，否则缓存消息 + true 会一直转圈。
+    // 同样清掉上一次中断加载留下的 true（否则 composer 整体缺失直到下次完整加载）。
+      setIsLoadingSessionMessages(false);
       subscribeToSelectedSession();
       return;
     }
