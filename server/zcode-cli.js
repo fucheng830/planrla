@@ -494,6 +494,7 @@ function buildWorkspaceParams(cwd) {
 export async function spawnZcode(command, options, writer) {
   const opts = options || {};
   const runtimeSessionId = opts.sessionId || null;
+  const notifyUserId = writer?.userId ?? null;
   const cwd = opts.cwd || opts.projectPath || process.cwd();
 
   const { node, script } = resolveZcodeBinary();
@@ -545,6 +546,14 @@ export async function spawnZcode(command, options, writer) {
     if (completeSent) return;
     completeSent = true;
     writer.send(createCompleteMessage({ provider: PROVIDER, sessionId: zcodeSessionId, exitCode }));
+    if (exitCode === 0) {
+      notifyRunStopped({
+        userId: notifyUserId,
+        provider: PROVIDER,
+        sessionId: zcodeSessionId,
+        stopReason: 'completed',
+      });
+    }
   };
 
   const cleanup = () => {
@@ -604,7 +613,7 @@ export async function spawnZcode(command, options, writer) {
       }));
       sendComplete(1);
     }
-    notifyRunFailed({ error });
+    notifyRunFailed({ userId: notifyUserId, provider: PROVIDER, sessionId: zcodeSessionId, error });
     cleanup();
   });
 
@@ -616,7 +625,7 @@ export async function spawnZcode(command, options, writer) {
     pending.clear();
 
     if (handle.aborted) {
-      notifyRunStopped();
+      notifyRunStopped({ userId: notifyUserId, provider: PROVIDER, sessionId: zcodeSessionId, stopReason: 'aborted' });
       sendComplete(0);
     } else if (!completeSent) {
       // Server died before turn.terminal: surface stderr tail if present.

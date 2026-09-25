@@ -5,6 +5,7 @@ import { generateDisplayName } from '@/modules/projects/index.js';
 import { ChatSessionWriter } from '@/modules/websocket/services/chat-session-writer.service.js';
 import { connectedClients, WS_OPEN_STATE } from '@/modules/websocket/services/websocket-state.service.js';
 import { backgroundTaskRegistry } from '@/modules/background-tasks/index.js';
+import { notifyRunStopped } from '@/services/notification-orchestrator.js';
 import type {
   LLMProvider,
   NormalizedMessage,
@@ -78,6 +79,24 @@ const MAX_BUFFERED_EVENTS_PER_RUN = 5000;
  * construction — exactly what auto-rename needs.
  */
 const runs = new Map<string, ChatRun>();
+
+// 手机客户端推送钩子:任意会话 run 结束(桌面发起、手机发起、定时任务)都
+// 通过通知管线广播。手机侧 PushSocketService 收到后按前台/后台决定是否弹
+// 本地通知;Web Push 订阅(手机浏览器)走同一事件。userId 回退逻辑由
+// orchestrator 处理(cron 路径无 userId → 本地单用户)。
+function notifyRunFinished(run: ChatRun, exitCode: unknown, aborted?: unknown): void {
+  try {
+    const code = typeof exitCode === 'number' ? exitCode : 0;
+    notifyRunStopped({
+      userId: run.writer.userId ?? null,
+      provider: run.provider,
+      sessionId: run.appSessionId,
+      stopReason: aborted ? 'aborted' : (code === 0 ? 'completed' : 'failed'),
+    });
+  } catch {
+    /* 通知失败不影响 run 生命周期 */
+  }
+}
 
 /**
  * Registry key for a run. Silent runs use a dedicated suffix so they occupy a
@@ -185,6 +204,8 @@ function decorateAndRecordEvent(run: ChatRun, message: NormalizedMessage): Norma
     outbound.actualSessionId = run.appSessionId;
     run.status = 'completed';
     run.completedAt = Date.now();
+    // 手机推送:run 真正终点的单一事件源(三种 provider 统一)。
+    notifyRunFinished(run, message.exitCode ?? 0, message.aborted);
     evictRunLater(run.appSessionId, run.silent);
     // REQ-046 §13 ② — chat run 完成 → registry 转 idle(面板显示"无活动/已完成")。
     // 非 silent 才进面板。TTL sweeper 会最终清掉。

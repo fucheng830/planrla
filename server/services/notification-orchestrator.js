@@ -1,6 +1,6 @@
 import webPush from 'web-push';
 
-import { notificationPreferencesDb, pushSubscriptionsDb, sessionsDb } from '../modules/database/index.js';
+import { notificationPreferencesDb, pushSubscriptionsDb, sessionsDb, userDb } from '../modules/database/index.js';
 
 const KIND_TO_PREF_KEY = {
   action_required: 'actionRequired',
@@ -18,6 +18,20 @@ const PROVIDER_LABELS = {
 
 const recentEventKeys = new Map();
 const DEDUPE_WINDOW_MS = 20000;
+
+// Cron/scheduled runs have no live websocket peer, so their writer carries no
+// userId. planrla is a local single-user app — fall back to the first active
+// account so background task completions still notify the phone.
+function resolveLocalUserId(userId) {
+  if (userId !== null && userId !== undefined && userId !== 0) {
+    return userId;
+  }
+  try {
+    return userDb.getFirstUser()?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const cleanupOldEventKeys = () => {
   const now = Date.now();
@@ -235,12 +249,13 @@ async function sendWebhook(url, event) {
 }
 
 function notifyUserIfEnabled({ userId, event }) {
-  if (!userId || !event) {
+  const targetUserId = resolveLocalUserId(userId);
+  if (!targetUserId || !event) {
     return;
   }
 
   const normalizedEvent = normalizeNotificationSession(event);
-  const preferences = notificationPreferencesDb.getPreferences(userId);
+  const preferences = notificationPreferencesDb.getPreferences(targetUserId);
 
   // Dedupe is shared across channels: a duplicate event is dropped entirely
   // regardless of which channel would have carried it.
@@ -252,7 +267,7 @@ function notifyUserIfEnabled({ userId, event }) {
 
   // webPush channel
   if (eventEnabled && Boolean(preferences?.channels?.webPush)) {
-    sendWebPush(userId, normalizedEvent).catch((err) => {
+    sendWebPush(targetUserId, normalizedEvent).catch((err) => {
       console.error('Web push send error:', err);
     });
   }
@@ -267,6 +282,15 @@ function notifyUserIfEnabled({ userId, event }) {
   }
 }
 
+/**
+ * @param {{
+ *   userId?: string | number | null,
+ *   provider?: string,
+ *   sessionId?: string | null,
+ *   stopReason?: string,
+ *   sessionName?: string | null,
+ * }} args
+ */
 function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'completed', sessionName = null }) {
   notifyUserIfEnabled({
     userId,
