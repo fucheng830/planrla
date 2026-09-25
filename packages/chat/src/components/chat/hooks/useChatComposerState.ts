@@ -663,7 +663,34 @@ export function useChatComposerState({
       }
 
       const referenceHints = formattedHints;
-      const hints = [searchHints, renameHints, referenceHints].filter(Boolean).join('\n\n---\n\n');
+      // 万象 feed「问 AI」引用素材：composer 外部通过 window 变量注入，
+      // 发送时前置进 content 让 agent 真正看到帖子内容。
+      // 支持多条累加；chips 在面板上可见即引用持续生效，故发送后不做清除——
+      // 清除由用户在面板上移除 chips 触发（FeedChatPanel 会同步删掉全局）。
+      let feedQuoteHints = '';
+      try {
+        const w = window as any;
+        const quotes: any[] = Array.isArray(w.__wx_feed_quotes) ? w.__wx_feed_quotes : [];
+        if (quotes.length > 0) {
+          feedQuoteHints = quotes
+            .map((q, i) =>
+              [
+                quotes.length > 1
+                  ? `【引用素材 ${i + 1}/${quotes.length}（来自万象信息流，用户希望你基于它们回答）】`
+                  : '【引用素材（来自万象信息流，用户希望你基于它回答）】',
+                `平台：${q.platform}｜作者：${q.author}｜标题：${q.title}`,
+                '正文：',
+                q.content,
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            )
+            .join('\n\n---\n\n');
+        }
+      } catch {
+        // ignore
+      }
+      const hints = [feedQuoteHints, searchHints, renameHints, referenceHints].filter(Boolean).join('\n\n---\n\n');
       const messageContent = hints
         ? `${hints}\n\n---\n\n${effectiveInput}`
         : effectiveInput;

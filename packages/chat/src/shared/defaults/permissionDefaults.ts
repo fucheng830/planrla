@@ -38,13 +38,18 @@ export function resolveSessionPermissionMode(
   provider: LLMProvider,
   sessionId: string | null | undefined,
 ): PermissionMode {
+  // 万象 agentchat：默认无限制模式（用户未做任何 per-session / 全局选择时生效）
+  if (!sessionId) {
+    return (BYPASS_MODE_BY_PROVIDER[provider] || 'default') as PermissionMode;
+  }
   if (sessionId) {
     const saved = localStorage.getItem(`permissionMode-${sessionId}`) as PermissionMode | null;
     if (saved) return saved;
   }
   const globalDefault = getDefaultPermissionModes()[provider];
   if (globalDefault) return globalDefault;
-  return 'default';
+  // 无任何记忆时：默认无限制（万象 agentchat 约定）
+  return (BYPASS_MODE_BY_PROVIDER[provider] || 'default') as PermissionMode;
 }
 
 /** 用户是否已确认"默认不限权限"风险（一次性确认）。 */
