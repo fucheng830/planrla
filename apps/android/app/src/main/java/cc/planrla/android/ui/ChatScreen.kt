@@ -440,10 +440,14 @@ class ChatViewModel(
             }
             ChatEvent.Complete -> {
                 setWorking(false)
-                // Preview: first line of the finished assistant message (mirrors Ekko's
-                // result thumbnail on the completion notification).
-                val summary = (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)
-                    ?.text?.value?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(80)
+                // Preview for the completion notification: first non-blank line of the
+                // finished assistant reply. Fall back to the last user prompt so the
+                // notification is never a bare "运行完成".
+                val assistantSummary = (_items.value.lastOrNull { it is ChatItem.Assistant } as? ChatItem.Assistant)
+                    ?.text?.value?.lineSequence()?.firstOrNull { it.isNotBlank() }
+                val userFallback = (_items.value.lastOrNull { it is ChatItem.User } as? ChatItem.User)
+                    ?.text?.lineSequence()?.firstOrNull { it.isNotBlank() }
+                val summary = (assistantSummary ?: userFallback)?.take(80)
                 notifyRunTerminalIfBackground(ok = true, summary = summary)
             }
             is ChatEvent.TokenBudgetEv -> _tokenBudget.value =
@@ -3110,3 +3114,4 @@ private fun EditLanDialog(device: Device, onSave: (String, String, String) -> Un
         dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
+
