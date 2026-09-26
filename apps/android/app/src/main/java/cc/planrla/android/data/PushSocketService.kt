@@ -240,12 +240,24 @@ class PushSocketService : Service() {
         /** chat tasks only ever reach idle (not completed) — registry semantics. */
         private val TERMINAL_STATUSES = setOf("idle", "completed", "failed", "killed")
 
-        /** Start the push channel after a device is configured. Idempotent. */
+        /**
+         * Start the push channel after a device is configured. Idempotent.
+         *
+         * 冷启动无条件 startForegroundService 会在系统繁忙(开机风暴/低配机)时踩
+         * 「5s 内未 startForeground」ANR——且全新安装无设备时服务本来就在空转轮询。
+         * 故仅在已配置设备或已登录账号时才拉起;异步判定避免在主线程读 DataStore。
+         */
         fun start(ctx: Context) {
-            runCatching {
-                ctx.startForegroundService(
-                    Intent(ctx, PushSocketService::class.java)
-                )
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val hasWork = runCatching {
+                    App.tokenStore.currentDevice() != null || App.tokenStore.accountJwtSync() != null
+                }.getOrDefault(false)
+                if (!hasWork) return@launch
+                runCatching {
+                    ctx.startForegroundService(
+                        Intent(ctx, PushSocketService::class.java)
+                    )
+                }
             }
         }
 

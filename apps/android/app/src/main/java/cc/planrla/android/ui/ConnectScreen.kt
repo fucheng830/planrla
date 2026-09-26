@@ -166,6 +166,7 @@ class ConnectViewModel : ViewModel() {
                         App.tokenStore.setDevices(mapped)
                         App.tokenStore.setCurrentDevice(chosen.id)
                         _state.value = State.LoggedIn(url ?: s)
+                        cc.planrla.android.data.PushSocketService.start(App.appContext)
                         return true
                     }
                     App.tokenStore.clear()
@@ -236,6 +237,8 @@ class ConnectViewModel : ViewModel() {
                     App.tokenStore.setDevices(mapped)
                     App.tokenStore.setCurrentDevice(target.id)
                     _state.value = State.LoggedIn(url ?: srv)
+                    // 登录成功即拉起推送通道(MainActivity 的条件启动对全新安装会跳过)
+                    cc.planrla.android.data.PushSocketService.start(App.appContext)
                 } else {
                     App.tokenStore.setDevices(emptyList())
                     App.tokenStore.clear()
