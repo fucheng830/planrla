@@ -92,6 +92,32 @@ class ConnectViewModel : ViewModel() {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning
 
+    /**
+     * 云端可能存在历史重复注册的死设备票(同名多条):逐台用 `?token=` 穿中继探测
+     * /api/auth/status,首个可达的优先;preferred(上次选中)最优先尝试。全部不可达
+     * 时返回 preferred,让既有错误提示兜底。
+     */
+    private fun pickReachableDevice(preferred: Device?, devices: List<Device>): Device {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        val ordered = listOfNotNull(preferred) + devices.filter { it.id != preferred?.id }
+        for (d in ordered) {
+            if (d.lan?.isNotBlank() == true) return d // LAN 直连设备不在中继探测范围
+            if (d.token.isBlank()) continue
+            val ok = runCatching {
+                client.newCall(
+                    okhttp3.Request.Builder()
+                        .url("https://api.planrla.com/api/auth/status?token=" + java.net.URLEncoder.encode(d.token, "UTF-8"))
+                        .build()
+                ).execute().use { it.isSuccessful }
+            }.getOrDefault(false)
+            if (ok) return d
+        }
+        return preferred ?: devices.first()
+    }
+
     suspend fun autoLogin(): Boolean {
         val s = App.tokenStore.serverUrlSync()
         // Direct-LAN device restore (no cloud account needed): the current device
@@ -129,12 +155,16 @@ class ConnectViewModel : ViewModel() {
                     if (current != null) {
                         // 账号中心化:登录即连,不再要求 QR 预配对——有 LAN 凭据走直连,
                         // 否则拿设备 token 走云端中继(与桌面端 relay 长连接配对)。
-                        val url = App.applyDeviceSelection(current)
+                        // 历史重复注册会留死票:无 LAN 凭据时先逐台探测再选。
+                        val chosen = if (!current.lan.isNullOrBlank()) current
+                            else pickReachableDevice(current, mapped)
+                        App.tokenStore.setCurrentDevice(chosen.id)
+                        val url = App.applyDeviceSelection(chosen)
                         // applyDeviceSelection 内部会 clear 凭据存储,恢复账号会话与
                         // 设备列表供切换器/下次冷启动使用。
                         App.tokenStore.setAccount(jwt, App.tokenStore.accountEmailSync() ?: "")
                         App.tokenStore.setDevices(mapped)
-                        App.tokenStore.setCurrentDevice(current.id)
+                        App.tokenStore.setCurrentDevice(chosen.id)
                         _state.value = State.LoggedIn(url ?: s)
                         return true
                     }
@@ -195,7 +225,10 @@ class ConnectViewModel : ViewModel() {
                         Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
                     }
                     val keepId = App.tokenStore.currentDeviceIdSync()
-                    val target = mapped.firstOrNull { it.id == keepId } ?: mapped.first()
+                    val preferred = mapped.firstOrNull { it.id == keepId }
+                    // 历史重复注册会留下死票(同名多设备):逐台穿中继探测,连得通的优先,
+                    // 全不通才落回首选并让后续 UI 报错。
+                    val target = pickReachableDevice(preferred, mapped)
                     val url = App.applyDeviceSelection(target)
                     // applyDeviceSelection 内部 clear 凭据存储——重存账号会话与设备
                     // 列表(含其余设备),供切换器与下次冷启动 autoLogin 使用。
