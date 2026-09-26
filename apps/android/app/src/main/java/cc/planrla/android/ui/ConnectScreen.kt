@@ -117,24 +117,32 @@ class ConnectViewModel : ViewModel() {
                 val devs = App.api(s).account.devices("Bearer $jwt").devices
                 if (devs.isNotEmpty()) {
                     val existing = App.tokenStore.devicesSync().associateBy { it.id }
-                    App.tokenStore.setDevices(devs.map { d ->
+                    val mapped = devs.map { d ->
                         val ex = existing[d.id]
                         Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
-                    })
+                    }
+                    App.tokenStore.setDevices(mapped)
                     if (App.tokenStore.currentDeviceIdSync() == null) {
                         App.tokenStore.setCurrentDevice(devs.first().id)
                     }
                     val current = App.tokenStore.currentDevice()
-                    if (current != null && !current.lan.isNullOrBlank()) {
-                        App.applyDeviceSelection(current)
-                        true
-                    } else {
-                        App.tokenStore.clear()
-                        App.tokenHolder.token = null
-                        App.tokenHolder.relayToken = null
-                        _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
-                        false
+                    if (current != null) {
+                        // 账号中心化:登录即连,不再要求 QR 预配对——有 LAN 凭据走直连,
+                        // 否则拿设备 token 走云端中继(与桌面端 relay 长连接配对)。
+                        val url = App.applyDeviceSelection(current)
+                        // applyDeviceSelection 内部会 clear 凭据存储,恢复账号会话与
+                        // 设备列表供切换器/下次冷启动使用。
+                        App.tokenStore.setAccount(jwt, App.tokenStore.accountEmailSync() ?: "")
+                        App.tokenStore.setDevices(mapped)
+                        App.tokenStore.setCurrentDevice(current.id)
+                        _state.value = State.LoggedIn(url ?: s)
+                        return true
                     }
+                    App.tokenStore.clear()
+                    App.tokenHolder.token = null
+                    App.tokenHolder.relayToken = null
+                    _err.value = App.appContext.getString(R.string.connect_error_no_devices)
+                    return false
                 } else {
                     App.tokenStore.setDevices(emptyList())
                     App.tokenStore.clear()
@@ -179,15 +187,22 @@ class ConnectViewModel : ViewModel() {
                 App.tokenStore.setAccount(r.token, email.trim())
                 val devs = App.api(srv).account.devices("Bearer ${r.token}").devices
                 if (devs.isNotEmpty()) {
-                    App.tokenStore.setDevices(devs.map { d ->
-                        Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token)
-                    })
-                    App.tokenStore.setCurrentDevice(devs.first().id)
-                    App.tokenStore.clear()
-                    App.tokenHolder.token = null
-                    App.tokenHolder.relayToken = null
-                    _err.value = App.appContext.getString(R.string.connect_error_remote_not_ready)
-                    _state.value = State.Input
+                    // 账号中心化:登录即看到账号下全部桌面端并直连第一个(此前这里
+                    // 是未完成的占位分支——拿到 token 却 clear+报「中转链路未接入」)。
+                    val existing = App.tokenStore.devicesSync().associateBy { it.id }
+                    val mapped = devs.map { d ->
+                        val ex = existing[d.id]
+                        Device(d.id, d.name.ifBlank { App.appContext.getString(R.string.connect_default_device_name) }, d.token, ex?.lan, ex?.ccUser, ex?.ccPass)
+                    }
+                    val keepId = App.tokenStore.currentDeviceIdSync()
+                    val target = mapped.firstOrNull { it.id == keepId } ?: mapped.first()
+                    val url = App.applyDeviceSelection(target)
+                    // applyDeviceSelection 内部 clear 凭据存储——重存账号会话与设备
+                    // 列表(含其余设备),供切换器与下次冷启动 autoLogin 使用。
+                    App.tokenStore.setAccount(r.token, email.trim())
+                    App.tokenStore.setDevices(mapped)
+                    App.tokenStore.setCurrentDevice(target.id)
+                    _state.value = State.LoggedIn(url ?: srv)
                 } else {
                     App.tokenStore.setDevices(emptyList())
                     App.tokenStore.clear()
