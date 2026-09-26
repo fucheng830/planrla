@@ -92,31 +92,8 @@ class ConnectViewModel : ViewModel() {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning
 
-    /**
-     * 云端可能存在历史重复注册的死设备票(同名多条):逐台用 `?token=` 穿中继探测
-     * /api/auth/status,首个可达的优先;preferred(上次选中)最优先尝试。全部不可达
-     * 时返回 preferred,让既有错误提示兜底。
-     */
-    private fun pickReachableDevice(preferred: Device?, devices: List<Device>): Device {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-        val ordered = listOfNotNull(preferred) + devices.filter { it.id != preferred?.id }
-        for (d in ordered) {
-            if (d.lan?.isNotBlank() == true) return d // LAN 直连设备不在中继探测范围
-            if (d.token.isBlank()) continue
-            val ok = runCatching {
-                client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.planrla.com/api/auth/status?token=" + java.net.URLEncoder.encode(d.token, "UTF-8"))
-                        .build()
-                ).execute().use { it.isSuccessful }
-            }.getOrDefault(false)
-            if (ok) return d
-        }
-        return preferred ?: devices.first()
-    }
+    private fun pickReachableDevice(preferred: Device?, devices: List<Device>): Device =
+        App.pickReachableRelayDevice(preferred, devices)
 
     suspend fun autoLogin(): Boolean {
         val s = App.tokenStore.serverUrlSync()

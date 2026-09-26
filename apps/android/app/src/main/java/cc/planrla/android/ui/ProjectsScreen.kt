@@ -116,16 +116,29 @@ class ProjectsViewModel : ViewModel() {
 
     fun load() {
         viewModelScope.launch {
+            // 中继冷启动竞态:UI 首帧就发请求,而 autoLogin→applyDeviceSelection
+            // 异步设 relayToken,抢先的请求 401 后被缓存成空列表且不再重试。
+            // 故先等凭据就位(最多 ~12s),再解析 base;失败时短暂重试两次。
+            var waited = 0
+            while (App.tokenHolder.token == null && App.tokenHolder.relayToken == null && waited < 12_000) {
+                kotlinx.coroutines.delay(250); waited += 250
+            }
             val s = App.resolveBaseUrl() ?: return@launch
             serverUrl = s
             _loading.value = true; _err.value = null
-            try {
-                _items.value = App.api(s).project.projects()
-            } catch (e: Exception) {
-                _err.value = localizeProjectLoadError(e.message)
-            } finally {
-                _loading.value = false
+            var lastErr: Exception? = null
+            for (attempt in 0 until 3) {
+                try {
+                    _items.value = App.api(s).project.projects()
+                    lastErr = null
+                    break
+                } catch (e: Exception) {
+                    lastErr = e
+                    if (attempt < 2) kotlinx.coroutines.delay(1200L)
+                }
             }
+            lastErr?.let { _err.value = localizeProjectLoadError(it.message) }
+            _loading.value = false
         }
     }
 

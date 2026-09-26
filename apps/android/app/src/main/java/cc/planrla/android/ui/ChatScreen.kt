@@ -313,7 +313,37 @@ class ChatViewModel(
                     _connected.value = true
                 }
             }
-            if (t == null && r == null) return@launch
+            if (t == null && r == null) {
+                // 中继冷启动竞态:autoLogin 可能还没设好凭据(异步 DataStore),
+                // 这里若直接放弃,会话/历史就永远空了。等凭据就位再继续(最多 ~12s)。
+                var waited = 0
+                while (t == null && r == null && waited < 12_000) {
+                    kotlinx.coroutines.delay(250); waited += 250
+                    t = App.tokenStore.tokenSync()
+                    r = App.tokenStore.relayTokenSync()
+                }
+                if (t == null && r == null) return@launch
+            }
+            // 中继路径:本地缓存的设备票可能指向历史注册的死设备(其 RelayDO 无
+            // 桌面连接 → 503)。逐台探测可达性,连得通的优先,并同步 currentDevice。
+            if (r != null) {
+                val all = App.tokenStore.devicesSync().filter { it.token.isNotBlank() }
+                val preferred = all.firstOrNull { it.token == r } ?: dev
+                val chosen = App.pickReachableRelayDevice(preferred, all)
+                r = chosen.token
+                if (chosen.id != dev?.id) {
+                    App.tokenStore.setCurrentDevice(chosen.id)
+                    App.tokenStore.setRelayToken(chosen.token)
+                }
+            }
+            // 拦截器读的是 tokenHolder;DataStore 已有票但 tokenHolder 未填充时
+            // (autoLogin 在途),先兜底灌入,保证本次 history/WS 带上凭据。
+            if (App.tokenHolder.token == null && App.tokenHolder.relayToken == null) {
+                t?.let { App.tokenHolder.token = it }
+                r?.let { App.tokenHolder.relayToken = it }
+            } else if (r != null && App.tokenHolder.relayToken != r) {
+                App.tokenHolder.relayToken = r
+            }
             serverUrl = s
             runCatching {
                 val resp = App.api(s).project.messages(sessionId, limit = 80)

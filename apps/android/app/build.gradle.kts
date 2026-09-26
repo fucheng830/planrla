@@ -14,8 +14,8 @@ android {
         applicationId = "cc.planrla.android"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.3.4"
+        versionCode = 9
+        versionName = "0.3.5"
         buildConfigField("String", "DEFAULT_SERVER", "\"http://192.168.0.13:3002\"")
         buildConfigField("String", "UPDATE_REPO", "\"fucheng830/planrla-release\"")
     }

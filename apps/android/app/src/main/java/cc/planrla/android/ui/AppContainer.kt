@@ -147,6 +147,33 @@ object App {
     fun api(serverUrl: String): ApiProvider = ApiProvider(serverUrl, client())
     fun chatSocket(): ChatSocket = ChatSocket(client())
 
+    /**
+     * 云端可能存在历史重复注册的死设备票(同名多条,其 RelayDO 无桌面连接 → 503)。
+     * 逐台用 `?token=` 穿中继探测 /api/auth/status,首个可达的优先;preferred 最先
+     * 尝试;LAN 直连设备不参与探测直接返回;全部不可达时返回 preferred 由调用方兜底。
+     */
+    fun pickReachableRelayDevice(preferred: cc.planrla.android.data.Device?, devices: List<cc.planrla.android.data.Device>): cc.planrla.android.data.Device {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        val ordered = listOfNotNull(preferred) + devices.filter { it.id != preferred?.id }
+        for (d in ordered) {
+            if (!d.lan.isNullOrBlank()) return d
+            if (d.token.isBlank()) continue
+            val ok = runCatching {
+                client.newCall(
+                    okhttp3.Request.Builder()
+                        .url("https://api.planrla.com/api/auth/status?token=" + java.net.URLEncoder.encode(d.token, "UTF-8"))
+                        .build()
+                ).execute().use { it.isSuccessful }
+            }.getOrDefault(false)
+            if (ok) return d
+        }
+        return preferred ?: devices.first()
+    }
+
+
     /** 退出远程访问并清空连接态，下次启动回到连接页。 */
     suspend fun logout() {
         tokenStore.clearConnection()
