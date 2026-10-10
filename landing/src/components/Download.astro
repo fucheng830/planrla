@@ -1,21 +1,19 @@
 ---
 // 安装包直链 R2 更新源(updates.planrla.com)——版本号从本地发版录取,构建时自动追新。
-// 源码:仓库以 GPL-3.0 公开,见 GitHub 仓库链接。
 import { readLocalReleases } from '../data/releases.ts';
 const latest = readLocalReleases()[0];
 const version = latest?.version ?? 'v0.15.0';
 const UPDATE_BASE = 'https://updates.planrla.com/desktop';
-const REPO = 'https://github.com/fucheng830/planrla';
 const platforms = [
   { label: 'Windows', detail: `.exe 安装包 · ${version}`, href: `${UPDATE_BASE}/planrla-${version.replace(/^v/, '')}-x64.exe`, primary: true },
-  { label: 'macOS', detail: '即将上线', href: REPO, primary: false },
-  { label: 'Linux', detail: '即将上线', href: REPO, primary: false },
+  { label: 'macOS', detail: '即将上线', href: '#waitlist', primary: false },
+  { label: 'Linux', detail: '即将上线', href: '#waitlist', primary: false },
 ];
 ---
 <section id="download" class="section" style="background:var(--color-surface)">
   <div class="container download-inner">
     <h2 class="section-title">下载 Planrla</h2>
-    <p class="section-subtitle">免费开始使用,本地优先 · GPL-3.0 开源</p>
+    <p class="section-subtitle">免费开始使用,本地优先 · 数据不离机</p>
     <div class="download-grid">
       {platforms.map((p) => (
         <a class={p.primary ? 'dl-card dl-card-primary' : 'dl-card'} href={p.href} target="_blank" rel="noopener">
@@ -24,7 +22,7 @@ const platforms = [
         </a>
       ))}
     </div>
-    <p class="download-note">源代码(GPL-3.0)见 <a href={REPO}>GitHub 仓库</a> · 桌面端应用内可自动更新</p>
+    <p class="download-note">桌面端应用内可自动更新 · 源码开放计划中</p>
   </div>
 </section>
 
