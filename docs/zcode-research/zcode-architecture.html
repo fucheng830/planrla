@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZCode 架构全景图</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020617; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; padding: 32px; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .header h1::before { content: '●'; color: #34d399; margin-right: 10px; animation: pulse 2s infinite; }
+  .header p { color: #64748b; font-size: 11px; margin-top: 6px; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  .diagram-card { background: rgba(15, 23, 42, .6); border: 1px solid #1e293b; border-radius: 12px; padding: 16px; max-width: 1480px; margin: 0 auto; }
+  svg { width: 100%; height: auto; display: block; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; max-width: 1480px; margin: 24px auto 0; }
+  .card { background: rgba(15, 23, 42, .7); border: 1px solid #1e293b; border-radius: 10px; padding: 16px; }
+  .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .card h3 { font-size: 12px; font-weight: 600; }
+  .card ul { list-style: none; }
+  .card li { font-size: 10px; color: #94a3b8; line-height: 1.7; }
+  .footer { text-align: center; color: #475569; font-size: 9px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ZCode 架构全景图</h1>
+  <p>zai-org/ZCode v3.14.0 · AI 编程工作台 · Desktop / Web / TUI 三形态 · Apache-2.0</p>
+</div>
+<div class="diagram-card">
+<svg viewBox="0 0 1440 1060" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrowhead-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+    </marker>
+  </defs>
+  <rect width="1440" height="1060" fill="#020617"/>
+  <rect width="1440" height="1060" fill="url(#grid)"/>
+
+  <!-- ===== arrows first (paint behind boxes) ===== -->
+  <g fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)">
+    <!-- Desktop -> protocol -->
+    <path d="M 320 185 L 396 180"/>
+    <!-- Web UI -> WebSocket -->
+    <path d="M 320 320 L 360 320 L 360 490 L 396 490"/>
+    <!-- TUI -> stdio -->
+    <path d="M 320 415 L 396 390"/>
+    <!-- protocol -> AgentRuntime -->
+    <path d="M 560 180 L 636 180"/>
+    <!-- TurnMachine <-> AgentRuntime -->
+    <path d="M 820 180 L 836 180"/>
+    <!-- AgentRuntime -> ToolScheduler -->
+    <path d="M 730 220 L 730 246"/>
+    <!-- ToolScheduler -> MCP/Skills -->
+    <path d="M 820 285 L 836 285"/>
+    <!-- Context/Compact -> runtime -->
+    <path d="M 930 246 L 930 224"/>
+    <!-- ToolScheduler -> Subagent -->
+    <path d="M 730 320 L 730 346"/>
+    <!-- runtime -> dynamic-workflow -->
+    <path d="M 730 480 L 730 566"/>
+    <!-- server -> services -->
+    <path d="M 1240 246 L 1240 224"/>
+    <!-- server -> storage (right bypass) -->
+    <path d="M 1380 300 L 1415 300 L 1415 475 L 1384 475"/>
+    <!-- provider <- GLM external (up from bottom gap) -->
+    <path d="M 200 711 L 200 660 L 1060 660 L 1060 380 L 1096 380"/>
+    <!-- server remote -> SSH/WSL/Docker -->
+    <path d="M 1100 285 L 1065 285 L 1065 500 L 600 500 L 600 711 L 590 711"/>
+  </g>
+  <!-- governance dashed ticks -->
+  <g fill="none" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#arrowhead-amber)" opacity="0.8">
+    <path d="M 340 866 L 340 834"/>
+    <path d="M 700 866 L 700 834"/>
+    <path d="M 1100 866 L 1100 834"/>
+  </g>
+
+  <!-- ===== region boundaries ===== -->
+  <!-- A 客户端形态 -->
+  <rect x="40" y="80" width="300" height="560" rx="12" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="190" y="106" fill="#22d3ee" font-size="11" font-weight="600" text-anchor="middle">客户端形态 CLIENT SURFACES</text>
+  <!-- B 协议与传输 -->
+  <rect x="380" y="80" width="200" height="560" rx="12" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="480" y="106" fill="#fb923c" font-size="11" font-weight="600" text-anchor="middle">协议 / 传输</text>
+  <!-- C Agent 运行时 -->
+  <rect x="620" y="80" width="420" height="400" rx="12" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="830" y="106" fill="#34d399" font-size="11" font-weight="600" text-anchor="middle">Agent 运行时 core（apps/zcode-cli）</text>
+  <!-- D dynamic-workflow -->
+  <rect x="620" y="520" width="420" height="120" rx="12" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.45"/>
+  <text x="830" y="546" fill="#34d399" font-size="11" font-weight="600" text-anchor="middle">Dynamic Workflow（动态工作流）</text>
+  <!-- E server/services/provider/storage -->
+  <rect x="1080" y="80" width="320" height="560" rx="12" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.45"/>
+  <text x="1240" y="106" fill="#34d399" font-size="11" font-weight="600" text-anchor="middle">服务层 packages/*</text>
+  <!-- G external -->
+  <rect x="40" y="690" width="1360" height="140" rx="12" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.5"/>
+  <text x="720" y="712" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="middle">外部依赖 EXTERNAL</text>
+  <!-- governance band -->
+  <rect x="40" y="870" width="1360" height="90" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.7"/>
+  <text x="720" y="890" fill="#fbbf24" font-size="10" font-weight="600" text-anchor="middle">工程治理层（贯穿全部模块）</text>
+
+  <!-- ===== component boxes (opaque underlay + tinted) ===== -->
+  <!-- A -->
+  <g>
+    <rect x="60" y="140" width="260" height="90" rx="6" fill="#0f172a"/>
+    <rect x="60" y="140" width="260" height="90" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="190" y="170" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Desktop</text>
+    <text x="190" y="188" fill="#94a3b8" font-size="9" text-anchor="middle">Electron main / host / preload</text>
+    <text x="190" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">renderer + scheduler</text>
+    <text x="190" y="216" fill="#64748b" font-size="8" text-anchor="middle">main 不承载业务状态，仅转发</text>
+  </g>
+  <g>
+    <rect x="60" y="270" width="260" height="70" rx="6" fill="#0f172a"/>
+    <rect x="60" y="270" width="260" height="70" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="190" y="298" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Web UI（packages/web）</text>
+    <text x="190" y="316" fill="#94a3b8" font-size="9" text-anchor="middle">auth / share + 共享 packages/ui</text>
+    <text x="190" y="330" fill="#64748b" font-size="8" text-anchor="middle">React 19 + Zustand 40+ stores</text>
+  </g>
+  <g>
+    <rect x="60" y="380" width="260" height="70" rx="6" fill="#0f172a"/>
+    <rect x="60" y="380" width="260" height="70" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="190" y="408" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">TUI（packages/tui）</text>
+    <text x="190" y="426" fill="#94a3b8" font-size="9" text-anchor="middle">终端交互界面</text>
+    <text x="190" y="440" fill="#64748b" font-size="8" text-anchor="middle">tui-prompt-handler / session relay</text>
+  </g>
+  <g>
+    <rect x="60" y="490" width="260" height="70" rx="6" fill="#0f172a"/>
+    <rect x="60" y="490" width="260" height="70" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="190" y="518" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">zcode CLI 统一入口</text>
+    <text x="190" y="536" fill="#94a3b8" font-size="9" text-anchor="middle">SEA 单二进制 · zcode / --web</text>
+    <text x="190" y="550" fill="#64748b" font-size="8" text-anchor="middle">无参进 TUI，--web 起 Web+后端</text>
+  </g>
+
+  <!-- B -->
+  <g>
+    <rect x="400" y="140" width="160" height="80" rx="6" fill="#0f172a"/>
+    <rect x="400" y="140" width="160" height="80" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="480" y="170" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">zcode-protocol v4</text>
+    <text x="480" y="188" fill="#94a3b8" font-size="9" text-anchor="middle">严格类型 + 运行时校验</text>
+    <text x="480" y="202" fill="#64748b" font-size="8" text-anchor="middle">packages/shared</text>
+  </g>
+  <g>
+    <rect x="400" y="260" width="160" height="60" rx="6" fill="#0f172a"/>
+    <rect x="400" y="260" width="160" height="60" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="480" y="285" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">RPC channels</text>
+    <text x="480" y="302" fill="#94a3b8" font-size="9" text-anchor="middle">packages/rpc 自研</text>
+  </g>
+  <g>
+    <rect x="400" y="360" width="160" height="60" rx="6" fill="#0f172a"/>
+    <rect x="400" y="360" width="160" height="60" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="480" y="385" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">stdio / IPC</text>
+    <text x="480" y="402" fill="#94a3b8" font-size="9" text-anchor="middle">entry-stdio / lifecycle</text>
+  </g>
+  <g>
+    <rect x="400" y="460" width="160" height="60" rx="6" fill="#0f172a"/>
+    <rect x="400" y="460" width="160" height="60" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="480" y="485" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">WebSocket /ws</text>
+    <text x="480" y="502" fill="#94a3b8" font-size="9" text-anchor="middle">HTTP + token 鉴权</text>
+  </g>
+
+  <!-- C core -->
+  <g>
+    <rect x="640" y="140" width="180" height="80" rx="6" fill="#0f172a"/>
+    <rect x="640" y="140" width="180" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="730" y="170" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">AgentRuntime</text>
+    <text x="730" y="188" fill="#94a3b8" font-size="9" text-anchor="middle">Ports &amp; Deps 依赖注入</text>
+    <text x="730" y="202" fill="#64748b" font-size="8" text-anchor="middle">methods/ 按能力安装 · 命令队列</text>
+  </g>
+  <g>
+    <rect x="840" y="140" width="180" height="80" rx="6" fill="#0f172a"/>
+    <rect x="840" y="140" width="180" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="930" y="170" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">TurnMachine</text>
+    <text x="930" y="188" fill="#94a3b8" font-size="9" text-anchor="middle">显式 turn 状态机</text>
+    <text x="930" y="202" fill="#64748b" font-size="8" text-anchor="middle">phase 枚举 + canTransitionTo</text>
+  </g>
+  <g>
+    <rect x="640" y="250" width="180" height="70" rx="6" fill="#0f172a"/>
+    <rect x="640" y="250" width="180" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="730" y="278" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">ToolScheduler</text>
+    <text x="730" y="295" fill="#94a3b8" font-size="9" text-anchor="middle">registry / executor / 校验</text>
+    <text x="730" y="309" fill="#64748b" font-size="8" text-anchor="middle">Permission broker 决策门</text>
+  </g>
+  <g>
+    <rect x="840" y="250" width="180" height="70" rx="6" fill="#0f172a"/>
+    <rect x="840" y="250" width="180" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="930" y="278" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Context + Compact</text>
+    <text x="930" y="295" fill="#94a3b8" font-size="9" text-anchor="middle">builder / sections</text>
+    <text x="930" y="309" fill="#64748b" font-size="8" text-anchor="middle">policy · microcompact · rounds</text>
+  </g>
+  <g>
+    <rect x="640" y="350" width="180" height="60" rx="6" fill="#0f172a"/>
+    <rect x="640" y="350" width="180" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="730" y="375" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Subagent runner</text>
+    <text x="730" y="392" fill="#94a3b8" font-size="9" text-anchor="middle">explore / general-purpose</text>
+  </g>
+  <g>
+    <rect x="840" y="350" width="180" height="60" rx="6" fill="#0f172a"/>
+    <rect x="840" y="350" width="180" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="930" y="375" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">MCP host / Skills</text>
+    <text x="930" y="392" fill="#94a3b8" font-size="9" text-anchor="middle">hooks / memory / telemetry</text>
+  </g>
+
+  <!-- D workflow -->
+  <g>
+    <rect x="640" y="570" width="180" height="50" rx="6" fill="#0f172a"/>
+    <rect x="640" y="570" width="180" height="50" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="730" y="592" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">DSL 编译器 + 因果图</text>
+    <text x="730" y="608" fill="#94a3b8" font-size="8" text-anchor="middle">analysis / compiler / lowering</text>
+  </g>
+  <g>
+    <rect x="840" y="570" width="180" height="50" rx="6" fill="#0f172a"/>
+    <rect x="840" y="570" width="180" height="50" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="930" y="592" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">并发引擎 + Journal</text>
+    <text x="930" y="608" fill="#94a3b8" font-size="8" text-anchor="middle">scheduler · settlement · artifacts</text>
+  </g>
+
+  <!-- E services -->
+  <g>
+    <rect x="1100" y="140" width="280" height="80" rx="6" fill="#0f172a"/>
+    <rect x="1100" y="140" width="280" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1240" y="168" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">packages/services ≈40 领域服务</text>
+    <text x="1240" y="186" fill="#94a3b8" font-size="9" text-anchor="middle">session / storage / git / fs / plugins</text>
+    <text x="1240" y="200" fill="#94a3b8" font-size="9" text-anchor="middle">skills / mcp-sync / oauth / terminal</text>
+    <text x="1240" y="214" fill="#64748b" font-size="8" text-anchor="middle">contract.ts 公共入口 · 分层 domain/app/adapters</text>
+  </g>
+  <g>
+    <rect x="1100" y="250" width="280" height="70" rx="6" fill="#0f172a"/>
+    <rect x="1100" y="250" width="280" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1240" y="278" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">server（HTTP / stdio 双入口）</text>
+    <text x="1240" y="296" fill="#94a3b8" font-size="9" text-anchor="middle">remote: SSH / WSL / Docker backend</text>
+    <text x="1240" y="310" fill="#64748b" font-size="8" text-anchor="middle">部署锁 · 资产缓存 · preflight</text>
+  </g>
+  <g>
+    <rect x="1100" y="350" width="280" height="60" rx="6" fill="#0f172a"/>
+    <rect x="1100" y="350" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1240" y="375" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">provider / provider-node</text>
+    <text x="1240" y="393" fill="#94a3b8" font-size="9" text-anchor="middle">GLM 内置 / OpenAI-compat / Anthropic</text>
+  </g>
+  <g>
+    <rect x="1100" y="450" width="280" height="60" rx="6" fill="#0f172a"/>
+    <rect x="1100" y="450" width="280" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1240" y="475" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">存储层（SQLite / 会话持久化）</text>
+    <text x="1240" y="493" fill="#94a3b8" font-size="9" text-anchor="middle">storage contract · startup · 严格追加</text>
+  </g>
+
+  <!-- G external -->
+  <g>
+    <rect x="80" y="730" width="240" height="70" rx="6" fill="#0f172a"/>
+    <rect x="80" y="730" width="240" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="200" y="758" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">LLM APIs</text>
+    <text x="200" y="776" fill="#94a3b8" font-size="9" text-anchor="middle">GLM / OpenAI-compat / Anthropic</text>
+    <text x="200" y="790" fill="#64748b" font-size="8" text-anchor="middle">AI SDK + 官方补丁</text>
+  </g>
+  <g>
+    <rect x="360" y="730" width="240" height="70" rx="6" fill="#0f172a"/>
+    <rect x="360" y="730" width="240" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="480" y="758" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">远程环境</text>
+    <text x="480" y="776" fill="#94a3b8" font-size="9" text-anchor="middle">SSH / WSL / Docker</text>
+    <text x="480" y="790" fill="#64748b" font-size="8" text-anchor="middle">harness/remote 容器镜像</text>
+  </g>
+  <g>
+    <rect x="640" y="730" width="240" height="70" rx="6" fill="#0f172a"/>
+    <rect x="640" y="730" width="240" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="760" y="758" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">MCP servers</text>
+    <text x="760" y="776" fill="#94a3b8" font-size="9" text-anchor="middle">外部工具进程</text>
+    <text x="760" y="790" fill="#64748b" font-size="8" text-anchor="middle">mcp-sync / official-mcp</text>
+  </g>
+  <g>
+    <rect x="920" y="730" width="240" height="70" rx="6" fill="#0f172a"/>
+    <rect x="920" y="730" width="240" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1040" y="758" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Browser-use（Playwright）</text>
+    <text x="1040" y="776" fill="#94a3b8" font-size="9" text-anchor="middle">浏览器操作 / CUA fail-closed</text>
+    <text x="1040" y="790" fill="#64748b" font-size="8" text-anchor="middle">zcode-cua 占位包</text>
+  </g>
+  <g>
+    <rect x="1200" y="730" width="180" height="70" rx="6" fill="#0f172a"/>
+    <rect x="1200" y="730" width="180" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1290" y="758" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">插件 CDN / 市场</text>
+    <text x="1290" y="776" fill="#94a3b8" font-size="9" text-anchor="middle">sha256 校验 zip</text>
+    <text x="1290" y="790" fill="#64748b" font-size="8" text-anchor="middle">官方市场 + 个人来源</text>
+  </g>
+
+  <!-- governance band boxes -->
+  <g>
+    <rect x="80" y="902" width="300" height="42" rx="6" fill="#0f172a"/>
+    <rect x="80" y="902" width="300" height="42" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="230" y="920" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">architecture-policy.yaml + baseline</text>
+    <text x="230" y="936" fill="#94a3b8" font-size="8" text-anchor="middle">模块边界 · owner · 公共入口 · 分层</text>
+  </g>
+  <g>
+    <rect x="420" y="902" width="300" height="42" rx="6" fill="#0f172a"/>
+    <rect x="420" y="902" width="300" height="42" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="570" y="920" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">architecture-check CI 门禁</text>
+    <text x="570" y="936" fill="#94a3b8" font-size="8" text-anchor="middle">≤400 行/文件 · 禁循环依赖 · 禁深导入</text>
+  </g>
+  <g>
+    <rect x="760" y="902" width="300" height="42" rx="6" fill="#0f172a"/>
+    <rect x="760" y="902" width="300" height="42" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="910" y="920" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">AGENTS.md / DESIGN.md / CONTEXT.md</text>
+    <text x="910" y="936" fill="#94a3b8" font-size="8" text-anchor="middle">spec 先行 · 设计系统 · 领域词汇表</text>
+  </g>
+  <g>
+    <rect x="1100" y="902" width="280" height="42" rx="6" fill="#0f172a"/>
+    <rect x="1100" y="902" width="280" height="42" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="1240" y="920" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">.agents/skills（8 个仓库技能）</text>
+    <text x="1240" y="936" fill="#94a3b8" font-size="8" text-anchor="middle">architecture-governance · react · electron…</text>
+  </g>
+
+  <!-- legend (outside all boundaries) -->
+  <g>
+    <text x="40" y="1000" fill="#64748b" font-size="9" font-weight="600">图例 LEGEND</text>
+    <rect x="130" y="992" width="14" height="10" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="150" y="1001" fill="#94a3b8" font-size="8">客户端</text>
+    <rect x="205" y="992" width="14" height="10" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.2"/>
+    <text x="225" y="1001" fill="#94a3b8" font-size="8">协议/传输</text>
+    <rect x="295" y="992" width="14" height="10" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.2"/>
+    <text x="315" y="1001" fill="#94a3b8" font-size="8">运行时/服务</text>
+    <rect x="400" y="992" width="14" height="10" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="420" y="1001" fill="#94a3b8" font-size="8">存储</text>
+    <rect x="460" y="992" width="14" height="10" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="480" y="1001" fill="#94a3b8" font-size="8">外部依赖</text>
+    <rect x="555" y="992" width="14" height="10" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="575" y="1001" fill="#94a3b8" font-size="8">治理</text>
+    <line x1="630" y1="997" x2="670" y2="997" stroke="#64748b" stroke-width="1.5"/>
+    <text x="678" y="1001" fill="#94a3b8" font-size="8">数据流</text>
+    <line x1="735" y1="997" x2="775" y2="997" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4"/>
+    <text x="783" y="1001" fill="#94a3b8" font-size="8">治理约束生效</text>
+  </g>
+</svg>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-header"><div class="card-dot" style="background:#34d399"></div><h3>Agent 运行时心脏</h3></div>
+    <ul>
+      <li>• AgentRuntime：Ports &amp; Deps 纯依赖注入，能力按 methods/ 目录安装</li>
+      <li>• TurnMachine：显式状态机，phase 枚举 + 迁移合法性校验</li>
+      <li>• owner/lease + CommandInbox：输入串行准入，杜绝并发写冲突</li>
+      <li>• Compact 会话压缩是一等公民：policy / microcompact / rounds</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-dot" style="background:#fb923c"></div><h3>一码三形态</h3></div>
+    <ul>
+      <li>• 单一 zcode CLI（SEA 单二进制）：无参进 TUI，--web 起 Web+后端</li>
+      <li>• Desktop main 仅做窗口/进程/转发，业务状态全在运行时</li>
+      <li>• 手机远控复用 Host attachment，不另起 Agent 实例</li>
+      <li>• 协议严格类型（zcode-protocol v4）+ 运行时校验</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-dot" style="background:#fbbf24"></div><h3>工程治理（最值得抄）</h3></div>
+    <ul>
+      <li>• architecture-policy.yaml 声明模块边界，CI 强制执行</li>
+      <li>• ≤400 行/文件、禁循环依赖、禁深导入、baseline 存量豁免</li>
+      <li>• architecture:context 生成「模块阅读包」喂给 AI</li>
+      <li>• AGENTS/DESIGN/CONTEXT 三文档：AI 协作规范系统化</li>
+    </ul>
+  </div>
+</div>
+<div class="footer">Generated by Codex · source: github.com/zai-org/ZCode · 2026-09-21</div>
+</body>
+</html>
