@@ -1,8 +1,10 @@
 ---
 const features = [
-  { title: '多 Provider 一体化', desc: 'Claude、Codex、Gemini、Cursor 在同一工作台切换，共享会话与项目。', icon: '⇄' },
-  { title: '本地优先', desc: '本地运行模型 CLI，凭据与数据不离机；远程访问按需开启。', icon: '⌂' },
-  { title: '桌面原生体验', desc: 'Electron 桌面端，三态主题、自绘标题栏、系统级集成。', icon: '▥' },
+  { title: '定时智能体', desc: 'Cron 式定时提示词，到点自动触发任意 CLI 智能体执行任务。', icon: '⏱' },
+  { title: '停机补跑 + 会话唤醒', desc: '错过的计划启动后补跑一次；唤醒模式在原会话续跑，保留全部上下文。', icon: '↻' },
+  { title: '手机推送', desc: '任意任务完成(桌面发起/手机发起/定时)推送到 Android,点开直达会话,通知栏直接回复。', icon: '📳' },
+  { title: '多 Provider 一体化', desc: 'Claude、Codex、Cursor、Gemini、Kimi、ZCode 在同一工作台,共享会话与项目。', icon: '⇄' },
+  { title: '本地优先 + 开源', desc: '数据不离机,GPL-3.0 开源,远程访问按需开启。', icon: '⌂' },
   { title: '会话全文搜索', desc: 'FTS5 全文索引，跨会话毫秒级检索历史对话。', icon: '⌕' },
 ];
 ---
@@ -23,7 +25,7 @@ const features = [
 </section>
 
 <style>
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; }
   .card-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--color-primary); color: var(--color-primary-fg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; margin-bottom: 14px; }
   .card h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
