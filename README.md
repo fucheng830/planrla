@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/logo.svg" alt="Planrla" width="64" height="64">
   <h1>Planrla</h1>
-  <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, <a href="https://geminicli.com/">Gemini-CLI</a>, <a href="https://opencode.ai">OpenCode</a>, <a href="https://moonshotai.github.io/kimi-code/">Kimi Code</a>, and <a href="https://z.ai">ZCode (GLM)</a>.<br>Agents run long tasks on your machine — Planrla pushes an alert to your phone when they need you, and you approve from anywhere.</p>
+  <p>A desktop and mobile UI for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, <a href="https://developers.openai.com/codex">Codex</a>, <a href="https://geminicli.com/">Gemini-CLI</a>, <a href="https://opencode.ai">OpenCode</a>, <a href="https://moonshotai.github.io/kimi-code/">Kimi Code</a>, and <a href="https://z.ai">ZCode (GLM)</a>.<br>Put your agents on a schedule — they run tasks on your machine while you sleep, keep full context between runs, and push to your phone when they're done.</p>
 </div>
 
 <p align="center">
@@ -47,6 +47,7 @@
 
 ## Features
 
+- **Scheduled Agents** - Cron-style prompts that trigger any agent on a schedule, catch up after downtime, and resume bound sessions with full context
 - **Responsive Design** - Works seamlessly across desktop, tablet, and mobile so you can also use Agents from mobile 
 - **Interactive Chat Interface** - Built-in chat interface for seamless communication with the Agents
 - **Integrated Shell Terminal** - Direct access to the Agents CLI through built-in shell functionality
@@ -56,6 +57,7 @@
 - **Plugin System** - Extend Planrla with custom plugins — add new tabs, backend services, and integrations
 - **TaskMaster AI Integration** *(Optional)* - Advanced project management with AI-powered task planning, PRD parsing, and workflow automation
 - **Model Compatibility** - Works with Claude, GPT, Gemini, Kimi, and GLM model families (the full list of supported models is available at runtime via `GET /api/providers/:provider/models`)
+- **Android App** - Native client with push notifications for task completion, permission approvals, and inline replies — create schedules, trigger runs, and read results from your phone
 
 
 ## Quick Start

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/logo.svg" alt="Planrla" width="64" height="64">
   <h1>Planrla</h1>
-  <p><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>、<a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>、<a href="https://developers.openai.com/codex">Codex</a> 和 <a href="https://geminicli.com/">Gemini-CLI</a> 的桌面和移动端 UI。可在本地或远程使用，从任何地方查看激活的项目与会话。</p>
+  <p><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>、<a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>、<a href="https://developers.openai.com/codex">Codex</a>、<a href="https://geminicli.com/">Gemini-CLI</a>、<a href="https://opencode.ai">OpenCode</a>、<a href="https://moonshotai.github.io/kimi-code/">Kimi Code</a> 与 <a href="https://z.ai">ZCode (GLM)</a> 的桌面和移动端 UI。<br>让智能体按计划定时干活：你在睡觉，它在跑任务、保留完整上下文、干完推送到手机。</p>
 </div>
 
 <p align="center">
@@ -52,6 +52,7 @@
 
 ## 功能
 
+- **定时智能体** - Cron 式定时提示词，到点自动触发任意智能体；停机错过可补跑，唤醒模式在原会话内续跑并保留全部上下文
 - **响应式设计** - 在桌面、平板和移动设备上无缝运行，让您随时随地使用 Agents
 - **交互聊天界面** - 内置聊天 UI，轻松与 Agents 交流
 - **集成 Shell 终端** - 通过内置 shell 功能直接访问 Agents CLI
@@ -61,6 +62,7 @@
 - **插件系统** - 通过自定义选项卡、后端服务与集成扩展 Planrla。 [开始构建 →](https://github.com/nomad/nomad-plugin-starter)
 - **TaskMaster AI 集成** *(可选)* - 结合 AI 任务规划、PRD 分析与工作流自动化，实现高级项目管理
 - **模型兼容性** - 支持 Claude、GPT、Gemini 模型家族（完整支持列表可通过 `GET /api/providers/:provider/models` 接口获取）
+- **Android 客户端** - 原生 App,任务完成/权限审批/追问均推送到手机,通知栏直接回复;支持创建定时任务、触发运行、查看结果
 
 ## 快速开始
 
