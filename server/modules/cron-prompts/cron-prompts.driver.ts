@@ -5,20 +5,24 @@
 // 会话会正常出现在侧边栏,产物落在 provider 自己的 transcript 里。
 
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 
 import * as cron from 'node-cron';
 
 import { spawnFns, sessionsService } from '@/modules/providers/index.js';
-import { homedir } from 'node:os';
 import { chatRunRegistry } from '@/modules/websocket/index.js';
 import type { LLMProvider, RealtimeClientConnection } from '@/shared/types.js';
 import { broadcastTeamMessage } from '@/utils/kanban-websocket.js';
 import { createTeamMessageStore } from '@/modules/team-messages/index.js';
-import { projectsDb } from '@/modules/database/repositories/projects.db.js';
-import { sessionsDb } from '@/modules/database/repositories/sessions.db.js';
+import { projectsDb, sessionsDb } from '@/modules/database/index.js';
 
 import { formatUtcSqlite, nextScheduledRunMs, shouldCatchUp } from './catch-up.js';
 import { cronPromptsStore, type CronPromptTask } from './cron-prompts.store.js';
+
+// 派发退避常量(移植 ZCode DISPATCH_RETRY_*):spawn/路径失败后指数退避重试。
+const DISPATCH_RETRY_BASE_MS = 30_000;
+const DISPATCH_RETRY_CAP_MS = 15 * 60_000;
+const DISPATCH_RETRY_MAX_ATTEMPTS = 5;
 
 /** No-op websocket stub (same trick as A2A inbound): the cron path has no live peer. */
 const STUB_CONNECTION: RealtimeClientConnection = {
@@ -130,11 +134,16 @@ export function createCronPromptsDriver(deps: {
   async function executeTask(
     task: CronPromptTask,
     onStarted?: (result: CronRunStartResult) => void,
+    trigger: 'schedule' | 'manual' | 'catch-up' = 'schedule',
   ): Promise<string | null> {
+    const runId = `${task.id}:${Date.now()}`;
     const spawnFn = spawnFns[task.provider as keyof typeof spawnFns];
     if (!spawnFn) {
       log(`[cron-prompts] provider "${task.provider}" not supported`);
       onStarted?.({ sessionId: null, error: `provider "${task.provider}" not supported` });
+      cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
+      cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: `provider not supported`, failureKind: 'permanent' });
+      cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
@@ -150,6 +159,9 @@ export function createCronPromptsDriver(deps: {
       if (!bound) {
         log(`[cron-prompts] bound session not found (task=${task.name}, session=${task.boundSessionId})`);
         onStarted?.({ sessionId: null, error: `bound session "${task.boundSessionId}" not found` });
+        cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
+        cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'bound session not found', failureKind: 'permanent' });
+        cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
         cronPromptsStore.recordRun(task.id, null);
         return null;
       }
@@ -159,6 +171,9 @@ export function createCronPromptsDriver(deps: {
           sessionId: null,
           error: `bound session provider "${bound.provider}" does not match task provider "${task.provider}"`,
         });
+        cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
+        cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'provider mismatch', failureKind: 'permanent' });
+        cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
         cronPromptsStore.recordRun(task.id, null);
         return null;
       }
@@ -173,9 +188,15 @@ export function createCronPromptsDriver(deps: {
     if (!existsSync(cwd)) {
       log(`[cron-prompts] projectPath does not exist: ${cwd} (task=${task.name})`);
       onStarted?.({ sessionId: null, error: `project path does not exist: ${cwd}` });
+      cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
+      cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: `project path missing: ${cwd}`, failureKind: 'transient' });
+      // 路径缺失可能是移动盘/网络盘临时不可达 → transient 重试。
+      const retry = cronPromptsStore.markDispatchFailed(task.id, 'transient', backoffOpts);
+      if (retry) scheduleRetry(task.id, retry);
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
+    cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
 
     if (!appSessionId) {
       appSessionId = sessionsService.createAppSession(task.provider as LLMProvider, cwd).sessionId;
@@ -190,9 +211,15 @@ export function createCronPromptsDriver(deps: {
     if (!run) {
       log(`[cron-prompts] session busy, skip run (task=${task.id})`);
       onStarted?.({ sessionId: null, error: 'session busy, skipped this run' });
+      cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'session busy', failureKind: 'transient' });
+      const retry = cronPromptsStore.markDispatchFailed(task.id, 'transient', backoffOpts);
+      if (retry) scheduleRetry(task.id, retry);
       cronPromptsStore.recordRun(task.id, null);
       return null;
     }
+    // 派发到 provider 成功(会话已建立、run 已注册)——清退避状态。
+    cronPromptsStore.markDispatchSucceeded(task.id);
+    cronPromptsStore.settleRun({ runId, status: 'dispatched', sessionId: appSessionId });
     // The app session id exists before the provider finishes (or even
     // reports its own provider session id) — hand it back immediately so
     // "Run now" callers can navigate to the run.
@@ -224,19 +251,50 @@ export function createCronPromptsDriver(deps: {
     return appSessionId;
   }
 
-  function runTaskGuarded(task: CronPromptTask) {
+  const backoffOpts = { baseMs: DISPATCH_RETRY_BASE_MS, capMs: DISPATCH_RETRY_CAP_MS, maxAttempts: DISPATCH_RETRY_MAX_ATTEMPTS };
+  const retryTimers = new Map<string, NodeJS.Timeout>();
+
+  /** 安排一次退避重试(重读任务,可能已被禁用/删除)。 */
+  function scheduleRetry(taskId: string, retryAt: string): void {
+    const existing = retryTimers.get(taskId);
+    if (existing) clearTimeout(existing);
+    const due = parseUtcBare(retryAt) - Date.now();
+    const timer = setTimeout(() => {
+      retryTimers.delete(taskId);
+      const fresh = cronPromptsStore.getById(taskId);
+      if (!fresh || !fresh.enabled) return;
+      log(`[cron-prompts] retry dispatch (task=${fresh.name}, attempt=${fresh.dispatchAttempts + 1})`);
+      runTaskGuarded(fresh, 'schedule');
+    }, Math.max(due, 1000));
+    timer.unref?.();
+    retryTimers.set(taskId, timer);
+  }
+
+  /** 解析 SQLite UTC 裸串为毫秒。 */
+  function parseUtcBare(value: string): number {
+    const naive = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(value.trim());
+    if (naive) {
+      return Date.UTC(Number(naive[1]), Number(naive[2]) - 1, Number(naive[3]), Number(naive[4]), Number(naive[5]), Number(naive[6]));
+    }
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }
+
+  function runTaskGuarded(task: CronPromptTask, trigger: 'schedule' | 'manual' | 'catch-up' = 'schedule') {
     if (running.has(task.id)) {
       log(`[cron-prompts] task ${task.name} still running, skipping trigger`);
       return;
     }
     running.add(task.id);
-    void executeTask(task)
+    void executeTask(task, undefined, trigger)
       .catch((e) => log(`[cron-prompts] task ${task.name} error: ${e?.message ?? e}`))
       .finally(() => running.delete(task.id));
   }
 
   function register(task: CronPromptTask) {
     if (!task.enabled) return;
+    // completed 终态不再注册调度(ZCode 语义:不可被 reload 复活)。
+    if (task.lifecycleStatus === 'completed') return;
     if (!cron.validate(task.cronExpression)) {
       log(`[cron-prompts] invalid cron "${task.cronExpression}" (task=${task.name})`);
       return;
@@ -285,7 +343,7 @@ export function createCronPromptsDriver(deps: {
       log(`[cron-prompts] catch-up: ${task.name} (missed ${task.nextRunAt})`);
       // 补跑后立即推进到 now 之后的计划点,防止重复补跑。
       advanceNextRunAt(task);
-      runTaskGuarded(task);
+      runTaskGuarded(task, 'catch-up');
     }
   }
 
@@ -303,6 +361,8 @@ export function createCronPromptsDriver(deps: {
     stop() {
       for (const handle of scheduled.values()) handle.stop();
       scheduled.clear();
+      for (const timer of retryTimers.values()) clearTimeout(timer);
+      retryTimers.clear();
     },
     async runNow(taskId) {
       const task = cronPromptsStore.getById(taskId);
@@ -314,7 +374,7 @@ export function createCronPromptsDriver(deps: {
       // session id as soon as it is minted so callers can navigate there.
       let resolveStarted!: (result: CronRunStartResult) => void;
       const started = new Promise<CronRunStartResult>((resolve) => { resolveStarted = resolve; });
-      const wrapped = executeTask(task, (result) => resolveStarted(result));
+      const wrapped = executeTask(task, (result) => resolveStarted(result), 'manual');
       void wrapped.catch(() => undefined);
       return await started;
     },

@@ -22,6 +22,16 @@ export interface CronPromptTask {
   catchUp: boolean;
   /** 持久化的下一计划点(UTC 裸串),补跑判定与推进的依据。 */
   nextRunAt: string | null;
+  /** 派发失败累计次数(退避重试依据;成功后清零)。 */
+  dispatchAttempts: number;
+  /** 退避重试的下次允许派发时间;null=无退避。 */
+  retryAt: string | null;
+  /** 最近一次派发失败归类:transient(可重试)/permanent(不重试)。 */
+  lastFailureKind: 'transient' | 'permanent' | null;
+  /** 有限次上限;NULL = 无限循环(默认)。 */
+  maxRuns: number | null;
+  /** active / completed(有限次耗尽终态)。 */
+  lifecycleStatus: 'active' | 'completed';
   /** 运行时权限模式;默认 bypassPermissions 兼容既有任务行为。 */
   permissionMode: string;
   enabled: boolean;
@@ -49,6 +59,11 @@ interface CronPromptRow {
   bound_session_id: string | null;
   catch_up: number | null;
   next_run_at: string | null;
+  dispatch_attempts: number;
+  retry_at: string | null;
+  last_failure_kind: string | null;
+  max_runs: number | null;
+  lifecycle_status: string;
   permission_mode: string;
   enabled: number;
   notify_inbox: number | null;
@@ -73,6 +88,13 @@ const rowToTask = (row: CronPromptRow): CronPromptTask => ({
   // 老库 NULL → 默认开启(与权限列的回填语义一致)
   catchUp: row.catch_up === null ? true : Boolean(row.catch_up),
   nextRunAt: row.next_run_at ?? null,
+  dispatchAttempts: Number(row.dispatch_attempts ?? 0),
+  retryAt: row.retry_at ?? null,
+  lastFailureKind: row.last_failure_kind === 'transient' || row.last_failure_kind === 'permanent'
+    ? row.last_failure_kind
+    : null,
+  maxRuns: row.max_runs === null || row.max_runs === undefined ? null : Number(row.max_runs),
+  lifecycleStatus: row.lifecycle_status === 'completed' ? 'completed' : 'active',
   permissionMode: row.permission_mode || 'bypassPermissions',
   enabled: Boolean(row.enabled),
   // 老库 NULL → 按默认语义(站内开、其余关)
@@ -112,6 +134,7 @@ export const cronPromptsStore = {
     sessionMode?: 'new' | 'resume';
     boundSessionId?: string | null;
     catchUp?: boolean;
+    maxRuns?: number | null;
     permissionMode?: string;
     enabled?: boolean;
     notifyInbox?: boolean;
@@ -121,8 +144,8 @@ export const cronPromptsStore = {
     const db = getConnection();
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, session_mode, bound_session_id, catch_up, permission_mode, enabled, notify_inbox, notify_email, notify_feishu)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO cron_prompts (id, name, cron_expression, prompt, provider, project_path, session_mode, bound_session_id, catch_up, max_runs, permission_mode, enabled, notify_inbox, notify_email, notify_feishu)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       input.name,
@@ -133,6 +156,7 @@ export const cronPromptsStore = {
       input.sessionMode === 'resume' ? 'resume' : 'new',
       input.sessionMode === 'resume' ? (input.boundSessionId ?? null) : null,
       input.catchUp === false ? 0 : 1,
+      input.maxRuns ?? null,
       input.permissionMode ?? 'bypassPermissions',
       input.enabled === false ? 0 : 1,
       input.notifyInbox === false ? 0 : 1,
@@ -200,6 +224,19 @@ export const cronPromptsStore = {
   /** Records a completed trigger (fire-and-forget: the run may still stream). */
   recordRun(id: string, sessionId: string | null): void {
     const db = getConnection();
+    // 有限次任务:跑满后进 completed 终态并停调度(移植 ZCode lifecycle)。
+    const task = this.getById(id);
+    if (task?.maxRuns != null) {
+      const next = task.runCount + 1;
+      if (next >= task.maxRuns) {
+        db.prepare(
+          `UPDATE cron_prompts
+           SET last_run_at = CURRENT_TIMESTAMP, last_session_id = ?, run_count = ?, lifecycle_status = 'completed', enabled = 0
+           WHERE id = ?`
+        ).run(sessionId, next, id);
+        return;
+      }
+    }
     db.prepare(
       `UPDATE cron_prompts
        SET last_run_at = CURRENT_TIMESTAMP, last_session_id = ?, run_count = run_count + 1
@@ -212,4 +249,135 @@ export const cronPromptsStore = {
     const db = getConnection();
     db.prepare('UPDATE cron_prompts SET next_run_at = ? WHERE id = ?').run(nextRunAt, id);
   },
+
+  // ===== 派发退避(移植 ZCode markDispatched/markDispatchFailed 语义) =====
+
+  /** 派发成功:清退避状态。 */
+  markDispatchSucceeded(id: string): void {
+    const db = getConnection();
+    db.prepare(
+      `UPDATE cron_prompts
+       SET dispatch_attempts = 0, retry_at = NULL, last_failure_kind = NULL
+       WHERE id = ?`
+    ).run(id);
+  },
+
+  /**
+   * 派发失败:记录失败归类并计算退避时间。
+   * - permanent(如 provider 不存在/绑定会话丢失):不重试,等待下一个正常计划点。
+   * - transient:指数退避(base * 2^attempts),封顶 cap;达上限后也放弃本轮。
+   * 返回退避后的 retry_at(ISO),或 null 表示不再重试。
+   */
+  markDispatchFailed(
+    id: string,
+    kind: 'transient' | 'permanent',
+    opts: { baseMs: number; capMs: number; maxAttempts: number },
+  ): string | null {
+    const db = getConnection();
+    const task = this.getById(id);
+    if (!task) return null;
+    if (kind === 'permanent') {
+      db.prepare(
+        `UPDATE cron_prompts SET last_failure_kind = 'permanent' WHERE id = ?`
+      ).run(id);
+      return null;
+    }
+    const attempts = task.dispatchAttempts + 1;
+    if (attempts >= opts.maxAttempts) {
+      db.prepare(
+        `UPDATE cron_prompts
+         SET dispatch_attempts = ?, last_failure_kind = 'transient'
+         WHERE id = ?`
+      ).run(attempts, id);
+      return null;
+    }
+    const backoff = Math.min(opts.baseMs * 2 ** (attempts - 1), opts.capMs);
+    const retryAt = new Date(Date.now() + backoff).toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+    db.prepare(
+      `UPDATE cron_prompts
+       SET dispatch_attempts = ?, retry_at = ?, last_failure_kind = 'transient'
+       WHERE id = ?`
+    ).run(attempts, retryAt, id);
+    return retryAt;
+  },
+
+  // ===== run 历史(移植 ZCode automation_runs) =====
+
+  /** 插入一条 run 记录(claim 时刻)。 */
+  insertRun(input: {
+    runId: string;
+    taskId: string;
+    trigger: 'schedule' | 'manual' | 'catch-up';
+    scheduledAt: string | null;
+  }): void {
+    const db = getConnection();
+    db.prepare(
+      `INSERT INTO cron_prompt_runs (run_id, task_id, trigger, status, scheduled_at)
+       VALUES (?, ?, ?, 'claimed', ?)`
+    ).run(input.runId, input.taskId, input.trigger, input.scheduledAt);
+  },
+
+  /** run 结算:成功(dispatched + session)/失败(error + failure_kind)。 */
+  settleRun(input: {
+    runId: string;
+    status: 'dispatched' | 'failed_to_dispatch';
+    sessionId?: string | null;
+    error?: string | null;
+    failureKind?: 'transient' | 'permanent' | null;
+  }): void {
+    const db = getConnection();
+    db.prepare(
+      `UPDATE cron_prompt_runs
+       SET status = ?, session_id = ?, error = ?, failure_kind = ?, finished_at = CURRENT_TIMESTAMP
+       WHERE run_id = ?`
+    ).run(input.status, input.sessionId ?? null, input.error ?? null, input.failureKind ?? null, input.runId);
+  },
+
+  /** 某任务的 run 历史(倒序分页)。 */
+  listRuns(taskId: string, limit = 20, offset = 0): CronPromptRun[] {
+    const db = getConnection();
+    const rows = db.prepare(
+      `SELECT * FROM cron_prompt_runs WHERE task_id = ? ORDER BY started_at DESC LIMIT ? OFFSET ?`
+    ).all(taskId, limit, offset) as unknown as CronPromptRunRow[];
+    return rows.map(rowToRun);
+  },
 };
+
+export interface CronPromptRun {
+  runId: string;
+  taskId: string;
+  trigger: 'schedule' | 'manual' | 'catch-up';
+  status: 'claimed' | 'dispatched' | 'failed_to_dispatch';
+  sessionId: string | null;
+  error: string | null;
+  failureKind: 'transient' | 'permanent' | null;
+  scheduledAt: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+interface CronPromptRunRow {
+  run_id: string;
+  task_id: string;
+  trigger: string;
+  status: string;
+  session_id: string | null;
+  error: string | null;
+  failure_kind: string | null;
+  scheduled_at: string | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+const rowToRun = (row: CronPromptRunRow): CronPromptRun => ({
+  runId: row.run_id,
+  taskId: row.task_id,
+  trigger: row.trigger === 'manual' ? 'manual' : row.trigger === 'catch-up' ? 'catch-up' : 'schedule',
+  status: row.status === 'dispatched' ? 'dispatched' : row.status === 'failed_to_dispatch' ? 'failed_to_dispatch' : 'claimed',
+  sessionId: row.session_id ?? null,
+  error: row.error ?? null,
+  failureKind: row.failure_kind === 'transient' || row.failure_kind === 'permanent' ? row.failure_kind : null,
+  scheduledAt: row.scheduled_at ?? null,
+  startedAt: row.started_at,
+  finishedAt: row.finished_at ?? null,
+});

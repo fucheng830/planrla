@@ -8,6 +8,7 @@ export interface LlmScheduleInput {
   boundSessionId?: string | null;
   permissionMode?: string;
   catchUp?: boolean;
+  maxRuns?: number | null;
   notifyInbox?: boolean;
 }
 
@@ -21,6 +22,7 @@ export interface NormalizedLlmScheduleInput {
   boundSessionId: string | null;
   permissionMode: string;
   catchUp: boolean;
+  maxRuns: number | null;
   notifyInbox: boolean;
 }
 
@@ -58,6 +60,7 @@ export function normalizeLlmScheduleInput(
     boundSessionId,
     permissionMode,
     catchUp: input.catchUp !== false,
+    maxRuns: typeof input.maxRuns === 'number' && Number.isInteger(input.maxRuns) && input.maxRuns > 0 ? input.maxRuns : null,
     notifyInbox: input.notifyInbox !== false,
   };
 }

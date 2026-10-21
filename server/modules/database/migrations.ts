@@ -3,6 +3,7 @@ import { Database } from 'better-sqlite3';
 import {
   A2A_AGENTS_TABLE_SCHEMA_SQL,
   CALENDAR_EVENTS_TABLE_SCHEMA_SQL,
+  CRON_PROMPT_RUNS_TABLE_SCHEMA_SQL,
   CRON_PROMPTS_TABLE_SCHEMA_SQL,
   APP_CONFIG_TABLE_SCHEMA_SQL,
   LAST_SCANNED_AT_SQL,
@@ -585,10 +586,20 @@ export const runMigrations = (db: Database) => {
     // 补跑语义(2026-09-22):错过计划点(停机/睡眠)后启动时补跑一次。老数据默认开启。
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'catch_up', 'BOOLEAN DEFAULT 1');
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'next_run_at', 'DATETIME');
+    // 派发失败退避(2026-10-21,移植 ZCode):失败后指数退避重试,而非静默丢弃。
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'dispatch_attempts', 'INTEGER NOT NULL DEFAULT 0');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'retry_at', 'DATETIME');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'last_failure_kind', 'TEXT');
+    // 一次性/有限次任务(2026-10-21,移植 ZCode maxRuns + lifecycle):
+    // NULL = 无限循环(既有语义);N = 跑满 N 次进 completed 终态。
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'max_runs', 'INTEGER');
+    addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'lifecycle_status', "TEXT NOT NULL DEFAULT 'active'");
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'permission_mode', "TEXT NOT NULL DEFAULT 'bypassPermissions'");
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_inbox', 'BOOLEAN DEFAULT 1');
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_email', 'BOOLEAN DEFAULT 0');
     addColumnToTableIfNotExists(db, 'cron_prompts', cronPromptColumns, 'notify_feishu', 'BOOLEAN DEFAULT 0');
+    // run 级历史表(移植 ZCode automation_runs)。
+    db.exec(CRON_PROMPT_RUNS_TABLE_SCHEMA_SQL);
 
     // Backfill: kanban agent sessions used to be filed under their worktree
     // path (…/.worktree/kanban/<task>), registering fake projects. Move them

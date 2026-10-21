@@ -218,6 +218,11 @@ CREATE TABLE IF NOT EXISTS cron_prompts (
     bound_session_id TEXT,
     catch_up BOOLEAN DEFAULT 1,
     next_run_at DATETIME,
+    dispatch_attempts INTEGER NOT NULL DEFAULT 0,
+    retry_at DATETIME,
+    last_failure_kind TEXT,
+    max_runs INTEGER,
+    lifecycle_status TEXT NOT NULL DEFAULT 'active',
     permission_mode TEXT NOT NULL DEFAULT 'bypassPermissions',
     enabled BOOLEAN DEFAULT 1,
     notify_inbox BOOLEAN DEFAULT 1,
@@ -229,6 +234,24 @@ CREATE TABLE IF NOT EXISTS cron_prompts (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+`;
+
+// 定时任务运行历史(移植自 ZCode automation_runs):每次触发一行,
+// claim → dispatched/failed → 结算,支持审计/重试/失败归因。
+export const CRON_PROMPT_RUNS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS cron_prompt_runs (
+    run_id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    trigger TEXT NOT NULL DEFAULT 'schedule',
+    status TEXT NOT NULL DEFAULT 'claimed',
+    session_id TEXT,
+    error TEXT,
+    failure_kind TEXT,
+    scheduled_at DATETIME,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS idx_cron_prompt_runs_task ON cron_prompt_runs(task_id, started_at DESC);
 `;
 export const INIT_SCHEMA_SQL = `
 -- Initialize authentication database

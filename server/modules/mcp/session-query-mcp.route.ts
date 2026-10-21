@@ -1,7 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import * as realCron from 'node-cron';
 
-import { sessionsService } from '@/modules/providers/index.js';
 import { searchSessions, type SessionSearchResult } from '@/modules/search/index.js';
 import type { NormalizedMessage } from '@/shared/types.js';
 import {
@@ -9,7 +8,7 @@ import {
   cronPromptsStore,
   normalizeLlmScheduleInput,
 } from '@/modules/cron-prompts/index.js';
-import { providerCapabilitiesService } from '@/modules/providers/index.js';
+import { providerCapabilitiesService, sessionsService } from '@/modules/providers/index.js';
 import { sessionsDb } from '@/modules/database/index.js';
 
 import { setSessionTitle } from './session-rename.service.js';
@@ -151,6 +150,11 @@ const SCHEDULE_CREATE_TOOL: ToolDefinition = {
         type: 'boolean',
         description:
           'When true (default), a missed trigger caused by downtime/sleep is caught up once on startup, within a 7-day window. Each downtime window catches up at most one run.',
+      },
+      maxRuns: {
+        type: 'number',
+        description:
+          'Total run limit for a finite task. Omit for recurring (default). When set (e.g. 1 for a one-shot reminder), the task auto-completes after N dispatches.',
       },
       notifyInbox: { type: 'boolean', description: 'Send a completion notice to the project inbox, default true.' },
     },
@@ -400,6 +404,7 @@ function createSchedule(args: Record<string, unknown>) {
     boundSessionId,
     permissionMode: requestedPermissionMode,
     catchUp: args.catchUp !== false,
+    maxRuns: typeof args.maxRuns === 'number' && Number.isInteger(args.maxRuns) && args.maxRuns > 0 ? args.maxRuns : null,
     notifyInbox: args.notifyInbox !== false,
   }, (expression) => realCron.validate(expression));
 

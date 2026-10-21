@@ -18,6 +18,9 @@ type CronPromptTask = {
   boundSessionId: string;
   catchUp: boolean;
   nextRunAt: string | null;
+  dispatchAttempts: number;
+  retryAt: string | null;
+  lastFailureKind: string | null;
   permissionMode: string;
   enabled: boolean;
   lastRunAt: string | null;
@@ -124,6 +127,60 @@ function formatLastRun(iso: string | null): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} 小时前`;
   return `${Math.floor(hours / 24)} 天前`;
+}
+
+/** 相对倒计时(移植 ZCode):「9 分钟后」而非绝对时间戳;临近显示「即将运行」。 */
+function formatNextRun(iso: string | null): string {
+  if (!iso) return '';
+  const ms = parseTimestampMs(iso) - Date.now();
+  if (!Number.isFinite(ms)) return '';
+  if (ms <= 60_000) return '即将运行';
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 60) return `${minutes} 分钟后`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时后`;
+  return `${Math.floor(hours / 24)} 天后`;
+}
+
+/** 星期几中文名列表(dow 逗号表达式)。 */
+function weekdayNames(dow: string): string {
+  const names: Record<string, string> = { '0': '日', '1': '一', '2': '二', '3': '三', '4': '四', '5': '五', '6': '六', '7': '日' };
+  return dow.split(',').map((d) => names[d.trim()] ?? d.trim()).join('、');
+}
+
+/**
+ * cron → 中文摘要(移植 ZCode automationFormat 思路):
+ * 常见模式生成自然语言;覆盖不了回退原始表达式,保证不误导。
+ */
+function describeCronRich(expr: string): string {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return expr;
+  const [min, hour, dom, mon, dow] = parts;
+  const hhmm = (h: string, m: string) => `${String(Number(h)).padStart(2, '0')}:${String(Number(m)).padStart(2, '0')}`;
+  let m: RegExpMatchArray | null;
+
+  if ((m = /^\*\/(\d+)$/.exec(min)) && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    return `每 ${m[1]} 分钟`;
+  }
+  if (min !== '*' && (m = /^\*\/(\d+)$/.exec(hour)) && dom === '*' && mon === '*' && dow === '*') {
+    return `每 ${m[1]} 小时的第 ${min} 分`;
+  }
+  if (/^\d+$/.test(min) && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    return `每小时的第 ${min} 分`;
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && mon === '*' && dow === '*') {
+    return `每天 ${hhmm(hour, min)}`;
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && mon === '*' && dow === '1-5') {
+    return `每工作日 ${hhmm(hour, min)}`;
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === '*' && mon === '*' && dow !== '*') {
+    return `每周${weekdayNames(dow)} ${hhmm(hour, min)}`;
+  }
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && /^\d+$/.test(dom) && mon === '*' && dow === '*') {
+    return `每月 ${dom} 号 ${hhmm(hour, min)}`;
+  }
+  return expr;
 }
 
 const MODE_LABELS: Record<ScheduleMode, string> = {
@@ -404,7 +461,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {describeCron(task.cronExpression)} · {task.provider} · {task.projectPath}
+                      {describeCronRich(task.cronExpression)} · {task.provider} · {task.projectPath}
                     </p>
                   </div>
                   <button
@@ -429,9 +486,25 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
                 </p>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <p className="text-[11px] text-muted-foreground">
-                    已运行 {task.runCount} 次 · 上次运行 {formatLastRun(task.lastRunAt)}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">
+                      已运行 {task.runCount} 次 · 上次运行 {formatLastRun(task.lastRunAt)}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+                      {task.enabled && (
+                        <span className="rounded-full bg-emerald-500/10 px-1.5 py-px font-medium text-emerald-600">
+                          下次运行 {formatNextRun(task.nextRunAt)}
+                        </span>
+                      )}
+                      {task.dispatchAttempts > 0 && (
+                        <span className="rounded-full bg-amber-500/10 px-1.5 py-px font-medium text-amber-600">
+                          {task.retryAt
+                            ? `派发失败,${formatNextRun(task.retryAt)}重试(第 ${task.dispatchAttempts + 1} 次)`
+                            : `派发失败 ${task.dispatchAttempts} 次,等待下一计划点`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"

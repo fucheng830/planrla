@@ -5,8 +5,9 @@
 import { Router } from 'express';
 import * as realCron from 'node-cron';
 
-import { providerCapabilitiesService } from '@/modules/providers/services/provider-capabilities.service.js';
-import { sessionsDb } from '@/modules/database/repositories/sessions.db.js';
+import { providerCapabilitiesService } from '@/modules/providers/index.js';
+import { sessionsDb } from '@/modules/database/index.js';
+
 import { cronPromptsStore } from './cron-prompts.store.js';
 import { cronPromptsDriver } from './cron-prompts.driver.js';
 
@@ -47,6 +48,10 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
     const notifyEmail = body.notifyEmail === true;
     const notifyFeishu = body.notifyFeishu === true;
     const catchUp = typeof body.catchUp === 'boolean' ? body.catchUp : true;
+    const maxRunsRaw = body.maxRuns;
+    const maxRuns = typeof maxRunsRaw === 'number' && Number.isInteger(maxRunsRaw) && maxRunsRaw > 0
+      ? maxRunsRaw
+      : null;
     const permissionMode = normalizePermissionMode(provider, body.permissionMode);
     const sessionMode = body.sessionMode === 'resume' ? 'resume' as const : 'new' as const;
     const boundSessionId = typeof body.boundSessionId === 'string' ? body.boundSessionId.trim() : '';
@@ -59,11 +64,18 @@ export function createCronPromptsRouter(deps: { cron?: CronValidate } = {}): Rou
         return { error: `bound session provider "${bound.provider}" does not match task provider "${provider}"` } as const;
       }
     }
-    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath, sessionMode, boundSessionId: sessionMode === 'resume' ? boundSessionId : null, catchUp, permissionMode, notifyInbox, notifyEmail, notifyFeishu } } as const;
+    return { value: { name, cronExpression, prompt, provider, projectPath: rawProjectPath, sessionMode, boundSessionId: sessionMode === 'resume' ? boundSessionId : null, catchUp, maxRuns, permissionMode, notifyInbox, notifyEmail, notifyFeishu } } as const;
   };
 
   router.get('/', (_req, res) => {
     res.json({ success: true, data: cronPromptsStore.list() });
+  });
+
+  router.get('/:id/runs', (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const runs = cronPromptsStore.listRuns(String(req.params.id), limit, offset);
+    res.json({ success: true, data: runs });
   });
 
   router.post('/', (req, res) => {
