@@ -43,6 +43,7 @@ class CronRunWriter {
   private done = false;
   private resolveDone?: () => void;
   private timer?: NodeJS.Timeout;
+  lastError: string | null = null;
 
   send(data: unknown): void {
     if (this.done) return;
@@ -51,6 +52,9 @@ class CronRunWriter {
       msg = typeof data === 'string' ? JSON.parse(data) : (data as Record<string, any>);
     } catch { return; }
     if (msg?.kind === 'complete' || msg?.kind === 'error') {
+      if (msg?.kind === 'error' && msg?.content) {
+        this.lastError = String(msg.content);
+      }
       this.done = true;
       this.resolveDone?.();
     }
@@ -248,6 +252,71 @@ export function createCronPromptsDriver(deps: {
       cronPromptsStore.recordRun(task.id, appSessionId);
       sendInboxNotification(task, appSessionId);
     }
+
+    // 2026-10-22: context limit 自动轮换——resume 会话膨胀超限后
+    // Claude Code 原生 compaction 也失败(Prompt is too long)，
+    // 此时自动创建新会话并注入旧会话末尾消息摘要，更新绑定，
+    // 让后续轮次在新会话上继续执行。
+    if (writer.lastError && writer.lastError.includes('Prompt is too long') && task.sessionMode === 'resume') {
+      log(`[cron-prompts] context limit hit, rotating session (task=${task.name}, old=${appSessionId})`);
+      try {
+        // 拉旧会话最后几条消息做摘要
+        const msgResp = await fetch(
+          `http://localhost:${process.env.SERVER_PORT ?? 3000}/api/providers/sessions/${appSessionId}/messages?limit=15`,
+        );
+        const msgData = await msgResp.json();
+        const msgs: Array<{ role?: string; content?: string }> =
+          msgData?.data?.messages ?? msgData?.data ?? [];
+        const summaryLines = msgs
+          .filter((m) => m.content)
+          .slice(-10)
+          .map((m) => `[${m.role ?? '?'}] ${String(m.content).slice(0, 200)}`);
+        const summary = summaryLines.length
+          ? `以下是上一轮工作的上下文摘要：\n${summaryLines.join('\n')}`
+          : '';
+
+        // 创建新会话并改绑
+        const newApp = sessionsService.createAppSession(
+          task.provider as LLMProvider,
+          cwd,
+        ).sessionId;
+        cronPromptsStore.update(task.id, {
+          sessionMode: 'resume',
+          boundSessionId: newApp,
+        });
+        log(`[cron-prompts] rotated to new session ${newApp} (task=${task.name})`);
+
+        // 用新会话重发本轮 prompt（附摘要）
+        const retryPrompt = summary
+          ? `[上下文轮换] 以下是前一轮的结论摘要：\n${summary}\n\n---\n\n${task.prompt}`
+          : task.prompt;
+        const newRun = chatRunRegistry.startRun({
+          appSessionId: newApp,
+          provider: task.provider as LLMProvider,
+          providerSessionId: null,
+          connection: STUB_CONNECTION,
+          userId: null,
+        });
+        if (newRun) {
+          const retryWriter = new CronRunWriter();
+          try {
+            void Promise.resolve(spawnFn(retryPrompt, {
+              cwd,
+              projectPath: cwd,
+              permissionMode: task.permissionMode,
+            }, retryWriter)).catch(() => {});
+            await retryWriter.waitComplete(RUN_TIMEOUT_MS);
+          } finally {
+            retryWriter.dispose();
+            chatRunRegistry.completeRun(newApp, { exitCode: 0 });
+            cronPromptsStore.recordRun(task.id, newApp);
+          }
+        }
+      } catch (rotateErr) {
+        log(`[cron-prompts] rotation failed: ${rotateErr instanceof Error ? rotateErr.message : String(rotateErr)}`);
+      }
+    }
+
     return appSessionId;
   }
 
