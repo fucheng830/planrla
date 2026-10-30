@@ -1,12 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import { CalendarAgenda } from '../../calendar-schedule/CalendarAgenda';
-import { CalendarMonthGrid } from '../../calendar-schedule/CalendarMonthGrid';
-import { CalendarTaskForms, type CalendarFormResult } from '../../calendar-schedule/CalendarTaskForms';
-import { buildAgendaItems, buildMonthEvents } from '../../calendar-schedule/cronCalendar';
-import { useScheduleSources } from '../../calendar-schedule/useScheduleSources';
-import type { AgendaItem } from '../../calendar-schedule/calendarData';
-import type { CronPromptTaskView } from '../../calendar-schedule/cronCalendar';
+import { CalendarAgenda, CalendarMonthGrid, CalendarTaskForms, buildAgendaItems, buildMonthEvents, useScheduleSources } from '@planrla/scheduler';
+import type { CalendarFormResult, AgendaItem, CronPromptTaskView } from '@planrla/scheduler';
 
 type SaveState = { tone: 'idle' | 'success' | 'error'; message?: string };
 

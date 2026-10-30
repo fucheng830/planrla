@@ -1,0 +1,25 @@
+{
+  "name": "@planrla/scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "planrla 定时任务独立包：cron-prompts 面板、日历排程视图。API 配置经注入，可嵌入任意宿主应用。",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.515.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.1"
+  }
+}

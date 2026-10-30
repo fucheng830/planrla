@@ -9,7 +9,7 @@ import {
   cronTimeLabel,
   eventDurationLabel,
   parseRecurringFromExpression,
-} from './cronCalendar';
+} from './cronCalendar.ts';
 
 const cronTask = (overrides: Partial<Parameters<typeof buildMonthEvents>[0]['cronTasks'][number]> = {}) => ({
   id: 'task-1',

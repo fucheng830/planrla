@@ -5,8 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { api } from '../../utils/api';
-import { kanbanApi } from '../kanban/api';
+import { schedulerApi as api, authenticatedFetch } from './api';
 
 import type { CalendarEventView, CronPromptTaskView, KanbanScheduleView } from './cronCalendar';
 
@@ -45,13 +44,20 @@ export function useScheduleSources(projectId: string | null, projectPath?: strin
     setLoading(true);
     setError(null);
     const eventsQuery = projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : '';
+    const listKanbanSchedules = async (): Promise<KanbanScheduleView[]> => {
+      const res = await authenticatedFetch(`/api/tasks/schedules?rootId=${encodeURIComponent(projectId)}`);
+      if (!res.ok) throw new Error(`tasks/schedules failed: ${res.status}`);
+      const data = (await res.json()) as { schedules?: KanbanScheduleView[] };
+      return data.schedules ?? [];
+    };
+
     Promise.all([
       api.get('/cron-prompts').then(async (res) => {
         if (!res.ok) throw new Error(`cron-prompts failed: ${res.status}`);
         const data = (await res.json()) as { data?: CronPromptTaskView[] };
         return data.data ?? [];
       }),
-      kanbanApi.listSchedules(projectId),
+      listKanbanSchedules(),
       api.get(`/calendar-events${eventsQuery}`).then(async (res) => {
         if (!res.ok) throw new Error(`calendar-events failed: ${res.status}`);
         const data = (await res.json()) as { data?: CalendarEventView[] };

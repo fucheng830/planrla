@@ -1,7 +1,7 @@
 import { CalendarClock, CalendarDays, Check, ChevronDown, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 
-import { api } from '../../utils/api';
+import { schedulerApi as api } from './api';
 
 import {
   DEFAULT_INTERVAL_MINUTES,

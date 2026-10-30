@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   CalendarClock, Check, Clock, Loader2, Pencil, Play, Plus, Power, Trash2, X,
 } from 'lucide-react';
 
-import { authenticatedFetch } from '../../utils/api';
-import { cn } from '../../lib/utils';
+import { authenticatedFetch } from './api';
+import { cn } from './utils';
 
 type CronPromptTask = {
   id: string;
@@ -213,8 +212,7 @@ const PERMISSION_MODE_LABELS: Record<string, string> = {
   yolo: 'YOLO',
 };
 
-export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
-  const navigate = useNavigate();
+export function CronPromptsPanel({ isVisible, onOpenSession }: { isVisible: boolean; onOpenSession?: (sessionId: string) => void }) {
   const [tasks, setTasks] = useState<CronPromptTask[]>([]);
   const [permissionModesByProvider, setPermissionModesByProvider] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
@@ -398,7 +396,7 @@ export function CronPromptsPanel({ isVisible }: { isVisible: boolean }) {
       if (!res.ok) throw new Error(await res.text());
       const body = await res.json() as { data?: { sessionId?: string | null; error?: string } };
       if (body.data?.error) setError(body.data.error);
-      if (body.data?.sessionId) navigate(`/session/${body.data.sessionId}`);
+      if (body.data?.sessionId) onOpenSession?.(body.data.sessionId);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

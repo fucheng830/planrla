@@ -4,7 +4,7 @@ import { CalendarClock, FileText, GitBranch, Globe, KanbanSquare, MonitorPlay, P
 
 import GitPanel from '../../git-panel/view/GitPanel';
 import { KanbanPanel } from '../../kanban';
-import { CronPromptsPanel } from '../../cron-prompts/CronPromptsPanel';
+import { CronPromptsPanel } from '@planrla/scheduler';
 import { BrowserUsePanel } from '../../browser-use';
 import type { Project } from '../../../types/app';
 import type { SettingsMainTab } from '../../settings/types/types';
