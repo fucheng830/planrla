@@ -1,7 +1,7 @@
 import { AtSign, Bot, CheckCircle2, Ellipsis, FileText, Paperclip, Plus, Send } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 
-import { cn } from '../../lib/utils';
+import { cn } from './utils';
 
 import type { MessageSession } from './messageHubData';
 

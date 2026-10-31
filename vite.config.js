@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
         '@planrla/scheduler': fileURLToPath(new URL('./packages/scheduler/src', import.meta.url)),
         '@planrla/kanban': fileURLToPath(new URL('./packages/kanban/src', import.meta.url)),
         '@planrla/browser-use': fileURLToPath(new URL('./packages/browser-use/src', import.meta.url)),
+        '@planrla/message-hub': fileURLToPath(new URL('./packages/message-hub/src', import.meta.url)),
       }
     },
     server: {

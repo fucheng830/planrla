@@ -7,8 +7,8 @@ import { api } from '../../../utils/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
 import { useKanban, kanbanApi } from '@planrla/kanban';
 import type { Task, TaskTemplate } from '@planrla/kanban';
-import { MessageHubPage, messageSessions  } from '../../message-hub';
-import type { MessageSession, MessageStage } from '../../message-hub';
+import { MessageHubPage, messageSessions } from '@planrla/message-hub';
+import type { MessageSession, MessageStage } from '@planrla/message-hub';
 
 import { buildInboxThreads, formatRelativeTime, type CronRunInfo, type RunningSessionInfo } from './inboxThreads';
 

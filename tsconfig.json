@@ -17,7 +17,9 @@
       "@planrla/kanban": ["packages/kanban/src/index.ts"],
       "@planrla/kanban/*": ["packages/kanban/src/*"],
       "@planrla/browser-use": ["packages/browser-use/src/index.ts"],
-      "@planrla/browser-use/*": ["packages/browser-use/src/*"]
+      "@planrla/browser-use/*": ["packages/browser-use/src/*"],
+      "@planrla/message-hub": ["packages/message-hub/src/index.ts"],
+      "@planrla/message-hub/*": ["packages/message-hub/src/*"]
     },
     "skipLibCheck": true,
     "moduleResolution": "Bundler",

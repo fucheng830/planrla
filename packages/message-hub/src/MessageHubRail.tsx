@@ -1,7 +1,7 @@
 import { Archive, ChevronLeft, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { cn } from '../../lib/utils';
+import { cn } from './utils';
 
 import type { MessageChannel } from './messageHubData';
 

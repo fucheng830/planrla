@@ -1,3 +1,5 @@
+import './message-hub.css';
+
 export { MessageHubPage } from './MessageHubPage';
 export { MessageHubInbox } from './MessageHubInbox';
 export { MessageHubInspector } from './MessageHubInspector';
