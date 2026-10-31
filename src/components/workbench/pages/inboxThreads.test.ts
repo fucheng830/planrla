@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { Task } from '../../kanban/types';
+import type { Task } from '@planrla/kanban';
 
 import { buildInboxThreads, formatRelativeTime } from './inboxThreads';
 

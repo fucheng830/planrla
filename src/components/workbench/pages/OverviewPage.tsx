@@ -4,10 +4,9 @@ import { AlertTriangle, ArrowRight, Bot, CheckCircle2, Clock, MessageSquare, Plu
 import type { Project } from '../../../types/app';
 import { api } from '../../../utils/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import { useKanban } from '../../kanban';
-import { kanbanApi } from '../../kanban/api';
+import { useKanban, kanbanApi } from '@planrla/kanban';
 import { WorkbenchStatus } from '../WorkbenchStatus';
-import type { Task, TaskTemplate } from '../../kanban/types';
+import type { Task, TaskTemplate } from '@planrla/kanban';
 
 import { FilterChip, MetricCard, PageShell, PageToolbar } from './PageShell';
 import type { ChatApprovalInfo } from './InboxPage';

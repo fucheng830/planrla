@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Paperclip, Plus, Search, X } from 'lucide-react';
 
 import type { Project } from '../../../types/app';
-import type { TaskTemplate } from '../../kanban/types';
+import type { TaskTemplate } from '@planrla/kanban';
 
 export type CreateTaskCardProps = {
   projects: Project[];

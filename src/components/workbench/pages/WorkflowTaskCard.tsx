@@ -1,6 +1,7 @@
 import { Clock, MessageSquare, Paperclip, Play } from 'lucide-react';
 
-import type { PendingAskUserQuestion, Task } from '../../kanban/types';
+import type { Task } from '@planrla/kanban';
+import type { PendingAskUserQuestion } from '@planrla/kanban';
 import { WorkbenchStatus } from '../WorkbenchStatus';
 
 import { relativeTime, stageCtaLabel, type DisplayTask } from './workflowModel';

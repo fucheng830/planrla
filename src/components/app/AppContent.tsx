@@ -7,7 +7,8 @@ import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
 import { useTerminalTabs } from '../terminal-panel/hooks/useTerminalTabs';
 import TerminalPanel from '../terminal-panel/view/TerminalPanel';
-import { KanbanProvider } from '../kanban';
+import { KanbanProvider } from '@planrla/kanban';
+import { configureKanbanEvents } from '@planrla/kanban';
 import { MarkdownEditorProvider, useMarkdownEditor } from '../markdown-editor/context/MarkdownEditorContext';
 import { MarkdownEditorPanel } from '../markdown-editor/view/MarkdownEditorPanel';
 import { BackgroundTasksPanel } from '../background-tasks/view/BackgroundTasksPanel';
@@ -74,6 +75,11 @@ function AppContentInner() {
   const { isMobile } = useDeviceSettings({ trackPWA: false });
   const { ws, sendMessage, subscribe } = useWebSocket();
   const openMarkdownEditor = useOpenMarkdownEditor();
+  // 看板包事件桥接:把宿主 WebSocket 事件流注入独立包(替代原上下文直连)。
+  useEffect(() => {
+    configureKanbanEvents((listener) => subscribe(listener as never));
+    return () => configureKanbanEvents(() => () => {});
+  }, [subscribe]);
   // REQ-046 — 后台任务面板 open 状态(受控,Sidebar 入口按钮触发)。
   const [showBackgroundTasks, setShowBackgroundTasks] = useState(false);
   const handleOpenBackgroundTasks = useCallback(() => setShowBackgroundTasks(true), []);

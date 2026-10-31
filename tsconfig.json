@@ -13,7 +13,9 @@
       "@planrla/chat": ["packages/chat/src/index.ts"],
       "@planrla/chat/*": ["packages/chat/src/*"],
       "@planrla/scheduler": ["packages/scheduler/src/index.ts"],
-      "@planrla/scheduler/*": ["packages/scheduler/src/*"]
+      "@planrla/scheduler/*": ["packages/scheduler/src/*"],
+      "@planrla/kanban": ["packages/kanban/src/index.ts"],
+      "@planrla/kanban/*": ["packages/kanban/src/*"]
     },
     "skipLibCheck": true,
     "moduleResolution": "Bundler",

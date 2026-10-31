@@ -1,4 +1,4 @@
-import type { Task, TaskPriority } from '../../kanban/types';
+import type { Task, TaskPriority } from '@planrla/kanban';
 import type { Project } from '../../../types/app';
 import type { WorkbenchStatusState } from '../WorkbenchStatus';
 

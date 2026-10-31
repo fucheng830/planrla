@@ -5,11 +5,10 @@ import { toast } from 'sonner';
 import type { Project } from '../../../types/app';
 import { api } from '../../../utils/api';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import { useKanban } from '../../kanban';
-import { kanbanApi } from '../../kanban/api';
+import { useKanban, kanbanApi } from '@planrla/kanban';
+import type { Task, TaskTemplate } from '@planrla/kanban';
 import { MessageHubPage, messageSessions  } from '../../message-hub';
 import type { MessageSession, MessageStage } from '../../message-hub';
-import type { Task, TaskTemplate } from '../../kanban/types';
 
 import { buildInboxThreads, formatRelativeTime, type CronRunInfo, type RunningSessionInfo } from './inboxThreads';
 

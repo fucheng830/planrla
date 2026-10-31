@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@planrla/chat': fileURLToPath(new URL('./packages/chat/src', import.meta.url)),
         '@planrla/scheduler': fileURLToPath(new URL('./packages/scheduler/src', import.meta.url)),
+        '@planrla/kanban': fileURLToPath(new URL('./packages/kanban/src', import.meta.url)),
       }
     },
     server: {

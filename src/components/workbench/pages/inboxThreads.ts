@@ -3,7 +3,7 @@
 // from live app state: kanban tasks, running provider sessions, and cron
 // prompt runs. No sample data — an empty project shows an empty inbox.
 
-import type { Task } from '../../kanban/types';
+import type { Task } from '@planrla/kanban';
 
 import type { InboxThread } from './inboxModel';
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CalendarClock, FileText, GitBranch, Globe, KanbanSquare, MonitorPlay, Plus, X } from 'lucide-react';
 
 import GitPanel from '../../git-panel/view/GitPanel';
-import { KanbanPanel } from '../../kanban';
+import { KanbanPanel } from '@planrla/kanban';
 import { CronPromptsPanel } from '@planrla/scheduler';
 import { BrowserUsePanel } from '../../browser-use';
 import type { Project } from '../../../types/app';

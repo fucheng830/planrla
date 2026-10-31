@@ -17,12 +17,11 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Markdown } from '@planrla/chat';
 
-import { useKanban } from '../../kanban';
-import { kanbanApi } from '../../kanban/api';
+import { useKanban, kanbanApi } from '@planrla/kanban';
 import { useWebSocket } from '../../../contexts/WebSocketContext';
-import type { Task, TaskAttachment, TaskDiffResult } from '../../kanban/types';
+import type { Task, TaskAttachment, TaskDiffResult } from '@planrla/kanban';
 import type { Project } from '../../../types/app';
-import { TaskDetailModal } from '../../kanban/TaskDetailModal';
+import { TaskDetailModal } from '@planrla/kanban';
 import { WorkbenchStatus } from '../WorkbenchStatus';
 
 import { FilterChip, PageShell, PageToolbar } from './PageShell';
