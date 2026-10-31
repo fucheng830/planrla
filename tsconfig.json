@@ -15,7 +15,9 @@
       "@planrla/scheduler": ["packages/scheduler/src/index.ts"],
       "@planrla/scheduler/*": ["packages/scheduler/src/*"],
       "@planrla/kanban": ["packages/kanban/src/index.ts"],
-      "@planrla/kanban/*": ["packages/kanban/src/*"]
+      "@planrla/kanban/*": ["packages/kanban/src/*"],
+      "@planrla/browser-use": ["packages/browser-use/src/index.ts"],
+      "@planrla/browser-use/*": ["packages/browser-use/src/*"]
     },
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
