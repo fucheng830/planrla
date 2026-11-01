@@ -280,8 +280,7 @@
     "wait-on": "^8.0.5"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx,js,jsx}": "eslint",
-    "server/**/*.{js,ts}": "eslint"
+    "*.{js,jsx,ts,tsx}": "eslint --fix"
   },
   "private": true
 }
