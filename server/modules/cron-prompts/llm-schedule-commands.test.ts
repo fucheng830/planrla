@@ -13,6 +13,7 @@ const valid: LlmScheduleInput = {
   boundSessionId: null,
   permissionMode: 'bypassPermissions',
   catchUp: true,
+  maxRuns: null,
 };
 
 test('normalizes a valid LLM schedule command for persistence', () => {

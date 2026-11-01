@@ -221,12 +221,15 @@ export const cronPromptsStore = {
     return result.changes > 0;
   },
 
-  /** Records a completed trigger (fire-and-forget: the run may still stream). */
-  recordRun(id: string, sessionId: string | null): void {
+  /**
+   * Records a completed trigger (fire-and-forget: the run may still stream).
+   * countRun=false 用于派发失败路径:run 未真正执行,不消耗有限次配额。
+   */
+  recordRun(id: string, sessionId: string | null, countRun = true): void {
     const db = getConnection();
     // 有限次任务:跑满后进 completed 终态并停调度(移植 ZCode lifecycle)。
     const task = this.getById(id);
-    if (task?.maxRuns != null) {
+    if (countRun && task?.maxRuns != null) {
       const next = task.runCount + 1;
       if (next >= task.maxRuns) {
         db.prepare(
@@ -317,10 +320,10 @@ export const cronPromptsStore = {
     ).run(input.runId, input.taskId, input.trigger, input.scheduledAt);
   },
 
-  /** run 结算:成功(dispatched + session)/失败(error + failure_kind)。 */
+  /** run 结算:completed(provider 跑完)/dispatched(已派发)/失败(error + failure_kind)。 */
   settleRun(input: {
     runId: string;
-    status: 'dispatched' | 'failed_to_dispatch';
+    status: 'completed' | 'dispatched' | 'failed_to_dispatch';
     sessionId?: string | null;
     error?: string | null;
     failureKind?: 'transient' | 'permanent' | null;
@@ -347,7 +350,7 @@ export interface CronPromptRun {
   runId: string;
   taskId: string;
   trigger: 'schedule' | 'manual' | 'catch-up';
-  status: 'claimed' | 'dispatched' | 'failed_to_dispatch';
+  status: 'claimed' | 'dispatched' | 'completed' | 'failed_to_dispatch';
   sessionId: string | null;
   error: string | null;
   failureKind: 'transient' | 'permanent' | null;
@@ -373,7 +376,7 @@ const rowToRun = (row: CronPromptRunRow): CronPromptRun => ({
   runId: row.run_id,
   taskId: row.task_id,
   trigger: row.trigger === 'manual' ? 'manual' : row.trigger === 'catch-up' ? 'catch-up' : 'schedule',
-  status: row.status === 'dispatched' ? 'dispatched' : row.status === 'failed_to_dispatch' ? 'failed_to_dispatch' : 'claimed',
+  status: row.status === 'dispatched' ? 'dispatched' : row.status === 'completed' ? 'completed' : row.status === 'failed_to_dispatch' ? 'failed_to_dispatch' : 'claimed',
   sessionId: row.session_id ?? null,
   error: row.error ?? null,
   failureKind: row.failure_kind === 'transient' || row.failure_kind === 'permanent' ? row.failure_kind : null,

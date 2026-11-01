@@ -148,7 +148,7 @@ export function createCronPromptsDriver(deps: {
       cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
       cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: `provider not supported`, failureKind: 'permanent' });
       cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
-      cronPromptsStore.recordRun(task.id, null);
+      cronPromptsStore.recordRun(task.id, null, false);
       return null;
     }
     // resume 模式:唤醒绑定的既有会话追加 turn(Codex 线程唤醒语义);
@@ -166,7 +166,7 @@ export function createCronPromptsDriver(deps: {
         cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
         cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'bound session not found', failureKind: 'permanent' });
         cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
-        cronPromptsStore.recordRun(task.id, null);
+        cronPromptsStore.recordRun(task.id, null, false);
         return null;
       }
       if (bound.provider !== task.provider) {
@@ -178,7 +178,7 @@ export function createCronPromptsDriver(deps: {
         cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
         cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'provider mismatch', failureKind: 'permanent' });
         cronPromptsStore.markDispatchFailed(task.id, 'permanent', backoffOpts);
-        cronPromptsStore.recordRun(task.id, null);
+        cronPromptsStore.recordRun(task.id, null, false);
         return null;
       }
       appSessionId = bound.session_id;
@@ -197,7 +197,7 @@ export function createCronPromptsDriver(deps: {
       // 路径缺失可能是移动盘/网络盘临时不可达 → transient 重试。
       const retry = cronPromptsStore.markDispatchFailed(task.id, 'transient', backoffOpts);
       if (retry) scheduleRetry(task.id, retry);
-      cronPromptsStore.recordRun(task.id, null);
+      cronPromptsStore.recordRun(task.id, null, false);
       return null;
     }
     cronPromptsStore.insertRun({ runId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
@@ -218,7 +218,7 @@ export function createCronPromptsDriver(deps: {
       cronPromptsStore.settleRun({ runId, status: 'failed_to_dispatch', error: 'session busy', failureKind: 'transient' });
       const retry = cronPromptsStore.markDispatchFailed(task.id, 'transient', backoffOpts);
       if (retry) scheduleRetry(task.id, retry);
-      cronPromptsStore.recordRun(task.id, null);
+      cronPromptsStore.recordRun(task.id, null, false);
       return null;
     }
     // 派发到 provider 成功(会话已建立、run 已注册)——清退避状态。
@@ -250,6 +250,7 @@ export function createCronPromptsDriver(deps: {
       writer.dispose();
       chatRunRegistry.completeRun(appSessionId, { exitCode: 0 });
       cronPromptsStore.recordRun(task.id, appSessionId);
+      cronPromptsStore.settleRun({ runId, status: 'completed', sessionId: appSessionId });
       sendInboxNotification(task, appSessionId);
     }
 
@@ -264,7 +265,7 @@ export function createCronPromptsDriver(deps: {
         const msgResp = await fetch(
           `http://localhost:${process.env.SERVER_PORT ?? 3000}/api/providers/sessions/${appSessionId}/messages?limit=15`,
         );
-        const msgData = await msgResp.json();
+        const msgData: any = await msgResp.json();
         const msgs: Array<{ role?: string; content?: string }> =
           msgData?.data?.messages ?? msgData?.data ?? [];
         const summaryLines = msgs
@@ -298,6 +299,8 @@ export function createCronPromptsDriver(deps: {
           userId: null,
         });
         if (newRun) {
+          const rotateRunId = `${task.id}:rotate:${Date.now()}`;
+          cronPromptsStore.insertRun({ runId: rotateRunId, taskId: task.id, trigger, scheduledAt: task.nextRunAt });
           const retryWriter = new CronRunWriter();
           try {
             void Promise.resolve(spawnFn(retryPrompt, {
@@ -310,6 +313,7 @@ export function createCronPromptsDriver(deps: {
             retryWriter.dispose();
             chatRunRegistry.completeRun(newApp, { exitCode: 0 });
             cronPromptsStore.recordRun(task.id, newApp);
+            cronPromptsStore.settleRun({ runId: rotateRunId, status: 'completed', sessionId: newApp });
           }
         }
       } catch (rotateErr) {
