@@ -7,6 +7,7 @@ import test from 'node:test';
 import { closeConnection } from '@/modules/database/connection.js';
 import { initializeDatabase } from '@/modules/database/init-db.js';
 import { projectsDb } from '@/modules/database/repositories/projects.db.js';
+import { normalizeProjectPath } from '@/shared/utils.js';
 
 async function withIsolatedDatabase(runTest: () => void | Promise<void>): Promise<void> {
   const previousDatabasePath = process.env.DATABASE_PATH;
@@ -32,11 +33,14 @@ async function withIsolatedDatabase(runTest: () => void | Promise<void>): Promis
 
 test('projectsDb.createProjectPath returns created for fresh paths', async () => {
   await withIsolatedDatabase(() => {
-    const created = projectsDb.createProjectPath('/workspace/new-project');
+    const inputPath = '/workspace/new-project';
+    const created = projectsDb.createProjectPath(inputPath);
 
     assert.equal(created.outcome, 'created');
     assert.ok(created.project);
-    assert.equal(created.project?.project_path, '/workspace/new-project');
+    // normalizeProjectPath 在 Windows 上会把 posix 分隔符转成反斜杠,
+    // 断言用同一归一化逻辑生成期望值,保证跨平台稳定。
+    assert.equal(created.project?.project_path, normalizeProjectPath(inputPath));
     assert.equal(created.project?.isArchived, 0);
   });
 });

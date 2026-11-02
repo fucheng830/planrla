@@ -164,19 +164,22 @@ test('claude provider models are always loaded directly from the provider', asyn
 test('provider model cache is persisted across service instances', async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'provider-model-cache-file-'));
   const cachePath = path.join(tempRoot, 'models-cache.json');
+  // gemini/claude 在 UNCACHED_PROVIDERS 里(模型目录变化快,不走缓存),
+  // 用 codex 验证磁盘缓存路径。
+  const cachedProvider = 'codex' as const;
 
   try {
     const writer = createProviderModelsService({
       cachePath,
       resolveProvider: () => ({
         models: {
-          getSupportedModels: async () => createModels('gemini-cached'),
-          getCurrentActiveModel: async () => createCurrentActiveModel('gemini-active'),
-          changeActiveModel: async (input) => createSessionActiveModelChange('gemini', input),
+          getSupportedModels: async () => createModels('codex-cached'),
+          getCurrentActiveModel: async () => createCurrentActiveModel('codex-active'),
+          changeActiveModel: async (input) => createSessionActiveModelChange(cachedProvider, input),
         },
       }),
     });
-    await writer.getProviderModels('gemini');
+    await writer.getProviderModels(cachedProvider);
 
     const reader = createProviderModelsService({
       cachePath,
@@ -185,13 +188,13 @@ test('provider model cache is persisted across service instances', async () => {
           getSupportedModels: async () => {
             throw new Error('loader should not be called for persisted cache hits');
           },
-          getCurrentActiveModel: async () => createCurrentActiveModel('gemini-active'),
-          changeActiveModel: async (input) => createSessionActiveModelChange('gemini', input),
+          getCurrentActiveModel: async () => createCurrentActiveModel('codex-active'),
+          changeActiveModel: async (input) => createSessionActiveModelChange(cachedProvider, input),
         },
       }),
     });
-    const models = await reader.getProviderModels('gemini');
-    assert.equal(models.models.DEFAULT, 'gemini-cached');
+    const models = await reader.getProviderModels(cachedProvider);
+    assert.equal(models.models.DEFAULT, 'codex-cached');
     assert.equal(models.cache.source, 'disk');
   } finally {
     await rm(tempRoot, { recursive: true, force: true });

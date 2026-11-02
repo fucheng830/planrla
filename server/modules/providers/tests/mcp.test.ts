@@ -341,8 +341,12 @@ test('providerMcpService global adder writes to all providers and rejects unsupp
       workspacePath,
     });
 
-    assert.equal(globalResult.length, 6);
-    assert.ok(globalResult.every((entry) => entry.created === true));
+    // Registry 里 provider 数量会随接入增长(claude/codex/cursor/gemini/
+    // opencode/kimi/zcode…),zcode 只支持 user scope,project scope 会报
+    // MCP_SCOPE_NOT_SUPPORTED(created=false)——这是预期降级,不算失败。
+    assert.ok(globalResult.length >= 6);
+    const supported = globalResult.filter((entry) => entry.created === true);
+    assert.equal(supported.length, 6);
 
     const claudeProject = await readJson(path.join(workspacePath, '.mcp.json'));
     assert.ok((claudeProject.mcpServers as Record<string, unknown>)['global-http']);
