@@ -115,9 +115,10 @@
 
 .ds-command-surface {
     border: 1px solid hsl(var(--ds-border-strong));
-    border-radius: var(--ds-radius-panel);
+    /* ZCode composer 质感: 双层软投影 + 12px 圆角 */
+    border-radius: 12px;
     background: hsl(var(--ds-surface-raised));
-    box-shadow: 0 8px 24px hsl(220 20% 10% / 0.06);
+    box-shadow: var(--ds-shadow-panel);
 }
 
 .ds-focus-ring:focus-visible {

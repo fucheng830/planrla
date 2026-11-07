@@ -147,7 +147,8 @@ const MessageComponent = memo(({ message, prevMessage, nextMessage, createDiff, 
       {message.type === 'user' ? (
         /* User message bubble on the right */
         <div className="flex w-full justify-end">
-          <div className="group max-w-[85%] rounded-2xl rounded-br-md bg-workbench-muted px-4 py-2.5 text-workbench-ink shadow-sm sm:max-w-xl">
+          {/* ZCode 用户气泡:半透明底 + 右上角小圆角(方向指示),轻阴影 */}
+          <div className="group max-w-[85%] rounded-2xl rounded-tr-md bg-[hsl(var(--ds-surface-muted))] px-4 py-2.5 text-workbench-ink shadow-sm sm:max-w-xl">
             <div dir="auto" className="whitespace-pre-wrap break-words text-sm">{String(message.content || '')}</div>
             {message.images && message.images.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2">

@@ -41,7 +41,8 @@ export const PromptInput = React.forwardRef<HTMLFormElement, PromptInputProps>(
           ref={ref}
           data-slot="prompt-input"
           className={cn(
-            'ds-command-surface relative overflow-hidden rounded-md shadow-sm transition-[border-color,box-shadow] duration-150 focus-within:border-workbench-accent focus-within:shadow-md focus-within:ring-1 focus-within:ring-workbench-accent/20',
+            // ZCode composer: 双层软投影 + 更大圆角,焦点环沿用 accent。
+            'ds-command-surface relative overflow-hidden rounded-xl transition-[border-color,box-shadow] duration-150 focus-within:border-workbench-accent focus-within:shadow-md focus-within:ring-1 focus-within:ring-workbench-accent/20',
             className
           )}
           {...props}
