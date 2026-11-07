@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { ChatInterface } from '@planrla/chat';
+
 import FileRefContextMenu from '../../chat/view/FileRefContextMenu';
 import ExtensionPanel from '../../extension-panel/view/ExtensionPanel';
 import { useExtensionPanel } from '../../extension-panel/hooks/useExtensionPanel';
@@ -151,7 +151,7 @@ function MainContent({
 
       {/* REQ-055: chat-wide right-click file actions (delegated, portal menu). */}
       <FileRefContextMenu selectedProject={selectedProject} onOpenInEditor={handleFileOpen}>
-      <div className={`flex min-h-0 flex-1 overflow-hidden ${activeTab === 'chat' ? 'bg-white' : 'bg-workbench-canvas'}`}>
+      <div className={`flex min-h-0 flex-1 overflow-hidden bg-workbench-canvas`}>
         <div className={`flex min-h-0 min-w-[200px] flex-col overflow-hidden ${editorExpanded ? 'hidden' : ''} flex-1`}>
           <div className={`h-full ${(activeTab === 'chat' || activeTab === 'files' || activeTab === 'git') ? 'block' : 'hidden'}`}>
             <ErrorBoundary showDetails>

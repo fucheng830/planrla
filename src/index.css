@@ -337,6 +337,22 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground)) transparent;
   }
+
+  /* ZCode 深色态滚动条:拇指用低透明度前景色,浅色态保持灰阶 */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(0 0% 100% / 0.14);
+    border-radius: 4px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(0 0% 100% / 0.26);
+  }
   
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
