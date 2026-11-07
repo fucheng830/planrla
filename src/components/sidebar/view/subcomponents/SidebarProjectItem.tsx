@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderTree, Star, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Edit3, FolderTree, Star, Trash2, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import type { TFunction } from 'i18next';
 
@@ -330,7 +330,12 @@ export default function SidebarProjectItem({
           }}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Folder className="h-3.5 w-3.5 flex-shrink-0 text-workbench-subtle" aria-hidden="true" />
+            {/* Codex 项目行语言:chevron 替代文件夹图标 */}
+            {isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 text-workbench-subtle" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-workbench-subtle" aria-hidden="true" />
+            )}
             <div className="min-w-0 flex-1 text-left">
               {isEditing ? (
                 <div className="space-y-1">
@@ -451,6 +456,10 @@ export default function SidebarProjectItem({
                     <Trash2 className="h-3 w-3 text-muted-foreground transition-colors hover:text-red-500" />
                   </button>
                 </div>
+                {/* Codex 项目行:会话计数徽章 */}
+                <span className="flex-shrink-0 text-[11px] tabular-nums text-muted-foreground/70">
+                  {sessionCountLabel}
+                </span>
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground/90 transition-colors group-hover:text-foreground" />
                 ) : (

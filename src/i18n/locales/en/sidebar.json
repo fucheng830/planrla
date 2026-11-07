@@ -1,5 +1,9 @@
 {
   "projects": {
+    "groups": {
+      "starred": "Pinned",
+      "projects": "Projects"
+    },
     "title": "Projects",
     "newProject": "New Project",
     "deleteProject": "Remove Project",

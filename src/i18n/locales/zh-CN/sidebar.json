@@ -1,5 +1,9 @@
 {
   "projects": {
+    "groups": {
+      "starred": "置顶",
+      "projects": "项目"
+    },
     "title": "项目",
     "newProject": "新建项目",
     "deleteProject": "移除项目",

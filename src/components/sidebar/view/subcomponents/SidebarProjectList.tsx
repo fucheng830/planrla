@@ -156,66 +156,84 @@ export default function SidebarProjectList({
 
   const showProjects = !isLoading && projects.length > 0 && filteredProjects.length > 0;
   const visibleProjects = orderedProjects ?? filteredProjects;
+  // Codex 会话树:置顶(starred)与项目两组展示;搜索态不分组
+  const starredProjects = visibleProjects.filter((project) => isProjectStarred(project.projectId));
+  const regularProjects = visibleProjects.filter((project) => !isProjectStarred(project.projectId));
+  const showGroups = starredProjects.length > 0 && regularProjects.length > 0 && !orderedProjects;
+
+  const renderProject = (project: Project) => (
+    // React key + per-project state lookups all use the DB `projectId`
+    // so they remain stable across renames and session changes.
+    <SidebarProjectItem
+      key={project.projectId}
+      project={project}
+      selectedProject={selectedProject}
+      selectedSession={selectedSession}
+      isExpanded={forceExpanded || expandedProjects.has(project.projectId)}
+      isDeleting={deletingProjects.has(project.projectId)}
+      isStarred={isProjectStarred(project.projectId)}
+      editingProject={editingProject}
+      editingName={editingName}
+      sessions={getProjectSessions(project)}
+      initialSessionsLoaded={initialSessionsLoaded.has(project.projectId)}
+      isLoadingMoreSessions={loadingMoreProjects.has(project.projectId)}
+      currentTime={currentTime}
+      editingSession={editingSession}
+      editingSessionName={editingSessionName}
+      onEditingNameChange={onEditingNameChange}
+      onToggleProject={onToggleProject}
+      onOpenFileTree={onOpenFileTree}
+      onProjectSelect={onProjectSelect}
+      onToggleStarProject={onToggleStarProject}
+      onStartEditingProject={onStartEditingProject}
+      onCancelEditingProject={onCancelEditingProject}
+      onSaveProjectName={onSaveProjectName}
+      onDeleteProject={onDeleteProject}
+      onSessionSelect={onSessionSelect}
+      onDeleteSession={onDeleteSession}
+      onForkSession={onForkSession}
+      onLoadMoreSessions={onLoadMoreSessions}
+      activeSessions={activeSessions}
+      completedSessions={completedSessions}
+      onNewSession={onNewSession}
+      onEditingSessionNameChange={onEditingSessionNameChange}
+      onStartEditingSession={onStartEditingSession}
+      onCancelEditingSession={onCancelEditingSession}
+      onSaveEditingSession={onSaveEditingSession}
+      t={t}
+      draggable
+      isDragging={draggingProjectId === project.projectId}
+      isDropTarget={dropTargetProjectId === project.projectId}
+      onDragStartProject={() => setDraggingProjectId(project.projectId)}
+      onDragOverProject={(below) => {
+        dropBelowRef.current = below;
+        setDropTargetProjectId(project.projectId);
+      }}
+      onDropProject={() => handleDrop(project.projectId)}
+      onDragEndProject={() => {
+        setDraggingProjectId(null);
+        setDropTargetProjectId(null);
+      }}
+    />
+  );
 
   return (
     <div className="pb-safe-area-inset-bottom md:space-y-1">
       {!showProjects
         ? state
-        : visibleProjects.map((project) => (
-            // React key + per-project state lookups all use the DB `projectId`
-            // so they remain stable across renames and session changes.
-            <SidebarProjectItem
-              key={project.projectId}
-              project={project}
-              selectedProject={selectedProject}
-              selectedSession={selectedSession}
-              isExpanded={forceExpanded || expandedProjects.has(project.projectId)}
-              isDeleting={deletingProjects.has(project.projectId)}
-              isStarred={isProjectStarred(project.projectId)}
-              editingProject={editingProject}
-              editingName={editingName}
-              sessions={getProjectSessions(project)}
-              initialSessionsLoaded={initialSessionsLoaded.has(project.projectId)}
-              isLoadingMoreSessions={loadingMoreProjects.has(project.projectId)}
-              currentTime={currentTime}
-              editingSession={editingSession}
-              editingSessionName={editingSessionName}
-              onEditingNameChange={onEditingNameChange}
-              onToggleProject={onToggleProject}
-              onOpenFileTree={onOpenFileTree}
-              onProjectSelect={onProjectSelect}
-              onToggleStarProject={onToggleStarProject}
-              onStartEditingProject={onStartEditingProject}
-              onCancelEditingProject={onCancelEditingProject}
-              onSaveProjectName={onSaveProjectName}
-              onDeleteProject={onDeleteProject}
-              onSessionSelect={onSessionSelect}
-              onDeleteSession={onDeleteSession}
-              onForkSession={onForkSession}
-              onLoadMoreSessions={onLoadMoreSessions}
-              activeSessions={activeSessions}
-              completedSessions={completedSessions}
-              onNewSession={onNewSession}
-              onEditingSessionNameChange={onEditingSessionNameChange}
-              onStartEditingSession={onStartEditingSession}
-              onCancelEditingSession={onCancelEditingSession}
-              onSaveEditingSession={onSaveEditingSession}
-              t={t}
-              draggable
-              isDragging={draggingProjectId === project.projectId}
-              isDropTarget={dropTargetProjectId === project.projectId}
-              onDragStartProject={() => setDraggingProjectId(project.projectId)}
-              onDragOverProject={(below) => {
-                dropBelowRef.current = below;
-                setDropTargetProjectId(project.projectId);
-              }}
-              onDropProject={() => handleDrop(project.projectId)}
-              onDragEndProject={() => {
-                setDraggingProjectId(null);
-                setDropTargetProjectId(null);
-              }}
-            />
-          ))}
+        : showGroups ? (
+            <>
+              <div className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                {t('projects.groups.starred', '置顶')}
+              </div>
+              {starredProjects.map(renderProject)}
+              <div className="px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                {t('projects.groups.projects', '项目')}
+              </div>
+              {regularProjects.map(renderProject)}
+            </>
+          )
+        : visibleProjects.map(renderProject)}
     </div>
   );
 }
