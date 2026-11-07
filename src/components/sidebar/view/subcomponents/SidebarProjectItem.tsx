@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderTree, Star, Trash2, X } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { TFunction } from 'i18next';
 
 import { cn } from '../../../../lib/utils';
@@ -133,6 +133,21 @@ export default function SidebarProjectItem({
   };
 
   const dragDepthRef = useRef(0);
+  // 展开/选中后把项目行滚进可视区,让展开的会话子列表立即可见。
+  const itemRef = useRef<HTMLDivElement>(null);
+  const wasExpanded = useRef(false);
+  useEffect(() => {
+    if (isExpanded && !wasExpanded.current) {
+      // 手动滚内层滚动容器(而非 scrollIntoView——它会一路滚到 <nav> 遮挡处)。
+      // 把「项目行 + 展开内容」的头部对齐滚动容器顶,子会话紧随其下可见。
+      const el = itemRef.current;
+      const scroller = el?.closest('.overflow-auto');
+      if (el && scroller) {
+        scroller.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+      }
+    }
+    wasExpanded.current = isExpanded;
+  }, [isExpanded]);
 
   return (
     <div className={cn('md:space-y-1', isDeleting && 'opacity-50 pointer-events-none')}>
@@ -253,9 +268,9 @@ export default function SidebarProjectItem({
 
                     <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/30">
                       {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        <ChevronDown className="h-3 w-3 text-muted-foreground/90" />
                       ) : (
-                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/90" />
                       )}
                     </div>
                   </>
@@ -437,9 +452,9 @@ export default function SidebarProjectItem({
                   </button>
                 </div>
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground/90 transition-colors group-hover:text-foreground" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/90 transition-colors group-hover:text-foreground" />
                 )}
               </>
             )}
@@ -447,6 +462,7 @@ export default function SidebarProjectItem({
         </div>
       </div>
 
+      <div ref={itemRef}>
       <SidebarProjectSessions
         project={project}
         isExpanded={isExpanded}
@@ -472,6 +488,7 @@ export default function SidebarProjectItem({
         onNewSession={onNewSession}
         t={t}
       />
+      </div>
     </div>
   );
 }
