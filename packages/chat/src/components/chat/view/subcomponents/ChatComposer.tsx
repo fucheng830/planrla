@@ -36,6 +36,7 @@ import ImageAttachment from './ImageAttachment';
 import VoiceInputButton from './VoiceInputButton';
 import PermissionRequestsBanner from './PermissionRequestsBanner';
 import TokenUsageSummary from './TokenUsageSummary';
+import ModelSelectorPill from './ModelSelectorPill';
 import SessionReferencePicker, { type PickerCandidateSession } from './SessionReferencePicker';
 import SessionReferenceChip from './SessionReferenceChip';
 
@@ -76,6 +77,11 @@ export interface ChatComposerProps {
   onCompactSession: () => void;
   slashCommandsCount: number;
   onToggleCommandMenu: () => void;
+  /** Codex 输入器模型选择胶囊所需:当前 provider 与模型目录 */
+  provider: string;
+  providerModel: string;
+  providerModelCatalog: Record<string, { OPTIONS: { value: string; label: string }[]; DEFAULT: string }> | null;
+  onSelectProviderModel: (provider: string, model: string) => void;
   hasInput: boolean;
   onClearInput: () => void;
   isUserScrolledUp: boolean;
@@ -146,6 +152,10 @@ export default function ChatComposer({
   onCompactSession,
   slashCommandsCount,
   onToggleCommandMenu,
+  provider,
+  providerModel,
+  providerModelCatalog,
+  onSelectProviderModel,
   hasInput,
   onClearInput,
   isUserScrolledUp,
@@ -500,6 +510,13 @@ export default function ChatComposer({
                 </span>
               </div>
             </button>
+
+            <ModelSelectorPill
+              provider={(provider as never) || 'claude'}
+              currentModel={providerModel}
+              catalog={providerModelCatalog || {}}
+              onSelect={onSelectProviderModel}
+            />
 
             <TokenUsageSummary
               usage={tokenBudget}

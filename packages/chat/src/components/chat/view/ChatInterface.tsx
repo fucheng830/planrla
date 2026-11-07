@@ -111,6 +111,14 @@ function ChatInterface({
   // REQ-052: compaction is a backend-owned capability; strict `=== true`
   // keeps the button inert until the capability matrix has actually loaded.
   const supportsCompact = providerCapabilities?.[provider]?.supportsCompact === true;
+  // Codex 输入器模型胶囊:当前 provider 对应的激活模型值
+  const activeProviderModel =
+    provider === 'claude' ? claudeModel
+    : provider === 'codex' ? codexModel
+    : provider === 'gemini' ? geminiModel
+    : provider === 'opencode' ? opencodeModel
+    : provider === 'kimi' ? kimiModel
+    : cursorModel;
 
   const {
     chatMessages,
@@ -641,6 +649,10 @@ function ChatInterface({
           onConfirmReference={handleConfirmReference}
           pickerDefaultSessions={pickerDefaultSessions}
           pickerAllSessions={allPickerSessions}
+          provider={provider}
+          providerModel={activeProviderModel}
+          providerModelCatalog={providerModelCatalog}
+          onSelectProviderModel={(targetProvider, model) => { void selectProviderModel(targetProvider as Parameters<typeof selectProviderModel>[0], model); }}
         />
       </div>
 
