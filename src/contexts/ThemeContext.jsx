@@ -38,7 +38,8 @@ export const ThemeProvider = ({ children }) => {
     if (statusBarMeta) statusBarMeta.setAttribute('content', isDarkMode ? 'black-translucent' : 'default');
 
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) themeColorMeta.setAttribute('content', isDarkMode ? '#0c1117' : '#ffffff');
+    // ZCode zai 双主题画布色:深 #161616 / 浅 #f8f8f8
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isDarkMode ? '#161616' : '#f8f8f8');
 
     // 桌面端：同步主题到 main 进程缓存（消除下次启动闪屏）。Web/Android 下无该 API，忽略。
     if (typeof window !== 'undefined' && window.electronAPI?.themeCache?.set) {
