@@ -257,8 +257,9 @@ export default function SidebarSessionItem({
       <div className="md:hidden">
         <div
           className={cn(
-            'p-2 mx-3 my-0.5 rounded-md border bg-workbench-surface transition-colors duration-150 relative',
-            isSelected ? 'bg-workbench-muted border-workbench-accent/40' : 'border-workbench-border',
+            // ZCode 列表项:无边框 + 柔和圆角,选中用 surface 提亮而不是描边
+            'p-2 mx-3 my-0.5 rounded-lg bg-transparent transition-colors duration-150 relative',
+            isSelected ? 'bg-workbench-muted' : 'hover:bg-workbench-muted/60',
           )}
           onClick={selectMobileSession}
         >
@@ -326,8 +327,9 @@ export default function SidebarSessionItem({
           <Button
             variant="ghost"
             className={cn(
-              'h-auto w-full justify-start rounded-md border bg-workbench-surface p-2 text-left font-normal transition-colors duration-150',
-              isSelected ? 'border-workbench-accent/40 bg-workbench-muted' : 'border-workbench-border hover:bg-workbench-muted',
+              // ZCode 列表项:无边框 + 柔和圆角,选中用 surface 提亮
+              'h-auto w-full justify-start rounded-lg p-2 text-left font-normal transition-colors duration-150',
+              isSelected ? 'bg-workbench-muted' : 'hover:bg-workbench-muted/60',
             )}
             onClick={() => onSessionSelect(session, project.projectId)}
             draggable={!isEditing}

@@ -297,7 +297,9 @@ export default function SidebarProjectItem({
           }}
           onDragEnd={() => onDragEndProject?.()}
           className={cn(
-            'hidden md:flex w-full justify-between rounded-md p-2 h-auto font-normal hover:bg-workbench-muted',
+            // ZCode 列表项:柔和圆角,hover 半透明 surface
+            'hidden md:flex w-full justify-between rounded-lg p-2 h-auto font-normal hover:bg-workbench-muted/60',
+            selectedProject?.projectId === project.projectId && 'bg-workbench-muted',
             draggable && 'cursor-grab active:cursor-grabbing',
             isDragging && 'opacity-40',
             isDropTarget &&
