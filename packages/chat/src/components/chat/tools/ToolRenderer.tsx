@@ -39,7 +39,8 @@ interface ToolRendererProps {
 function getToolCategory(toolName: string): string {
   if (['Edit', 'Write', 'ApplyPatch'].includes(toolName)) return 'edit';
   if (['Grep', 'Glob'].includes(toolName)) return 'search';
-  if (toolName === 'Bash') return 'bash';
+  // Codex 的 shell 工具叫 exec,与 Claude 的 Bash 同属终端执行类。
+  if (['Bash', 'exec', 'shell'].includes(toolName)) return 'bash';
   if (['TodoWrite', 'TodoRead'].includes(toolName)) return 'todo';
   if (['TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet'].includes(toolName)) return 'task';
   if (toolName === 'Task') return 'agent';

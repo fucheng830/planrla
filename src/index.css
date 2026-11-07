@@ -45,6 +45,15 @@
     --ring: 0 0% 15%;
     --radius: 0.5rem;
 
+    /* ZCode 轨迹色标: 工具卡/消息按类型用色点区分,浅色态 */
+    --traj-tool: 27 92% 50%;       /* orange #d97706 — 编辑/写入类 */
+    --traj-bash: 174 72% 32%;      /* teal #0f766e — 终端/执行类 */
+    --traj-search: 204 90% 44%;    /* blue #0284c7 — 搜索/读取类 */
+    --traj-reasoning: 262 83% 58%; /* purple #7c3aed — 推理/计划类 */
+    --traj-agent: 271 55% 55%;     /* violet — 委派/子代理 */
+    --traj-user: 221 83% 53%;      /* blue #2563eb — 用户消息 */
+    --traj-assistant: 173 80% 31%; /* teal #0f766e — 助手消息 */
+
     /* Nav design tokens */
     --nav-glass-bg: 0 0% 100% / 0.7;
     --nav-glass-blur: 20px;
@@ -106,6 +115,15 @@
     --border: 0 0% 25%;
     --input: 0 0% 25%;
     --ring: 0 0% 94%;
+
+    /* ZCode 轨迹色标 — 深色态(提亮一档保对比) */
+    --traj-tool: 28 92% 58%;
+    --traj-bash: 174 65% 45%;
+    --traj-search: 203 90% 56%;
+    --traj-reasoning: 262 85% 68%;
+    --traj-agent: 271 60% 65%;
+    --traj-user: 214 90% 62%;
+    --traj-assistant: 173 70% 42%;
 
     /* Nav design tokens — dark overrides */
     --nav-glass-bg: 217.2 91.2% 8% / 0.55;

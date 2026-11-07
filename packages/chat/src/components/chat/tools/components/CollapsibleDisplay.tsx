@@ -18,13 +18,14 @@ interface CollapsibleDisplayProps {
 }
 
 const dotColorMap: Record<string, string> = {
-  edit: 'bg-amber-500 dark:bg-amber-400',
-  search: 'bg-slate-400 dark:bg-slate-500',
-  bash: 'bg-green-500 dark:bg-green-400',
-  todo: 'bg-violet-500 dark:bg-violet-400',
-  task: 'bg-violet-500 dark:bg-violet-400',
-  agent: 'bg-purple-500 dark:bg-purple-400',
-  plan: 'bg-indigo-500 dark:bg-indigo-400',
+  // ZCode 轨迹色标 token:深浅两态由 CSS 变量切换(与 OneLineDisplay 同源)。
+  edit: 'bg-[hsl(var(--traj-tool))]',
+  search: 'bg-[hsl(var(--traj-search))]',
+  bash: 'bg-[hsl(var(--traj-bash))]',
+  todo: 'bg-[hsl(var(--traj-reasoning))]',
+  task: 'bg-[hsl(var(--traj-reasoning))]',
+  agent: 'bg-[hsl(var(--traj-agent))]',
+  plan: 'bg-[hsl(var(--traj-reasoning))]',
   question: 'bg-primary',
   default: 'bg-border',
 };
