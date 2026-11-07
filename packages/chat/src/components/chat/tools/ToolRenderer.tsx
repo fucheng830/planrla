@@ -184,6 +184,14 @@ export const ToolRenderer: React.FC<ToolRendererProps> = memo(({
     const title = typeof displayConfig.title === 'function'
       ? displayConfig.title(parsedData)
       : displayConfig.title || 'Details';
+    // Codex 编辑卡语言:文件编辑类标题改为「已编辑 file.tsx / 已创建 file.tsx」
+    const isFileEditTool = toolName === 'Edit' || toolName === 'ApplyPatch';
+    const isFileCreateTool = toolName === 'Write';
+    const editCardTitle = isFileEditTool
+      ? `已编辑 ${title}`
+      : isFileCreateTool
+        ? `已创建 ${title}`
+        : title;
 
     const defaultOpen = displayConfig.defaultOpen !== undefined
       ? displayConfig.defaultOpen
@@ -293,7 +301,7 @@ export const ToolRenderer: React.FC<ToolRendererProps> = memo(({
       <CollapsibleDisplay
         toolName={toolName}
         toolId={toolId}
-        title={title}
+        title={editCardTitle}
         defaultOpen={defaultOpen}
         onTitleClick={handleTitleClick}
         badge={badgeElement}

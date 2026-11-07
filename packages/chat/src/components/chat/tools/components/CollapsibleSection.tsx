@@ -30,6 +30,13 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 }) => {
   const headerBase =
     'flex select-none items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs transition-colors';
+  // Codex 编辑卡语言:edit 类工具卡用浮起卡片,头部不带灰底,标题加重
+  const isEditCard = toolName === 'Edit' || toolName === 'Write' || toolName === 'ApplyPatch';
+  const cardClass = isEditCard
+    ? 'group/section overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_3px_hsl(0_0%_0%/0.06),0_4px_16px_hsl(0_0%_0%/0.05)]'
+    : 'group/section overflow-hidden rounded-lg border border-border bg-card shadow-sm';
+  const editHeaderBase =
+    'flex select-none items-center gap-2 border-b border-border px-3 py-2.5 text-xs transition-colors';
   const dot = dotColor ? (
     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
   ) : null;
@@ -37,11 +44,11 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   return (
     <Collapsible
       defaultOpen={open}
-      className={cn('group/section overflow-hidden rounded-lg border border-border bg-card shadow-sm', className)}
+      className={cn(cardClass, className)}
     >
       {/* When there's a clickable title (Edit/Write), only the chevron toggles collapse */}
       {onTitleClick ? (
-        <div className={`${headerBase} hover:bg-muted`}>
+        <div className={`${isEditCard ? editHeaderBase : headerBase} hover:bg-muted`}>
           {dot}
           <CollapsibleTrigger className="flex flex-shrink-0 items-center p-0.5 text-muted-foreground hover:text-foreground">
             <svg
@@ -53,15 +60,26 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </CollapsibleTrigger>
-          {toolName && (
-            <span className="flex-shrink-0 font-medium text-muted-foreground">{toolName}</span>
-          )}
-          {toolName && (
-            <span className="flex-shrink-0 text-[10px] text-muted-foreground/40">/</span>
+          {isEditCard ? (
+            <span className="flex-shrink-0 text-foreground/90">📄</span>
+          ) : (
+            <>
+              {toolName && (
+                <span className="flex-shrink-0 font-medium text-muted-foreground">{toolName}</span>
+              )}
+              {toolName && (
+                <span className="flex-shrink-0 text-[10px] text-muted-foreground/40">/</span>
+              )}
+            </>
           )}
           <button
             onClick={onTitleClick}
-            className="flex-1 truncate text-left font-mono text-primary transition-colors hover:text-primary/80 hover:underline"
+            className={cn(
+              'flex-1 truncate text-left transition-colors',
+              isEditCard
+                ? 'font-semibold text-foreground hover:text-primary'
+                : 'font-mono text-primary hover:text-primary/80 hover:underline',
+            )}
           >
             {title}
           </button>

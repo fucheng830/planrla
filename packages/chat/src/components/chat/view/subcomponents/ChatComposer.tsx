@@ -557,7 +557,7 @@ export default function ChatComposer({
                     : undefined
               }
               disabled={isLoading ? false : isRecording ? false : isTranscribing ? true : !input.trim()}
-              className="h-10 w-10 sm:h-10 sm:w-10"
+              className="h-9 w-9 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95 sm:h-9 sm:w-9"
             >
               {isTranscribing ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
             </PromptInputSubmit>
