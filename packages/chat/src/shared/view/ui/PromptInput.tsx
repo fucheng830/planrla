@@ -41,8 +41,8 @@ export const PromptInput = React.forwardRef<HTMLFormElement, PromptInputProps>(
           ref={ref}
           data-slot="prompt-input"
           className={cn(
-            // ZCode composer: 双层软投影 + 更大圆角,焦点环沿用 accent。
-            'ds-command-surface relative overflow-hidden rounded-xl transition-[border-color,box-shadow] duration-150 focus-within:border-workbench-accent focus-within:shadow-md focus-within:ring-1 focus-within:ring-workbench-accent/20',
+            // Codex composer: 18px 大圆角 + 双层软投影,焦点环沿用 accent。
+            'ds-command-surface relative overflow-hidden rounded-[18px] transition-[border-color,box-shadow] duration-150 focus-within:border-workbench-accent focus-within:shadow-md focus-within:ring-1 focus-within:ring-workbench-accent/20',
             className
           )}
           {...props}
@@ -203,7 +203,7 @@ export const PromptInputSubmit = React.forwardRef<HTMLButtonElement, PromptInput
         type={isActive ? 'button' : 'submit'}
         variant="default"
         size="icon"
-        className={cn('h-8 w-8 rounded-lg', className)}
+        className={cn('h-8 w-8 rounded-full', className)}
         {...props}
       >
         {children ?? (isActive ? (

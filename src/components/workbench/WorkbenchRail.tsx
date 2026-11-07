@@ -58,7 +58,7 @@ export function WorkbenchRail({ items, footerItems, activeId, onSelect, classNam
             className={cn(
               'ds-focus-ring relative flex size-9 items-center justify-center rounded-[10px] text-workbench-subtle transition-colors hover:bg-workbench-muted hover:text-workbench-ink',
               isActive &&
-                'bg-workbench-surface text-workbench-accent shadow-[0_1px_2px_hsl(220_20%_10%/0.12),0_0_0_1px_hsl(var(--ds-border))] dark:bg-workbench-raised dark:text-workbench-accent dark:shadow-[inset_0_0_0_1px_hsl(var(--ds-accent)/0.35),0_1px_2px_hsl(0_0%_0%/0.35)]',
+                'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(0_0%_0%/0.18)] dark:shadow-[0_1px_3px_hsl(0_0%_0%/0.5)]',
             )}
           >
             <Icon className="size-4" aria-hidden="true" />

@@ -1,6 +1,5 @@
 import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose, Activity } from 'lucide-react';
 import type { TFunction } from 'i18next';
-import { useTranslation } from 'react-i18next';
 
 import { Button, Input, Tooltip } from '../../../../shared/view/ui';
 import { IS_PLATFORM } from '../../../../constants/config';
@@ -74,7 +73,7 @@ export default function SidebarHeader({
         className={cn(
           "flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium transition-all",
           searchMode === 'projects'
-            ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+            ? "bg-primary text-primary-foreground shadow-sm [&>svg]:text-primary-foreground"
             : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
         )}
       >
@@ -87,7 +86,7 @@ export default function SidebarHeader({
         className={cn(
           "flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium transition-all",
           searchMode === 'sessions'
-            ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+            ? "bg-primary text-primary-foreground shadow-sm [&>svg]:text-primary-foreground"
             : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
         )}
       >
@@ -112,7 +111,7 @@ export default function SidebarHeader({
             className={cn(
               "flex h-7 w-8 items-center justify-center rounded-lg border border-transparent text-xs font-medium transition-all",
               searchMode === 'archived'
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border dark:bg-accent dark:ring-primary/35 dark:hover:bg-accent [&>svg]:text-primary"
+                ? "bg-primary text-primary-foreground shadow-sm [&>svg]:text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
             )}
           >

@@ -115,8 +115,8 @@
 
 .ds-command-surface {
     border: 1px solid hsl(var(--ds-border-strong));
-    /* ZCode composer 质感: 双层软投影 + 12px 圆角 */
-    border-radius: 12px;
+      /* Codex composer 质感: 双层软投影 + 18px 大圆角 */
+      border-radius: 18px;
     background: hsl(var(--ds-surface-raised));
     box-shadow: var(--ds-shadow-panel);
 }
