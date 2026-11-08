@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { Archive, Check, Copy, Edit2, FolderOpen, Network, Pin, PinOff, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Archive, Check, Copy, Edit2, Folder, FolderOpen, GitBranch, Network, Pin, PinOff, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Badge, Button, Dialog, DialogContent, DialogTitle } from '../../../../shared/view/ui';
@@ -122,10 +123,17 @@ export default function SidebarSessionItem({
   const jsonlPath = (session.jsonlPath as string | null | undefined) ?? null;
   const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI);
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  // Codex hover 详情浮层:portal 到 body(侧栏 overflow 会裁剪 absolute 浮层)
+  const [hoverCardPos, setHoverCardPos] = useState<{ top: number; left: number } | null>(null);
 
   const flashCopied = (label: string) => {
     setCopiedLabel(label);
     window.setTimeout(() => setCopiedLabel((current) => (current === label ? null : current)), 1200);
+  };
+
+  const handleRowMouseEnter = (event: ReactMouseEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoverCardPos({ top: rect.top + rect.height / 2, left: rect.right + 10 });
   };
 
   const handleArchive = () => {
@@ -326,6 +334,8 @@ export default function SidebarSessionItem({
         <ContextMenu actions={sessionMenuActions} menuLabel={t('contextMenu.sessionMenuLabel', 'Session context menu')} isDisabled={isEditing}>
           <Button
             variant="ghost"
+            onMouseEnter={handleRowMouseEnter}
+            onMouseLeave={() => setHoverCardPos(null)}
             className={cn(
               // ZCode 列表项:无边框 + 柔和圆角,选中用 surface 提亮
               'h-auto w-full justify-start rounded-lg p-2 text-left font-normal transition-colors duration-150',
@@ -463,6 +473,29 @@ export default function SidebarSessionItem({
             </div>
           </DialogContent>
         </Dialog>
+        {hoverCardPos && !isEditing && createPortal(
+          <div
+            className="pointer-events-none fixed z-[80] w-64 rounded-xl border border-border bg-popover p-3 shadow-[0_8px_32px_hsl(0_0%_0%/0.14)]"
+            style={{ top: hoverCardPos.top, left: hoverCardPos.left, transform: 'translateY(-50%)' }}
+            role="tooltip"
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={sessionView.sessionName}>
+                {sessionView.sessionName}
+              </span>
+              <span className="flex-shrink-0 text-[11px] text-muted-foreground/70">{compactSessionAge}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Folder className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{project.displayName || project.projectId}</span>
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <GitBranch className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate font-mono">{project.fullPath}</span>
+            </div>
+          </div>,
+          document.body,
+        )}
       </div>
     </div>
   );
