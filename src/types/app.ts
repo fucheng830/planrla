@@ -68,6 +68,8 @@ export interface Project {
   isStarred?: boolean;
   /** Persisted manual order (drag-and-drop). -1/undefined = no manual order. */
   sortIndex?: number;
+  /** 项目工作区当前 git 分支(后端解析,悬浮卡展示);非 git 目录为 null。 */
+  branch?: string | null;
   sessions?: ProjectSession[];
   sessionMeta?: ProjectSessionMeta;
   [key: string]: unknown;

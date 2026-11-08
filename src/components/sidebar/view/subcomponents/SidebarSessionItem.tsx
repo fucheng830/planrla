@@ -491,7 +491,7 @@ export default function SidebarSessionItem({
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <GitBranch className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate font-mono">{project.fullPath}</span>
+              <span className="truncate font-mono">{project.branch || project.fullPath}</span>
             </div>
           </div>,
           document.body,

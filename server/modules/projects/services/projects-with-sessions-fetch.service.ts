@@ -6,7 +6,9 @@ import { sessionSynchronizerService } from '@/modules/providers/index.js';
 import { WS_OPEN_STATE, connectedClients } from '@/modules/websocket/index.js';
 import type { RealtimeClientConnection } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
+
 import { groupSessionRowsByProject } from './project-session-grouping.js';
+import { getProjectBranch } from './git-branch.service.js';
 
 type SessionSummary = {
   id: string;
@@ -40,6 +42,8 @@ export type ProjectListItem = {
   displayName: string;
   fullPath: string;
   isStarred: boolean;
+  /** 项目工作区当前 git 分支(悬浮卡展示);非 git 目录为 null。 */
+  branch?: string | null;
   /** Persisted manual order (sidebar drag-and-drop); -1 = none. */
   sortIndex?: number;
   sessions: SessionSummary[];
@@ -243,11 +247,13 @@ export async function getProjectsWithSessions(
         : await generateDisplayName(path.basename(row.project_path) || row.project_path, row.project_path);
 
     const page = pagesByPath.get(row.project_path) ?? { sessions: [], total: 0, hasMore: false };
+    const branch = await getProjectBranch(row.project_path);
     projects.push({
       projectId: row.project_id,
       path: row.project_path,
       displayName,
       fullPath: row.project_path,
+      branch,
       isStarred: Boolean(row.isStarred),
       sortIndex: typeof row.sortIndex === 'number' && row.sortIndex >= 0 ? row.sortIndex : -1,
       sessions: page.sessions,
