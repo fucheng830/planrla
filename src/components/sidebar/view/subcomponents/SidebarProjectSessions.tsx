@@ -1,4 +1,5 @@
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Button } from '../../../../shared/view/ui';
@@ -80,40 +81,21 @@ export default function SidebarProjectSessions({
   onDeleteSession,
   onForkSession,
   onLoadMoreSessions,
-  onNewSession,
+  onNewSession: _onNewSession,
   t,
 }: SidebarProjectSessionsProps) {
+  // Codex 会话树:每组默认显示前 5 条,其余折叠进「展开显示」
+  const [expandedAll, setExpandedAll] = useState(false);
   if (!isExpanded) {
     return null;
   }
 
   const hasSessions = sessions.length > 0;
+  const visibleSessions = expandedAll ? sessions : sessions.slice(0, 5);
+  const hiddenCount = sessions.length - visibleSessions.length;
 
   return (
-    <div className="ml-3 space-y-1 border-l border-border pl-3">
-      <div className="px-3 pb-1 pt-1 md:hidden">
-        <button
-          className="flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/90 active:scale-[0.98]"
-          onClick={() => {
-            onProjectSelect(project);
-            onNewSession(project);
-          }}
-        >
-          <Plus className="h-3 w-3" />
-          {t('sessions.newSession')}
-        </button>
-      </div>
-
-      <Button
-        variant="default"
-        size="sm"
-        className="hidden h-9 w-full justify-start gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 md:flex"
-        onClick={() => onNewSession(project)}
-      >
-        <Plus className="h-3 w-3" />
-        {t('sessions.newSession')}
-      </Button>
-
+    <div className="mt-0.5 space-y-0.5">
       {!initialSessionsLoaded ? (
         <SessionListSkeleton />
       ) : !hasSessions ? (
@@ -122,7 +104,7 @@ export default function SidebarProjectSessions({
         </div>
       ) : (
         <>
-          {sessions.map((session) => {
+          {visibleSessions.map((session) => {
             const activity = activeSessions.get(session.id);
             const completion = completedSessions.get(session.id);
 
@@ -149,6 +131,25 @@ export default function SidebarProjectSessions({
               />
             );
           })}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpandedAll((v) => !v)}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground/70 transition-colors hover:text-foreground"
+            >
+              {expandedAll ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  {t('sessions.collapseSessions', '收起显示')}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  {t('sessions.expandSessions', '展开显示')}
+                </>
+              )}
+            </button>
+          )}
 
           {hasMoreSessions && (
             <Button

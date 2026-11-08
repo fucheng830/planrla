@@ -342,35 +342,29 @@ export default function SidebarSessionItem({
             }
           >
             <div className="flex w-full min-w-0 items-center gap-2">
-              <div
-                className={cn(
-                  'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md',
-                  isSelected ? 'bg-workbench-accent/10' : 'bg-workbench-muted',
+              {/* Codex 会话行:单行标题 + 右侧状态(spinner/蓝点) */}
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="min-w-0 flex-1 truncate text-sm text-foreground">{sessionView.sessionName}</div>
+                {isProcessing ? (
+                  <span className="flex-shrink0 ml-auto flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
+                    <span className="h-3 w-3 animate-spin rounded-full border border-muted-foreground/30 border-t-muted-foreground" />
+                  </span>
+                ) : (
+                  <SessionTaskStatusBadge status={taskStatus} />
                 )}
-              >
-                <SessionProviderLogo provider={session.__provider} className="h-3 w-3" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1 truncate text-xs font-medium text-workbench-ink">{sessionView.sessionName}</div>
-                  {compactSessionAge && (
-                    <span
-                      className={cn(
-                        'ml-auto flex-shrink-0 text-[11px] text-workbench-subtle transition-opacity duration-200',
-                        isEditing ? 'opacity-0' : 'group-hover:opacity-0',
-                      )}
-                    >
-                      {compactSessionAge}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-0.5 flex items-center gap-1.5">
-                  {sessionView.messageCount > 0 && <Badge variant="secondary" className="px-1 py-0 text-xs">{sessionView.messageCount}</Badge>}
-                  <SessionTaskStatusBadge status={isProcessing ? 'running' : taskStatus} />
-                  {isPinned && (
-                    <Pin className="ml-auto h-3 w-3 flex-shrink-0 fill-primary/20 text-primary" aria-label={t('tooltips.pinnedSession', 'Pinned')} />
-                  )}
-                </div>
+                {compactSessionAge && (
+                  <span
+                    className={cn(
+                      'flex-shrink-0 text-[11px] text-workbench-subtle transition-opacity duration-200',
+                      isEditing ? 'opacity-0' : 'group-hover:opacity-0',
+                    )}
+                  >
+                    {compactSessionAge}
+                  </span>
+                )}
+                {isPinned && (
+                  <Pin className="h-3 w-3 flex-shrink-0 fill-primary/20 text-primary" aria-label={t('tooltips.pinnedSession', 'Pinned')} />
+                )}
               </div>
             </div>
           </Button>
