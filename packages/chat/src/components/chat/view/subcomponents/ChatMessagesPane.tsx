@@ -166,6 +166,41 @@ export default function ChatMessagesPane({
     if (!isProcessing || visibleMessages.length === 0) return [];
     return [visibleMessages.length - 1];
   }, [isProcessing, visibleMessages.length]);
+  // Codex turn 聚合:每条消息所属 reply turn 的文件编辑统计(截图「已编辑 N 个文件 +X -Y」卡的数据源)
+  const turnEditSummaries = useMemo(() => {
+    const map = new Map<number, { count: number; added: number; removed: number; files: string[] }>();
+    let turnStart = 0;
+    let summary: { count: number; added: number; removed: number; files: string[] } | null = null;
+    const commitTurn = (endExclusive: number) => {
+      if (summary) {
+        for (let i = turnStart; i < endExclusive; i += 1) map.set(i, summary);
+      }
+      summary = null;
+    };
+    visibleMessages.forEach((msg, index) => {
+      const isAssistantish = msg.type === 'assistant' || msg.type === 'tool';
+      if (!isAssistantish) {
+        commitTurn(index);
+        turnStart = index + 1;
+        return;
+      }
+      if (msg.isToolUse && ['Edit', 'Write', 'ApplyPatch'].includes(String(msg.toolName || ''))) {
+        const input = (typeof msg.toolInput === 'object' && msg.toolInput !== null ? msg.toolInput : {}) as Record<string, unknown>;
+        const filePath = String(input.file_path || input.path || '').split(/[\\/]/).pop() || '';
+        const oldStr = typeof input.old_string === 'string' ? input.old_string : '';
+        const newStr = typeof input.new_string === 'string' ? input.new_string : typeof input.content === 'string' ? input.content : '';
+        const added = newStr ? newStr.split('\n').length : 0;
+        const removed = oldStr ? oldStr.split('\n').length : 0;
+        if (!summary) summary = { count: 0, added: 0, removed: 0, files: [] };
+        summary.count += 1;
+        summary.added += added;
+        summary.removed += removed;
+        if (filePath && !summary.files.includes(filePath)) summary.files.push(filePath);
+      }
+    });
+    commitTurn(visibleMessages.length);
+    return map;
+  }, [visibleMessages]);
 
   return (
     <div
@@ -291,6 +326,7 @@ export default function ChatMessagesPane({
                     onForkAtMessage={onForkAtMessage && currentSessionId ? () => onForkAtMessage(currentSessionId, message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp) : undefined}
                     archivedCount={archivedCount}
                     onViewArchivedHistory={onViewArchivedHistory}
+                    turnEditSummary={index === visibleMessages.length - 1 || (nextMessage && nextMessage.type !== 'assistant' && nextMessage.type !== 'tool') ? turnEditSummaries.get(index) : undefined}
                   />
                 </div>
               );
