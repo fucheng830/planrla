@@ -171,10 +171,7 @@ export default function SidebarProjectList({
 
   const showProjects = !isLoading && projects.length > 0 && filteredProjects.length > 0;
   const visibleProjects = orderedProjects ?? filteredProjects;
-  // Codex 会话树:置顶(starred)与项目两组展示;搜索态不分组
-  const starredProjects = visibleProjects.filter((project) => isProjectStarred(project.projectId));
-  const regularProjects = visibleProjects.filter((project) => !isProjectStarred(project.projectId));
-  const showGroups = starredProjects.length > 0 && regularProjects.length > 0 && !orderedProjects;
+  // Codex 会话树:不分组,项目平铺且默认全部展开(每组截断 5 条)
 
   const renderProject = (project: Project) => (
     // React key + per-project state lookups all use the DB `projectId`
@@ -184,7 +181,7 @@ export default function SidebarProjectList({
       project={project}
       selectedProject={selectedProject}
       selectedSession={selectedSession}
-      isExpanded={forceExpanded || expandedProjects.has(project.projectId)}
+      isExpanded
       isDeleting={deletingProjects.has(project.projectId)}
       isStarred={isProjectStarred(project.projectId)}
       editingProject={editingProject}
@@ -274,18 +271,6 @@ export default function SidebarProjectList({
       )}
       {!showProjects
         ? state
-        : showGroups ? (
-            <>
-              <div className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                {t('projects.groups.starred', '置顶')}
-              </div>
-              {starredProjects.map(renderProject)}
-              <div className="px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                {t('projects.groups.projects', '项目')}
-              </div>
-              {regularProjects.map(renderProject)}
-            </>
-          )
         : visibleProjects.map(renderProject)}
     </div>
   );

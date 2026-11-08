@@ -128,8 +128,6 @@ export default function SidebarProjectItem({
     if (selectedProject?.projectId !== project.projectId) {
       onProjectSelect(project);
     }
-
-    toggleProject();
   };
 
   const dragDepthRef = useRef(0);
