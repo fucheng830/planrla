@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { api } from '../../../../utils/api';
@@ -105,6 +106,9 @@ export default function SidebarProjectList({
   const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const dropBelowRef = useRef(false);
+  // Codex「新聊天」:全局入口,弹项目选择浮层后新建会话
+  const [chatPickerOpen, setChatPickerOpen] = useState(false);
+  const chatPickerRef = useRef<HTMLDivElement>(null);
   const [orderedProjects, setOrderedProjects] = useState<Project[] | null>(null);
 
   useEffect(() => {
@@ -134,6 +138,17 @@ export default function SidebarProjectList({
     });
     setDropTargetProjectId(null);
   };
+
+  useEffect(() => {
+    if (!chatPickerOpen) return;
+    const onDocClick = (event: MouseEvent) => {
+      if (chatPickerRef.current && !chatPickerRef.current.contains(event.target as Node)) {
+        setChatPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [chatPickerOpen]);
 
   const state = (
     <SidebarProjectsState
@@ -219,6 +234,44 @@ export default function SidebarProjectList({
 
   return (
     <div className="pb-safe-area-inset-bottom md:space-y-1">
+      {showProjects && (
+        <div ref={chatPickerRef} className="relative px-2 pb-1">
+          <button
+            type="button"
+            onClick={() => setChatPickerOpen((v) => !v)}
+            className="flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/90 active:scale-[0.98]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('projects.newChat', '新聊天')}
+          </button>
+          {chatPickerOpen && (
+            <div className="absolute left-2 right-2 top-11 z-40 max-h-72 overflow-y-auto rounded-xl border border-border bg-popover py-1 shadow-[0_8px_32px_hsl(0_0%_0%/0.14)]">
+              <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold text-foreground">
+                {t('projects.newChatPickProject', '选择项目')}
+              </div>
+              {visibleProjects.map((project) => (
+                <button
+                  key={project.projectId}
+                  type="button"
+                  onClick={() => {
+                    setChatPickerOpen(false);
+                    onProjectSelect(project);
+                    onNewSession(project);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-muted"
+                >
+                  <span className="min-w-0 flex-1 truncate text-foreground">
+                    {project.displayName || project.projectId}
+                  </span>
+                  <span className="flex-shrink-0 text-[11px] tabular-nums text-muted-foreground/60">
+                    {String(Number(project.sessionMeta?.total ?? getProjectSessions(project).length))}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {!showProjects
         ? state
         : showGroups ? (

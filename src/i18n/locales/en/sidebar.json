@@ -4,6 +4,8 @@
       "starred": "Pinned",
       "projects": "Projects"
     },
+    "newChat": "New chat",
+    "newChatPickProject": "Pick a project",
     "title": "Projects",
     "newProject": "New Project",
     "deleteProject": "Remove Project",
