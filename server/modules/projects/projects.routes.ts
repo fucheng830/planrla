@@ -1,5 +1,6 @@
-import express from 'express';
 import fs from 'node:fs';
+
+import express from 'express';
 
 import { createProject, updateProjectDisplayName } from '@/modules/projects/services/project-management.service.js';
 import { startCloneProject } from '@/modules/projects/services/project-clone.service.js';
@@ -8,6 +9,7 @@ import { getArchivedProjectsWithSessions, getProjectSessionsPage, getProjectsWit
 import { deleteOrArchiveProject, restoreArchivedProject } from '@/modules/projects/services/project-delete.service.js';
 import { applyLegacyStarredProjectIds, toggleProjectStar } from '@/modules/projects/services/project-star.service.js';
 import { reorderProjects } from '@/modules/projects/services/project-reorder.service.js';
+import { sessionsDb, getConnection } from '@/modules/database/index.js';
 
 const router = express.Router();
 
@@ -109,6 +111,35 @@ router.get(
     const offset = parseNonNegativeIntQuery(req.query.offset, 'offset', 0);
     const sessionsPage = await getProjectSessionsPage(projectId, { limit, offset });
     res.json(sessionsPage);
+  }),
+);
+
+// Codex 侧栏「最近」分组:跨项目最近会话(未归档),带项目显示名。
+router.get(
+  '/recent-sessions',
+  asyncHandler(async (req, res) => {
+    const limit = parseNonNegativeIntQuery(req.query.limit, 'limit', 8);
+    const sessions = sessionsDb.getAllSessions();
+    const recent = sessions
+      .slice()
+      .sort((a, b) => {
+        const at = a.updated_at || a.created_at || '';
+        const bt = b.updated_at || b.created_at || '';
+        return bt.localeCompare(at);
+      })
+      .slice(0, limit);
+    const projectRows = getConnection().prepare('SELECT project_path, custom_project_name FROM projects WHERE isArchived = 0').all() as Array<{ project_path: string; custom_project_name: string | null }>;
+    const pathToName = new Map(projectRows.map((p) => [p.project_path, p.custom_project_name || p.project_path.split(/[\\/]/).pop() || p.project_path]));
+    res.json(createApiSuccessResponse({
+      sessions: recent.map((s) => ({
+        sessionId: s.session_id,
+        provider: s.provider,
+        projectPath: s.project_path,
+        projectName: s.project_path ? pathToName.get(s.project_path) ?? null : null,
+        title: s.custom_name,
+        updatedAt: s.updated_at || s.created_at,
+      })),
+    }));
   }),
 );
 

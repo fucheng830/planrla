@@ -16,7 +16,7 @@ import type { SessionTaskStatus } from '../../../../shared/taskStatus';
 import SessionTaskStatusBadge from '../../../../shared/SessionTaskStatusBadge';
 import type { ReleaseInfo } from '../../../../types/sharedTypes';
 import type { ConversationSearchResults, SearchProgress } from '../../hooks/useSidebarController';
-import type { ArchivedProjectListItem, ArchivedSessionListItem, SidebarSearchMode } from '../../types/types';
+import type { ArchivedProjectListItem, ArchivedSessionListItem, SidebarSearchMode, RecentSessionItem  } from '../../types/types';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
 import { getAllSessions, getSessionDate, getSessionName } from '../../utils/utils';
 import FileTree from '../../../file-tree/view/FileTree';
@@ -388,6 +388,7 @@ type SidebarContentProps = {
   activeTab?: AppTab;
   onOpenWorkbenchTab?: (tab: 'overview' | 'inbox' | 'workflow' | 'schedule' | 'chat') => void;
   projectListProps: SidebarProjectListProps;
+  recentSessions?: RecentSessionItem[];
   completedSessions: CompletedSessionNotificationMap;
   t: TFunction;
 };
@@ -433,6 +434,7 @@ export default function SidebarContent({
   activeTab,
   onOpenWorkbenchTab,
   projectListProps,
+  recentSessions = [],
   completedSessions,
   t,
 }: SidebarContentProps) {
@@ -1025,6 +1027,32 @@ export default function SidebarContent({
         )}
         </ScrollArea>
       </ContextMenu>
+
+      {/* Codex「最近」分组:跨项目最近会话平铺(项目 tab 且有数据时显示) */}
+      {searchMode === 'projects' && recentSessions.length > 0 && (
+        <div className="px-3 pb-2">
+          <div className="pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            {t('projects.recent', '最近')}
+          </div>
+          {recentSessions.map((session) => (
+            <button
+              key={session.sessionId}
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-workbench-muted/60"
+              onClick={() => {
+                window.location.hash = `#/session/${session.sessionId}`;
+              }}
+            >
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                {session.title || session.sessionId}
+              </span>
+              {session.projectName && (
+                <span className="flex-shrink-0 text-[11px] text-muted-foreground/60">{session.projectName}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       <SidebarFooter
         updateAvailable={updateAvailable}

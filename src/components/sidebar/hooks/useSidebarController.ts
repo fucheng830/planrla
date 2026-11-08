@@ -4,7 +4,6 @@ import type { TFunction } from 'i18next';
 import { api, authenticatedFetch } from '../../../utils/api';
 import { usePaletteOps } from '../../../contexts/PaletteOpsContext';
 import type { Project, ProjectSession, LLMProvider } from '../../../types/app';
-import type { SessionActivityMap } from '../../../hooks/useSessionProtection';
 import type {
   ArchivedProjectListItem,
   ArchivedSessionListItem,
@@ -12,8 +11,9 @@ import type {
   ProjectSortOrder,
   SidebarSearchMode,
   SessionDeleteConfirmation,
-  SessionWithProvider,
+  SessionWithProvider, RecentSessionItem 
 } from '../types/types';
+import type { SessionActivityMap } from '../../../hooks/useSessionProtection';
 import type { A2aDelegateContextValue } from '../contexts/A2aDelegateContext';
 import {
   clearLegacyStarredProjectIds,
@@ -184,6 +184,8 @@ export function useSidebarController({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [optimisticStarByProjectId, setOptimisticStarByProjectId] = useState<Map<string, boolean>>(new Map());
   const [loadingMoreProjects, setLoadingMoreProjects] = useState<Set<string>>(new Set());
+  // Codex 侧栏「最近」分组:跨项目最近会话(独立接口,不随项目列表刷新)
+  const [recentSessions, setRecentSessions] = useState<RecentSessionItem[]>([]);
   // REQ-020 S3: optimistic override of each session's A2A exposure flag.
   // Keyed by sessionId. When present, it wins over the server-provided value
   // so the toggle reacts instantly while the PATCH is in flight.
@@ -209,6 +211,21 @@ export function useSidebarController({
 
   useEffect(() => {
     setInitialSessionsLoaded(new Set());
+  }, [projects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    authenticatedFetch('/api/projects/recent-sessions?limit=8')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!cancelled && body?.data?.sessions) {
+          setRecentSessions(body.data.sessions as RecentSessionItem[]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [projects]);
 
   useEffect(() => {
@@ -1032,6 +1049,7 @@ export function useSidebarController({
 
   return {
     isSidebarCollapsed,
+    recentSessions,
     expandedProjects,
     fileTreeExpandedProjects,
     editingProject,

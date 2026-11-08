@@ -2,6 +2,16 @@ import type { AppTab, LoadingProgress, Project, ProjectSession, LLMProvider } fr
 import type { CompletedSessionNotificationMap, SessionActivityMap } from '../../../hooks/useSessionProtection';
 
 export type ProjectSortOrder = 'name' | 'date';
+
+/** Codex 侧栏「最近」分组条目(跨项目最近会话)。 */
+export type RecentSessionItem = {
+  sessionId: string;
+  provider: string;
+  projectPath: string | null;
+  projectName: string | null;
+  title: string | null;
+  updatedAt: string | null;
+};
 export type SidebarSearchMode = 'projects' | 'sessions' | 'archived' | 'files';
 export type ArchivedProjectListItem = Project & { isArchived: true };
 

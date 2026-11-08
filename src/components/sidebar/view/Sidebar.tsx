@@ -6,15 +6,15 @@ import { useVersionCheck } from '../../../hooks/useVersionCheck';
 import { useUiPreferences } from '../../../hooks/useUiPreferences';
 import { useSidebarController } from '../hooks/useSidebarController';
 import { usePaletteOps } from '../../../contexts/PaletteOpsContext';
-import type { LLMProvider } from '../../../types/app';
+import type { LLMProvider, Project  } from '../../../types/app';
 import type { SidebarProps } from '../types/types';
+import { A2aDelegateProvider } from '../contexts/A2aDelegateContext';
 
 import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
 import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
-import type { Project } from '../../../types/app';
-import { A2aDelegateProvider } from '../contexts/A2aDelegateContext';
+
 
 function Sidebar({
   projects,
@@ -69,6 +69,7 @@ function Sidebar({
     setSearchMode,
     conversationResults,
     isSearching,
+    recentSessions,
     searchProgress,
     clearConversationResults,
     runningSessionsCount,
@@ -319,6 +320,7 @@ function Sidebar({
             activeTab={activeTab}
             onOpenWorkbenchTab={onOpenWorkbenchTab}
             projectListProps={projectListProps}
+            recentSessions={recentSessions}
             onOpenFile={paletteOps.openFile}
             completedSessions={completedSessions}
             t={t}
