@@ -153,4 +153,4 @@ This automatically:
 
 ## License
 
-By contributing, you agree that your contributions may be incorporated into the project under its proprietary terms.
+Planrla is licensed under GPL-3.0 (see [LICENSE](LICENSE)). By contributing, you agree that your contributions will be licensed under GPL-3.0 as part of this project — inbound equals outbound.
