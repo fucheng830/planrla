@@ -107,7 +107,7 @@ export const sessionsDb = {
            updated_at = COALESCE(?, CURRENT_TIMESTAMP),
            project_path = ?,
            jsonl_path = ?,
-           isArchived = 0,
+           isArchived = isArchived,
            custom_name = COALESCE(?, custom_name)
          WHERE session_id = ?`
       ).run(
@@ -134,7 +134,7 @@ export const sessionsDb = {
          updated_at = excluded.updated_at,
          project_path = excluded.project_path,
          jsonl_path = excluded.jsonl_path,
-         isArchived = 0,
+         isArchived = sessions.isArchived,
          custom_name = COALESCE(excluded.custom_name, sessions.custom_name)`
     ).run(
       providerSessionId,
