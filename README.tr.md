@@ -78,6 +78,8 @@ Başlamanın en hızlı yolu — yerel kurulum yok. Web, mobil uygulama, API vey
 
 #### npm
 
+> **Note:** the `planrla` npm package is not published yet — install from source instead (see the main English README). The Docker sandbox command below also depends on it.
+
 Planrla'yi **npx** ile anında dene (**Node.js** v22+ gerekir):
 
 ```

@@ -1,5 +1,5 @@
 // 构建前脚本:从仓库本地发版录(docs/process/releases/*.md)生成 public/desktop/latest.json。
-// 仓库为私有、GitHub Releases API 404,本地文件是唯一可靠源;读不到时用 STATIC_FALLBACK 兜底,构建不挂。
+// 仓库已开源,但本地发版录仍是唯一可靠源;读不到时用 STATIC_FALLBACK 兜底,构建不挂。
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';

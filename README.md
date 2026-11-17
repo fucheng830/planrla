@@ -72,19 +72,16 @@ Sign in to your Planrla account in Settings → Remote Access, register this des
 
 ### Self-Hosted
 
-#### npm
+#### From source
 
-Try Planrla instantly with **npx** (requires **Node.js** v22+):
-
-```
-npx planrla
-```
-
-Or install **globally** for regular use:
+Run the server directly from this repository (requires **Node.js** v22+):
 
 ```
-npm install -g planrla
-Planrla
+git clone https://github.com/fucheng830/planrla.git
+cd planrla
+npm install
+npm run build
+npm start
 ```
 
 Open `http://localhost:3001` — all your existing sessions are discovered automatically.
@@ -93,13 +90,9 @@ Configuration is environment-driven (`SERVER_PORT`, `HOST`, `JWT_SECRET`, …) a
 
 #### Docker Sandboxes (Experimental)
 
-Run agents in isolated sandboxes with hypervisor-level isolation. Starts Claude Code by default. Requires the [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/).
+Run agents in isolated sandboxes with hypervisor-level isolation. Starts Claude Code by default. Requires the [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/). The `planrla` npm package is not published yet — until then, run sandboxes from a source checkout (`npm run build` first). See the [sandbox docs](docker/) for setup and advanced options.
 
-```
-npx planrla@latest sandbox ~/my-project
-```
-
-Supports Claude Code, Codex, and Gemini CLI. See the [sandbox docs](docker/) for setup and advanced options.
+Supports Claude Code, Codex, and Gemini CLI.
 
 
 ---
@@ -108,11 +101,11 @@ Supports Claude Code, Codex, and Gemini CLI. See the [sandbox docs](docker/) for
 
 Planrla runs on your machine; Remote Access relays it to your phone over an outbound connection. Docker sandboxes are for isolated agent execution.
 
-| | Desktop | Self-Hosted (npm) | Remote Access (Beta) |
+| | Desktop | Self-Hosted | Remote Access (Beta) |
 |---|---|---|---|
 | **Best for** | Daily driver, native experience | Running beside your existing setup | Controlling agents from your phone, anywhere |
 | **How you access it** | Native window | Browser via `[yourip]:port` | Any browser via `api.planrla.com` device link |
-| **Setup** | Installer from [planrla.com](https://planrla.com) | `npx planrla` | Sign in + register device in Settings |
+| **Setup** | Installer from [planrla.com](https://planrla.com) | Clone this repo + `npm install` | Sign in + register device in Settings |
 | **Machine needs to stay on** | Yes | Yes | Yes (agents run on your machine) |
 | **Push notifications** | Desktop notifications | Desktop notifications | Phone push: permission needed / task done |
 | **Agents supported** | Claude Code, Cursor CLI, Codex, Gemini CLI, OpenCode, Kimi Code, ZCode | Same | Same |

@@ -1,6 +1,6 @@
 ---
 import { readLocalReleases, STATIC_FALLBACK } from '../data/releases.ts';
-// build 时读仓库本地发版录 docs/process/releases/*.md(私有仓库,GitHub API 404)
+// build 时读仓库本地发版录 docs/process/releases/*.md(仓库已开源,但本地发版录仍是唯一数据源——每版必写、无网络依赖)
 const entries = readLocalReleases().slice(0, 6);
 if (entries.length === 0) entries.push(STATIC_FALLBACK);
 const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';

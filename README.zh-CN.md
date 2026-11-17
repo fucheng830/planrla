@@ -74,19 +74,16 @@
 
 ### 自托管
 
-#### npm
+#### 从源码运行
 
-启动 Planrla，只需一行 `npx`（需要 Node.js v22+）：
-
-```bash
-npx planrla
-```
-
-或进行全局安装，便于日常使用：
+在本仓库直接运行服务器（需要 Node.js v22+）：
 
 ```bash
-npm install -g planrla
-Planrla
+git clone https://github.com/fucheng830/planrla.git
+cd planrla
+npm install
+npm run build
+npm start
 ```
 
 打开 `http://localhost:3001`，系统会自动发现所有现有会话。
@@ -95,13 +92,7 @@ Planrla
 
 #### Docker Sandboxes（实验性）
 
-在隔离的沙箱中运行代理，具有虚拟机管理程序级别的隔离。默认启动 Claude Code。需要 [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/)。
-
-```
-npx planrla@latest sandbox ~/my-project
-```
-
-支持 Claude Code、Codex 和 Gemini CLI。详情请参阅 [沙箱文档](docker/)。
+在隔离的沙箱中运行代理，具有虚拟机管理程序级别的隔离。默认启动 Claude Code。需要 [`sbx` CLI](https://docs.docker.com/ai/sandboxes/get-started/)。npm 包尚未发布，当前请从源码检出运行（先 `npm run build`）。支持 Claude Code、Codex 和 Gemini CLI，详情请参阅 [沙箱文档](docker/)。
 
 ---
 

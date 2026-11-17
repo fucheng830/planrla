@@ -78,6 +78,8 @@ Der schnellste Einstieg – keine lokale Einrichtung erforderlich. Erhalte eine 
 
 #### npm
 
+> **Note:** the `planrla` npm package is not published yet — install from source instead (see the main English README). The Docker sandbox command below also depends on it.
+
 Planrla sofort mit **npx** ausprobieren (erfordert **Node.js** v22+):
 
 ```bash

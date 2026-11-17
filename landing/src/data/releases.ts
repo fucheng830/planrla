@@ -75,9 +75,9 @@ export async function fetchReleases(token?: string): Promise<FeedEntry[]> {
 }
 
 // ---------------------------------------------------------------------------
-// 本地发版录数据源（主用）。仓库为私有,GitHub Releases API 对外 404、v0.10.0 起
-// 也不再打 tag——而 docs/process/releases/*.md 每版必写。构建时直接读本地文件,
-// 无网络依赖、不依赖 token。fetchReleases 保留作公开仓库后的备用通道。
+// 本地发版录数据源（主用）。仓库已开源(2026-11-18),但 docs/process/releases/*.md
+// 每版必写、构建时直接读本地文件,无网络依赖、不依赖 token,仍是唯一数据源。
+// fetchReleases 保留作 GitHub Releases API 备用通道。
 // ---------------------------------------------------------------------------
 
 import { readdirSync, readFileSync } from 'node:fs';

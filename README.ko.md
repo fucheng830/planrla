@@ -74,6 +74,8 @@
 
 #### npm
 
+> **Note:** the `planrla` npm package is not published yet — install from source instead (see the main English README). The Docker sandbox command below also depends on it.
+
 **npx**로 즉시 Planrla를 실행하세요 (Node.js v22+ 필요):
 
 ```bash
