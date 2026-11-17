@@ -3,6 +3,20 @@
 All notable changes to Planrla will be documented in this file.
 
 
+## [0.15.0-dev](https://github.com/fucheng830/planrla/compare/v0.14.0...v0.15.0) (开发线 · 2026-08-21 起打包,未正式发布)
+
+### New Features
+
+* **relay:** 远程访问中继上线 — 手机经 api.planrla.com 接管本机(GTM T1/T2/T4/T5/T7/T8):relay-client mux 协议客户端(HTTP 转发 + WS 桥接 + 指数退避重连)、二进制透传 + `__relay` cookie 会话、用量计量 `/api/usage`、激活漏斗埋点(posthog)、官网/README relay 叙事
+* 详见 `docs/process/releases/v0.15.0.md`
+
+### Bug Fixes
+
+* **zcode:** 会话同步 `no such column: created_at` — 旧库缺列由启动迁移自动补齐
+* **landing:** latest.json 构建时从 `docs/process/releases/` 生成,不再手写
+
+> **版本策略(2026-11-17)**:生产版钉死 **v0.14.0**(R2 feed `desktop/`,产物固化于 `release-prod/0.14.0/`);开发线版本号 `0.15.0-dev`,开发构建发布到 R2 `desktop-dev/` 前缀,与生产 feed 隔离。发布 0.15.0 正式版时 package.json 回到 `0.15.0` 对齐 tag(单轨规则不变)。
+
 ## [0.14.0](https://github.com/fucheng830/planrla/compare/v0.13.0...v0.14.0) (2026-08-11)
 
 ### New Features

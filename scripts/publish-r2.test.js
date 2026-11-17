@@ -34,6 +34,18 @@ test('buildR2Objects lists latest.yml + exe + blockmap + zip when all exist', ()
   }
 });
 
+test('buildR2Objects honors prefix override (dev channel desktop-dev)', () => {
+  const version = '0.15.0-dev';
+  const tmp = makeTempRelease(version);
+  try {
+    const objs = buildR2Objects({ version, releaseDir: tmp, prefix: 'desktop-dev' });
+    assert.equal(objs[0].remote, 'desktop-dev/latest.yml');
+    assert.ok(objs.every((o) => o.remote.startsWith('desktop-dev/')));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('buildR2Objects returns empty array when no artifacts present', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r2-test-'));
   try {

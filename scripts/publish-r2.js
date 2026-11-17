@@ -7,8 +7,11 @@
  * from the cached install). Auth: wrangler OAuth (`npx wrangler login`) OR env
  * CF_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  *
- * Usage: node scripts/publish-r2.js [--version <x.y.z>]
+ * Usage: node scripts/publish-r2.js [--version <x.y.z>] [--prefix <channel>]
  * Version defaults to package.json version. Release dir defaults to ./release.
+ * Prefix defaults to `desktop` (production feed); dev builds push to `desktop-dev`
+ * so they never pollute the production update source. `--prefix` arg wins over
+ * env R2_PREFIX.
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -23,14 +26,14 @@ const BUCKET = process.env.R2_BUCKET || 'planrla-updates';
  * Filters out files that don't exist locally (e.g. blockmap may be absent).
  * Currently Windows-only (nsis + zip); mac/linux handled in future phases.
  */
-export function buildR2Objects({ version, releaseDir }) {
+export function buildR2Objects({ version, releaseDir, prefix = 'desktop' }) {
   const arch = 'x64';
   const base = `${releaseDir}/planrla-${version}-${arch}`;
   return [
-    { local: `${releaseDir}/latest.yml`, remote: `desktop/latest.yml` },
-    { local: `${base}.exe`, remote: `desktop/planrla-${version}-${arch}.exe` },
-    { local: `${base}.exe.blockmap`, remote: `desktop/planrla-${version}-${arch}.exe.blockmap` },
-    { local: `${base}.zip`, remote: `desktop/planrla-${version}-${arch}.zip` },
+    { local: `${releaseDir}/latest.yml`, remote: `${prefix}/latest.yml` },
+    { local: `${base}.exe`, remote: `${prefix}/planrla-${version}-${arch}.exe` },
+    { local: `${base}.exe.blockmap`, remote: `${prefix}/planrla-${version}-${arch}.exe.blockmap` },
+    { local: `${base}.zip`, remote: `${prefix}/planrla-${version}-${arch}.zip` },
   ].filter((o) => fs.existsSync(o.local));
 }
 
@@ -43,7 +46,9 @@ function main() {
   );
   const version = args.version || require('../package.json').version;
   const releaseDir = args['release-dir'] || 'release';
-  const objs = buildR2Objects({ version, releaseDir });
+  // 生产(desktop)与开发(desktop-dev)更新源隔离:开发构建永不污染生产 feed(2026-11-17 版本策略)
+  const prefix = args.prefix || process.env.R2_PREFIX || 'desktop';
+  const objs = buildR2Objects({ version, releaseDir, prefix });
   if (objs.length === 0) {
     console.error(`[publish-r2] no artifacts in ${releaseDir}/ — run "npm run desktop:dist:win" first`);
     process.exit(1);
@@ -61,7 +66,7 @@ function main() {
       console.warn(`[publish-r2] ⚠ skipped ${remote} (${sizeMiB} MiB): ${String(e.message || e).split('\n')[0]}`);
     }
   }
-  console.log(`[publish-r2] ✓ Processed ${objs.length} objects (failures warned above). Bucket "${BUCKET}", prefix desktop/.`);
+  console.log(`[publish-r2] ✓ Processed ${objs.length} objects (failures warned above). Bucket "${BUCKET}", prefix ${prefix}/.`);
 }
 
 // Run main() only when invoked directly (not when imported by tests).
