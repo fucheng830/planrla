@@ -148,6 +148,8 @@ dev-debug.log
 # electron-builder 打包产物
 release/
 release-v*/
+# 生产版固化副本(v0.14.0 锚定产物,体积大不入库)
+release-prod/
 # Cloudflare wrangler 本地状态(landing 部署运行时,含缓存/token)
 .wrangler/
 
