@@ -57,6 +57,10 @@ const namespaceLabels: Record<string, string> = {
   user: 'User Commands',
   other: 'Other Commands',
 };
+// Group labels go through i18n; defaultValue falls back to English so the
+// menu renders in the operator language when a translation exists.
+const getNamespaceLabel = (namespace: string, t: (key: string, opts?: Record<string, unknown>) => string) =>
+  t(`commandMenu.groups.${namespace}`, { defaultValue: namespaceLabels[namespace] || namespace });
 
 const namespaceIcons: Record<string, LucideIcon> = {
   frequent: Star,
@@ -251,7 +255,7 @@ export default function CommandMenu({
         <div key={namespace} className="command-group">
           {orderedNamespaces.length > 1 && (
             <div className="flex items-center justify-between px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-              <span>{namespaceLabels[namespace] || namespace}</span>
+              <span>{getNamespaceLabel(namespace, t)}</span>
               <span className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                 {(groupedCommands[namespace] || []).length}
               </span>
@@ -293,16 +297,16 @@ export default function CommandMenu({
                     </span>
                     {command.metadata?.type && (
                       <span className="command-metadata-badge shrink-0 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-500 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                        {command.metadata.type}
+                        {t(`commandMenu.types.${command.metadata.type}`, { defaultValue: String(command.metadata.type) })}
                       </span>
                     )}
                   </div>
                   {command.description && (
                     <div
                       className="truncate whitespace-nowrap text-[12px] leading-4 text-gray-500 dark:text-slate-400"
-                      title={command.description}
+                      title={t(`commandMenu.desc.${command.name}`, { defaultValue: command.description })}
                     >
-                      {command.description}
+                      {t(`commandMenu.desc.${command.name}`, { defaultValue: command.description })}
                     </div>
                   )}
                 </div>

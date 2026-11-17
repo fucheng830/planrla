@@ -43,7 +43,30 @@
   },
   "commandMenu": {
     "noCommands": "没有可用命令",
-    "availableCommands": "可用命令"
+    "availableCommands": "可用命令",
+    "groups": {
+      "frequent": "常用命令",
+      "builtin": "内置命令",
+      "skill": "技能",
+      "project": "项目命令",
+      "user": "用户命令",
+      "other": "其他命令"
+    },
+    "types": {
+      "builtin": "内置",
+      "skill": "技能",
+      "project": "项目",
+      "user": "用户",
+      "plugin": "插件"
+    },
+    "desc": {
+      "/help": "查看 Claude Code 帮助文档",
+      "/models": "查看当前可用的模型",
+      "/cost": "查看 token 用量信息",
+      "/memory": "打开并编辑 CLAUDE.md 记忆文件",
+      "/config": "打开设置与配置",
+      "/status": "查看系统状态与版本信息"
+    }
   },
   "subagent": {
     "agent": "智能体",

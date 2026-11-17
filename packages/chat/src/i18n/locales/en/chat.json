@@ -43,7 +43,23 @@
   },
   "commandMenu": {
     "noCommands": "No commands available",
-    "availableCommands": "Available commands"
+    "availableCommands": "Available commands",
+    "groups": {
+      "frequent": "Frequently Used",
+      "builtin": "Built-in Commands",
+      "skill": "Skills",
+      "project": "Project Commands",
+      "user": "User Commands",
+      "other": "Other Commands"
+    },
+    "types": {
+      "builtin": "builtin",
+      "skill": "skill",
+      "project": "project",
+      "user": "user",
+      "plugin": "plugin"
+    },
+    "desc": {}
   },
   "subagent": {
     "agent": "Agent",
