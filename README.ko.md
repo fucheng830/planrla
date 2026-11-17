@@ -226,7 +226,7 @@ Planrla와 Planrla Hosted는 Claude Code를 확장하며 별도로 존재하지 
 
 GNU General Public License v3.0 - 자세한 내용은 [LICENSE](LICENSE) 파일 참조.
 
-All rights reserved.
+본 프로젝트는 [CloudCLI (claudecodeui)](https://github.com/siteboon/claudecodeui)(Simos Mikelatos / siteboon, AGPL v3 라이선스)의 파생 작품입니다. Planrla의 수정 및 추가 구성요소는 GPL-3.0으로 배포됩니다.
 
 ## 감사의 말
 

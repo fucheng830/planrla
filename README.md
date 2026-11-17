@@ -201,7 +201,7 @@ Yes. Planrla reads from and writes to the same `~/.claude` config that Claude Co
 
 Planrla is licensed under the **GNU GPL v3** — see [LICENSE](LICENSE).
 
-It is a derivative work of [CloudCLI (claudecodeui)](https://github.com/siteboon/claudecodeui) by Simos Mikelatos / siteboon. Community contributions are welcomed under GPL-3.0.
+It is a derivative work of [CloudCLI (claudecodeui)](https://github.com/siteboon/claudecodeui) by Simos Mikelatos / siteboon, originally licensed under the GNU AGPL v3. Planrla's modifications and additional components are released under GPL-3.0. Community contributions are welcomed under GPL-3.0.
 
 ## Acknowledgments
 

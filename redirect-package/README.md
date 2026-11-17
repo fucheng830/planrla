@@ -219,9 +219,7 @@ Yes, for self-hosted. Planrla reads from and writes to the same `~/.claude` conf
 
 ## License
 
-All rights reserved.
-
-Planrla  - (https://planrla.com).
+GPL-3.0 — see the root [LICENSE](../LICENSE). Planrla — https://planrla.com. Derivative work of [claudecodeui](https://github.com/siteboon/claudecodeui) (AGPL-3.0).
 
 ## Acknowledgments
 

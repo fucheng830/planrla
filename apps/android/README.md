@@ -63,4 +63,4 @@ Uses the `chat.*` WebSocket protocol (Planrla fork v1.34.0+):
 
 ## License
 
-Proprietary. All rights reserved.
+GPL-3.0 — see the root [LICENSE](../../LICENSE). This app is part of Planrla, a derivative work of [claudecodeui](https://github.com/siteboon/claudecodeui) (AGPL-3.0).

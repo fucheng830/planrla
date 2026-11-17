@@ -226,7 +226,7 @@ Planrla 與 Planrla Hosted 是對 Claude Code 的擴充，而非旁觀 — MCP �
 
 GNU 通用公共授權條款 v3.0 — 詳見 [LICENSE](LICENSE) 檔案。
 
-All rights reserved.
+本專案衍生自 [CloudCLI (claudecodeui)](https://github.com/siteboon/claudecodeui)（作者 Simos Mikelatos / siteboon，原以 GNU AGPL v3 授權）；Planrla 的修改與新增元件以 GPL-3.0 發布。歡迎社群以 GPL-3.0 貢獻。
 
 ## 致謝
 

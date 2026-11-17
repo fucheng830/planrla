@@ -1,3 +1,13 @@
 Planrla
+Copyright (C) 2026 fucheng830 and Planrla contributors
 
-This software is proprietary. All rights reserved.
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 3 as published
+by the Free Software Foundation. See LICENSE for the full license text.
+
+This project is a derivative work of claudecodeui (CloudCLI),
+https://github.com/siteboon/claudecodeui
+Copyright (C) Simos Mikelatos / siteboon and claudecodeui contributors,
+originally licensed under the GNU Affero General Public License v3.0.
+Planrla's modifications and additional components are released under
+GPL-3.0.

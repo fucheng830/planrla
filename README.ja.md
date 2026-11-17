@@ -225,7 +225,7 @@ Planrla と Planrla Hosted は、Claude Code の横に別物として存在す�
 
 GNU General Public License v3.0 - 詳細は [LICENSE](LICENSE) ファイルを参照してください。
 
-All rights reserved.
+本プロジェクトは [CloudCLI (claudecodeui)](https://github.com/siteboon/claudecodeui)（Simos Mikelatos / siteboon、AGPL v3 ライセンス）の派生作品です。Planrla の改変と追加コンポーネントは GPL-3.0 で公開しています。
 
 ## 謝辞
 
